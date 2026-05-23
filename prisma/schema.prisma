@@ -1,14 +1,38 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "sqlite"
 }
 
+model User {
+  id           String               @id @default(cuid())
+  email        String               @unique
+  name         String
+  passwordHash String
+  role         String               @default("user")
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  holdings     Holding[]
+  resetTokens  PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model Holding {
   id            String     @id @default(cuid())
-  ticker        String     @unique
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker        String
   name          String
   targetPct     Float
   hardCapPct    Float?
@@ -17,6 +41,8 @@ model Holding {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   snapshots     Snapshot[]
+
+  @@unique([userId, ticker])
 }
 
 model Snapshot {
@@ -25,8 +51,9 @@ model Snapshot {
   holding   Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
   date      DateTime @default(now())
   units     Float
-  priceGbp  Float
-  valueGbp  Float
+  price     Float
+  value     Float
+  currency  String   @default("USD")
   createdAt DateTime @default(now())
 }
 

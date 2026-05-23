@@ -6,6 +6,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: "file:./prisma/atlas.db",
+    url: process.env.DATABASE_URL ?? "file:./prisma/atlas.db",
   },
 });

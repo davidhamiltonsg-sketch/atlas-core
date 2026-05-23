@@ -14,8 +14,10 @@ export function formatCurrency(value: number, currency = "GBP"): string {
   }).format(value)
 }
 
-export function formatPercent(value: number, decimals = 1): string {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`
+export function formatPercent(value: number, decimals = 1, signed = true): string {
+  const str = `${Math.abs(value).toFixed(decimals)}%`
+  if (!signed) return str
+  return value >= 0 ? `+${str}` : `-${str}`
 }
 
 export function formatDate(date: Date | string): string {

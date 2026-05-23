@@ -1,49 +1,69 @@
 @import "tailwindcss";
 
+/* ─── Light mode ──────────────────────────────────────────────────────────── */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --border: 0 0% 90%;
-  --accent: 0 0% 94%;
-  --accent-foreground: 0 0% 9%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 9%;
-  --primary: 0 0% 9%;
-  --primary-foreground: 0 0% 98%;
+  --background:         240 33% 98.5%;   /* barely-blue white */
+  --foreground:         240 22% 9%;      /* deep navy-black */
+  --card:               0   0%  100%;    /* pure white — lifts off background */
+  --card-foreground:    240 22% 9%;
+  --muted:              240 28% 96%;
+  --muted-foreground:   240  8% 42%;
+  --border:             240 22% 89%;     /* indigo-tinted border */
+  --accent:             240 55% 97%;     /* light indigo wash */
+  --accent-foreground:  240 22% 9%;
+  --primary:            239 84% 62%;     /* #4f46e5 — vivid indigo */
+  --primary-foreground: 0   0%  100%;
+
+  /* Semantic alert colours */
+  --success:            142 72% 29%;
+  --warning:            32  95% 44%;
+  --danger:             0   84% 60%;
+
+  /* Sidebar */
+  --sidebar-bg:         0   0%  100%;
+  --sidebar-border:     240 22% 91%;
 }
 
+/* ─── Dark mode ───────────────────────────────────────────────────────────── */
 .dark {
-  --background: 0 0% 7%;
-  --foreground: 0 0% 95%;
-  --muted: 0 0% 12%;
-  --muted-foreground: 0 0% 55%;
-  --border: 0 0% 16%;
-  --accent: 0 0% 14%;
-  --accent-foreground: 0 0% 95%;
-  --card: 0 0% 9%;
-  --card-foreground: 0 0% 95%;
-  --primary: 0 0% 95%;
-  --primary-foreground: 0 0% 9%;
+  --background:         237 32%  7%;    /* deep navy */
+  --foreground:         240 15% 95%;
+  --card:               237 28% 10.5%; /* slightly lighter navy */
+  --card-foreground:    240 15% 95%;
+  --muted:              237 26% 14%;
+  --muted-foreground:   240 10% 57%;
+  --border:             237 22% 18%;
+  --accent:             237 26% 15%;
+  --accent-foreground:  240 15% 95%;
+  --primary:            239 84% 67%;   /* #6366f1 */
+  --primary-foreground: 0   0%  100%;
+
+  --success:            142 72% 45%;
+  --warning:            38  95% 54%;
+  --danger:             0   84% 65%;
+
+  --sidebar-bg:         237 30%  8.5%; /* slightly lifted from body */
+  --sidebar-border:     237 22% 16%;
 }
 
+/* ─── Tailwind theme tokens ───────────────────────────────────────────────── */
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-border: hsl(var(--border));
-  --color-accent: hsl(var(--accent));
+  --color-background:        hsl(var(--background));
+  --color-foreground:        hsl(var(--foreground));
+  --color-muted:             hsl(var(--muted));
+  --color-muted-foreground:  hsl(var(--muted-foreground));
+  --color-border:            hsl(var(--border));
+  --color-accent:            hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-card:              hsl(var(--card));
+  --color-card-foreground:   hsl(var(--card-foreground));
+  --color-primary:           hsl(var(--primary));
+  --color-primary-foreground:hsl(var(--primary-foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* ─── Base ────────────────────────────────────────────────────────────────── */
 * {
   border-color: hsl(var(--border));
 }
@@ -54,4 +74,54 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+
+/* ─── Alert animations ────────────────────────────────────────────────────── */
+
+/* Hard-drift icon: red ring pulse */
+@keyframes ring-red {
+  0%   { box-shadow: 0 0 0 0   rgb(239 68 68 / 0.5); }
+  70%  { box-shadow: 0 0 0 8px rgb(239 68 68 / 0);   }
+  100% { box-shadow: 0 0 0 0   rgb(239 68 68 / 0);   }
+}
+.pulse-red {
+  border-radius: 99px;
+  animation: ring-red 1.8s ease-out infinite;
+}
+
+/* Soft-drift icon: amber ring pulse */
+@keyframes ring-amber {
+  0%   { box-shadow: 0 0 0 0   rgb(245 158 11 / 0.45); }
+  70%  { box-shadow: 0 0 0 7px rgb(245 158 11 / 0);   }
+  100% { box-shadow: 0 0 0 0   rgb(245 158 11 / 0);   }
+}
+.pulse-amber {
+  border-radius: 99px;
+  animation: ring-amber 2.4s ease-out infinite;
+}
+
+/* Card shadow in light mode for depth */
+.card-elevated {
+  box-shadow: 0 1px 3px 0 hsl(240 22% 9% / 0.06),
+              0 1px 2px -1px hsl(240 22% 9% / 0.06);
+}
+.dark .card-elevated {
+  box-shadow: none;
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(239 84% 62%), hsl(262 83% 65%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

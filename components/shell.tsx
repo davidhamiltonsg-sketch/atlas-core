@@ -7,10 +7,11 @@ import { Topbar } from "./topbar"
 interface ShellProps {
   title: string
   subtitle?: string
+  userName?: string
   children: React.ReactNode
 }
 
-export function Shell({ title, subtitle, children }: ShellProps) {
+export function Shell({ title, subtitle, userName, children }: ShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -21,6 +22,7 @@ export function Shell({ title, subtitle, children }: ShellProps) {
           onMenuClick={() => setSidebarOpen(true)}
           title={title}
           subtitle={subtitle}
+          userName={userName}
         />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
       </div>
