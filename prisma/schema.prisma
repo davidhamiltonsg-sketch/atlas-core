@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Holding {
+  id            String     @id @default(cuid())
+  ticker        String     @unique
+  name          String
+  targetPct     Float
+  hardCapPct    Float?
+  toleranceBand Float      @default(2.5)
+  color         String     @default("#6366f1")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  snapshots     Snapshot[]
+}
+
+model Snapshot {
+  id        String   @id @default(cuid())
+  holdingId String
+  holding   Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  units     Float
+  priceGbp  Float
+  valueGbp  Float
+  createdAt DateTime @default(now())
+}
+
+model Contribution {
+  id        String   @id @default(cuid())
+  date      DateTime
+  amountGbp Float
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model GovernanceRule {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model BehaviourLog {
+  id        String   @id @default(cuid())
+  type      String
+  note      String
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+}
