@@ -9,7 +9,7 @@ async function getUsers() {
     orderBy: { createdAt: "asc" },
     include: { _count: { select: { holdings: true } } },
   })
-  return users.map((u) => ({
+  return users.map((u: typeof users[number]) => ({
     id: u.id,
     email: u.email,
     name: u.name,
