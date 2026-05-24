@@ -31,7 +31,8 @@ export default async function Behaviour() {
     take: 50,
   })
 
-  const serialisedLogs = logs.map(l => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const serialisedLogs = (logs as any[]).map((l) => ({
     id: l.id,
     type: l.type,
     note: l.note,
