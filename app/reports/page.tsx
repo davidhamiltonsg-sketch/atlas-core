@@ -191,7 +191,7 @@ async function getReportData(userId: string) {
   const healthScore = Math.max(0, Math.round(100 - hardBreaches * 15 - softBreaches * 7 - maxDrift * 1.5))
 
   // Governance compliance — map each rule category to a status
-  const ruleCategories = [...new Set(rules.map(r => r.category))]
+  const ruleCategories = [...new Set(rules.map(r => r.category as string))]
 
   return {
     totalValue, positions, companyExposure, sectorExposure, geoExposure,
@@ -1043,7 +1043,7 @@ export default async function Reports() {
           }
         />
         <div className="divide-y divide-border">
-          {ruleCategories.map((category: string) => {
+          {ruleCategories.map((category) => {
             const catRules = rules.filter(r => r.category === category)
             return (
               <div key={category} className="print-break-avoid">
