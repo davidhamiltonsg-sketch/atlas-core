@@ -3,16 +3,14 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { AdminUsersClient } from "./client"
-import type { Prisma } from "@prisma/client"
-
-type UserWithCount = Prisma.UserGetPayload<{ include: { _count: { select: { holdings: true } } } }>
 
 async function getUsers() {
   const users = await db.user.findMany({
     orderBy: { createdAt: "asc" },
     include: { _count: { select: { holdings: true } } },
   })
-  return users.map((u: UserWithCount) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (users as any[]).map((u) => ({
     id: u.id,
     email: u.email,
     name: u.name,
