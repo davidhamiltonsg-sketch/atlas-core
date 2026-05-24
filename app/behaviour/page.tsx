@@ -1,5 +1,9 @@
 import { Shell } from "@/components/shell"
-import { Brain, Plus, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Brain, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { getSession } from "@/lib/session"
+import { redirect } from "next/navigation"
+import { db } from "@/lib/db"
+import { BehaviourLogForm } from "@/components/behaviour/behaviour-log-form"
 
 const principles = [
   "Long-term wealth is destroyed behaviourally before it is destroyed mathematically.",
@@ -10,18 +14,35 @@ const principles = [
 ]
 
 const checkItems = [
-  { label: "Am I acting on data or emotion?", type: "check" },
-  { label: "Is this a rule-based decision or a feeling?", type: "check" },
-  { label: "Has it been 90+ days since my last structural change?", type: "check" },
-  { label: "Have I waited 48 hours before acting on this impulse?", type: "check" },
-  { label: "Would I be comfortable explaining this decision in 10 years?", type: "check" },
+  "Am I acting on data or emotion?",
+  "Is this a rule-based decision or a feeling?",
+  "Has it been 90+ days since my last structural change?",
+  "Have I waited 48 hours before acting on this impulse?",
+  "Would I be comfortable explaining this decision in 10 years?",
 ]
 
-export default function Behaviour() {
+export default async function Behaviour() {
+  const session = await getSession()
+  if (!session) redirect("/login")
+
+  const logs = await db.behaviourLog.findMany({
+    where: { userId: session.userId },
+    orderBy: { date: "desc" },
+    take: 50,
+  })
+
+  const serialisedLogs = logs.map(l => ({
+    id: l.id,
+    type: l.type,
+    note: l.note,
+    date: l.date.toISOString(),
+  }))
+
   return (
     <Shell
       title="Behavioural System"
       subtitle="Discipline, stability, and long-term consistency"
+      userName={session.name}
     >
       {/* Core principles */}
       <div className="rounded-xl border border-border bg-card p-5">
@@ -52,11 +73,8 @@ export default function Behaviour() {
             Run this before making any portfolio change.
           </p>
           <div className="space-y-2">
-            {checkItems.map(({ label }) => (
-              <label
-                key={label}
-                className="flex items-start gap-3 cursor-pointer group"
-              >
+            {checkItems.map(label => (
+              <label key={label} className="flex items-start gap-3 cursor-pointer group">
                 <input
                   type="checkbox"
                   className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-border accent-foreground cursor-pointer"
@@ -69,28 +87,8 @@ export default function Behaviour() {
           </div>
         </div>
 
-        {/* Behaviour log */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Behaviour Log</h2>
-            </div>
-            <button className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent transition-colors">
-              <Plus className="h-3 w-3" />
-              Log entry
-            </button>
-          </div>
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent">
-              <Brain className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="text-xs text-muted-foreground max-w-xs">
-              No entries yet. Log emotional states, impulse decisions resisted, or behavioural
-              observations here.
-            </p>
-          </div>
-        </div>
+        {/* Interactive behaviour log */}
+        <BehaviourLogForm initialLogs={serialisedLogs} />
       </div>
 
       {/* Warning zone */}

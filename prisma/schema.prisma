@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id           String               @id @default(cuid())
-  email        String               @unique
-  name         String
-  passwordHash String
-  role         String               @default("user")
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  holdings     Holding[]
-  resetTokens  PasswordResetToken[]
+  id             String               @id @default(cuid())
+  email          String               @unique
+  name           String
+  passwordHash   String
+  role           String               @default("user")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  holdings       Holding[]
+  resetTokens    PasswordResetToken[]
+  behaviourLogs  BehaviourLog[]
 }
 
 model PasswordResetToken {
@@ -76,6 +77,8 @@ model GovernanceRule {
 
 model BehaviourLog {
   id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   type      String
   note      String
   date      DateTime @default(now())
