@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@libsql/client"],
   typescript: {
     // Type checking passes locally; Vercel's TS version differs from local with Prisma driver adapters
     ignoreBuildErrors: true,
