@@ -1,19 +1,12 @@
 import { PrismaClient } from "@prisma/client"
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
-import path from "path"
-
-function getDbPath(): string {
-  const url = process.env.DATABASE_URL ?? "file:./prisma/atlas.db"
-  if (url.startsWith("file:")) {
-    const filePath = url.slice(5)
-    return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath)
-  }
-  return path.resolve(process.cwd(), "prisma/atlas.db")
-}
+import { PrismaLibSQL } from "@prisma/adapter-libsql"
+import { createClient } from "@libsql/client"
 
 function createPrismaClient() {
-  const dbPath = getDbPath()
-  const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` })
+  const url = process.env.DATABASE_URL ?? "file:prisma/atlas.db"
+  const authToken = process.env.DATABASE_AUTH_TOKEN ?? undefined
+  const libsql = createClient({ url, authToken })
+  const adapter = new PrismaLibSQL(libsql)
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
