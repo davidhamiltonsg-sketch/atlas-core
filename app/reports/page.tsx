@@ -1043,7 +1043,7 @@ export default async function Reports() {
           }
         />
         <div className="divide-y divide-border">
-          {ruleCategories.map((category) => {
+          {ruleCategories.map((category: string) => {
             const catRules = rules.filter(r => r.category === category)
             return (
               <div key={category} className="print-break-avoid">
