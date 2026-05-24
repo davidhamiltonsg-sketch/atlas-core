@@ -7,6 +7,7 @@ import { redirect } from "next/navigation"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { HealthGauge } from "@/components/charts/health-gauge"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
+import { computePortfolioHealth } from "@/lib/health"
 
 const MONTHLY_CONTRIBUTION = 3000
 const ANNUAL_LUMP_SUM = 20000
@@ -158,11 +159,27 @@ async function getDashboardData(userId: string) {
 
   const driftAlerts   = positions.filter(p => p.status !== "healthy").length
   const maxDrift      = positions.reduce((max, p) => Math.max(max, Math.abs(p.driftPct)), 0)
-  const activeRules   = await db.governanceRule.count({ where: { active: true } })
+
+  // Stale data detection (must be before health score)
+  const latestSnapshotDate = holdings.reduce<Date | null>((latest, h) => {
+    const d = h.snapshots[0]?.date
+    if (!d) return latest
+    return latest === null || d > latest ? d : latest
+  }, null)
+  const daysSinceUpdate = latestSnapshotDate
+    ? Math.floor((Date.now() - new Date(latestSnapshotDate).getTime()) / 86_400_000)
+    : null
+
+  const [activeRules, totalRules] = await Promise.all([
+    db.governanceRule.count({ where: { active: true } }),
+    db.governanceRule.count(),
+  ])
   const hardBreaches  = positions.filter(p => p.status === "hard").length
   const softBreaches  = positions.filter(p => p.status === "soft").length
-  const healthScore   = Math.max(0, Math.round(100 - hardBreaches * 15 - softBreaches * 7 - maxDrift * 1.5))
-  const healthLabel   = healthScore >= 80 ? "Good standing" : healthScore >= 60 ? "Review recommended" : "Action required"
+  const snapshotAgeDays = daysSinceUpdate ?? 999
+  const health = computePortfolioHealth({ hardBreaches, softBreaches, maxDrift, activeRules, totalRules, snapshotAgeDays })
+  const healthScore = health.overall
+  const healthLabel = health.overallLabel
 
   // 2045 forecast (base case 10%, 19 years remaining from 2026)
   const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
@@ -177,23 +194,13 @@ async function getDashboardData(userId: string) {
   const daysToContribution = Math.ceil((nextContribution.getTime() - now.getTime()) / 86_400_000)
   const nextContributionLabel = nextContribution.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 
-  // Stale data detection
-  const latestSnapshotDate = holdings.reduce<Date | null>((latest, h) => {
-    const d = h.snapshots[0]?.date
-    if (!d) return latest
-    return latest === null || d > latest ? d : latest
-  }, null)
-  const daysSinceUpdate = latestSnapshotDate
-    ? Math.floor((Date.now() - new Date(latestSnapshotDate).getTime()) / 86_400_000)
-    : null
-
   const donutData = holdings.map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  return { totalValue, newTotalValue, positions: positionsWithAlloc, driftAlerts, activeRules, healthScore, healthLabel, hasAnyAlert, suggested, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange }
+  return { totalValue, newTotalValue, positions: positionsWithAlloc, driftAlerts, activeRules, healthScore, healthLabel, health, hasAnyAlert, suggested, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange }
 }
 
 const sections = [
@@ -208,7 +215,7 @@ export default async function Dashboard() {
   const session = await getSession()
   if (!session) redirect("/login")
   const {
-    totalValue, newTotalValue, positions, driftAlerts, activeRules, healthScore, healthLabel,
+    totalValue, newTotalValue, positions, driftAlerts, activeRules, healthScore, healthLabel, health,
     hasAnyAlert, suggested, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate,
     base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange,
   } = await getDashboardData(session.userId)
@@ -609,19 +616,33 @@ export default async function Dashboard() {
             <div className="flex justify-center">
               <HealthGauge score={healthScore} label={healthLabel} />
             </div>
-            <div className="mt-4 pt-4 border-t border-border space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Hard breaches</span>
-                <span className={`font-bold ${hardBreaches > 0 ? "text-red-500" : "text-green-500"}`}>{hardBreaches}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Soft drifts</span>
-                <span className={`font-bold ${softBreaches > 0 ? "text-amber-500" : "text-green-500"}`}>{softBreaches}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Active rules</span>
-                <span className="font-bold">{activeRules}</span>
-              </div>
+            <div className="mt-4 pt-4 border-t border-border space-y-3">
+              {[health.structural, health.behavioural, health.concentration, health.execution].map((dim) => {
+                const barColor =
+                  dim.status === "excellent" ? "bg-green-500" :
+                  dim.status === "good"      ? "bg-emerald-400" :
+                  dim.status === "caution"   ? "bg-amber-400" :
+                                               "bg-red-500"
+                const textColor =
+                  dim.status === "excellent" ? "text-green-500" :
+                  dim.status === "good"      ? "text-emerald-400" :
+                  dim.status === "caution"   ? "text-amber-400" :
+                                               "text-red-500"
+                return (
+                  <div key={dim.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <span className="text-[11px] font-semibold">{dim.label}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1.5">{dim.description}</span>
+                      </div>
+                      <span className={`text-[11px] font-bold tabular-nums ${textColor}`}>{dim.score}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${dim.score}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 

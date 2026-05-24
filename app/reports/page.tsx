@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { computePortfolioHealth } from "@/lib/health"
 import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure-bar-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { ExportPdfButton } from "@/components/reports/export-pdf-button"
@@ -187,15 +188,40 @@ async function getReportData(userId: string) {
       (ht !== undefined && p.actualPct > ht.high)
     return !isHard && p.outsideBand
   }).length
+  // Hard cap breaches only — governed concentration within caps is intentional
+  const companyHardBreaches = companies.filter((c) => companyExposure[c] >= COMPANY_CAPS[c].hard).length
+  const sectorHardBreaches  = (Object.keys(SECTOR_CAPS) as (keyof typeof SECTOR_CAPS)[]).filter(
+    (k) => sectorExposure[k] >= SECTOR_CAPS[k].excessive
+  ).length
 
-  const healthScore = Math.max(0, Math.round(100 - hardBreaches * 15 - softBreaches * 7 - maxDrift * 1.5))
+  // Snapshot age
+  const latestDate = positions.reduce<Date | null>((latest, p) => {
+    const d = p.snapshotDate
+    if (!d) return latest
+    const dd = new Date(d)
+    return latest === null || dd > latest ? dd : latest
+  }, null)
+  const snapshotAgeDays = latestDate
+    ? Math.floor((Date.now() - latestDate.getTime()) / 86_400_000)
+    : 999
+
+  const [activeRules, totalRules] = await Promise.all([
+    db.governanceRule.count({ where: { active: true } }),
+    db.governanceRule.count(),
+  ])
+  const health = computePortfolioHealth({
+    hardBreaches, softBreaches, maxDrift,
+    companyHardBreaches, sectorHardBreaches,
+    activeRules, totalRules, snapshotAgeDays,
+  })
+  const healthScore = health.overall
 
   // Governance compliance — map each rule category to a status
   const ruleCategories = [...new Set(rules.map(r => r.category as string))]
 
   return {
     totalValue, positions, companyExposure, sectorExposure, geoExposure,
-    healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
+    health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, softBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
     rules, ruleCategories,
   }
@@ -260,7 +286,7 @@ export default async function Reports() {
 
   const {
     totalValue, positions, companyExposure, sectorExposure, geoExposure,
-    healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
+    health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
     rules, ruleCategories,
   } = await getReportData(session.userId)
@@ -270,8 +296,8 @@ export default async function Reports() {
     ? new Date(positions[0].snapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "—"
 
-  const healthColor  = healthScore >= 80 ? "text-green-500" : healthScore >= 60 ? "text-amber-500" : "text-red-500"
-  const healthLabel  = healthScore >= 80 ? "Good standing" : healthScore >= 60 ? "Review recommended" : "Action required"
+  const healthColor  = healthScore >= 80 ? "text-green-500" : healthScore >= 65 ? "text-amber-500" : "text-red-500"
+  const healthLabel  = health.overallLabel
 
   const companies   = Object.keys(COMPANY_CAPS) as (keyof typeof COMPANY_CAPS)[]
   const sectorKeys  = Object.keys(SECTOR_CAPS) as (keyof typeof SECTOR_CAPS)[]
@@ -583,10 +609,10 @@ export default async function Reports() {
               cls: hhiPct < 10 ? "text-green-500" : hhiPct < 18 ? "text-amber-500" : "text-red-500",
             },
             {
-              label: "Feels like... holdings",
+              label: "Concentration Density",
               value: effectiveN.toFixed(1),
               unit: "",
-              sub: "How many independent bets you effectively have",
+              sub: "Effective independent positions (1/HHI)",
               note: effectiveN >= 5 ? "Good diversity" : effectiveN >= 3 ? "Moderate" : "Very concentrated",
               cls: effectiveN >= 5 ? "text-green-500" : effectiveN >= 3 ? "text-amber-500" : "text-red-500",
             },
@@ -623,7 +649,7 @@ export default async function Reports() {
               <span className="font-semibold text-foreground">How the spread score works:</span>{" "}
               This score measures how evenly your money is spread across holdings. A score below 10 means you&apos;re well diversified.
               A score above 18 means you&apos;re quite concentrated — your portfolio behaves more like a few big bets than a true spread.
-              The &quot;feels like&quot; number tells you how many truly independent holdings your portfolio behaves like — even if you own 5 ETFs, they might overlap so much they act like 2–3 positions.
+              The Concentration Density tells you how many truly independent positions your portfolio behaves like — even if you own 5 ETFs, they might overlap so much they act like 2–3 positions.
             </p>
           </div>
 
