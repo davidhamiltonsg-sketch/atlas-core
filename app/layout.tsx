@@ -10,7 +10,16 @@ const geistSans = Geist({
 
 export const metadata: Metadata = {
   title: "Atlas Core",
-  description: "Personal investment operating system",
+  description: "Personal investment operating system — governed digital economy portfolio",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Atlas Core",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -20,6 +29,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#6366f1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
       <body className="h-full">
         <ThemeProvider
           attribute="class"

@@ -24,6 +24,7 @@ type Props = {
   allocOrder: string[]
   hasAnyAlert: boolean
   defaultContribution?: number
+  annualLumpSum?: number
 }
 
 function calculateSuggestedAllocations(
@@ -60,6 +61,7 @@ export function ExecutionPlan({
   allocOrder,
   hasAnyAlert: initialHasAnyAlert,
   defaultContribution = 3000,
+  annualLumpSum = 20000,
 }: Props) {
   const [contribution, setContribution] = useState(defaultContribution)
   const [inputVal, setInputVal] = useState(String(defaultContribution))
@@ -378,6 +380,47 @@ export function ExecutionPlan({
           </p>
         </div>
       </div>
+
+      {/* Annual lump sum section */}
+      {annualLumpSum > 0 && (
+        <div className="border-t border-border bg-indigo-500/[0.03] px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                <p className="text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">Annual Lump Sum — ${annualLumpSum.toLocaleString()} USD</p>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Deploy as a single batch. Allocate proportionally — boost the most underweight positions first.</p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {allocOrder.map(ticker => {
+                  const pos = positions.find(p => p.ticker === ticker)
+                  if (!pos) return null
+                  const lumpSuggested = calculateSuggestedAllocations(positions, annualLumpSum)
+                  const amount = lumpSuggested[ticker] ?? 0
+                  const standard = Math.round((pos.targetPct / 100) * annualLumpSum / 100) * 100
+                  const isZeroed = amount === 0
+                  const isBoosted = amount > standard
+                  return (
+                    <div key={ticker} className="flex flex-col items-start">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{ticker}</span>
+                      <span className={`text-sm font-black tabular-nums ${isZeroed ? "text-muted-foreground/50 line-through" : isBoosted ? "text-indigo-600 dark:text-indigo-400" : "text-foreground"}`}>
+                        ${amount.toLocaleString()}
+                      </span>
+                      {isBoosted && <span className="text-[9px] text-indigo-600 dark:text-indigo-500 font-semibold">boosted</span>}
+                      {isZeroed && <span className="text-[9px] text-muted-foreground font-semibold">skip</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="shrink-0 text-right pl-4 border-l border-border/50">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Deploy</p>
+              <p className="text-xl font-black tabular-nums">${annualLumpSum.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">once a year</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

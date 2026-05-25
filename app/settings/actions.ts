@@ -31,6 +31,29 @@ export async function updateProfileAction(formData: FormData) {
   return { success: true }
 }
 
+export async function updateContributionSettingsAction(formData: FormData) {
+  const session = await getSession()
+  if (!session) return { error: "Unauthenticated." }
+
+  const monthly = parseFloat(formData.get("monthlyContribution") as string)
+  const annual = parseFloat(formData.get("annualLumpSum") as string)
+  const growth = parseFloat(formData.get("contributionGrowthRate") as string)
+
+  if (isNaN(monthly) || monthly < 0) return { error: "Invalid monthly contribution." }
+  if (isNaN(annual) || annual < 0) return { error: "Invalid annual lump sum." }
+  if (isNaN(growth) || growth < 0 || growth > 1) return { error: "Growth rate must be between 0 and 1." }
+
+  await db.user.update({
+    where: { id: session.userId },
+    data: { monthlyContribution: monthly, annualLumpSum: annual, contributionGrowthRate: growth, updatedAt: new Date() },
+  })
+
+  revalidatePath("/settings")
+  revalidatePath("/")
+  revalidatePath("/forecast")
+  return { success: true }
+}
+
 export async function changePasswordAction(formData: FormData) {
   const session = await getSession()
   if (!session) return { error: "Unauthenticated." }

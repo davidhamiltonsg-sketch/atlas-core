@@ -6,9 +6,6 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { ForecastAreaChart, type ForecastDataPoint, type MilestoneMarker } from "@/components/charts/forecast-area-chart"
 
-const MONTHLY_CONTRIBUTION = 3000
-const ANNUAL_LUMP_SUM = 20000
-const CONTRIBUTION_GROWTH_RATE = 0.05
 const SINGAPORE_SAVINGS_RATE = 0.030
 
 const returnScenarios = [
@@ -50,7 +47,16 @@ async function getForecastData(userId: string) {
 export default async function Forecast() {
   const session = await getSession()
   if (!session) redirect("/login")
-  const currentValue = await getForecastData(session.userId)
+
+  const [currentValue, user] = await Promise.all([
+    getForecastData(session.userId),
+    db.user.findUnique({ where: { id: session.userId } }),
+  ])
+
+  const MONTHLY_CONTRIBUTION = user?.monthlyContribution ?? 3000
+  const ANNUAL_LUMP_SUM = user?.annualLumpSum ?? 20000
+  const CONTRIBUTION_GROWTH_RATE = user?.contributionGrowthRate ?? 0.05
+
   const startYear = new Date().getFullYear()
 
   // Build year-by-year chart data (current year → 2045)
@@ -102,7 +108,7 @@ export default async function Forecast() {
   }
 
   return (
-    <Shell title="Forecast Engine" subtitle="Long-term compounding trajectories — 2045 horizon" userName={session.name}>
+    <Shell title="Forecast Engine" subtitle="Long-term compounding trajectories — 2045 horizon" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Hero stat row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">

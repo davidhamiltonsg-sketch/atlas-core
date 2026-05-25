@@ -1,13 +1,16 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Check, AlertCircle, Loader2, User, Lock, Shield, Eye, EyeOff } from "lucide-react"
-import { updateProfileAction, changePasswordAction } from "./actions"
+import { Check, AlertCircle, Loader2, User, Lock, Shield, Eye, EyeOff, TrendingUp } from "lucide-react"
+import { updateProfileAction, changePasswordAction, updateContributionSettingsAction } from "./actions"
 
 interface SettingsClientProps {
   initialName: string
   initialEmail: string
   role: string
+  monthlyContribution: number
+  annualLumpSum: number
+  contributionGrowthRate: number
 }
 
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
@@ -36,7 +39,7 @@ function StatusMessage({ msg }: { msg: { type: "success" | "error"; text: string
   )
 }
 
-export function SettingsClient({ initialName, initialEmail, role }: SettingsClientProps) {
+export function SettingsClient({ initialName, initialEmail, role, monthlyContribution, annualLumpSum, contributionGrowthRate }: SettingsClientProps) {
   // Profile
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
@@ -47,6 +50,23 @@ export function SettingsClient({ initialName, initialEmail, role }: SettingsClie
   const [showPwd, setShowPwd] = useState(false)
   const [pwdMsg, setPwdMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [pwdPending, startPwdTransition] = useTransition()
+
+  // Contribution settings
+  const [contribMsg, setContribMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [contribPending, startContribTransition] = useTransition()
+
+  function handleContrib(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setContribMsg(null)
+    const formData = new FormData(e.currentTarget)
+    startContribTransition(async () => {
+      const result = await updateContributionSettingsAction(formData)
+      setContribMsg(result.success
+        ? { type: "success", text: "Contribution settings saved." }
+        : { type: "error", text: result.error ?? "Save failed." }
+      )
+    })
+  }
 
   function handleProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -79,6 +99,72 @@ export function SettingsClient({ initialName, initialEmail, role }: SettingsClie
 
   return (
     <div className="max-w-xl space-y-5">
+      {/* Contribution Settings */}
+      <Section title="Contribution Settings" icon={TrendingUp}>
+        <form onSubmit={handleContrib} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Monthly Contribution (USD)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <input
+                  name="monthlyContribution"
+                  type="number"
+                  step="100"
+                  min="0"
+                  required
+                  defaultValue={monthlyContribution}
+                  className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Used in the execution plan and forecast.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Annual Lump Sum (USD)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <input
+                  name="annualLumpSum"
+                  type="number"
+                  step="1000"
+                  min="0"
+                  required
+                  defaultValue={annualLumpSum}
+                  className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Yearly bonus contribution for the forecast.</p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Contribution Growth Rate (per year)</label>
+            <div className="relative">
+              <input
+                name="contributionGrowthRate"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                required
+                defaultValue={contributionGrowthRate}
+                className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">× p.a.</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">e.g. 0.05 = 5% annual growth in contributions. Used in the forecast model.</p>
+          </div>
+          <StatusMessage msg={contribMsg} />
+          <button
+            type="submit"
+            disabled={contribPending}
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+          >
+            {contribPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            Save Contribution Settings
+          </button>
+        </form>
+      </Section>
+
       {/* Profile */}
       <Section title="Profile" icon={User}>
         <form onSubmit={handleProfile} className="space-y-4">

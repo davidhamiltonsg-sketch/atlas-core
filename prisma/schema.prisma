@@ -8,16 +8,23 @@ datasource db {
 }
 
 model User {
-  id             String               @id @default(cuid())
-  email          String               @unique
-  name           String
-  passwordHash   String
-  role           String               @default("user")
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  holdings       Holding[]
-  resetTokens    PasswordResetToken[]
-  behaviourLogs  BehaviourLog[]
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  name                 String
+  passwordHash         String
+  role                 String               @default("user")
+  monthlyContribution  Float                @default(3000)
+  annualLumpSum        Float                @default(20000)
+  contributionGrowthRate Float              @default(0.05)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  holdings             Holding[]
+  resetTokens          PasswordResetToken[]
+  behaviourLogs        BehaviourLog[]
+  trades               Trade[]
+  contributions        ContributionRecord[]
+  dividends            Dividend[]
+  watchlistItems       WatchlistItem[]
 }
 
 model PasswordResetToken {
@@ -42,6 +49,7 @@ model Holding {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   snapshots     Snapshot[]
+  dividends     Dividend[]
 
   @@unique([userId, ticker])
 }
@@ -58,12 +66,60 @@ model Snapshot {
   createdAt DateTime @default(now())
 }
 
-model Contribution {
+// Trade log — record actual buy/sell transactions
+model Trade {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker    String
+  type      String   // "BUY" | "SELL"
+  units     Float
+  price     Float    // USD per unit
+  amount    Float    // total in SGD (units * price * fxRate)
+  fxRate    Float    @default(1.35) // USDSGD at time of trade
   date      DateTime
-  amountGbp Float
   note      String?
   createdAt DateTime @default(now())
+}
+
+// Month-by-month contribution records
+model ContributionRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Float    // USD
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// Dividend received from ETFs
+model Dividend {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdingId String?
+  holding   Holding? @relation(fields: [holdingId], references: [id], onDelete: SetNull)
+  ticker    String
+  amount    Float    // SGD amount received
+  units     Float    // units held at time of dividend
+  paymentDate DateTime
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// Watchlist for potential future positions
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker    String
+  name      String
+  note      String?
+  targetPct Float?   // hypothetical target if added to portfolio
+  addedAt   DateTime @default(now())
+
+  @@unique([userId, ticker])
 }
 
 model GovernanceRule {

@@ -10,9 +10,10 @@ import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-cha
 import { computePortfolioHealth } from "@/lib/health"
 import { ExecutionPlan } from "@/components/dashboard/execution-plan"
 
-const MONTHLY_CONTRIBUTION = 3000   // USD — used in 2045 forecast + ExecutionPlan default
-const ANNUAL_LUMP_SUM = 20000
-const CONTRIBUTION_GROWTH_RATE = 0.05
+// Fallback defaults (overridden by user DB settings)
+const DEFAULT_MONTHLY = 3000
+const DEFAULT_ANNUAL_LUMP_SUM = 20000
+const DEFAULT_GROWTH_RATE = 0.05
 
 function projectPortfolio(
   currentValue: number,
@@ -45,11 +46,30 @@ const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
 
 type ActionStatus = "healthy" | "soft" | "hard"
 
+async function getUsdSgdRate(): Promise<number> {
+  try {
+    const res = await fetch(
+      "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d",
+      { headers: { "User-Agent": "Mozilla/5.0" }, next: { revalidate: 3600 } }
+    )
+    if (res.ok) {
+      const d = await res.json()
+      const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
+      if (rate && rate > 0) return rate
+    }
+  } catch {}
+  return 1.35
+}
+
 async function getDashboardData(userId: string) {
-  const holdings = await db.holding.findMany({
-    where: { userId },
-    include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
-  })
+  const [user, holdings, usdSgdRate] = await Promise.all([
+    db.user.findUnique({ where: { id: userId } }),
+    db.holding.findMany({
+      where: { userId },
+      include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
+    }),
+    getUsdSgdRate(),
+  ])
 
   // Build portfolio value history (index 0 = latest, align across holdings)
   const historyPoints: Array<{ label: string; value: number }> = []
@@ -136,9 +156,25 @@ async function getDashboardData(userId: string) {
   const healthScore = health.overall
   const healthLabel = health.overallLabel
 
+  const monthlyContribution = user?.monthlyContribution ?? DEFAULT_MONTHLY
+  const annualLumpSum = user?.annualLumpSum ?? DEFAULT_ANNUAL_LUMP_SUM
+  const contributionGrowthRate = user?.contributionGrowthRate ?? DEFAULT_GROWTH_RATE
+
   // 2045 forecast (base case 10%, 19 years remaining from 2026)
   const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
-  const base2045 = projectPortfolio(totalValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.10, yearsTo2045, CONTRIBUTION_GROWTH_RATE)
+  const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, 0.10, yearsTo2045, contributionGrowthRate)
+
+  // Goal tracking: where should the portfolio be right now if on the base-case trajectory?
+  // Start from portfolio value at start of this year, project to today
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1)
+  const dayOfYear = Math.floor((Date.now() - startOfYear.getTime()) / 86_400_000)
+  const fractionOfYear = dayOfYear / 365
+  // Approximate "on-track" value: extrapolate linearly within the current year
+  const yearsElapsed = 2045 - new Date().getFullYear() - yearsTo2045 // 0 for current year
+  const targetNow = totalValue > 0
+    ? projectPortfolio(totalValue, monthlyContribution, annualLumpSum, 0.10, Math.floor(fractionOfYear * 12) / 12, contributionGrowthRate)
+    : null
+  const onTrackPct = targetNow && targetNow > 0 ? (totalValue / targetNow) * 100 : null
 
   // Next contribution countdown (15th of each month)
   const now = new Date()
@@ -155,7 +191,7 @@ async function getDashboardData(userId: string) {
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  return { totalValue, hasBalance, positions, driftAlerts, activeRules, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange }
+  return { totalValue, hasBalance, positions, driftAlerts, activeRules, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct }
 }
 
 const sections = [
@@ -173,13 +209,14 @@ export default async function Dashboard() {
     totalValue, hasBalance, positions, driftAlerts, activeRules, healthScore, healthLabel, health,
     hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate,
     base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange,
+    monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
   const allocOrder = [...positions].sort((a, b) => b.targetPct - a.targetPct).map(p => p.ticker)
 
   return (
-    <Shell title="Dashboard" subtitle="Your investment operating system" userName={session.name}>
+    <Shell title="Dashboard" subtitle="Your investment operating system" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* New user welcome — no balance yet */}
       {!hasBalance && (
@@ -257,14 +294,16 @@ export default async function Dashboard() {
         <div className="space-y-5 min-w-0">
 
           {/* KPI strip */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
                 <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-black tabular-nums">{formatCurrency(totalValue, "SGD")}</p>
-              <p className="text-[11px] text-muted-foreground">SGD · IBKR</p>
+              <p className="text-[11px] text-muted-foreground">
+                SGD · USD/SGD {usdSgdRate.toFixed(4)}
+              </p>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
@@ -287,6 +326,29 @@ export default async function Dashboard() {
               <p className="text-[11px] text-muted-foreground">
                 {driftAlerts === 0 ? "All within tolerance" : `${driftAlerts} position${driftAlerts > 1 ? "s" : ""} outside band`}
               </p>
+            </div>
+
+            <div className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 ${
+              onTrackPct === null ? "border-border" :
+              onTrackPct >= 95 ? "border-green-500/30" :
+              onTrackPct >= 80 ? "border-yellow-400/30" : "border-red-500/30"
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Goal Track</span>
+                <Activity className={`h-3.5 w-3.5 ${
+                  onTrackPct === null ? "text-muted-foreground" :
+                  onTrackPct >= 95 ? "text-green-500" :
+                  onTrackPct >= 80 ? "text-yellow-400" : "text-red-500"
+                }`} />
+              </div>
+              <p className={`text-2xl font-black tabular-nums ${
+                onTrackPct === null ? "text-muted-foreground" :
+                onTrackPct >= 95 ? "text-green-500" :
+                onTrackPct >= 80 ? "text-yellow-400" : "text-red-500"
+              }`}>
+                {onTrackPct !== null ? `${onTrackPct.toFixed(0)}%` : "—"}
+              </p>
+              <p className="text-[11px] text-muted-foreground">vs base-case 2045 pace</p>
             </div>
           </div>
 
@@ -354,7 +416,8 @@ export default async function Dashboard() {
               hasBalance={hasBalance}
               allocOrder={allocOrder}
               hasAnyAlert={hasAnyAlert}
-              defaultContribution={MONTHLY_CONTRIBUTION}
+              defaultContribution={monthlyContribution}
+              annualLumpSum={annualLumpSum}
             />
           </div>
 

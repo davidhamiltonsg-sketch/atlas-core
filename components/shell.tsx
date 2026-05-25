@@ -8,15 +8,16 @@ interface ShellProps {
   title: string
   subtitle?: string
   userName?: string
+  isAdmin?: boolean
   children: React.ReactNode
 }
 
-export function Shell({ title, subtitle, userName, children }: ShellProps) {
+export function Shell({ title, subtitle, userName, isAdmin = false, children }: ShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isAdmin={isAdmin} />
       <div className="flex flex-1 flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
         <Topbar
           onMenuClick={() => setSidebarOpen(true)}

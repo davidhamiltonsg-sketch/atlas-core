@@ -92,7 +92,7 @@ export default async function Governance() {
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v5.2" userName={session.name}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v5.2" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">

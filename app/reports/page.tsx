@@ -374,7 +374,7 @@ export default async function Reports() {
   }
 
   return (
-    <Shell title="Reports" subtitle="Overlap & concentration engine — v5.2" userName={session.name}>
+    <Shell title="Reports" subtitle="Overlap & concentration engine — v5.2" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Print-only cover header */}
       <div className="print-header hidden">

@@ -12,29 +12,85 @@ import {
   X,
   Users,
   Settings,
+  History,
+  ArrowLeftRight,
+  PiggyBank,
+  GitCompare,
+  Star,
+  BarChart3,
+  Coins,
+  CalendarDays,
+  Download,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
 
-const nav = [
-  { href: "/",              label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/portfolio",     label: "Portfolio",  icon: PieChart },
-  { href: "/governance",    label: "Governance", icon: ShieldCheck },
-  { href: "/behaviour",     label: "Behaviour",  icon: Brain },
-  { href: "/reports",       label: "Reports",    icon: FileBarChart2 },
-  { href: "/forecast",      label: "Forecast",   icon: TrendingUp },
-  { href: "/admin/users",   label: "Users",      icon: Users },
-  { href: "/settings",      label: "Settings",   icon: Settings },
+const mainNav = [
+  { href: "/",              label: "Dashboard",    icon: LayoutDashboard },
+  { href: "/portfolio",     label: "Portfolio",    icon: PieChart },
+  { href: "/governance",    label: "Governance",   icon: ShieldCheck },
+  { href: "/behaviour",     label: "Behaviour",    icon: Brain },
+  { href: "/reports",       label: "Reports",      icon: FileBarChart2 },
+  { href: "/forecast",      label: "Forecast",     icon: TrendingUp },
+]
+
+const trackingNav = [
+  { href: "/history",       label: "History",      icon: History },
+  { href: "/trades",        label: "Trades",       icon: ArrowLeftRight },
+  { href: "/contributions", label: "Contributions",icon: PiggyBank },
+  { href: "/dividends",     label: "Dividends",    icon: Coins },
+  { href: "/ytd",           label: "YTD / P&L",    icon: CalendarDays },
+]
+
+const toolsNav = [
+  { href: "/holdings",      label: "Holdings",     icon: PieChart },
+  { href: "/rebalance",     label: "Rebalance",    icon: GitCompare },
+  { href: "/risk",          label: "Risk",         icon: BarChart3 },
+  { href: "/watchlist",     label: "Watchlist",    icon: Star },
 ]
 
 interface SidebarProps {
   open: boolean
   onClose: () => void
+  isAdmin?: boolean
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+function NavLink({ href, label, icon: Icon, onClick }: { href: string; label: string; icon: React.ElementType; onClick: () => void }) {
   const pathname = usePathname()
+  const active = pathname === href
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+        active
+          ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+      )}
+    >
+      {active && (
+        <span className="absolute left-0 inset-y-1.5 w-0.5 rounded-full bg-indigo-500" />
+      )}
+      <Icon className={cn(
+        "h-4 w-4 shrink-0 transition-colors",
+        active ? "text-indigo-600 dark:text-indigo-400" : ""
+      )} />
+      {label}
+    </Link>
+  )
+}
 
+function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-0.5">
+      <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">{label}</p>
+      {children}
+    </div>
+  )
+}
+
+export function Sidebar({ open, onClose, isAdmin = false }: SidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -74,32 +130,21 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-0.5 p-3 pt-4">
-          {nav.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={onClose}
-                className={cn(
-                  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
-                  active
-                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-                    : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                )}
-              >
-                {active && (
-                  <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-indigo-500" />
-                )}
-                <Icon className={cn(
-                  "h-4 w-4 shrink-0 transition-colors",
-                  active ? "text-indigo-600 dark:text-indigo-400" : ""
-                )} />
-                {label}
-              </Link>
-            )
-          })}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          <NavGroup label="Core">
+            {mainNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          </NavGroup>
+          <NavGroup label="Tracking">
+            {trackingNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          </NavGroup>
+          <NavGroup label="Tools">
+            {toolsNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          </NavGroup>
+          <NavGroup label="Account">
+            <NavLink href="/export" label="Export" icon={Download} onClick={onClose} />
+            <NavLink href="/settings" label="Settings" icon={Settings} onClick={onClose} />
+            {isAdmin && <NavLink href="/admin/users" label="Users" icon={Users} onClick={onClose} />}
+          </NavGroup>
         </nav>
 
         {/* Footer */}

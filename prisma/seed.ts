@@ -277,8 +277,14 @@ async function main() {
 
   // Clear all data
   await prisma.snapshot.deleteMany()
+  await prisma.dividend.deleteMany()
   await prisma.holding.deleteMany()
+  await prisma.trade.deleteMany()
+  await prisma.contributionRecord.deleteMany()
+  await prisma.watchlistItem.deleteMany()
   await prisma.governanceRule.deleteMany()
+  await prisma.behaviourLog.deleteMany()
+  await prisma.passwordResetToken.deleteMany()
   await prisma.user.deleteMany()
 
   // Create admin user
@@ -289,6 +295,9 @@ async function main() {
       name: "Portfolio Owner",
       passwordHash,
       role: "admin",
+      monthlyContribution: 3000,
+      annualLumpSum: 20000,
+      contributionGrowthRate: 0.05,
     },
   })
   console.log(`  ✓ Admin user: admin@atlas.local`)

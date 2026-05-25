@@ -8,6 +8,8 @@ import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { HoldingRow } from "@/components/portfolio/holding-row"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
+import { AutoRefresh } from "@/components/auto-refresh"
+import { DriftNotifications } from "@/components/drift-notifications"
 
 // Hard drift thresholds — only overweight triggers for positions without a low bound (e.g. BTC is optional)
 const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
@@ -87,7 +89,28 @@ export default async function Portfolio() {
   }))
 
   return (
-    <Shell title="Portfolio Architecture" subtitle="Holdings, target allocations, and hard caps" userName={session.name}>
+    <Shell title="Portfolio Architecture" subtitle="Holdings, target allocations, and hard caps" userName={session.name} isAdmin={session.role === "admin"}>
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <AutoRefresh intervalHours={24} />
+        <DriftNotifications alerts={[
+          ...holdings.filter(h => h.isHard).map(h => ({
+            ticker: h.ticker,
+            severity: "hard" as const,
+            direction: h.drift > 0 ? "over" as const : "under" as const,
+            actualPct: h.actualPct,
+            targetPct: h.targetPct,
+          })),
+          ...holdings.filter(h => h.isSoft).map(h => ({
+            ticker: h.ticker,
+            severity: "soft" as const,
+            direction: h.drift > 0 ? "over" as const : "under" as const,
+            actualPct: h.actualPct,
+            targetPct: h.targetPct,
+          })),
+        ]} />
+      </div>
 
       {/* Stale data warning */}
       {daysSinceUpdate !== null && daysSinceUpdate >= 3 && (

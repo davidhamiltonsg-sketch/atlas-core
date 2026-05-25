@@ -28,7 +28,7 @@ export default async function AdminUsers() {
   const users = await getUsers()
 
   return (
-    <Shell title="User Management" subtitle="Create and manage portfolio users" userName={session.name}>
+    <Shell title="User Management" subtitle="Create and manage portfolio users" userName={session.name} isAdmin={session.role === "admin"}>
       <AdminUsersClient users={users} currentUserId={session.userId} />
     </Shell>
   )
