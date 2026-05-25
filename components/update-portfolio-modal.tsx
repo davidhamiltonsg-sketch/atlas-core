@@ -71,12 +71,12 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
       const base64 = dataUrl.split(",")[1]
       const mimeType = file.type
 
-      try {
-        const rows = await extractFromScreenshot(base64, mimeType)
-        setExtractedRows(rows)
+      const result = await extractFromScreenshot(base64, mimeType)
+      if (result.success) {
+        setExtractedRows(result.data)
         setScreenshotState("preview")
-      } catch (err) {
-        setExtractError(err instanceof Error ? err.message : "Failed to extract data from screenshot")
+      } else {
+        setExtractError(result.error)
         setScreenshotState("error")
       }
     }

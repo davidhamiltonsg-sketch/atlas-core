@@ -135,34 +135,42 @@ export async function refreshLivePrices(): Promise<{ success: boolean; updated?:
   return { success: true, updated }
 }
 
+type ExtractResult =
+  | { success: true; data: Array<{ ticker: string; units: number; price: number; value: number }> }
+  | { success: false; error: string }
+
 // Screenshot OCR: extract holdings data from an IBKR screenshot using Claude vision
 export async function extractFromScreenshot(
   imageBase64: string,
   mimeType: string
-): Promise<Array<{ ticker: string; units: number; price: number; value: number }>> {
-  const session = await getSession()
-  if (!session) throw new Error("Unauthenticated")
+): Promise<ExtractResult> {
+  try {
+    const session = await getSession()
+    if (!session) return { success: false, error: "Not authenticated" }
 
-  const client = new Anthropic()
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) return { success: false, error: "ANTHROPIC_API_KEY is not configured on this server" }
 
-  const message = await client.messages.create({
-    model: "claude-opus-4-6",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-              data: imageBase64,
+    const client = new Anthropic({ apiKey })
+
+    const message = await client.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+                data: imageBase64,
+              },
             },
-          },
-          {
-            type: "text",
-            text: `This is a brokerage (IBKR) portfolio screenshot. Extract the holdings data.
+            {
+              type: "text",
+              text: `This is a brokerage (IBKR) portfolio screenshot. Extract the holdings data.
 
 For each holding visible, return a JSON array with objects containing:
 - ticker: the stock/ETF ticker symbol (string)
@@ -172,15 +180,20 @@ For each holding visible, return a JSON array with objects containing:
 
 Only include ETF/stock holdings, not cash. Return ONLY a valid JSON array, no explanation.
 Example: [{"ticker":"VT","units":428,"price":155.52,"value":85209.84}]`,
-          },
-        ],
-      },
-    ],
-  })
+            },
+          ],
+        },
+      ],
+    })
 
-  const text = message.content[0].type === "text" ? message.content[0].text : ""
-  const jsonMatch = text.match(/\[[\s\S]*\]/)
-  if (!jsonMatch) throw new Error("Could not parse holdings from screenshot")
+    const text = message.content[0].type === "text" ? message.content[0].text : ""
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (!jsonMatch) return { success: false, error: "Claude could not find holdings data in the screenshot" }
 
-  return JSON.parse(jsonMatch[0])
+    const data = JSON.parse(jsonMatch[0])
+    return { success: true, data }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error"
+    return { success: false, error: msg }
+  }
 }
