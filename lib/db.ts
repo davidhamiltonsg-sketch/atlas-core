@@ -1,13 +1,16 @@
 import { PrismaClient } from "@prisma/client"
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
+import Database from "better-sqlite3"
 import path from "path"
 
 function createPrismaClient() {
   const rawUrl = process.env.DATABASE_URL ?? "file:prisma/atlas.db"
-  // Strip the "file:" prefix and resolve to an absolute path
+  // Strip "file:" prefix if present, then resolve to absolute path
   const relativePath = rawUrl.startsWith("file:") ? rawUrl.slice(5) : rawUrl
   const absolutePath = path.resolve(process.cwd(), relativePath)
-  const adapter = new PrismaBetterSqlite3({ url: `file:${absolutePath}` })
+  // Pass the Database instance directly to avoid URL parsing issues on Windows
+  const sqlite = new Database(absolutePath)
+  const adapter = new PrismaBetterSqlite3(sqlite)
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
