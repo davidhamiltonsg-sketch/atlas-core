@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client"
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
-import path from "path"
+import { PrismaLibSql } from "@prisma/adapter-libsql"
 import bcrypt from "bcryptjs"
+import "dotenv/config"
 
-const dbPath = path.resolve(process.cwd(), "prisma/atlas.db")
-const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` })
+const url = process.env.DATABASE_URL
+const authToken = process.env.DATABASE_AUTH_TOKEN || undefined
+if (!url) throw new Error("DATABASE_URL is not set")
+const adapter = new PrismaLibSql({ url, authToken })
 const prisma = new PrismaClient({ adapter })
 
 // v5.2 target allocations
