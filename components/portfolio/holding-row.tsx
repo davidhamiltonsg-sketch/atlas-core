@@ -33,13 +33,26 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
   const [isPending, startTransition] = useTransition()
 
   const DriftIcon = h.drift > 0.05 ? TrendingUp : h.drift < -0.05 ? TrendingDown : Minus
-  const driftColor = h.overCap ? "text-red-500" : !h.withinBand ? "text-amber-500" : "text-green-500"
+  // Color system: hard breach = red (severity), soft = direction-aware (yellow/orange), healthy = green
+  const under = h.drift < 0
+  const driftColor = h.isHard
+    ? "text-red-500"
+    : h.isSoft
+    ? (under ? "text-yellow-400" : "text-orange-500")
+    : "text-green-500"
   const StatusIcon = h.isHard ? XCircle : h.isSoft ? AlertTriangle : CheckCircle2
-  const statusIconCls = h.isHard ? "text-red-500" : h.isSoft ? "text-amber-500" : "text-green-500"
+  const statusIconCls = driftColor
+  const pulseCls = h.isHard
+    ? "pulse-red"
+    : h.isSoft
+    ? (under ? "pulse-yellow" : "pulse-orange")
+    : ""
   const rowAccent = h.isHard
     ? "border-l-4 border-red-500 bg-red-500/[0.02]"
     : h.isSoft
-    ? "border-l-[3px] border-amber-400 bg-amber-500/[0.02]"
+    ? under
+      ? "border-l-[3px] border-yellow-400 bg-yellow-400/[0.02]"
+      : "border-l-[3px] border-orange-500 bg-orange-500/[0.02]"
     : "border-l-4 border-transparent"
 
   function handleSave() {
@@ -192,7 +205,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
                 ? `Soft drift: ${h.ticker} is at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Redirect contributions over the next 2–3 months.`
                 : `${h.ticker} is within its tolerance band at ${h.actualPct.toFixed(1)}% (target ${h.targetPct}%). No action needed.`
             }>
-              <StatusIcon className={`h-4 w-4 ${statusIconCls} ${h.isHard ? "pulse-red" : h.isSoft ? "pulse-amber" : ""} cursor-help`} />
+              <StatusIcon className={`h-4 w-4 ${statusIconCls} ${pulseCls} cursor-help`} />
             </div>
           </>
         )}
@@ -251,7 +264,9 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
         <div className={`col-span-2 md:col-span-7 mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed ${
           h.isHard
             ? "bg-red-500/[0.08] text-red-700 dark:text-red-300 border border-red-500/20"
-            : "bg-amber-400/[0.08] text-amber-700 dark:text-amber-300 border border-amber-400/20"
+            : under
+              ? "bg-yellow-400/[0.08] text-yellow-700 dark:text-yellow-300 border border-yellow-400/20"
+              : "bg-orange-500/[0.08] text-orange-700 dark:text-orange-300 border border-orange-500/20"
         }`}>
           <span className="font-bold mr-1">{h.isHard ? "⚡ Action required:" : "↗ Recommended:"}</span>
           {h.isHard

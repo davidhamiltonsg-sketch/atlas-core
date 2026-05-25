@@ -1,6 +1,6 @@
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
-import { ShieldCheck, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 
@@ -96,17 +96,29 @@ export default async function Governance() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Total Rules</p>
-          <p className="mt-1 text-xl font-semibold">{totalRules}</p>
+        <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Total Rules</span>
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <p className="text-2xl font-black tabular-nums">{totalRules}</p>
+          <p className="text-[11px] text-muted-foreground">Governance framework</p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Active</p>
-          <p className="mt-1 text-xl font-semibold text-green-500">{activeRules}</p>
+        <div className="rounded-xl border border-green-500/20 bg-card p-4 card-elevated flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Active</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+          </div>
+          <p className="text-2xl font-black tabular-nums text-green-500">{activeRules}</p>
+          <p className="text-[11px] text-muted-foreground">Rules enforced</p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Inactive</p>
-          <p className="mt-1 text-xl font-semibold text-muted-foreground">{totalRules - activeRules}</p>
+        <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Inactive</span>
+            <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <p className="text-2xl font-black tabular-nums text-muted-foreground">{totalRules - activeRules}</p>
+          <p className="text-[11px] text-muted-foreground">Not enforced</p>
         </div>
       </div>
 
@@ -261,36 +273,48 @@ export default async function Governance() {
         </div>
       </div>
 
-      {/* Response cards */}
+      {/* Response protocol */}
       <div className="grid gap-3 sm:grid-cols-3 mb-6">
         {[
           {
-            label: "Healthy — No Action",
-            text: "All positions within range. Continue monthly contribution schedule unchanged.",
+            label: "Healthy",
+            sub: "No action required",
+            text: "All positions within band. Continue monthly contribution schedule unchanged.",
             icon: CheckCircle2,
             color: "text-green-500",
-            bg: "bg-green-500/10",
+            border: "border-green-500/20",
+            bg: "bg-green-500/[0.06]",
+            pill: "bg-green-500/10 text-green-600 dark:text-green-400",
           },
           {
-            label: "Soft Trigger — Redirect",
-            text: "Redirect new contributions to underweight positions. No selling required.",
+            label: "Soft Trigger",
+            sub: "Redirect contributions",
+            text: "Redirect new capital to underweight positions for 2–3 months. No selling required.",
             icon: AlertTriangle,
             color: "text-amber-500",
-            bg: "bg-amber-500/10",
+            border: "border-amber-500/20",
+            bg: "bg-amber-500/[0.06]",
+            pill: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
           },
           {
-            label: "Hard Trigger — Review",
-            text: "Redirect contributions and selectively trim if rebalancing is necessary after review.",
-            icon: AlertTriangle,
+            label: "Hard Trigger",
+            sub: "Rebalancing review required",
+            text: "Halt buys on the breaching position. Assess selective trim at the next dealing window.",
+            icon: XCircle,
             color: "text-red-500",
-            bg: "bg-red-500/10",
+            border: "border-red-500/20",
+            bg: "bg-red-500/[0.06]",
+            pill: "bg-red-500/10 text-red-600 dark:text-red-400",
           },
-        ].map(({ label, text, icon: Icon, color, bg }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-4">
-            <div className={`flex h-7 w-7 items-center justify-center rounded-full ${bg} mb-3`}>
-              <Icon className={`h-3.5 w-3.5 ${color}`} />
+        ].map(({ label, sub, text, icon: Icon, color, border, bg, pill }) => (
+          <div key={label} className={`rounded-xl border ${border} ${bg} p-4`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Icon className={`h-4 w-4 ${color}`} />
+              <div>
+                <p className="text-xs font-bold leading-none">{label}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
+              </div>
             </div>
-            <p className="text-xs font-semibold mb-1">{label}</p>
             <p className="text-xs text-muted-foreground leading-relaxed">{text}</p>
           </div>
         ))}

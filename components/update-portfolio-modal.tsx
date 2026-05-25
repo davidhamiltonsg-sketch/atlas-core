@@ -22,10 +22,11 @@ interface ExtractedRow {
 interface UpdatePortfolioModalProps {
   holdings: Holding[]
   onClose: () => void
+  defaultMode?: "choose" | "manual" | "screenshot"
 }
 
-export function UpdatePortfolioModal({ holdings, onClose }: UpdatePortfolioModalProps) {
-  const [mode, setMode] = useState<"choose" | "manual" | "screenshot">("choose")
+export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose" }: UpdatePortfolioModalProps) {
+  const [mode, setMode] = useState<"choose" | "manual" | "screenshot">(defaultMode)
   const [manualValues, setManualValues] = useState<Record<string, { units: string; price: string }>>(
     Object.fromEntries(holdings.map((h) => [h.id, { units: String(h.latestUnits), price: String(h.latestPrice) }]))
   )

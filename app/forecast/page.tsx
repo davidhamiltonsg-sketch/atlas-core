@@ -169,14 +169,15 @@ export default async function Forecast() {
       {/* Assumptions */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Monthly Contribution", value: formatCurrency(MONTHLY_CONTRIBUTION, "SGD") },
-          { label: "Annual Lump Sum",       value: formatCurrency(ANNUAL_LUMP_SUM, "SGD") },
-          { label: "Contribution Growth",   value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.` },
-          { label: "Horizon",               value: "2045 (19 yr)" },
-        ].map(({ label, value }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="mt-1 text-sm font-semibold">{value}</p>
+          { label: "Monthly Contribution", value: `$${MONTHLY_CONTRIBUTION.toLocaleString()}`, sub: "USD/month" },
+          { label: "Annual Lump Sum",       value: `$${ANNUAL_LUMP_SUM.toLocaleString()}`, sub: "USD/year" },
+          { label: "Contribution Growth",   value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`, sub: "Annual increase" },
+          { label: "Horizon",               value: "2045", sub: "19 years remaining" },
+        ].map(({ label, value, sub }) => (
+          <div key={label} className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-1.5">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="text-lg font-black tabular-nums">{value}</p>
+            <p className="text-[11px] text-muted-foreground">{sub}</p>
           </div>
         ))}
       </div>
@@ -249,7 +250,7 @@ export default async function Forecast() {
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold">Projection Summary</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Starting {fmtM(currentValue)} · {formatCurrency(MONTHLY_CONTRIBUTION, "SGD")}/mo + {formatCurrency(ANNUAL_LUMP_SUM, "SGD")}/yr · contributions +{(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.
+            Starting {fmtM(currentValue)} · ${MONTHLY_CONTRIBUTION.toLocaleString()} USD/mo + ${ANNUAL_LUMP_SUM.toLocaleString()} USD/yr · contributions +{(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.
           </p>
         </div>
         <div className="overflow-x-auto">

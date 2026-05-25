@@ -14,9 +14,11 @@ interface Holding {
 
 interface PortfolioUpdateButtonProps {
   holdings: Holding[]
+  defaultMode?: "choose" | "manual" | "screenshot"
+  label?: string
 }
 
-export function PortfolioUpdateButton({ holdings }: PortfolioUpdateButtonProps) {
+export function PortfolioUpdateButton({ holdings, defaultMode = "choose", label = "Update Values" }: PortfolioUpdateButtonProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -26,11 +28,11 @@ export function PortfolioUpdateButton({ holdings }: PortfolioUpdateButtonProps) 
         className="flex items-center gap-1.5 rounded-lg border border-border bg-card hover:bg-accent px-3 py-1.5 text-xs font-medium text-foreground transition-colors"
       >
         <RefreshCw className="h-3.5 w-3.5" />
-        Update Values
+        {label}
       </button>
 
       {open && (
-        <UpdatePortfolioModal holdings={holdings} onClose={() => setOpen(false)} />
+        <UpdatePortfolioModal holdings={holdings} onClose={() => setOpen(false)} defaultMode={defaultMode} />
       )}
     </>
   )

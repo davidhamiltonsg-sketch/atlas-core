@@ -454,7 +454,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 2. EXECUTIVE SUMMARY ─────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-avoid">
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before print-break-avoid">
         <SectionHeader
           icon={FileText}
           title="What's Happening — Summary"
@@ -484,7 +484,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 3. PRIORITY ACTION PLAN ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-avoid">
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before print-break-avoid">
         <SectionHeader
           icon={Zap}
           title="What To Do — Action Plan"
@@ -523,7 +523,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 4. ALLOCATION + DONUT ─────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px] mb-6">
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px] mb-6 print-break-before">
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <SectionHeader
             icon={BarChart3}
@@ -685,7 +685,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 6. GEOGRAPHIC DISTRIBUTION ───────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before">
         <SectionHeader
           icon={Globe}
           title="Where in the World Is Your Money?"
@@ -855,7 +855,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 8. COMPANY EXPOSURE ──────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before">
         <SectionHeader
           icon={BarChart3}
           title="How Much of Each Company Do You Own?"
@@ -868,7 +868,7 @@ export default async function Reports() {
               : undefined
           }
         />
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 print-chart-wrap">
           <ExposureBarChart data={companyBarData} />
         </div>
         {/* Detail table */}
@@ -912,7 +912,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 9. SECTOR DEPENDENCY ─────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before">
         <SectionHeader
           icon={Activity}
           title="Are You Overexposed to Any Theme?"
@@ -925,7 +925,7 @@ export default async function Reports() {
               : undefined
           }
         />
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 print-chart-wrap">
           <ExposureBarChart data={sectorBarData} />
         </div>
         <div className="px-5 pb-5 space-y-3">
@@ -1096,7 +1096,7 @@ export default async function Reports() {
       </div>
 
       {/* ── 12. GOVERNANCE SUMMARY CARDS ─────────────────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-3 mb-6 print-break-avoid">
+      <div className="grid gap-3 sm:grid-cols-3 mb-6 print-break-before print-break-avoid">
         {[
           {
             title: "Contribution Routing",

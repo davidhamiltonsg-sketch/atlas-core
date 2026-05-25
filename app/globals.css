@@ -111,6 +111,29 @@ body {
   animation: ring-amber 2.4s ease-out infinite;
 }
 
+/* Yellow pulse (soft underweight) */
+@keyframes ring-yellow {
+  0%   { box-shadow: 0 0 0 0   rgb(250 204 21 / 0.5); }
+  70%  { box-shadow: 0 0 0 7px rgb(250 204 21 / 0);  }
+  100% { box-shadow: 0 0 0 0   rgb(250 204 21 / 0);  }
+}
+.pulse-yellow {
+  border-radius: 99px;
+  animation: ring-yellow 2.4s ease-out infinite;
+}
+
+/* Orange pulse (soft overweight) */
+@keyframes ring-orange {
+  0%   { box-shadow: 0 0 0 0   rgb(249 115 22 / 0.45); }
+  70%  { box-shadow: 0 0 0 7px rgb(249 115 22 / 0);   }
+  100% { box-shadow: 0 0 0 0   rgb(249 115 22 / 0);   }
+}
+.pulse-orange {
+  border-radius: 99px;
+  animation: ring-orange 2.4s ease-out infinite;
+}
+
+
 /* ─── Health Gauge animations ─────────────────────────────────────────────── */
 
 /* Green — gentle breathing glow */
@@ -297,13 +320,14 @@ body {
   }
 
   /* Page breaks */
-  .print-break-before { page-break-before: always; break-before: page; }
+  .print-break-before { page-break-before: always !important; break-before: page !important; }
   .print-break-avoid  { page-break-inside: avoid; break-inside: avoid; }
+  .print-new-section  { page-break-before: always !important; break-before: page !important; }
 
-  /* Cards */
+  /* Cards — no border in print */
   .rounded-xl, .rounded-lg {
-    border-radius: 4pt !important;
-    border: 0.5pt solid #ccc !important;
+    border-radius: 0 !important;
+    border: none !important;
     box-shadow: none !important;
   }
 
@@ -321,8 +345,9 @@ body {
   }
   .recharts-responsive-container {
     width: 100% !important;
-    height: 220px !important;
-    min-height: 180px;
+    height: 180px !important;
+    min-height: 140px;
+    max-height: 180px !important;
   }
 
   /* Hide charts that don't render well in print */
@@ -338,15 +363,37 @@ body {
   }
 
   /* Typography */
-  h1 { font-size: 18pt; font-weight: 900; }
-  h2 { font-size: 12pt; font-weight: 700; }
-  h3 { font-size: 10pt; font-weight: 600; }
-  p, td, th, span, li { font-size: 9pt; }
+  h1 { font-size: 16pt; font-weight: 900; }
+  h2 { font-size: 11pt; font-weight: 700; }
+  h3 { font-size: 9pt; font-weight: 600; }
+  p, td, th, span, li { font-size: 8pt; }
 
-  /* Tables */
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 0.4pt solid #ccc; padding: 3pt 5pt; }
-  thead { background: #f0f0f0 !important; }
+  /* Tables — prevent horizontal overflow */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+    overflow: hidden;
+    page-break-inside: auto;
+  }
+  th, td {
+    border: 0.4pt solid #ccc;
+    padding: 2pt 4pt;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 0;  /* forces table-layout:fixed to honour column widths */
+  }
+  thead { background: #f0f0f0 !important; display: table-header-group; }
+  tr { page-break-inside: avoid; }
+
+  /* Constrain bar charts and exposure charts */
+  .print-chart-wrap {
+    max-height: 200px !important;
+    overflow: hidden !important;
+    page-break-inside: avoid;
+  }
 
   /* Remove glows */
   .glow-red, .glow-amber, .glow-green, .glow-navy { box-shadow: none !important; }

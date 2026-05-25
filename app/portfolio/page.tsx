@@ -9,6 +9,15 @@ import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { HoldingRow } from "@/components/portfolio/holding-row"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
 
+// Hard drift thresholds — only overweight triggers for positions without a low bound (e.g. BTC is optional)
+const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
+  VT:   { low: 40, high: 62 },
+  QQQM: { low: 16, high: 31 },
+  SMH:  { high: 15 },
+  VWO:  { low: 4,  high: 12 },
+  BTC:  { high: 8  },  // no low — underweight BTC is fine (optional position)
+}
+
 async function getPortfolioData(userId: string) {
   const holdings = await db.holding.findMany({
     where: { userId },
@@ -19,29 +28,34 @@ async function getPortfolioData(userId: string) {
   })
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
+  const hasBalance = totalValue > 0
 
   return {
     holdings: holdings.map((h) => {
       const latest = h.snapshots[0]
       const value = latest?.value ?? 0
-      const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
-      const drift = actualPct - h.targetPct
-      const withinBand = Math.abs(drift) <= h.toleranceBand
-      const overCap = h.hardCapPct !== null && actualPct > h.hardCapPct
-      const isHard = overCap || Math.abs(drift) > h.toleranceBand * 2
-      const isSoft = !isHard && !withinBand
-      // Sparkline: snapshots are desc (newest first), reverse gives oldest→newest for chart
+      const actualPct = hasBalance ? (value / totalValue) * 100 : 0
+      const drift = hasBalance ? actualPct - h.targetPct : 0
+      const withinBand = !hasBalance || Math.abs(drift) <= h.toleranceBand
+      const overCap = hasBalance && h.hardCapPct !== null && actualPct > h.hardCapPct
+      // Use HARD_THRESHOLDS for consistent logic: only flag overweight if no low bound
+      const ht = HARD_THRESHOLDS[h.ticker]
+      const isHard = hasBalance && (overCap ||
+        (ht?.low !== undefined && actualPct < ht.low) ||
+        (ht !== undefined && actualPct > ht.high))
+      const isSoft = hasBalance && !isHard && !withinBand
       const sparklineValues = h.snapshots.map(s => s.value)
       return { ...h, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues }
     }),
     totalValue,
+    hasBalance,
   }
 }
 
 export default async function Portfolio() {
   const session = await getSession()
   if (!session) redirect("/login")
-  const { holdings, totalValue } = await getPortfolioData(session.userId)
+  const { holdings, totalValue, hasBalance } = await getPortfolioData(session.userId)
 
   const snapshotDate = holdings[0]?.latestSnapshot
     ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
@@ -90,8 +104,23 @@ export default async function Portfolio() {
         </div>
       )}
 
-      {/* Hard breach banner */}
-      {hardBreaches > 0 && (() => {
+      {/* New user — no balance yet */}
+      {!hasBalance && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] px-5 py-4">
+          <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-primary/15">
+            <Activity className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-primary">Welcome — enter your first snapshot to get started</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Target allocations are shown below. Once you add your holdings, drift alerts and instructions will appear automatically.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Hard breach banner — only when portfolio has balance */}
+      {hasBalance && hardBreaches > 0 && (() => {
         const firstHard = holdings.find(h => h.isHard)
         return (
           <a href={firstHard ? `#holding-${firstHard.ticker}` : "#holdings"} className="mb-4 flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 dark:bg-red-500/[0.12] px-5 py-3.5 glow-red flash-red cursor-pointer hover:bg-red-500/[0.16] transition-colors group">
@@ -110,7 +139,7 @@ export default async function Portfolio() {
       })()}
 
       {/* Soft breach banner */}
-      {softBreaches > 0 && hardBreaches === 0 && (() => {
+      {hasBalance && softBreaches > 0 && hardBreaches === 0 && (() => {
         const firstSoft = holdings.find(h => h.isSoft)
         return (
           <a href={firstSoft ? `#holding-${firstSoft.ticker}` : "#holdings"} className="mb-4 flex items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 dark:bg-amber-400/[0.08] px-5 py-3.5 glow-amber cursor-pointer hover:bg-amber-400/[0.14] transition-colors group">
@@ -135,16 +164,21 @@ export default async function Portfolio() {
 
           {/* KPI row */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
+            {(hasBalance ? [
               { label: "Total Value", value: formatCurrency(totalValue, "SGD"), sub: "SGD · IBKR", accent: "" },
               { label: "Holdings", value: String(holdings.length), sub: "Active positions", accent: "" },
               { label: "Within Tolerance", value: `${withinCount}/${holdings.length}`, sub: "Bands respected", accent: withinCount === holdings.length ? "text-green-500" : "text-amber-500" },
               { label: "Hard Breaches", value: String(hardBreaches), sub: hardBreaches === 0 ? "None — all clear" : "Immediate review", accent: hardBreaches > 0 ? "text-red-500" : "text-green-500" },
-            ].map(({ label, value, sub, accent }) => (
-              <div key={label} className="rounded-xl border border-border bg-card p-4 card-elevated">
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className={`mt-1 text-xl font-bold tabular-nums ${accent}`}>{value}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
+            ] : [
+              { label: "Holdings", value: String(holdings.length), sub: "Target allocations set", accent: "" },
+              { label: "Largest Target", value: `${Math.max(...holdings.map(h => h.targetPct))}%`, sub: holdings.reduce((m, h) => h.targetPct > m.targetPct ? h : m, holdings[0])?.ticker ?? "—", accent: "" },
+              { label: "Hard Caps Defined", value: String(holdings.filter(h => h.hardCapPct !== null).length), sub: "Governance guardrails", accent: "text-green-500" },
+              { label: "Status", value: "Ready", sub: "Add first snapshot to begin", accent: "text-primary" },
+            ]).map(({ label, value, sub, accent }) => (
+              <div key={label} className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
+                <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                <p className={`text-2xl font-black tabular-nums ${accent}`}>{value}</p>
+                <p className="text-[11px] text-muted-foreground">{sub}</p>
               </div>
             ))}
           </div>
@@ -165,13 +199,17 @@ export default async function Portfolio() {
                   <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                     Click the pencil icon on any row below to edit that holding's units and price directly. Or use the button to update all holdings at once.
                   </p>
-                  <PortfolioUpdateButton holdings={holdings.map((h) => ({
-                    id: h.id,
-                    ticker: h.ticker,
-                    name: h.name,
-                    latestUnits: h.latestSnapshot?.units ?? 0,
-                    latestPrice: h.latestSnapshot?.price ?? 0,
-                  }))} />
+                  <PortfolioUpdateButton
+                    defaultMode="manual"
+                    label="Open Manual Entry"
+                    holdings={holdings.map((h) => ({
+                      id: h.id,
+                      ticker: h.ticker,
+                      name: h.name,
+                      latestUnits: h.latestSnapshot?.units ?? 0,
+                      latestPrice: h.latestSnapshot?.price ?? 0,
+                    }))}
+                  />
                 </div>
               </div>
               <div className="px-5 py-4 flex items-start gap-3">
@@ -183,13 +221,17 @@ export default async function Portfolio() {
                   <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                     Take a screenshot of your IBKR portfolio and upload it — Atlas reads the numbers automatically using AI and fills in all your holdings.
                   </p>
-                  <PortfolioUpdateButton holdings={holdings.map((h) => ({
-                    id: h.id,
-                    ticker: h.ticker,
-                    name: h.name,
-                    latestUnits: h.latestSnapshot?.units ?? 0,
-                    latestPrice: h.latestSnapshot?.price ?? 0,
-                  }))} />
+                  <PortfolioUpdateButton
+                    defaultMode="screenshot"
+                    label="Upload Screenshot"
+                    holdings={holdings.map((h) => ({
+                      id: h.id,
+                      ticker: h.ticker,
+                      name: h.name,
+                      latestUnits: h.latestSnapshot?.units ?? 0,
+                      latestPrice: h.latestSnapshot?.price ?? 0,
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -310,7 +352,11 @@ export default async function Portfolio() {
           {/* Per-holding drift summary */}
           <div className="mt-5 space-y-2.5 border-t border-border pt-4">
             {holdings.map((h) => {
-              const driftColor = h.isHard ? "#ef4444" : h.isSoft ? "#f59e0b" : "#22c55e"
+              const driftColor = h.isHard
+                ? "#ef4444"                                 // red-500 — hard breach always red
+                : h.isSoft
+                ? (h.drift < 0 ? "#facc15" : "#f97316")   // yellow-400 / orange-500
+                : "#22c55e"                                 // green-500
               const pct = Math.min(100, (h.actualPct / (h.hardCapPct ?? 100)) * 100)
               return (
                 <div key={h.ticker}>

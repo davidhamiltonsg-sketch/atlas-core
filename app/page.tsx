@@ -1,15 +1,16 @@
 import { Shell } from "@/components/shell"
-import { TrendingUp, ShieldCheck, AlertTriangle, Activity, CheckCircle2, XCircle, Zap } from "lucide-react"
+import { TrendingUp, ShieldCheck, AlertTriangle, Activity, XCircle } from "lucide-react"
 import { db } from "@/lib/db"
-import { formatCurrency, formatPercent } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { HealthGauge } from "@/components/charts/health-gauge"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { computePortfolioHealth } from "@/lib/health"
+import { ExecutionPlan } from "@/components/dashboard/execution-plan"
 
-const MONTHLY_CONTRIBUTION = 3000
+const MONTHLY_CONTRIBUTION = 3000   // USD — used in 2045 forecast + ExecutionPlan default
 const ANNUAL_LUMP_SUM = 20000
 const CONTRIBUTION_GROWTH_RATE = 0.05
 
@@ -42,38 +43,7 @@ const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
   BTC:  { high: 8  },
 }
 
-const MONTHLY_ALLOC: Record<string, number> = {
-  VT: 1560, QQQM: 690, SMH: 300, VWO: 240, BTC: 210,
-}
-const TOTAL_MONTHLY = 3000
-
 type ActionStatus = "healthy" | "soft" | "hard"
-
-function calculateSuggestedAllocations(
-  positions: Array<{ ticker: string; actualPct: number; targetPct: number; status: ActionStatus }>
-): Record<string, number> {
-  const isOverweight = (p: { actualPct: number; targetPct: number; status: ActionStatus }) =>
-    p.actualPct > p.targetPct && p.status !== "healthy"
-
-  const active = positions.filter(p => !isOverweight(p))
-  const result: Record<string, number> = {}
-  positions.forEach(p => { result[p.ticker] = 0 })
-
-  if (active.length === 0) return result
-
-  const activeTotalTarget = active.reduce((sum, p) => sum + p.targetPct, 0)
-  const rounded = active.map(p => ({
-    ticker: p.ticker,
-    amount: Math.round(((p.targetPct / activeTotalTarget) * TOTAL_MONTHLY) / 10) * 10,
-  }))
-  const diff = TOTAL_MONTHLY - rounded.reduce((s, a) => s + a.amount, 0)
-  if (diff !== 0 && rounded.length > 0) {
-    const maxIdx = rounded.reduce((mi, a, i, arr) => a.amount > arr[mi].amount ? i : mi, 0)
-    rounded[maxIdx].amount += diff
-  }
-  rounded.forEach(a => { result[a.ticker] = a.amount })
-  return result
-}
 
 async function getDashboardData(userId: string) {
   const holdings = await db.holding.findMany({
@@ -96,6 +66,7 @@ async function getDashboardData(userId: string) {
   }
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
+  const hasBalance = totalValue > 0
   const prevTotalValue = historyPoints.length >= 2 ? historyPoints[historyPoints.length - 2].value : null
   const valueChange = prevTotalValue !== null ? totalValue - prevTotalValue : null
 
@@ -107,10 +78,11 @@ async function getDashboardData(userId: string) {
     const overCap = h.hardCapPct !== null && actualPct > h.hardCapPct
 
     const ht = HARD_THRESHOLDS[h.ticker]
-    const isHardDrift = overCap ||
+    // When portfolio has no balance yet, suppress all drift alerts
+    const isHardDrift = totalValue > 0 && (overCap ||
       (ht?.low !== undefined && actualPct < ht.low) ||
-      (ht !== undefined && actualPct > ht.high)
-    const isSoftDrift = !isHardDrift && absDrift > h.toleranceBand
+      (ht !== undefined && actualPct > ht.high))
+    const isSoftDrift = totalValue > 0 && !isHardDrift && absDrift > h.toleranceBand
 
     let status: ActionStatus
     let instruction: string
@@ -133,32 +105,15 @@ async function getDashboardData(userId: string) {
     return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction }
   })
 
-  const suggested = calculateSuggestedAllocations(positions)
   const hasAnyAlert = positions.some(p => p.status !== "healthy")
 
-  // Project portfolio state AFTER deploying the suggested monthly allocation
-  const newTotalValue = totalValue + TOTAL_MONTHLY
-
-  const positionsWithAlloc = positions.map(p => {
-    const amount = suggested[p.ticker] ?? 0
-    const standard = MONTHLY_ALLOC[p.ticker] ?? 0
-    const tag: "standard" | "boosted" | "zeroed" =
-      amount === 0 ? "zeroed" : amount > standard ? "boosted" : "standard"
-
-    const projectedValue = p.value + amount
-    const projectedPct   = newTotalValue > 0 ? (projectedValue / newTotalValue) * 100 : 0
-    const driftBefore    = Math.abs(p.driftPct)
-    const driftAfter     = Math.abs(projectedPct - p.targetPct)
-    const driftImprovement = driftBefore - driftAfter   // positive = getting closer to target
-
-    return { ...p, suggestedAmount: amount, allocationTag: tag, projectedPct, driftImprovement }
-  })
-
+  // Sort by severity for display
   const order: Record<ActionStatus, number> = { hard: 0, soft: 1, healthy: 2 }
-  positionsWithAlloc.sort((a, b) => order[a.status] - order[b.status])
+  positions.sort((a, b) => order[a.status] - order[b.status])
 
   const driftAlerts   = positions.filter(p => p.status !== "healthy").length
-  const maxDrift      = positions.reduce((max, p) => Math.max(max, Math.abs(p.driftPct)), 0)
+  // Suppress maxDrift for zero-balance portfolios (all positions technically at -100% drift)
+  const maxDrift      = hasBalance ? positions.reduce((max, p) => Math.max(max, Math.abs(p.driftPct)), 0) : 0
 
   // Stale data detection (must be before health score)
   const latestSnapshotDate = holdings.reduce<Date | null>((latest, h) => {
@@ -200,7 +155,7 @@ async function getDashboardData(userId: string) {
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  return { totalValue, newTotalValue, positions: positionsWithAlloc, driftAlerts, activeRules, healthScore, healthLabel, health, hasAnyAlert, suggested, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange }
+  return { totalValue, hasBalance, positions, driftAlerts, activeRules, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange }
 }
 
 const sections = [
@@ -215,18 +170,34 @@ export default async function Dashboard() {
   const session = await getSession()
   if (!session) redirect("/login")
   const {
-    totalValue, newTotalValue, positions, driftAlerts, activeRules, healthScore, healthLabel, health,
-    hasAnyAlert, suggested, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate,
+    totalValue, hasBalance, positions, driftAlerts, activeRules, healthScore, healthLabel, health,
+    hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate,
     base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange,
   } = await getDashboardData(session.userId)
 
-  const allocOrder = ["VT", "QQQM", "SMH", "VWO", "BTC"]
+  // Derive ticker order by target % descending (largest allocation first in footer summary)
+  const allocOrder = [...positions].sort((a, b) => b.targetPct - a.targetPct).map(p => p.ticker)
 
   return (
     <Shell title="Dashboard" subtitle="Your investment operating system" userName={session.name}>
 
+      {/* New user welcome — no balance yet */}
+      {!hasBalance && (
+        <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/[0.06] px-5 py-4">
+          <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+            <TrendingUp className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-primary">Portfolio configured — ready for your first snapshot</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Target allocations are set. Head to <a href="/portfolio" className="underline font-semibold">Portfolio</a> and enter your holdings to start tracking drift and health.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Hard breach banner */}
-      {hardBreaches > 0 && (
+      {hasBalance && hardBreaches > 0 && (
         <a href="#execution" className="mb-5 flex items-center gap-4 rounded-xl border-2 border-red-500/50 bg-red-500/10 dark:bg-red-500/[0.12] px-5 py-4 glow-red flash-red cursor-pointer hover:bg-red-500/[0.16] transition-colors group">
           <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20 pulse-red">
             <XCircle className="h-5 w-5 text-red-500" />
@@ -244,7 +215,7 @@ export default async function Dashboard() {
       )}
 
       {/* Soft drift banner */}
-      {softBreaches > 0 && hardBreaches === 0 && (
+      {hasBalance && softBreaches > 0 && hardBreaches === 0 && (
         <a href="#execution" className="mb-5 flex items-center gap-4 rounded-xl border border-amber-400/40 bg-amber-400/10 dark:bg-amber-400/[0.08] px-5 py-3.5 glow-amber cursor-pointer hover:bg-amber-400/[0.14] transition-colors group">
           <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/20 pulse-amber">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -261,8 +232,8 @@ export default async function Dashboard() {
         </a>
       )}
 
-      {/* Stale data warning */}
-      {daysSinceUpdate !== null && daysSinceUpdate >= 3 && (
+      {/* Stale data warning — only when portfolio has balance */}
+      {hasBalance && daysSinceUpdate !== null && daysSinceUpdate >= 3 && (
         <a href="/portfolio" className={`mb-5 flex items-center gap-3 rounded-xl border px-5 py-3 transition-colors group ${
           daysSinceUpdate >= 7
             ? "border-red-500/30 bg-red-500/[0.07] hover:bg-red-500/[0.11]"
@@ -330,16 +301,19 @@ export default async function Dashboard() {
               </div>
               <div className="divide-y divide-border">
                 {positions.map((p) => {
+                  const under = p.driftPct < 0
                   const badgeCls = p.status === "healthy"
                     ? "bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20"
                     : p.status === "soft"
-                    ? "bg-amber-400/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/30"
+                    ? under
+                      ? "bg-yellow-400/15 text-yellow-700 dark:text-yellow-400 ring-1 ring-yellow-400/30"
+                      : "bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-1 ring-orange-500/30"
                     : "bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30"
-                  const badgeLabel = p.status === "healthy" ? "On track" : p.status === "soft" ? "Watch" : "Act now"
+                  const badgeLabel = p.status === "healthy" ? "On track" : p.status === "soft" ? (under ? "Underweight" : "Overweight") : (under ? "Buy now" : "Halt buys")
                   const rowCls = p.status === "hard"
                     ? "border-l-4 border-red-500"
                     : p.status === "soft"
-                    ? "border-l-[3px] border-amber-400"
+                    ? under ? "border-l-[3px] border-yellow-400" : "border-l-[3px] border-orange-500"
                     : "border-l-4 border-transparent"
                   return (
                     <a key={p.ticker} href={`/portfolio#holding-${p.ticker}`}
@@ -350,9 +324,9 @@ export default async function Dashboard() {
                         <span className="text-xs text-muted-foreground ml-2 truncate hidden sm:inline">{p.name}</span>
                       </div>
                       <span className="text-xs font-semibold hidden sm:block">{formatCurrency(p.value, "SGD")}</span>
-                      <span className="text-xs tabular-nums font-semibold hidden sm:block">{p.actualPct.toFixed(1)}%</span>
+                      <span className="text-xs tabular-nums font-semibold hidden sm:block">{hasBalance ? `${p.actualPct.toFixed(1)}%` : "—"}</span>
                       <span className="text-xs tabular-nums text-muted-foreground hidden sm:block">{p.targetPct}%</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit hidden sm:block ${badgeCls}`}>{badgeLabel}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit hidden sm:block ${hasBalance ? badgeCls : "bg-muted text-muted-foreground"}`}>{hasBalance ? badgeLabel : "Target"}</span>
                       {/* Mobile right side */}
                       <div className="col-span-1 flex items-center justify-end gap-2 sm:hidden">
                         <span className="text-xs font-semibold">{p.actualPct.toFixed(1)}%</span>
@@ -363,7 +337,7 @@ export default async function Dashboard() {
                 })}
               </div>
               <div className="px-4 py-2.5 border-t border-border bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{positions.length} positions · {formatCurrency(totalValue, "SGD")} total</span>
+                <span>{positions.length} positions{hasBalance ? ` · ${formatCurrency(totalValue, "SGD")} total` : " · no snapshot yet"}</span>
                 <a href="/portfolio" className="font-semibold text-primary hover:underline">Manage holdings →</a>
               </div>
             </div>
@@ -374,215 +348,75 @@ export default async function Dashboard() {
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
               What To Do This Month
             </h2>
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              {positions.length === 0 ? (
-                <div className="px-5 py-8 text-center text-xs text-muted-foreground">
-                  No holdings found. Seed the database to generate instructions.
+            <ExecutionPlan
+              positions={positions}
+              totalValue={totalValue}
+              hasBalance={hasBalance}
+              allocOrder={allocOrder}
+              hasAnyAlert={hasAnyAlert}
+              defaultContribution={MONTHLY_CONTRIBUTION}
+            />
+          </div>
+
+          {/* How to use Atlas */}
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">How to Use Atlas</h2>
+            <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+              {[
+                {
+                  step: "1",
+                  title: "Update your portfolio",
+                  body: "Go to the Portfolio page and enter your current units and price for each holding. You can type them in manually, upload a screenshot from IBKR, or use the live price refresh. Do this at least once a month — ideally after your monthly contribution.",
+                  href: "/portfolio",
+                  cta: "Go to Portfolio →",
+                },
+                {
+                  step: "2",
+                  title: "Read the dashboard alerts",
+                  body: "When positions drift outside their target bands, alerts appear at the top. Red = hard breach (urgent action — check badge for Buy now or Halt buys). Yellow = soft underweight (add more over 2–3 months). Orange = soft overweight (slow contributions). Green = on track.",
+                  href: null,
+                  cta: null,
+                },
+                {
+                  step: "3",
+                  title: "Follow the monthly plan",
+                  body: "The \"What To Do This Month\" section tells you exactly how to split your $3,000 monthly contribution. Follow the suggested amounts — they are calculated to reduce drift and move your portfolio toward targets. Never deviate based on short-term market noise.",
+                  href: "#execution",
+                  cta: "See this month's plan ↓",
+                },
+                {
+                  step: "4",
+                  title: "Check the health score",
+                  body: "The health gauge in the sidebar scores your portfolio across four dimensions: Structural (drift integrity), Behavioural (governance rule compliance), Concentration (hard-cap exposure), and Execution (how fresh your data is). Aim to stay above 80.",
+                  href: null,
+                  cta: null,
+                },
+                {
+                  step: "5",
+                  title: "Review reports monthly",
+                  body: "The Reports page shows your look-through exposure to individual companies (Nvidia, Microsoft, Apple, etc.) and sectors (semiconductor, digital economy). Check that no company or sector has breached its hard cap before each contribution.",
+                  href: "/reports",
+                  cta: "Open Reports →",
+                },
+                {
+                  step: "6",
+                  title: "Never sell on emotion",
+                  body: "Atlas is a long-horizon system (2045). It is designed to keep you disciplined through volatility. If you feel the urge to sell, go to the Behaviour page and read the red-flag checklist before doing anything.",
+                  href: "/behaviour",
+                  cta: "Read Behaviour System →",
+                },
+              ].map(({ step, title, body, href, cta }) => (
+                <div key={step} className="flex items-start gap-4 px-5 py-4">
+                  <div className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-black text-primary mt-0.5">{step}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold mb-1">{title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{body}</p>
+                    {href && cta && (
+                      <a href={href} className="inline-block mt-2 text-[11px] font-semibold text-primary hover:underline">{cta}</a>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div className="divide-y divide-border">
-                    {positions.map((p) => {
-                      const isHard    = p.status === "hard"
-                      const isSoft    = p.status === "soft"
-                      const isHealthy = p.status === "healthy"
-
-                      const StatusIcon = isHealthy ? CheckCircle2 : isSoft ? AlertTriangle : XCircle
-                      const iconWrapCls = isHard ? "pulse-red" : isSoft ? "pulse-amber" : ""
-                      const iconCls     = isHealthy ? "text-green-500" : isSoft ? "text-amber-500" : "text-red-500"
-
-                      const rowCls = isHard
-                        ? "border-l-[4px] border-red-500 bg-red-500/[0.035] dark:bg-red-500/[0.06]"
-                        : isSoft
-                        ? "border-l-[3px] border-amber-400 bg-amber-500/[0.03] dark:bg-amber-500/[0.04]"
-                        : "border-l-4 border-transparent"
-
-                      const badgeCls = isHealthy
-                        ? "bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20"
-                        : isSoft
-                        ? "bg-amber-400/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/30"
-                        : "bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30"
-
-                      const badgeLabel = isHealthy ? "Healthy" : isSoft ? "Soft Drift" : "Hard Drift"
-                      const badgeTip = isHealthy
-                        ? `${p.ticker} is within its target range of ${p.targetPct}% (±${p.driftPct > 0 ? p.driftPct.toFixed(1) : Math.abs(p.driftPct).toFixed(1)}%). No action needed.`
-                        : isSoft
-                        ? `${p.ticker} has drifted ${Math.abs(p.driftPct).toFixed(1)}% ${p.driftPct > 0 ? "above" : "below"} its ${p.targetPct}% target — outside the tolerance band. Redirect contributions over the next 2–3 months to correct this.`
-                        : `${p.ticker} has drifted ${Math.abs(p.driftPct).toFixed(1)}% ${p.driftPct > 0 ? "above" : "below"} its ${p.targetPct}% target — a hard breach. Immediate rebalancing action is required at your next dealing window.`
-                      const standard   = MONTHLY_ALLOC[p.ticker] ?? 0
-                      const amountStr  = p.suggestedAmount === 0 ? "$0" : `$${p.suggestedAmount.toLocaleString()}`
-                      const amountCls  = p.allocationTag === "zeroed"
-                        ? "text-muted-foreground/60 line-through"
-                        : p.allocationTag === "boosted"
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-foreground"
-                      const amountSub  = p.allocationTag === "zeroed"
-                        ? "paused"
-                        : p.allocationTag === "boosted"
-                        ? `↑ from $${standard.toLocaleString()}`
-                        : "standard"
-
-                      const isAlert = isHard || isSoft
-
-                      // Impact mini-bar: show before/after allocation visually
-                      const targetBarW   = Math.min(100, (p.targetPct / 70) * 100)
-                      const currentBarW  = Math.min(100, (p.actualPct / 70) * 100)
-                      const projBarW     = Math.min(100, (p.projectedPct / 70) * 100)
-                      const impvSign     = p.driftImprovement > 0.05 ? "+" : p.driftImprovement < -0.05 ? "−" : "≈"
-                      const impvCls      = p.driftImprovement > 0.05 ? "text-green-500" : p.driftImprovement < -0.05 ? "text-red-500" : "text-muted-foreground"
-
-                      const rowContent = (
-                        <>
-                          <div className={`shrink-0 mt-0.5 ${iconWrapCls}`}>
-                            <StatusIcon className={`h-4 w-4 ${iconCls}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
-                              <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.color, boxShadow: `0 0 6px ${p.color}80` }} />
-                              <span className={`text-sm font-extrabold tracking-tight ${isHard ? "text-red-700 dark:text-red-400" : isSoft ? "text-amber-700 dark:text-amber-400" : ""}`}>
-                                {p.ticker}
-                              </span>
-                              <span className="text-xs text-muted-foreground hidden sm:inline">{p.name}</span>
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold cursor-help ${badgeCls}`} title={badgeTip}>{badgeLabel}</span>
-                            </div>
-                            <p className={`text-xs leading-relaxed mb-2.5 ${isHard || isSoft ? "text-foreground/70" : "text-muted-foreground"}`}>
-                              {p.instruction}
-                            </p>
-
-                            {/* Impact bar — before vs projected vs target */}
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground w-14 shrink-0">Now</span>
-                                <div className="relative flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full rounded-full" style={{ width: `${currentBarW}%`, backgroundColor: p.color, opacity: 0.6 }} />
-                                  <div className="absolute inset-y-0 w-0.5 bg-foreground/30" style={{ left: `${targetBarW}%` }} />
-                                </div>
-                                <span className="text-[10px] tabular-nums font-semibold w-10 text-right">{p.actualPct.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground w-14 shrink-0">After</span>
-                                <div className="relative flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full rounded-full transition-all" style={{ width: `${projBarW}%`, backgroundColor: p.color, opacity: 0.9 }} />
-                                  <div className="absolute inset-y-0 w-0.5 bg-foreground/30" style={{ left: `${targetBarW}%` }} />
-                                </div>
-                                <span className="text-[10px] tabular-nums font-bold w-10 text-right">{p.projectedPct.toFixed(1)}%</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground w-14 shrink-0">Target</span>
-                                <div className="relative flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full rounded-full opacity-30" style={{ width: `${targetBarW}%`, backgroundColor: p.color }} />
-                                  <div className="absolute inset-y-0 w-0.5 bg-foreground/50" style={{ left: `${targetBarW}%` }} />
-                                </div>
-                                <span className="text-[10px] tabular-nums text-muted-foreground w-10 text-right">{p.targetPct.toFixed(1)}%</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-right min-w-[5.5rem] ml-2">
-                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Invest</p>
-                            <p className={`text-base font-black tabular-nums ${amountCls}`}>{amountStr}</p>
-                            <p className="text-[10px] text-muted-foreground mb-2">{amountSub}</p>
-                            {p.suggestedAmount > 0 && (
-                              <div className={`text-[10px] font-bold ${impvCls}`}>
-                                {impvSign}{Math.abs(p.driftImprovement).toFixed(1)}% drift
-                              </div>
-                            )}
-                            {p.suggestedAmount > 0 && (
-                              <div className="text-[10px] text-muted-foreground">
-                                {p.driftImprovement > 0.05 ? "closer to target" : p.driftImprovement < -0.05 ? "further from target" : "no change"}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )
-
-                      return isAlert ? (
-                        <a key={p.ticker} href={`/portfolio#holding-${p.ticker}`} className={`flex items-start gap-4 px-5 py-4 transition-colors ${rowCls} cursor-pointer hover:brightness-[1.04] group`}>
-                          {rowContent}
-                        </a>
-                      ) : (
-                        <div key={p.ticker} className={`flex items-start gap-4 px-5 py-4 transition-colors ${rowCls}`}>
-                          {rowContent}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Allocation plan footer */}
-                  <div className={`border-t ${hasAnyAlert
-                    ? "border-amber-400/40 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/[0.07] dark:to-orange-500/[0.05] dark:border-amber-500/20"
-                    : "border-border bg-muted/20"
-                  }`}>
-                    {/* Top row — amounts */}
-                    <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Zap className={`h-3.5 w-3.5 shrink-0 ${hasAnyAlert ? "text-amber-500" : "text-muted-foreground"}`} />
-                          <p className={`text-xs font-bold uppercase tracking-wide ${hasAnyAlert ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}`}>
-                            {hasAnyAlert ? "Adjusted Plan — Invest This Much This Month" : "Standard Monthly Investment Plan"}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-x-5 gap-y-2">
-                          {allocOrder.map(ticker => {
-                            const amount   = suggested[ticker] ?? 0
-                            const standard = MONTHLY_ALLOC[ticker] ?? 0
-                            const isZeroed  = amount === 0
-                            const isBoosted = amount > standard
-                            return (
-                              <div key={ticker} className="flex flex-col items-start">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{ticker}</span>
-                                <span className={`text-base font-black tabular-nums ${
-                                  isZeroed ? "text-muted-foreground/50 line-through" :
-                                  isBoosted ? "text-amber-600 dark:text-amber-400" :
-                                  "text-foreground"
-                                }`}>
-                                  ${amount.toLocaleString()}
-                                </span>
-                                {isBoosted && <span className="text-[9px] text-amber-600 dark:text-amber-500 font-semibold">↑ boosted</span>}
-                                {isZeroed  && <span className="text-[9px] text-muted-foreground font-semibold">paused</span>}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right pl-4 border-l border-border/50">
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Deploy</p>
-                        <p className="text-xl font-black tabular-nums">{formatCurrency(TOTAL_MONTHLY, "SGD")}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">this month</p>
-                      </div>
-                    </div>
-
-                    {/* Bottom row — portfolio impact summary */}
-                    <div className="px-5 pb-4 pt-3 border-t border-border/40 flex flex-wrap items-center gap-x-6 gap-y-2">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Portfolio after</p>
-                        <p className="text-sm font-black tabular-nums">{formatCurrency(newTotalValue, "SGD")}</p>
-                      </div>
-                      <div className="h-8 w-px bg-border/50 hidden sm:block" />
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Positions improving</p>
-                        <p className="text-sm font-black tabular-nums text-green-500">
-                          {positions.filter(p => p.driftImprovement > 0.05).length} / {positions.length}
-                        </p>
-                      </div>
-                      <div className="h-8 w-px bg-border/50 hidden sm:block" />
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Avg drift improvement</p>
-                        <p className="text-sm font-black tabular-nums text-green-500">
-                          {(() => {
-                            const improving = positions.filter(p => p.suggestedAmount > 0)
-                            if (improving.length === 0) return "—"
-                            const avg = improving.reduce((s, p) => s + p.driftImprovement, 0) / improving.length
-                            return `${avg >= 0 ? "+" : ""}${avg.toFixed(2)}%`
-                          })()}
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground ml-auto hidden md:block italic">
-                        Projections assume market prices unchanged
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
+              ))}
             </div>
           </div>
 
