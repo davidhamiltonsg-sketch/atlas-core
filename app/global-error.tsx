@@ -9,8 +9,7 @@ export default function GlobalError({
 }) {
   const isDbError =
     error.message?.includes("DATABASE_URL") ||
-    error.message?.includes("libsql") ||
-    error.digest
+    error.message?.includes("libsql")
 
   return (
     <html lang="en">

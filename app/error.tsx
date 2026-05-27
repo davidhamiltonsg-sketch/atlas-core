@@ -16,8 +16,7 @@ export default function Error({
   const isDbError =
     error.message?.includes("DATABASE_URL") ||
     error.message?.includes("libsql") ||
-    error.message?.includes("prisma") ||
-    error.digest
+    error.message?.includes("prisma")
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0f0f13] p-6">
