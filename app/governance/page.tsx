@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-group"
 
 const thresholds = [
   {
@@ -320,32 +321,21 @@ export default async function Governance() {
         ))}
       </div>
 
-      {/* Rules by category */}
-      <div className="space-y-5">
-        {Object.entries(grouped).map(([category, rules]) => (
-          <div key={category}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              {category}
-            </h2>
-            <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
-              {rules.map(({ id, title, description, active }) => (
-                <div key={id} className="flex items-start justify-between gap-4 px-5 py-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${active ? "bg-green-500/15" : "bg-muted"}`}>
-                      <ShieldCheck className={`h-3 w-3 ${active ? "text-green-500" : "text-muted-foreground"}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{description}</p>
-                    </div>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${active ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}`}>
-                    {active ? "Active" : "Inactive"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Rules by category — collapsible */}
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Governance Rules
+        </h2>
+        <span className="text-[11px] text-muted-foreground">Click a category to expand</span>
+      </div>
+      <div className="space-y-2">
+        {Object.entries(grouped).map(([category, rules], i) => (
+          <CollapsibleRuleGroup
+            key={category}
+            category={category}
+            rules={rules}
+            defaultOpen={i === 0}
+          />
         ))}
       </div>
     </Shell>

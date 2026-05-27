@@ -1,49 +1,49 @@
 @import "tailwindcss";
 
-/* ─── Light mode — Navy / Yellow / Black ──────────────────────────────────── */
+/* ─── Light mode — Cool Slate / Electric Indigo ───────────────────────────── */
 :root {
-  --background:         0   0%  97%;     /* warm white #f7f7f7 */
-  --foreground:         222 47% 11%;     /* deep navy-black #0f1f3d */
-  --card:               0   0%  100%;    /* pure white */
-  --card-foreground:    222 47% 11%;
-  --muted:              220 14% 93%;     /* light grey-blue */
-  --muted-foreground:   220  9% 46%;
-  --border:             220 18% 87%;     /* blue-grey border */
-  --accent:             224 64% 94%;     /* light navy wash */
-  --accent-foreground:  222 47% 11%;
-  --primary:            222 77% 30%;     /* navy blue #0f237a */
-  --primary-foreground: 0   0%  100%;    /* white text on navy */
+  --background:         220 20% 97%;     /* cool off-white #f4f5f9 */
+  --foreground:         224 40% 10%;     /* deep graphite-navy #0d1120 */
+  --card:               0   0%  100%;    /* pure white cards */
+  --card-foreground:    224 40% 10%;
+  --muted:              220 16% 94%;     /* light cool grey */
+  --muted-foreground:   220 12% 44%;     /* secondary text */
+  --border:             220 20% 88%;     /* cool blue-grey border */
+  --accent:             238 80% 97%;     /* faint indigo wash */
+  --accent-foreground:  224 40% 10%;
+  --primary:            238 72% 56%;     /* electric indigo #4f52e8 */
+  --primary-foreground: 0   0%  100%;    /* white on indigo */
 
   /* Traffic light colours */
-  --success:            142 71% 29%;     /* green */
-  --warning:            43  96% 44%;     /* golden yellow */
-  --danger:             0   84% 55%;     /* red */
+  --success:            142 71% 29%;
+  --warning:            38  92% 44%;
+  --danger:             0   84% 52%;
 
-  /* Sidebar */
-  --sidebar-bg:         0   0%  100%;
-  --sidebar-border:     220 18% 90%;
+  /* Sidebar — slightly off-white with indigo tint */
+  --sidebar-bg:         228 30% 98%;
+  --sidebar-border:     220 20% 90%;
 }
 
-/* ─── Dark mode — Obsidian ─────────────────────────────────────────────────── */
+/* ─── Dark mode — Obsidian / Muted Electric Indigo ────────────────────────── */
 .dark {
-  --background:         240 24%  6%;    /* deep obsidian #0a0a14 */
-  --foreground:         0   0%  97%;    /* white */
-  --card:               240 18%  9%;    /* #10101e */
-  --card-foreground:    0   0%  97%;
-  --muted:              240 14% 13%;    /* #18192a */
-  --muted-foreground:   240  8% 62%;
-  --border:             240 14% 18%;    /* #242436 */
-  --accent:             240 16% 13%;
-  --accent-foreground:  0   0%  97%;
-  --primary:            43  96% 55%;    /* golden yellow for dark */
-  --primary-foreground: 222 47% 11%;   /* navy text on yellow */
+  --background:         240 27%  5%;    /* deep obsidian #09090f */
+  --foreground:         220 14% 94%;    /* soft white, not pure */
+  --card:               240 22%  8%;    /* elevated surface #0e0e1c */
+  --card-foreground:    220 14% 94%;
+  --muted:              240 18% 12%;    /* recessed surface #141425 */
+  --muted-foreground:   240  9% 58%;    /* secondary text */
+  --border:             240 16% 17%;    /* controlled border #20203a */
+  --accent:             240 18% 11%;
+  --accent-foreground:  220 14% 94%;
+  --primary:            238 68% 64%;    /* muted electric indigo */
+  --primary-foreground: 0   0%  100%;
 
   --success:            142 72% 45%;
   --warning:            43  96% 55%;
   --danger:             0   84% 65%;
 
-  --sidebar-bg:         240 20%  7%;
-  --sidebar-border:     240 14% 16%;
+  --sidebar-bg:         240 26%  6%;    /* slightly lighter than bg */
+  --sidebar-border:     240 16% 14%;
 }
 
 /* ─── Tailwind theme tokens ───────────────────────────────────────────────── */
@@ -183,16 +183,61 @@ body {
 
 /* ─── Gradient text utility ───────────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(222 77% 30%), hsl(43 96% 44%));
+  background: linear-gradient(135deg, hsl(238 72% 52%), hsl(260 70% 65%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .dark .gradient-text {
-  background: linear-gradient(135deg, hsl(43 96% 55%), hsl(222 77% 75%));
+  background: linear-gradient(135deg, hsl(238 68% 72%), hsl(260 60% 80%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ─── Glassmorphism ───────────────────────────────────────────────────────── */
+.glass {
+  background: rgb(255 255 255 / 0.025);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgb(255 255 255 / 0.07);
+}
+.dark .glass {
+  background: rgb(255 255 255 / 0.028);
+  border-color: rgb(255 255 255 / 0.07);
+}
+
+/* ─── Elevated card surfaces ──────────────────────────────────────────────── */
+.surface-1 { background: hsl(var(--card)); }
+.surface-2 { background: hsl(var(--muted)); }
+
+/* ─── Indigo glow ─────────────────────────────────────────────────────────── */
+.glow-indigo {
+  box-shadow: 0 0 20px 4px rgb(99 102 241 / 0.18),
+              0 0 40px 8px rgb(99 102 241 / 0.08);
+}
+
+/* ─── Data label style ────────────────────────────────────────────────────── */
+.label-caps {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ─── Metric display ──────────────────────────────────────────────────────── */
+.metric-xl {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.metric-lg {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
 }
 
 /* ─── Banner animations ───────────────────────────────────────────────────── */

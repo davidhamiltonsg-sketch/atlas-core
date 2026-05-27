@@ -4,9 +4,10 @@ import { formatCurrency } from "@/lib/utils"
 import { TrendingUp, Landmark, Zap } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
-import { ForecastAreaChart, type ForecastDataPoint, type MilestoneMarker } from "@/components/charts/forecast-area-chart"
+import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
 
 const SINGAPORE_SAVINGS_RATE = 0.030
+const CONE_VOL = 0.15  // annual return volatility for P10/P90 band
 
 const returnScenarios = [
   { label: "Conservative", rate: 0.05, rateLabel: "5% p.a.", color: "#a78bfa" },
@@ -36,6 +37,18 @@ function projectPortfolio(
   return value
 }
 
+function toReal(nominal: number, years: number, cpi = 0.025): number {
+  return nominal / Math.pow(1 + cpi, years)
+}
+
+// Log-normal P10/P90 cone around the base projection.
+// Approximation: scale base value by exp(±1.28 × σ × √n).
+// This is conservative since contributions reduce variance vs. lump-sum.
+function coneProjection(base: number, yr: number, z: number): number {
+  if (yr === 0) return base
+  return base * Math.exp(z * CONE_VOL * Math.sqrt(yr))
+}
+
 async function getForecastData(userId: string) {
   const holdings = await db.holding.findMany({
     where: { userId },
@@ -60,16 +73,35 @@ export default async function Forecast() {
   const startYear = new Date().getFullYear()
 
   // Build year-by-year chart data (current year → 2045)
-  const chartData: ForecastDataPoint[] = []
+  const chartData: ExtendedForecastPoint[] = []
   for (let yr = 0; yr <= 19; yr++) {
     const year = startYear + yr
+    const conservative = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.05, yr, CONTRIBUTION_GROWTH_RATE)
+    const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
+    const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.15, yr, CONTRIBUTION_GROWTH_RATE)
+    const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, SINGAPORE_SAVINGS_RATE, yr, CONTRIBUTION_GROWTH_RATE)
+    const coneP10      = coneProjection(base, yr, -1.28)
+    const coneP90      = coneProjection(base, yr,  1.28)
+    const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
+    const contribHigh  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 1.2, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
     chartData.push({
       year,
       label: String(year),
-      conservative: yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.05, yr, CONTRIBUTION_GROWTH_RATE),
-      base:         yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE),
-      aggressive:   yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.15, yr, CONTRIBUTION_GROWTH_RATE),
-      savings:      yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, SINGAPORE_SAVINGS_RATE, yr, CONTRIBUTION_GROWTH_RATE),
+      yr,
+      conservative,
+      base,
+      aggressive,
+      savings,
+      realConservative: toReal(conservative, yr),
+      realBase:         toReal(base, yr),
+      realAggressive:   toReal(aggressive, yr),
+      realSavings:      toReal(savings, yr),
+      coneP10,
+      coneP90,
+      realConeP10:  toReal(coneP10, yr),
+      realConeP90:  toReal(coneP90, yr),
+      contribLow,
+      contribHigh,
     })
   }
 
@@ -143,32 +175,21 @@ export default async function Forecast() {
         </p>
       </div>
 
-      {/* CHART */}
+      {/* CHART PANEL */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold">Compounding Trajectories</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {startYear} → 2045 · hover to inspect any year · dashed = bank savings reference
+            {startYear} → 2045 · hover to inspect any year · switch views for uncertainty & contribution sensitivity
           </p>
         </div>
         <div className="p-4">
-          <div className="flex flex-wrap gap-4 mb-3">
-            {[
-              { label: "Aggressive (15%)", color: "#22c55e" },
-              { label: "Base Case (10%)",  color: "#6366f1" },
-              { label: "Conservative (5%)", color: "#a78bfa" },
-              { label: "Bank Savings (3%)", color: "#64748b", dashed: true },
-            ].map(({ label, color, dashed }) => (
-              <div key={label} className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <div
-                  className="h-0.5 w-6 rounded"
-                  style={{ backgroundColor: color, opacity: dashed ? 0.6 : 1, borderTop: dashed ? `2px dashed ${color}` : undefined, height: dashed ? 0 : 2 }}
-                />
-                {label}
-              </div>
-            ))}
-          </div>
-          <ForecastAreaChart data={chartData} currentValue={currentValue} milestones={milestones} />
+          <ForecastChartPanel
+            data={chartData}
+            currentValue={currentValue}
+            milestones={milestones}
+            monthlyContribution={MONTHLY_CONTRIBUTION}
+          />
         </div>
       </div>
 

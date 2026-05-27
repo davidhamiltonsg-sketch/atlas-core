@@ -9,6 +9,7 @@ import { HealthGauge } from "@/components/charts/health-gauge"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { computePortfolioHealth } from "@/lib/health"
 import { ExecutionPlan } from "@/components/dashboard/execution-plan"
+import { HealthMethodology } from "@/components/health-methodology"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -541,6 +542,18 @@ export default async function Dashboard() {
                 )
               })}
             </div>
+            <HealthMethodology
+              structural={health.structural.score}
+              behavioural={health.behavioural.score}
+              concentration={health.concentration.score}
+              execution={health.execution.score}
+              hardBreaches={hardBreaches}
+              softBreaches={softBreaches}
+              maxDrift={maxDrift}
+              activeRules={activeRules}
+              totalRules={totalRules}
+              snapshotAgeDays={snapshotAgeDays}
+            />
           </div>
 
           {/* Portfolio value history */}
