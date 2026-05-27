@@ -192,7 +192,7 @@ async function getDashboardData(userId: string) {
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct }
+  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct }
 }
 
 const sections = [
@@ -207,10 +207,11 @@ export default async function Dashboard() {
   const session = await getSession()
   if (!session) redirect("/login")
   const {
-    totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, healthScore, healthLabel, health,
-    hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate,
-    base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange,
-    monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct,
+    totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays,
+    healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData,
+    daysSinceUpdate, latestSnapshotDate, base2045, yearsTo2045, daysToContribution,
+    nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum,
+    contributionGrowthRate, usdSgdRate, onTrackPct,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
