@@ -10,6 +10,8 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3, Info } from "lucide-re
 async function getYtdData(userId: string) {
   const now = new Date()
   const ytdStart = new Date(now.getFullYear(), 0, 1) // Jan 1 this year
+  // Days elapsed in the year so far (minimum 1 to avoid division by zero on Jan 1)
+  const totalDays = Math.max(1, Math.ceil((now.getTime() - ytdStart.getTime()) / 86400000))
 
   const [holdings, trades, dividends] = await Promise.all([
     db.holding.findMany({
@@ -27,128 +29,158 @@ async function getYtdData(userId: string) {
     }),
   ])
 
-  // ── Cost Basis (FIFO from all-time trades) ───────────────────────────────────
-  // Track cost basis per ticker using weighted average cost method
-  type AvgCostEntry = { units: number; totalCost: number } // totalCost in SGD
-  const avgCost: Record<string, AvgCostEntry> = {}
-
   const sortedTrades = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
+  // ── Cost Basis — weighted average per ticker ─────────────────────────────────
+  // Track SGD cost (for unrealised P&L vs current SGD value) AND
+  // USD cost (for avgCostPerUnit display — price is USD/unit).
+  type AvgCostEntry = { units: number; totalCostSgd: number; totalCostUsd: number }
+  const avgCost: Record<string, AvgCostEntry> = {}
+
   for (const t of sortedTrades) {
-    if (!avgCost[t.ticker]) avgCost[t.ticker] = { units: 0, totalCost: 0 }
+    if (!avgCost[t.ticker]) avgCost[t.ticker] = { units: 0, totalCostSgd: 0, totalCostUsd: 0 }
     if (t.type === "BUY") {
-      avgCost[t.ticker].units += t.units
-      avgCost[t.ticker].totalCost += t.amount // SGD
+      avgCost[t.ticker].units       += t.units
+      avgCost[t.ticker].totalCostSgd += t.amount          // SGD: units × price × fxRate
+      avgCost[t.ticker].totalCostUsd += t.units * t.price // USD: units × price
     } else if (t.type === "SELL") {
-      const avgPerUnit = avgCost[t.ticker].units > 0
-        ? avgCost[t.ticker].totalCost / avgCost[t.ticker].units
-        : 0
-      avgCost[t.ticker].units = Math.max(0, avgCost[t.ticker].units - t.units)
-      avgCost[t.ticker].totalCost = avgCost[t.ticker].units * avgPerUnit
+      const avgSgdPU = avgCost[t.ticker].units > 0 ? avgCost[t.ticker].totalCostSgd / avgCost[t.ticker].units : 0
+      const avgUsdPU = avgCost[t.ticker].units > 0 ? avgCost[t.ticker].totalCostUsd / avgCost[t.ticker].units : 0
+      const remaining = Math.max(0, avgCost[t.ticker].units - t.units)
+      avgCost[t.ticker].units        = remaining
+      avgCost[t.ticker].totalCostSgd = remaining * avgSgdPU
+      avgCost[t.ticker].totalCostUsd = remaining * avgUsdPU
     }
   }
 
-  // ── Current portfolio values ─────────────────────────────────────────────────
+  // ── YTD trade cash-flows ─────────────────────────────────────────────────────
+  const ytdBuys  = sortedTrades.filter(t => t.type === "BUY"  && new Date(t.date) >= ytdStart)
+  const ytdSells = sortedTrades.filter(t => t.type === "SELL" && new Date(t.date) >= ytdStart)
+
+  // Per-ticker net capital deployed YTD (SGD) — for stripping out contributions from returns
+  const ytdNetBuysSgd:  Record<string, number> = {}
+  const ytdNetSellsSgd: Record<string, number> = {}
+  for (const t of ytdBuys)  ytdNetBuysSgd[t.ticker]  = (ytdNetBuysSgd[t.ticker]  ?? 0) + t.amount
+  for (const t of ytdSells) ytdNetSellsSgd[t.ticker] = (ytdNetSellsSgd[t.ticker] ?? 0) + t.amount
+
+  // Total YTD contributions in USD (BUY trades only; price is USD/unit)
+  const ytdContribTotal = ytdBuys.reduce((s, t) => s + t.units * t.price, 0)
+
+  // ── Realised P&L (SELL trades this year vs weighted-avg cost at time of sale) ─
+  let realisedPnl = 0
+  const tempAvgCost: Record<string, { units: number; totalCostSgd: number }> = {}
+  for (const t of sortedTrades) {
+    const isYtdSell = t.type === "SELL" && new Date(t.date) >= ytdStart
+    if (!tempAvgCost[t.ticker]) tempAvgCost[t.ticker] = { units: 0, totalCostSgd: 0 }
+    if (t.type === "BUY") {
+      tempAvgCost[t.ticker].units        += t.units
+      tempAvgCost[t.ticker].totalCostSgd += t.amount
+    } else if (t.type === "SELL") {
+      const avgPU = tempAvgCost[t.ticker].units > 0
+        ? tempAvgCost[t.ticker].totalCostSgd / tempAvgCost[t.ticker].units : 0
+      if (isYtdSell) realisedPnl += t.amount - avgPU * t.units
+      const remaining = Math.max(0, tempAvgCost[t.ticker].units - t.units)
+      tempAvgCost[t.ticker].units        = remaining
+      tempAvgCost[t.ticker].totalCostSgd = remaining * avgPU
+    }
+  }
+
+  // ── Per-holding data ─────────────────────────────────────────────────────────
   const holdingData = holdings.map(h => {
     const latestSnap = h.snapshots[h.snapshots.length - 1]
-    const firstSnap = h.snapshots[0]
 
-    // Value at start of year (closest snapshot before ytdStart)
     const snapsBefore = h.snapshots.filter(s => s.date < ytdStart)
     const ytdStartSnap = snapsBefore[snapsBefore.length - 1]
-
-    // YTD start: first snap of year if no snap before
-    const snapsInYear = h.snapshots.filter(s => s.date >= ytdStart)
+    const snapsInYear  = h.snapshots.filter(s => s.date >= ytdStart)
     const firstYtdSnap = snapsInYear[0]
 
-    const startValue = ytdStartSnap?.value ?? firstYtdSnap?.value ?? 0
+    const startValue   = ytdStartSnap?.value ?? firstYtdSnap?.value ?? 0
     const currentValue = latestSnap?.value ?? 0
-    const units = latestSnap?.units ?? 0
+    const units        = latestSnap?.units ?? 0
     const currentPrice = latestSnap?.price ?? 0
 
     const cb = avgCost[h.ticker]
-    const costBasisTotal = cb ? cb.totalCost : 0
-    const avgCostPerUnit = cb && cb.units > 0 ? cb.totalCost / cb.units : null
+    const costBasisTotal  = cb ? cb.totalCostSgd : 0
+    // avgCostPerUnit = USD weighted-average purchase price (what you paid per share in USD)
+    const avgCostPerUnit  = cb && cb.units > 0 ? cb.totalCostUsd / cb.units : null
 
-    // Unrealised P&L = current market value - cost basis
+    // Unrealised P&L: current SGD market value vs SGD cost basis
     const unrealisedPnl = costBasisTotal > 0 ? currentValue - costBasisTotal : null
-    const unrealisedPct = costBasisTotal > 0 && costBasisTotal > 0 ? (unrealisedPnl! / costBasisTotal) * 100 : null
+    const unrealisedPct = costBasisTotal > 0 ? (unrealisedPnl! / costBasisTotal) * 100 : null
 
-    // YTD return
-    const ytdReturn = startValue > 0 ? currentValue - startValue : null
-    const ytdReturnPct = startValue > 0 ? ((currentValue - startValue) / startValue) * 100 : null
+    // YTD market return: strip out capital deployed this year
+    // marketReturn = EMV - BMV - ytdBuys + ytdSells (all SGD)
+    const tickerBuys  = ytdNetBuysSgd[h.ticker]  ?? 0
+    const tickerSells = ytdNetSellsSgd[h.ticker] ?? 0
+    const hasActivity = startValue > 0 || tickerBuys > 0
+    const ytdReturn   = hasActivity ? currentValue - startValue - tickerBuys + tickerSells : null
+
+    // Per-holding Modified Dietz %
+    // Denominator = BMV + Σ(Wi × buyAmount) - Σ(Wi × sellAmount)
+    const mdBuys = ytdBuys.filter(t => t.ticker === h.ticker).reduce((s, t) => {
+      const dayOfFlow = Math.max(0, Math.ceil((new Date(t.date).getTime() - ytdStart.getTime()) / 86400000))
+      const wi = (totalDays - dayOfFlow) / totalDays
+      return s + wi * t.amount
+    }, 0)
+    const mdSells = ytdSells.filter(t => t.ticker === h.ticker).reduce((s, t) => {
+      const dayOfFlow = Math.max(0, Math.ceil((new Date(t.date).getTime() - ytdStart.getTime()) / 86400000))
+      const wi = (totalDays - dayOfFlow) / totalDays
+      return s + wi * t.amount
+    }, 0)
+    const mdDenominator = startValue + mdBuys - mdSells
+    const ytdReturnPct  = ytdReturn !== null && mdDenominator > 0
+      ? (ytdReturn / mdDenominator) * 100 : null
 
     return {
-      ticker: h.ticker,
-      name: h.name,
-      color: h.color,
-      targetPct: h.targetPct,
-      units,
-      currentPrice,
-      currentValue,
-      costBasisTotal,
-      avgCostPerUnit,
-      unrealisedPnl,
-      unrealisedPct,
-      ytdReturn,
-      ytdReturnPct,
+      ticker: h.ticker, name: h.name, color: h.color, targetPct: h.targetPct,
+      units, currentPrice, currentValue,
+      costBasisTotal, avgCostPerUnit,
+      unrealisedPnl, unrealisedPct,
+      ytdReturn, ytdReturnPct,
       hasData: latestSnap !== undefined,
     }
   })
 
-  const totalCurrentValue = holdingData.reduce((s, h) => s + h.currentValue, 0)
-  const totalCostBasis = holdingData.reduce((s, h) => s + h.costBasisTotal, 0)
+  const totalCurrentValue  = holdingData.reduce((s, h) => s + h.currentValue, 0)
+  const totalCostBasis     = holdingData.reduce((s, h) => s + h.costBasisTotal, 0)
   const totalUnrealisedPnl = totalCostBasis > 0 ? totalCurrentValue - totalCostBasis : null
   const totalUnrealisedPct = totalCostBasis > 0 ? ((totalCurrentValue - totalCostBasis) / totalCostBasis) * 100 : null
 
-  // ── YTD portfolio return ─────────────────────────────────────────────────────
-  // Sum of per-holding ytd returns (SGD)
-  const ytdReturns = holdingData.filter(h => h.ytdReturn !== null)
-  const totalYtdReturn = ytdReturns.length > 0 ? ytdReturns.reduce((s, h) => s + (h.ytdReturn ?? 0), 0) : null
-
-  // YTD start value = sum of start values
-  const startValues = holdings.map(h => {
-    const snapsBefore = h.snapshots.filter(s => s.date < ytdStart)
+  // ── Portfolio-level YTD (Modified Dietz) ────────────────────────────────────
+  const totalStartValue = holdings.reduce((s, h) => {
+    const snapsBefore = h.snapshots.filter(snap => snap.date < ytdStart)
     const ytdStartSnap = snapsBefore[snapsBefore.length - 1]
-    const snapsInYear = h.snapshots.filter(s => s.date >= ytdStart)
+    const snapsInYear  = h.snapshots.filter(snap => snap.date >= ytdStart)
     const firstYtdSnap = snapsInYear[0]
-    return ytdStartSnap?.value ?? firstYtdSnap?.value ?? 0
-  })
-  const totalStartValue = startValues.reduce((s, v) => s + v, 0)
-  const totalYtdPct = totalStartValue > 0 && totalYtdReturn !== null
-    ? (totalYtdReturn / totalStartValue) * 100
+    return s + (ytdStartSnap?.value ?? firstYtdSnap?.value ?? 0)
+  }, 0)
+
+  const totalYtdBuysSgd  = ytdBuys.reduce((s, t) => s + t.amount, 0)
+  const totalYtdSellsSgd = ytdSells.reduce((s, t) => s + t.amount, 0)
+
+  // Market return = EMV - BMV - net cash deployed
+  const totalYtdReturn = (totalCurrentValue > 0 || totalStartValue > 0)
+    ? totalCurrentValue - totalStartValue - totalYtdBuysSgd + totalYtdSellsSgd
     : null
 
-  // ── Realised P&L (from SELLs this year) ─────────────────────────────────────
-  // Simplified: sell amount minus cost basis at time of sale
-  const ytdSells = sortedTrades.filter(t => t.type === "SELL" && new Date(t.date) >= ytdStart)
-  // We track avg cost up to each sell by replaying trades up to that point
-  let realisedPnl = 0
-  const tempAvgCost: Record<string, AvgCostEntry> = {}
-  for (const t of sortedTrades) {
-    const isYtdSell = t.type === "SELL" && new Date(t.date) >= ytdStart
-    if (!tempAvgCost[t.ticker]) tempAvgCost[t.ticker] = { units: 0, totalCost: 0 }
-    if (t.type === "BUY") {
-      tempAvgCost[t.ticker].units += t.units
-      tempAvgCost[t.ticker].totalCost += t.amount
-    } else if (t.type === "SELL") {
-      const avgPU = tempAvgCost[t.ticker].units > 0
-        ? tempAvgCost[t.ticker].totalCost / tempAvgCost[t.ticker].units
-        : 0
-      if (isYtdSell) realisedPnl += t.amount - avgPU * t.units
-      tempAvgCost[t.ticker].units = Math.max(0, tempAvgCost[t.ticker].units - t.units)
-      tempAvgCost[t.ticker].totalCost = tempAvgCost[t.ticker].units * avgPU
-    }
-  }
+  // Modified Dietz denominator = BMV + Σ(Wi × inflows) - Σ(Wi × outflows)
+  const mdBuysDenom = ytdBuys.reduce((s, t) => {
+    const dayOfFlow = Math.max(0, Math.ceil((new Date(t.date).getTime() - ytdStart.getTime()) / 86400000))
+    const wi = (totalDays - dayOfFlow) / totalDays
+    return s + wi * t.amount
+  }, 0)
+  const mdSellsDenom = ytdSells.reduce((s, t) => {
+    const dayOfFlow = Math.max(0, Math.ceil((new Date(t.date).getTime() - ytdStart.getTime()) / 86400000))
+    const wi = (totalDays - dayOfFlow) / totalDays
+    return s + wi * t.amount
+  }, 0)
+  const mdDenominator = totalStartValue + mdBuysDenom - mdSellsDenom
+  const totalYtdPct = totalYtdReturn !== null && mdDenominator > 0
+    ? (totalYtdReturn / mdDenominator) * 100 : null
 
   // ── YTD Dividends ────────────────────────────────────────────────────────────
-  const ytdDividends = dividends.filter(d => new Date(d.paymentDate) >= ytdStart)
+  const ytdDividends     = dividends.filter(d => new Date(d.paymentDate) >= ytdStart)
   const ytdDividendTotal = ytdDividends.reduce((s, d) => s + d.amount, 0)
-
-  // ── YTD Contributions ────────────────────────────────────────────────────────
-  const contributions = await db.contributionRecord.findMany({ where: { userId } })
-  const ytdContributions = contributions.filter(c => new Date(c.date) >= ytdStart)
-  const ytdContribTotal = ytdContributions.reduce((s, c) => s + c.amount, 0)
 
   const hasCostBasis = totalCostBasis > 0
 
@@ -162,7 +194,7 @@ async function getYtdData(userId: string) {
     totalYtdPct,
     realisedPnl: ytdSells.length > 0 ? realisedPnl : null,
     ytdDividendTotal,
-    ytdContribTotal,
+    ytdContribTotal, // USD (from BUY trades this year)
     hasCostBasis,
     year: now.getFullYear(),
     tradeCount: trades.length,
@@ -199,7 +231,7 @@ export default async function YtdPage() {
         {/* Summary KPIs */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-            <p className="text-xs text-muted-foreground mb-1">YTD Return</p>
+            <p className="text-xs text-muted-foreground mb-1">YTD Market Return</p>
             {data.totalYtdReturn !== null ? (
               <>
                 <p className={`text-2xl font-black tabular-nums ${data.totalYtdReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
@@ -239,11 +271,11 @@ export default async function YtdPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-            <p className="text-xs text-muted-foreground mb-1">YTD Contributions</p>
+            <p className="text-xs text-muted-foreground mb-1">YTD Capital Deployed</p>
             <p className={`text-2xl font-black tabular-nums ${data.ytdContribTotal > 0 ? "text-indigo-400" : "text-muted-foreground"}`}>
               {data.ytdContribTotal > 0 ? formatCurrency(data.ytdContribTotal, "USD") : "—"}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Capital added {data.year}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">From BUY trades {data.year}</p>
           </div>
         </div>
 
@@ -274,7 +306,7 @@ export default async function YtdPage() {
                   <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Cost Basis</th>
                   <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Avg Cost / Unit</th>
                   <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Unrealised P&L</th>
-                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">YTD Return</th>
+                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">YTD Market Return</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -359,10 +391,10 @@ export default async function YtdPage() {
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Notes</h2>
           <div className="space-y-1.5 text-xs text-muted-foreground">
-            <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. All values in SGD.</p>
-            <p>YTD return compares current snapshot value to the last snapshot before 1 Jan {data.year}. Where no prior-year snapshot exists, the first snapshot of the year is used as the baseline.</p>
-            <p>Unrealised P&L = current market value minus total cost basis. This reflects the gain/loss if you sold your entire position today.</p>
-            <p>Dividend income and contribution records must be entered in their respective sections to appear here.</p>
+            <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. Cost basis is in SGD; avg cost/unit is the USD price paid per share.</p>
+            <p><span className="font-semibold text-foreground">YTD Market Return</span> uses the <span className="font-semibold text-foreground">Modified Dietz method</span>: market gain = EMV − BMV − net capital deployed. The % denominator accounts for the timing of each BUY/SELL so contributions are not mistaken for returns.</p>
+            <p>Unrealised P&L = current SGD market value minus SGD cost basis. This reflects the gain/loss if you sold your entire position today.</p>
+            <p>YTD Capital Deployed = sum of BUY trade amounts in USD this year. BUY trades automatically create a linked contribution record for monthly tracking.</p>
           </div>
         </div>
 

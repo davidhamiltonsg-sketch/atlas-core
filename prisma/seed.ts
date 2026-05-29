@@ -9,14 +9,14 @@ if (!url) throw new Error("DATABASE_URL is not set")
 const adapter = new PrismaLibSql({ url, authToken })
 const prisma = new PrismaClient({ adapter })
 
-// v5.2 target allocations
+// v5.8 target allocations (Section 2 hard caps, Section 3.1 tolerance bands)
 const holdings = [
   {
     ticker: "VT",
     name: "Vanguard Total World Stock ETF",
     targetPct: 52,
-    hardCapPct: 62,
-    toleranceBand: 5,
+    hardCapPct: 60,
+    toleranceBand: 6,
     color: "#6366f1",
     snapshot: { units: 428, price: 155.52, value: 85209.84 },
   },
@@ -24,8 +24,8 @@ const holdings = [
     ticker: "QQQM",
     name: "Invesco NASDAQ 100 ETF",
     targetPct: 23,
-    hardCapPct: 31,
-    toleranceBand: 4,
+    hardCapPct: 30,
+    toleranceBand: 5,
     color: "#8b5cf6",
     snapshot: { units: 63, price: 295.02, value: 23792.85 },
   },
@@ -34,7 +34,7 @@ const holdings = [
     name: "VanEck Semiconductor ETF",
     targetPct: 10,
     hardCapPct: 15,
-    toleranceBand: 2,
+    toleranceBand: 3,
     color: "#a78bfa",
     snapshot: { units: 24, price: 573.79, value: 17628.63 },
   },
@@ -42,8 +42,8 @@ const holdings = [
     ticker: "VWO",
     name: "Vanguard FTSE Emerging Markets ETF",
     targetPct: 8,
-    hardCapPct: 12,
-    toleranceBand: 2,
+    hardCapPct: 13,
+    toleranceBand: 3,
     color: "#c4b5fd",
     snapshot: { units: 109, price: 58.94, value: 8223.72 },
   },

@@ -36,12 +36,12 @@ function projectPortfolio(
   return value
 }
 
-// v5.2 hard drift thresholds
+// v5.8 hard drift thresholds (Section 3.1)
 const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-  VT:   { low: 40, high: 62 },
-  QQQM: { low: 16, high: 31 },
-  SMH:  { high: 15 },
-  VWO:  { low: 4,  high: 12 },
+  VT:   { low: 42, high: 62 },
+  QQQM: { low: 15, high: 31 },
+  SMH:  { low: 5,  high: 15 },
+  VWO:  { low: 3,  high: 13 },
   BTC:  { high: 8  },
 }
 

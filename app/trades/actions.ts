@@ -37,7 +37,7 @@ export async function addTradeAction(formData: FormData) {
   const fxRate = await getUsdSgdRate()
   const amount = units * price * fxRate
 
-  await db.trade.create({
+  const trade = await db.trade.create({
     data: {
       userId: session.userId,
       ticker,
@@ -51,7 +51,22 @@ export async function addTradeAction(formData: FormData) {
     },
   })
 
+  // Auto-link: BUY trades create a ContributionRecord so the contributions page stays in sync.
+  // Note format [trade:ID] allows reliable deletion if the trade is later removed.
+  if (type === "BUY") {
+    await db.contributionRecord.create({
+      data: {
+        userId: session.userId,
+        amount: units * price, // USD (price is USD/unit)
+        date,
+        note: `[trade:${trade.id}] BUY ${units} ${ticker} @ $${price}`,
+      },
+    })
+  }
+
   revalidatePath("/trades")
+  revalidatePath("/contributions")
+  revalidatePath("/ytd")
   return { success: true }
 }
 
@@ -62,7 +77,17 @@ export async function deleteTradeAction(id: string) {
   const trade = await db.trade.findFirst({ where: { id, userId: session.userId } })
   if (!trade) return { error: "Trade not found." }
 
+  // Delete any auto-linked contribution record first
+  await db.contributionRecord.deleteMany({
+    where: {
+      userId: session.userId,
+      note: { startsWith: `[trade:${id}]` },
+    },
+  })
+
   await db.trade.delete({ where: { id } })
   revalidatePath("/trades")
+  revalidatePath("/contributions")
+  revalidatePath("/ytd")
   return { success: true }
 }

@@ -11,13 +11,13 @@ import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-butto
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 
-// Hard drift thresholds — only overweight triggers for positions without a low bound (e.g. BTC is optional)
+// v5.8 hard drift thresholds (Section 3.1) — BTC has no lower hard trigger (underweight is a soft alert only)
 const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-  VT:   { low: 40, high: 62 },
-  QQQM: { low: 16, high: 31 },
-  SMH:  { high: 15 },
-  VWO:  { low: 4,  high: 12 },
-  BTC:  { high: 8  },  // no low — underweight BTC is fine (optional position)
+  VT:   { low: 42, high: 62 },
+  QQQM: { low: 15, high: 31 },
+  SMH:  { low: 5,  high: 15 },
+  VWO:  { low: 3,  high: 13 },
+  BTC:  { high: 8  },
 }
 
 async function getPortfolioData(userId: string) {

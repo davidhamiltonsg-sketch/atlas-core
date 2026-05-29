@@ -42,6 +42,24 @@ const redFlags = [
   "Comparing performance obsessively to benchmarks or others",
   "Planning a structural redesign within 18 months of the last one",
   "Making changes during a market drawdown",
+  "Consulting the governance document looking for permission to break its rules",
+]
+
+const prohibitedActions = [
+  { action: "Panic selling on drawdown", rationale: "Realises temporary loss permanently." },
+  { action: "Adding new tickers", rationale: "Increases complexity, dilutes conviction. Five tickers only." },
+  { action: "Chasing recent outperformers", rationale: "Buying after a run = buying high. No momentum additions." },
+  { action: "Reducing DCA during volatility", rationale: "Drawdowns are the highest-value deployment window." },
+  { action: "Reactive rebalancing", rationale: "Driven by noise rather than drift thresholds is trading, not rebalancing." },
+  { action: "Leveraged positions", rationale: "Liquidation risk incompatible with 19-year mandate." },
+]
+
+const crashProtocol = [
+  { tier: "1", label: "Noise", drawdown: "<10%", response: "No action. Continue DCA.", flag: null },
+  { tier: "2", label: "Correction", drawdown: "10–15%", response: "No action. Consider increasing DCA if income permits.", flag: "If earnings revisions falling, accelerate quarterly review to monthly." },
+  { tier: "3", label: "Bear", drawdown: "15–25%", response: "No selling. Contribution acceleration optional. Log emotional state.", flag: "Document whether drawdown is valuation-led or fundamental-led." },
+  { tier: "4", label: "Crisis", drawdown: ">25%", response: "Emergency review. Contributions continue unless income is impaired.", flag: "Assess permanent thesis change (§4.4)." },
+  { tier: "5", label: "Extreme", drawdown: ">40%", response: "Full governance review. No selling without written rationale.", flag: "Evaluate thesis, not price." },
 ]
 
 export default async function Behaviour() {
@@ -135,7 +153,7 @@ export default async function Behaviour() {
       </div>
 
       {/* Red flags */}
-      <div className="rounded-xl border border-red-500/20 bg-red-500/[0.04] p-5">
+      <div className="rounded-xl border border-red-500/20 bg-red-500/[0.04] p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
           <div>
@@ -150,6 +168,64 @@ export default async function Behaviour() {
               <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed">{flag}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Prohibited Actions — §6.1 */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-4">
+        <div className="px-5 py-4 border-b border-border">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Prohibited Actions §6.1</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">These are never permitted under any market condition.</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Action</th>
+              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Rationale</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {prohibitedActions.map(({ action, rationale }) => (
+              <tr key={action} className="hover:bg-accent/20">
+                <td className="px-4 py-2.5 font-semibold text-red-400">{action}</td>
+                <td className="px-4 py-2.5 text-muted-foreground">{rationale}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Crash Protocol — §6.2 */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Crash Protocol §6.2</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Mandated response by drawdown tier. DCA continues at all tiers unless income is impaired.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                {["Tier", "Label", "Drawdown", "Mandated Response", "Regime Flag"].map(h => (
+                  <th key={h} className="px-4 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {crashProtocol.map(({ tier, label, drawdown, response, flag }) => {
+                const tierNum = parseInt(tier)
+                const color = tierNum <= 1 ? "text-green-500" : tierNum === 2 ? "text-yellow-400" : tierNum === 3 ? "text-orange-500" : "text-red-500"
+                return (
+                  <tr key={tier} className="hover:bg-accent/20">
+                    <td className={`px-4 py-3 font-black ${color}`}>{tier}</td>
+                    <td className={`px-4 py-3 font-semibold ${color}`}>{label}</td>
+                    <td className="px-4 py-3 tabular-nums font-mono text-muted-foreground">{drawdown}</td>
+                    <td className="px-4 py-3 text-foreground/80">{response}</td>
+                    <td className="px-4 py-3 text-muted-foreground italic">{flag ?? "—"}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </Shell>

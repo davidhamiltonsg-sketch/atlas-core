@@ -5,60 +5,124 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-group"
 
+// v5.8 thresholds (Section 2 hard caps + Section 3.1 drift bands)
 const thresholds = [
   {
     ticker: "VT",
     target: 52,
     classification: "Global Core",
-    healthyLow: 45, healthyHigh: 57,
-    softLow: 40, softHigh: 62,  // soft = outside healthy but inside hard
-    hardHigh: 62, hardLow: 40,
+    healthyLow: 46, healthyHigh: 58,
+    softLow: 42, softHigh: 62,  // soft = outside healthy but inside hard trigger
+    hardHigh: 62, hardLow: 42,
     color: "#6366f1",
   },
   {
     ticker: "QQQM",
     target: 23,
     classification: "Digital Economy Engine",
-    healthyLow: 19, healthyHigh: 27,
-    softLow: 16, softHigh: 31,
-    hardHigh: 31, hardLow: 16,
+    healthyLow: 18, healthyHigh: 28,
+    softLow: 15, softHigh: 31,
+    hardHigh: 31, hardLow: 15,
     color: "#8b5cf6",
   },
   {
     ticker: "SMH",
     target: 10,
     classification: "AI Infrastructure Tilt",
-    healthyLow: 0, healthyHigh: 12,
-    softLow: 0, softHigh: 15,
-    hardHigh: 15, hardLow: 0,
+    healthyLow: 7, healthyHigh: 13,
+    softLow: 5, softHigh: 15,
+    hardHigh: 15, hardLow: 5,
     color: "#a78bfa",
   },
   {
     ticker: "VWO",
     target: 8,
     classification: "Geographic Diversifier",
-    healthyLow: 6, healthyHigh: 10,
-    softLow: 4, softHigh: 12,
-    hardHigh: 12, hardLow: 4,
+    healthyLow: 5, healthyHigh: 11,
+    softLow: 3, softHigh: 13,
+    hardHigh: 13, hardLow: 3,
     color: "#c4b5fd",
   },
   {
     ticker: "BTC",
     target: 7,
-    classification: "Optionality Overlay",
-    healthyLow: 5, healthyHigh: 8,
-    softLow: 0, softHigh: 8,
-    hardHigh: 8, hardLow: 0,
+    classification: "Bitcoin — Volatility Cap",
+    healthyLow: 6, healthyHigh: 8,
+    softLow: 0, softHigh: 8,  // no soft overweight band — hard cap immediately at 8%
+    hardHigh: 8, hardLow: 0,  // no lower hard trigger (underweight is soft alert only)
     color: "#f59e0b",
   },
 ]
 
+// conviction = asymmetric trim rule (§3.5): do not trim unless Section 2 hard cap is breached
 const thresholdDisplay = [
-  { ticker: "VT",   target: "52%", classification: "Global Core",           healthy: "45–57%", soft: "<45% or >57%", hard: "<40% or >62%", color: "#6366f1" },
-  { ticker: "QQQM", target: "23%", classification: "Digital Economy Engine", healthy: "19–27%", soft: "<19% or >27%", hard: "<16% or >31%", color: "#8b5cf6" },
-  { ticker: "SMH",  target: "10%", classification: "AI Infrastructure Tilt", healthy: "8–12%",  soft: ">12%",         hard: ">15%",         color: "#a78bfa" },
-  { ticker: "VWO",  target: "8%",  classification: "Geographic Diversifier", healthy: "6–10%",  soft: "<6% or >10%",  hard: "<4% or >12%",  color: "#c4b5fd" },
-  { ticker: "BTC",  target: "7%",  classification: "Optionality Overlay",    healthy: "5–8%",   soft: ">8%",          hard: ">8%",          color: "#f59e0b" },
+  { ticker: "VT",   positionCap: "60%", target: "52%", classification: "Global Core",              healthy: "46–58%", soft: "<46% or >58%", hard: "<42% or >62%", color: "#6366f1", conviction: false },
+  { ticker: "QQQM", positionCap: "30%", target: "23%", classification: "Digital Economy Engine",   healthy: "18–28%", soft: "<18% or >28%", hard: "<15% or >31%", color: "#8b5cf6", conviction: true  },
+  { ticker: "SMH",  positionCap: "15%", target: "10%", classification: "AI Infrastructure Tilt",   healthy: "7–13%",  soft: "<7% or >13%",  hard: "<5% or >15%",  color: "#a78bfa", conviction: true  },
+  { ticker: "VWO",  positionCap: "13%", target: "8%",  classification: "Geographic Diversifier",   healthy: "5–11%",  soft: "<5% or >11%",  hard: "<3% or >13%",  color: "#c4b5fd", conviction: false },
+  { ticker: "BTC",  positionCap: "8%",  target: "7%",  classification: "Bitcoin — Volatility Cap", healthy: "6–8%",   soft: "<6%",          hard: ">8%",          color: "#f59e0b", conviction: false },
+]
+
+const monthlySteps = [
+  {
+    step: 1,
+    question: "Has any hard cap been breached?",
+    detail: "Check ticker allocations and look-through concentration (§4).",
+    yes: "Execute mandated response immediately: BTC >8% → trim to target; QQQM >30% → halt + trim; SMH >15% → trim; Nvidia >13% → reduce cluster exposure. Then go to Step 6.",
+    no: "Proceed to Step 2.",
+  },
+  {
+    step: 2,
+    question: "Is any asset below target?",
+    detail: "Review all portfolio weights against target allocation.",
+    yes: "Direct 100% of monthly contribution to the most underweight asset. No splitting. No optimisation. Then go to Step 6.",
+    no: "Proceed to Step 3.",
+  },
+  {
+    step: 3,
+    question: "Is any asset above its soft alert band?",
+    detail: "Soft alert = outside healthy range but below hard trigger.",
+    yes: "Pause contributions to that asset. Redirect to underweight positions. Do not trim. Exception: if any §4 concentration limit is breached, §4 overrides. Then go to Step 6.",
+    no: "Proceed to Step 4.",
+  },
+  {
+    step: 4,
+    question: "Is any structural review trigger active?",
+    detail: "§4.4: QQQM underperforms VT >5% annualised over 5 years, or semiconductor cluster underperforms VT >8% annualised.",
+    yes: "Schedule formal review within 30 days. Continue normal contributions. Do not alter allocations during review. Then go to Step 6.",
+    no: "Proceed to Step 5.",
+  },
+  {
+    step: 5,
+    question: "Normal contribution deployment.",
+    detail: "No hard triggers, concentration breaches, underweight priorities, or structural reviews active.",
+    yes: null,
+    no: null,
+    action: "Deploy monthly contribution at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · BTC 7%. Then go to Step 6.",
+  },
+  {
+    step: 6,
+    question: "Market regime: is the portfolio drawdown greater than 25%?",
+    detail: "Measure from all-time high.",
+    yes: "Activate Crash Protocol (§6.2). Continue DCA unchanged. Do not redesign the portfolio. Do not initiate discretionary sales.",
+    no: "Continue normal operation. No further action required.",
+  },
+  {
+    step: 7,
+    question: "Compliance confirmation.",
+    detail: null,
+    yes: null,
+    no: null,
+    action: "Confirm: pre-clearance obtained · within dealing window · no compliance restrictions · contribution executed · governance log updated · drift reviewed · concentration reviewed.",
+  },
+  {
+    step: 8,
+    question: "System closure.",
+    detail: null,
+    yes: null,
+    no: null,
+    action: "Close. Do not monitor daily. Do not seek confirmation from market commentators. Do not alter allocations outside governance rules. Reopen only at the next scheduled review date.",
+  },
 ]
 
 async function getRules() {
@@ -93,7 +157,7 @@ export default async function Governance() {
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v5.2" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v5.8" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
@@ -241,29 +305,32 @@ export default async function Governance() {
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold">Allocation Governance Thresholds</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Soft triggers redirect contributions. Hard triggers require rebalancing review.
+            Position Cap (§2) = absolute ceiling requiring trim. Drift triggers (§3.1) govern contribution redirection.
+            Conviction assets (★) may not be trimmed unless Position Cap is breached.
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                {["Asset", "Classification", "Target", "Healthy Range", "Soft Trigger", "Hard Trigger"].map((h) => (
+                {["Asset", "Classification", "Target", "Position Cap §2", "Healthy Range", "Soft Trigger §3.1", "Hard Trigger §3.1"].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {thresholdDisplay.map(({ ticker, target, classification, healthy, soft, hard, color }) => (
+              {thresholdDisplay.map(({ ticker, positionCap, target, classification, healthy, soft, hard, color, conviction }) => (
                 <tr key={ticker} className="hover:bg-accent/30 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                       <span className="font-bold">{ticker}</span>
+                      {conviction && <span className="text-[9px] font-bold text-indigo-400 bg-indigo-400/10 px-1.5 py-0.5 rounded-full">★ Conviction</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{classification}</td>
                   <td className="px-4 py-3 font-semibold">{target}</td>
+                  <td className="px-4 py-3 font-semibold text-red-400">{positionCap}</td>
                   <td className="px-4 py-3 text-green-500">{healthy}</td>
                   <td className="px-4 py-3 text-amber-500">{soft}</td>
                   <td className="px-4 py-3 text-red-500">{hard}</td>
@@ -319,6 +386,49 @@ export default async function Governance() {
             <p className="text-xs text-muted-foreground leading-relaxed">{text}</p>
           </div>
         ))}
+      </div>
+
+      {/* Monthly Decision Engine — §5.4 */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">Monthly Decision Engine</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            §5.4 — Execute every monthly contribution in under five minutes. No forecasting. No opinion. Follow the steps in order.
+          </p>
+        </div>
+        <div className="divide-y divide-border">
+          {monthlySteps.map((s) => (
+            <div key={s.step} className="px-5 py-4 flex gap-4">
+              <div className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[11px] font-black text-muted-foreground mt-0.5">
+                {s.step}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-foreground mb-0.5">{s.question}</p>
+                {s.detail && <p className="text-[11px] text-muted-foreground mb-2">{s.detail}</p>}
+                {s.action ? (
+                  <p className="text-[11px] text-foreground/80 bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">{s.action}</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div className="rounded-lg bg-green-500/[0.06] border border-green-500/15 px-3 py-2">
+                      <p className="text-[10px] font-bold text-green-500 mb-0.5">If Yes</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">{s.yes}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 border border-border px-3 py-2">
+                      <p className="text-[10px] font-bold text-muted-foreground mb-0.5">If No</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">{s.no}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-3 border-t border-border bg-muted/20">
+          <p className="text-[11px] text-muted-foreground italic">
+            Precedence: §4 Look-Through Concentration → §3 Drift Governance → §5 Contribution Engine → all other sections.
+            Concentration always overrides conviction. Hard triggers always override soft alerts.
+          </p>
+        </div>
       </div>
 
       {/* Rules by category — collapsible */}

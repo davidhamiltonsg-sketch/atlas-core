@@ -50,11 +50,12 @@ const COMPANY_CAPS: Record<string, { soft: number; hard: number }> = {
   TSMC:      { soft: 5,  hard: 7  },
 }
 
+// v5.8 cluster caps (Section 4.2) — "elevated" = soft cap, "excessive" = hard cap
 const SECTOR_CAPS = {
-  semiconductor: { label: "Semiconductor",    elevated: 20, excessive: 26 },
-  digital:       { label: "Digital Economy",  elevated: 48, excessive: 54 },
-  us:            { label: "US Market",        elevated: 70, excessive: 78 },
-  ai:            { label: "AI Infrastructure",elevated: 38, excessive: 46 },
+  semiconductor: { label: "Semiconductor & Compute", elevated: 28, excessive: 35 },
+  digital:       { label: "Digital Economy",         elevated: 55, excessive: 65 },
+  us:            { label: "US Equity Dependency",    elevated: 70, excessive: 80 },
+  ai:            { label: "AI Infrastructure",       elevated: 20, excessive: 28 },
 }
 
 // Pairwise overlap data (approximate % of ETF-A that is shared with ETF-B, weighted)
