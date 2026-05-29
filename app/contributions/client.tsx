@@ -135,7 +135,7 @@ export function ContributionsClient({ contributions: initialContributions, month
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Amount (USD)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                  <input name="amount" type="number" step="100" min="1" required defaultValue={monthlyTarget} className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                  <input name="amount" type="number" step="any" min="1" required defaultValue={monthlyTarget} className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
                 </div>
               </div>
               <div>
