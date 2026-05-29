@@ -134,29 +134,29 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
   try {
     const sendUrl = `${FLEX_BASE}.SendRequest?v=3&t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&p=3`
 
-    // Step 1: request with retry — IBKR sometimes rejects SendRequest transiently
-    let referenceCode: string | undefined
-    let getUrl = `${FLEX_BASE}.GetStatement`
+    // Step 1: single SendRequest — no retry (IBKR rate limits on repeated calls)
+    const sendRes = await fetch(sendUrl, { cache: "no-store" })
+    if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
 
-    for (let sendAttempt = 0; sendAttempt < 4; sendAttempt++) {
-      if (sendAttempt > 0) await sleep(5000)
-      const sendRes = await fetch(sendUrl, { cache: "no-store" })
-      if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
-      const sendXml = await sendRes.text()
-      referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
-      getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
-      if (referenceCode) break
-      if (RETRYABLE.some(s => sendXml.includes(s))) continue
-      return { success: false, error: extractError(sendXml) }
-    }
+    const sendXml = await sendRes.text()
+    const referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
+    const getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
 
     if (!referenceCode) {
-      return { success: false, error: "IBKR could not generate the report — try again in a moment" }
+      const ibkrError = extractError(sendXml)
+      // Rate limit / temporary unavailability — tell user to wait or set a dedicated query
+      if (RETRYABLE.some(s => sendXml.includes(s))) {
+        return {
+          success: false,
+          error: `IBKR could not generate the report right now. This usually means the same query was used recently (rate limited). Wait 2–3 minutes and try again, or configure IBKR_FLEX_QUERY_ID_ACTIVITY as a dedicated activity query in your .env.`,
+        }
+      }
+      return { success: false, error: ibkrError }
     }
 
-    // Step 2: poll for result
-    for (let attempt = 0; attempt < 6; attempt++) {
-      await sleep(attempt === 0 ? 4000 : 3000)
+    // Step 2: poll for result (max ~25s to stay within Vercel 30s limit)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await sleep(attempt === 0 ? 4000 : 4000)
       const getRes = await fetch(
         `${getUrl}?q=${encodeURIComponent(referenceCode)}&t=${encodeURIComponent(token)}&v=3`,
         { cache: "no-store" }
@@ -168,7 +168,7 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
         const { executions, dividends, accountId } = parseFlexActivity(xml)
         return { success: true, executions, dividends, accountId }
       }
-      // Valid FLEX report but no activity sections (positions-only query)
+      // Valid FLEX report but positions-only query — return empty gracefully
       if (xml.includes("<OpenPosition") || xml.includes("<FlexStatement")) {
         return { success: true, executions: [], dividends: [], accountId: xml.match(/accountId="([^"]+)"/)?.[1] ?? "" }
       }
