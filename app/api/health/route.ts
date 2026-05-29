@@ -11,8 +11,9 @@ export async function GET() {
     DATABASE_AUTH_TOKEN: !!process.env.DATABASE_AUTH_TOKEN,
     SESSION_SECRET:      !!process.env.SESSION_SECRET,
     ANTHROPIC_API_KEY:   !!process.env.ANTHROPIC_API_KEY,
-    IBKR_FLEX_TOKEN:     !!process.env.IBKR_FLEX_TOKEN,
-    IBKR_FLEX_QUERY_ID:  !!process.env.IBKR_FLEX_QUERY_ID,
+    IBKR_FLEX_TOKEN:              !!process.env.IBKR_FLEX_TOKEN,
+    IBKR_FLEX_QUERY_ID:           !!process.env.IBKR_FLEX_QUERY_ID,
+    IBKR_FLEX_QUERY_ID_ACTIVITY:  !!process.env.IBKR_FLEX_QUERY_ID_ACTIVITY,
   }
 
   // DB connection test

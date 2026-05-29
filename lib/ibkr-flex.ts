@@ -12,6 +12,31 @@ export type FlexResult =
   | { success: true; positions: FlexPosition[]; accountId: string; reportDate: string }
   | { success: false; error: string }
 
+// ── Activity (Executions + Dividends) ──────────────────────────────────────
+
+export interface FlexExecution {
+  tradeID: string
+  symbol: string
+  buySell: "BUY" | "SELL"
+  quantity: number   // always positive; buySell distinguishes direction
+  price: number      // USD per unit
+  currency: string   // instrument currency (usually USD)
+  fxRate: number     // fxRateToBase = USDSGD at execution time
+  tradeDate: string  // YYYYMMDD
+}
+
+export interface FlexDividend {
+  transactionID: string
+  symbol: string
+  amount: number     // in account base currency (SGD)
+  payDate: string    // YYYYMMDD
+  description: string
+}
+
+export type FlexActivityResult =
+  | { success: true; executions: FlexExecution[]; dividends: FlexDividend[]; accountId: string }
+  | { success: false; error: string }
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
@@ -53,6 +78,88 @@ function extractError(xml: string): string {
     xml.match(/<ErrorCode>([^<]+)<\/ErrorCode>/)?.[1] ??
     "Unknown IBKR error"
   )
+}
+
+function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividends: FlexDividend[]; accountId: string } {
+  const executions: FlexExecution[] = []
+  const dividends: FlexDividend[] = []
+
+  // Parse executions
+  const execRe = /<Execution\s+([^>]+)\/?>/g
+  let m: RegExpExecArray | null
+  while ((m = execRe.exec(xml)) !== null) {
+    const a = m[1]
+    const symbol   = attr(a, "symbol")
+    const tradeID  = attr(a, "tradeID")
+    const buySell  = attr(a, "buySell") as "BUY" | "SELL"
+    const quantity = parseFloat(attr(a, "quantity"))
+    const price    = parseFloat(attr(a, "tradePrice"))
+    const currency = attr(a, "currency")
+    const fxRate   = parseFloat(attr(a, "fxRateToBase")) || 1.35
+    const tradeDate = attr(a, "tradeDate")
+
+    if (symbol && tradeID && (buySell === "BUY" || buySell === "SELL") && !isNaN(quantity) && !isNaN(price)) {
+      executions.push({ tradeID, symbol, buySell, quantity: Math.abs(quantity), price, currency, fxRate, tradeDate })
+    }
+  }
+
+  // Parse dividends (CashTransaction where type="Dividends")
+  const cashRe = /<CashTransaction\s+([^>]+)\/?>/g
+  while ((m = cashRe.exec(xml)) !== null) {
+    const a = m[1]
+    if (attr(a, "type") !== "Dividends") continue
+    const symbol        = attr(a, "symbol")
+    const transactionID = attr(a, "transactionID")
+    const amount        = parseFloat(attr(a, "amount"))
+    const description   = attr(a, "description")
+    // dateTime format: "YYYYMMDD;HHMMSS" or "YYYYMMDD"
+    const rawDate = attr(a, "dateTime") || attr(a, "reportDate")
+    const payDate = rawDate.split(";")[0]
+
+    if (symbol && transactionID && !isNaN(amount) && amount > 0) {
+      dividends.push({ transactionID, symbol, amount, payDate, description })
+    }
+  }
+
+  return {
+    executions,
+    dividends,
+    accountId: xml.match(/accountId="([^"]+)"/)?.[1] ?? "",
+  }
+}
+
+export async function fetchFlexActivity(token: string, queryId: string): Promise<FlexActivityResult> {
+  try {
+    const sendUrl = `${FLEX_BASE}.SendRequest?v=3&t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&p=3`
+    const sendRes = await fetch(sendUrl, { cache: "no-store" })
+    if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
+
+    const sendXml = await sendRes.text()
+    const referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
+    const getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
+
+    if (!referenceCode) return { success: false, error: extractError(sendXml) }
+
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await sleep(attempt === 0 ? 4000 : 3000)
+      const getRes = await fetch(
+        `${getUrl}?q=${encodeURIComponent(referenceCode)}&t=${encodeURIComponent(token)}&v=3`,
+        { cache: "no-store" }
+      )
+      if (!getRes.ok) return { success: false, error: `IBKR GetStatement HTTP ${getRes.status}` }
+      const xml = await getRes.text()
+
+      if (xml.includes("<Execution") || xml.includes("<CashTransaction")) {
+        const { executions, dividends, accountId } = parseFlexActivity(xml)
+        return { success: true, executions, dividends, accountId }
+      }
+      if (xml.includes("Statement generation in progress") || xml.includes("Please try again shortly")) continue
+      return { success: false, error: extractError(xml) }
+    }
+    return { success: false, error: "IBKR activity report timed out — try again" }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error fetching FLEX activity" }
+  }
 }
 
 export async function fetchFlexPositions(token: string, queryId: string): Promise<FlexResult> {

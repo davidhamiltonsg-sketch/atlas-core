@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, Trash2, Coins, Loader2, Check, AlertCircle, X } from "lucide-react"
+import { Plus, Trash2, Coins, Loader2, Check, AlertCircle, X, Download } from "lucide-react"
 import { addDividendAction, deleteDividendAction } from "./actions"
+import { IBKRActivityImport } from "@/components/ibkr-activity-import"
 
 type Dividend = {
   id: string
@@ -21,6 +22,7 @@ interface DividendsClientProps {
 export function DividendsClient({ dividends: initialDividends, holdings }: DividendsClientProps) {
   const [dividends, setDividends] = useState(initialDividends)
   const [showForm, setShowForm] = useState(false)
+  const [showIBKRImport, setShowIBKRImport] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -61,6 +63,13 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
   }, {} as Record<string, number>)
 
   return (
+    <>
+    {showIBKRImport && (
+      <IBKRActivityImport
+        onClose={() => setShowIBKRImport(false)}
+        onImported={() => window.location.reload()}
+      />
+    )}
     <div className="space-y-5">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
@@ -86,13 +95,22 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Dividend Log</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
-        >
-          {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-          {showForm ? "Cancel" : "Record Dividend"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowIBKRImport(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/[0.06] hover:bg-indigo-500/10 text-indigo-500 text-xs font-semibold px-3 py-1.5 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Import IBKR
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+          >
+            {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showForm ? "Cancel" : "Record Dividend"}
+          </button>
+        </div>
       </div>
 
       {msg && (
@@ -200,5 +218,6 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
         </div>
       )}
     </div>
+    </>
   )
 }

@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Loader2, Check, AlertCircle, X } from "lucide-react"
+import { Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Loader2, Check, AlertCircle, X, Download } from "lucide-react"
 import { addTradeAction, deleteTradeAction } from "./actions"
+import { IBKRActivityImport } from "@/components/ibkr-activity-import"
 
 type Trade = {
   id: string
@@ -24,6 +25,7 @@ interface TradesClientProps {
 export function TradesClient({ trades: initialTrades, holdings }: TradesClientProps) {
   const [trades, setTrades] = useState(initialTrades)
   const [showForm, setShowForm] = useState(false)
+  const [showIBKRImport, setShowIBKRImport] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -60,6 +62,13 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
   const totalSold = trades.filter(t => t.type === "SELL").reduce((s, t) => s + t.amount, 0)
 
   return (
+    <>
+    {showIBKRImport && (
+      <IBKRActivityImport
+        onClose={() => setShowIBKRImport(false)}
+        onImported={() => window.location.reload()}
+      />
+    )}
     <div className="space-y-5">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
@@ -80,13 +89,22 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
       {/* Add trade button */}
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Trade Log</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
-        >
-          {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-          {showForm ? "Cancel" : "Log Trade"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowIBKRImport(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/[0.06] hover:bg-indigo-500/10 text-indigo-500 text-xs font-semibold px-3 py-1.5 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Import IBKR
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+          >
+            {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showForm ? "Cancel" : "Log Trade"}
+          </button>
+        </div>
       </div>
 
       {/* Status message */}
@@ -216,5 +234,6 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
         )}
       </div>
     </div>
+    </>
   )
 }
