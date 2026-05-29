@@ -139,7 +139,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
               <div className="text-center">
                 <p className="text-sm font-semibold">Fetch IBKR Activity</p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                  Pulls executed trades and dividend payments from your IBKR FLEX activity report. Already-imported items are skipped automatically.
+                  Pulls executed trades and dividend payments from your IBKR FLEX report. Your query must include the <strong>Executions</strong> and <strong>Cash Transactions</strong> sections. Already-imported items are skipped automatically.
                 </p>
               </div>
               <button

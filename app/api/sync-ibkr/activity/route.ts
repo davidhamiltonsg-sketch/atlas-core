@@ -11,11 +11,11 @@ export async function POST() {
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
 
   const token   = process.env.IBKR_FLEX_TOKEN
-  const queryId = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY
+  const queryId = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_FLEX_QUERY_ID
 
   if (!token || !queryId) {
     return NextResponse.json(
-      { error: "IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID_ACTIVITY is not configured" },
+      { error: "IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID is not configured" },
       { status: 503 }
     )
   }
