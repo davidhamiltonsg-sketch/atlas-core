@@ -59,7 +59,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
     try {
       const res = await fetch("/api/sync-ibkr/activity", { method: "POST" })
       const data = await res.json()
-      if (!res.ok) {
+      if (!res.ok || data.error) {
         setErrorMsg(data.error ?? "Failed to fetch from IBKR")
         setState("error")
         return
@@ -202,7 +202,9 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                   )}
                 </div>
                 {executions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-2">No executions in report period.</p>
+                  <p className="text-xs text-muted-foreground py-2">
+                    No executions found. Your FLEX query may not include an <strong>Executions</strong> section — add it in IBKR → Reports → Flex Queries, or set <code className="text-[10px] bg-muted px-1 rounded">IBKR_FLEX_QUERY_ID_ACTIVITY</code> in your .env.
+                  </p>
                 ) : (
                   <div className="space-y-1.5">
                     {executions.map(e => {
@@ -270,7 +272,9 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                   )}
                 </div>
                 {dividends.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-2">No dividends in report period.</p>
+                  <p className="text-xs text-muted-foreground py-2">
+                    No dividends found. Add a <strong>Cash Transactions</strong> section (type = Dividends) to your FLEX query.
+                  </p>
                 ) : (
                   <div className="space-y-1.5">
                     {dividends.map(d => {

@@ -10,8 +10,12 @@ export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
 
-  const token   = process.env.IBKR_FLEX_TOKEN
-  const queryId = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_FLEX_QUERY_ID
+  const token        = process.env.IBKR_FLEX_TOKEN
+  const activityId   = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY
+  const positionsId  = process.env.IBKR_FLEX_QUERY_ID
+  const queryId      = activityId ?? positionsId
+
+  console.log("[sync-ibkr/activity] token present:", !!token, "activityId:", !!activityId, "fallback positionsId:", !!positionsId)
 
   if (!token || !queryId) {
     return NextResponse.json(
@@ -20,9 +24,16 @@ export async function POST() {
     )
   }
 
+  if (!activityId) {
+    console.warn("[sync-ibkr/activity] IBKR_FLEX_QUERY_ID_ACTIVITY not set — falling back to positions query. Add an Executions+CashTransactions FLEX query for full activity import.")
+  }
+
   const result = await fetchFlexActivity(token, queryId)
+  console.log("[sync-ibkr/activity] fetchFlexActivity result:", result.success ? "success" : `error: ${(result as { success: false; error: string }).error}`)
+
   if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 502 })
+    // Return 422 (not 502) so Vercel doesn't flag it as a function crash in logs
+    return NextResponse.json({ error: result.error }, { status: 422 })
   }
 
   // Fetch existing trade ibkr IDs to mark already-imported rows

@@ -128,18 +128,33 @@ function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividend
   }
 }
 
+const RETRYABLE = ["Please try again shortly", "Statement generation in progress", "Statement could not be generated"]
+
 export async function fetchFlexActivity(token: string, queryId: string): Promise<FlexActivityResult> {
   try {
     const sendUrl = `${FLEX_BASE}.SendRequest?v=3&t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&p=3`
-    const sendRes = await fetch(sendUrl, { cache: "no-store" })
-    if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
 
-    const sendXml = await sendRes.text()
-    const referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
-    const getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
+    // Step 1: request with retry — IBKR sometimes rejects SendRequest transiently
+    let referenceCode: string | undefined
+    let getUrl = `${FLEX_BASE}.GetStatement`
 
-    if (!referenceCode) return { success: false, error: extractError(sendXml) }
+    for (let sendAttempt = 0; sendAttempt < 4; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(5000)
+      const sendRes = await fetch(sendUrl, { cache: "no-store" })
+      if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
+      const sendXml = await sendRes.text()
+      referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
+      getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
+      if (referenceCode) break
+      if (RETRYABLE.some(s => sendXml.includes(s))) continue
+      return { success: false, error: extractError(sendXml) }
+    }
 
+    if (!referenceCode) {
+      return { success: false, error: "IBKR could not generate the report — try again in a moment" }
+    }
+
+    // Step 2: poll for result
     for (let attempt = 0; attempt < 6; attempt++) {
       await sleep(attempt === 0 ? 4000 : 3000)
       const getRes = await fetch(
@@ -153,7 +168,11 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
         const { executions, dividends, accountId } = parseFlexActivity(xml)
         return { success: true, executions, dividends, accountId }
       }
-      if (xml.includes("Statement generation in progress") || xml.includes("Please try again shortly")) continue
+      // Valid FLEX report but no activity sections (positions-only query)
+      if (xml.includes("<OpenPosition") || xml.includes("<FlexStatement")) {
+        return { success: true, executions: [], dividends: [], accountId: xml.match(/accountId="([^"]+)"/)?.[1] ?? "" }
+      }
+      if (RETRYABLE.some(s => xml.includes(s))) continue
       return { success: false, error: extractError(xml) }
     }
     return { success: false, error: "IBKR activity report timed out — try again" }
