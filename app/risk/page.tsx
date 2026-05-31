@@ -101,8 +101,12 @@ async function getRiskData(userId: string) {
   const annualisedReturn = Math.pow(1 + avgPeriodReturn, periodsPerYear) - 1
 
   // Sharpe (risk-free rate from user settings, defaulting to 4% SGD T-bill proxy)
+  // Requires ≥12 period returns for statistical reliability — fewer points cause geometric
+  // annualisation to produce unrealistically large values from consistently positive returns.
   const riskFree = user?.riskFreeRate ?? 0.04
-  const sharpe = annualisedVol > 0 ? (annualisedReturn - riskFree) / annualisedVol : null
+  const sharpe = annualisedVol > 0 && periodReturns.length >= 12
+    ? (annualisedReturn - riskFree) / annualisedVol
+    : null
 
   // Max Drawdown
   let peak = 0, maxDrawdown = 0, drawdownStart = "", drawdownEnd = "", peakDate = "", currentDrawdown = 0
@@ -205,7 +209,9 @@ export default async function RiskPage() {
   const data = await getRiskData(session.userId)
 
   const hasData = data.dataPoints >= 2
-  const hasSufficientData = data.periodReturns.length >= 3
+  // Sharpe requires 12+ periods; volatility shown from 4+ (single-point annualisation is noise below that)
+  const hasSufficientData = data.periodReturns.length >= 12
+  const hasEnoughForVol = data.periodReturns.length >= 4
 
   const volInfo = hasData ? volLabel(data.annualisedVol) : null
   const sharpeInfo = data.sharpe !== null ? sharpeLabel(data.sharpe) : null
@@ -221,10 +227,11 @@ export default async function RiskPage() {
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
             <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-amber-500">Limited historical data</p>
+              <p className="text-xs font-semibold text-amber-500">Sharpe Ratio unavailable — insufficient history</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Risk metrics improve with more snapshots. Currently {data.dataPoints} snapshot{data.dataPoints !== 1 ? "s" : ""} recorded.
-                Add more portfolio updates over time for accurate volatility calculations.
+                Sharpe Ratio requires at least 12 monthly snapshots to avoid geometric annualisation artefacts
+                ({data.periodReturns.length} period{data.periodReturns.length !== 1 ? "s" : ""} available — need {Math.max(0, 12 - data.periodReturns.length)} more).
+                Volatility and drawdown are shown from 4+ snapshots.
               </p>
             </div>
           </div>
@@ -406,11 +413,11 @@ export default async function RiskPage() {
                       <td className="px-5 py-3 text-right tabular-nums">{h.targetPct}%</td>
                       <td className="px-5 py-3 text-right tabular-nums font-semibold">{formatCurrency(h.latestValue, "SGD")}</td>
                       <td className="px-5 py-3 text-right tabular-nums">
-                        {h.dataPoints >= 2 ? formatPercent(h.annualisedVol * 100, 1, false) : "—"}
+                        {h.dataPoints >= 8 ? formatPercent(h.annualisedVol * 100, 1, false) : "—"}
                       </td>
                       <td className="px-5 py-3 text-right text-muted-foreground">{h.dataPoints}</td>
-                      <td className={`px-5 py-3 text-right font-semibold ${h.dataPoints >= 2 ? hVol.color : "text-muted-foreground"}`}>
-                        {h.dataPoints >= 2 ? hVol.label : "Insufficient data"}
+                      <td className={`px-5 py-3 text-right font-semibold ${h.dataPoints >= 8 ? hVol.color : "text-muted-foreground"}`}>
+                        {h.dataPoints >= 8 ? hVol.label : `Need ${Math.max(0, 8 - h.dataPoints)} more`}
                       </td>
                     </tr>
                   )
@@ -472,7 +479,7 @@ export default async function RiskPage() {
             </div>
             <div>
               <p className="font-semibold text-foreground mb-0.5">Sharpe Ratio</p>
-              <p>Excess return over the risk-free rate (configurable in Settings — currently {(data.riskFree * 100).toFixed(2)}% SGD proxy) divided by annualised volatility. Requires at least 3 data points.</p>
+              <p>Excess return over the risk-free rate (configurable in Settings — currently {(data.riskFree * 100).toFixed(2)}% SGD proxy) divided by annualised volatility. Requires 12+ snapshots — with fewer, geometric annualisation of consistently positive returns produces unrealistically high values.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground mb-0.5">Value at Risk (VaR)</p>

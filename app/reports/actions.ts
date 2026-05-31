@@ -6,6 +6,70 @@ import { revalidatePath } from "next/cache"
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
+// ── Yahoo Finance crumb auth ──────────────────────────────────────────────────
+// v10/quoteSummary requires a crumb token obtained by first collecting cookies from
+// finance.yahoo.com, then calling /v1/test/getcrumb with those cookies.
+// We cache in module scope (persists for the life of the Next.js server process).
+
+let _cachedCrumb  = ""
+let _cachedCookie = ""
+let _crumbCachedAt = 0
+const CRUMB_TTL = 55 * 60 * 1000 // 55 minutes
+
+async function getYFCrumb(): Promise<{ crumb: string; cookie: string } | null> {
+  if (_cachedCrumb && Date.now() - _crumbCachedAt < CRUMB_TTL) {
+    return { crumb: _cachedCrumb, cookie: _cachedCookie }
+  }
+  try {
+    // Step 1: load finance.yahoo.com to collect session cookies
+    const pageRes = await fetch("https://finance.yahoo.com/", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      redirect: "follow",
+      cache: "no-store",
+    })
+
+    // Collect Set-Cookie values — getSetCookie() is available in Node 18+
+    const rawCookies: string[] =
+      typeof (pageRes.headers as Record<string, unknown>).getSetCookie === "function"
+        ? ((pageRes.headers as unknown as { getSetCookie(): string[] }).getSetCookie())
+        : [pageRes.headers.get("set-cookie") ?? ""]
+
+    const cookieStr = rawCookies
+      .filter(Boolean)
+      .map(c => c.split(";")[0].trim())
+      .filter(Boolean)
+      .join("; ")
+
+    // Step 2: fetch the crumb using those cookies
+    for (const host of YF_HOSTS) {
+      try {
+        const crumbRes = await fetch(`https://${host}/v1/test/getcrumb`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "*/*",
+            "Cookie": cookieStr,
+          },
+          cache: "no-store",
+        })
+        if (!crumbRes.ok) continue
+        const crumb = (await crumbRes.text()).trim()
+        // A valid crumb is a short alphanumeric string; reject HTML/null responses
+        if (crumb && crumb !== "null" && crumb.length > 2 && !crumb.startsWith("<")) {
+          _cachedCrumb  = crumb
+          _cachedCookie = cookieStr
+          _crumbCachedAt = Date.now()
+          return { crumb, cookie: cookieStr }
+        }
+      } catch { continue }
+    }
+  } catch {}
+  return null
+}
+
 // Map Yahoo Finance ticker symbols → our tracked company names
 const SYMBOL_TO_COMPANY: Record<string, string> = {
   NVDA:     "Nvidia",
@@ -44,18 +108,25 @@ type EtfData = {
 
 async function fetchYFHoldings(ticker: string): Promise<Record<string, unknown> | null> {
   const modules = "topHoldings"
+  const auth = await getYFCrumb()
+
   for (const host of YF_HOSTS) {
     try {
+      // Append crumb when available; Yahoo falls back gracefully without it but
+      // a missing crumb is the primary cause of "Unauthorized" / empty responses.
+      const qs = auth
+        ? `modules=${modules}&crumb=${encodeURIComponent(auth.crumb)}`
+        : `modules=${modules}`
+
+      const headers: Record<string, string> = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+      }
+      if (auth?.cookie) headers["Cookie"] = auth.cookie
+
       const res = await fetch(
-        `https://${host}/v10/finance/quoteSummary/${ticker}?modules=${modules}`,
-        {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json",
-          },
-          cache: "no-store",
-        }
+        `https://${host}/v10/finance/quoteSummary/${ticker}?${qs}`,
+        { headers, cache: "no-store" }
       )
       if (!res.ok) continue
       const json = await res.json()

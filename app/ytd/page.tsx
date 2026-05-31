@@ -143,8 +143,21 @@ async function getYtdData(userId: string) {
 
   const totalCurrentValue  = holdingData.reduce((s, h) => s + h.currentValue, 0)
   const totalCostBasis     = holdingData.reduce((s, h) => s + h.costBasisTotal, 0)
-  const totalUnrealisedPnl = totalCostBasis > 0 ? totalCurrentValue - totalCostBasis : null
-  const totalUnrealisedPct = totalCostBasis > 0 ? ((totalCurrentValue - totalCostBasis) / totalCostBasis) * 100 : null
+
+  // Only aggregate unrealised P&L for holdings that have recorded trades.
+  // If cost basis is partial (e.g. 2 of 5 holdings have trades), the portfolio-level
+  // % becomes meaningless (current value >> partial cost) — suppress the % until complete.
+  const holdingsWithBasis    = holdingData.filter(h => h.costBasisTotal > 0)
+  const holdingsWithoutBasis = holdingData.filter(h => h.costBasisTotal === 0 && h.hasData)
+  const hasCompleteCostBasis = holdingsWithoutBasis.length === 0 && holdingsWithBasis.length > 0
+
+  // Unrealised uses only the subset with actual cost basis
+  const basisSubsetCost    = holdingsWithBasis.reduce((s, h) => s + h.costBasisTotal, 0)
+  const basisSubsetValue   = holdingsWithBasis.reduce((s, h) => s + h.currentValue, 0)
+  const totalUnrealisedPnl = basisSubsetCost > 0 ? basisSubsetValue - basisSubsetCost : null
+  const totalUnrealisedPct = hasCompleteCostBasis && basisSubsetCost > 0
+    ? ((basisSubsetValue - basisSubsetCost) / basisSubsetCost) * 100
+    : null // hide % when partial — SGD figure is still shown
 
   // ── Portfolio-level YTD (Modified Dietz) ────────────────────────────────────
   const totalStartValue = holdings.reduce((s, h) => {
@@ -190,6 +203,9 @@ async function getYtdData(userId: string) {
     totalCostBasis,
     totalUnrealisedPnl,
     totalUnrealisedPct,
+    hasCompleteCostBasis,
+    holdingsWithBasisCount: holdingsWithBasis.length,
+    holdingsTotalCount: holdingData.filter(h => h.hasData).length,
     totalYtdReturn,
     totalYtdPct,
     realisedPnl: ytdSells.length > 0 ? realisedPnl : null,
@@ -228,6 +244,21 @@ export default async function YtdPage() {
           </div>
         )}
 
+        {/* Partial cost basis notice */}
+        {data.hasCostBasis && !data.hasCompleteCostBasis && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
+            <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-amber-500">Partial cost basis — {data.holdingsWithBasisCount} of {data.holdingsTotalCount} holdings have trade records</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Unrealised P&L % is suppressed at the portfolio level until all holdings have logged trades — a partial basis
+                makes the portfolio % meaningless. Individual holding rows show accurate figures where trades exist.
+                Add remaining trades in the <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a>.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Summary KPIs */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
@@ -253,9 +284,15 @@ export default async function YtdPage() {
                 <p className={`text-2xl font-black tabular-nums ${data.totalUnrealisedPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
                   {data.totalUnrealisedPnl >= 0 ? "+" : ""}{formatCurrency(data.totalUnrealisedPnl, "SGD")}
                 </p>
-                <p className={`text-[11px] font-semibold mt-0.5 ${data.totalUnrealisedPct !== null && data.totalUnrealisedPct >= 0 ? "text-green-500" : "text-red-500"}`}>
-                  {data.totalUnrealisedPct !== null ? (data.totalUnrealisedPct >= 0 ? "+" : "") + formatPercent(data.totalUnrealisedPct, 2, false) + " vs cost" : "—"}
-                </p>
+                {data.totalUnrealisedPct !== null ? (
+                  <p className={`text-[11px] font-semibold mt-0.5 ${data.totalUnrealisedPct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {(data.totalUnrealisedPct >= 0 ? "+" : "") + formatPercent(data.totalUnrealisedPct, 2, false)} vs cost
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-amber-500 mt-0.5">
+                    {data.holdingsWithBasisCount}/{data.holdingsTotalCount} holdings
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-2xl font-black text-muted-foreground">—</p>
@@ -362,7 +399,12 @@ export default async function YtdPage() {
               {data.hasCostBasis && (
                 <tfoot>
                   <tr className="border-t border-border bg-muted/20">
-                    <td className="px-5 py-3 font-semibold text-muted-foreground">Total</td>
+                    <td className="px-5 py-3 font-semibold text-muted-foreground">
+                      Total
+                      {!data.hasCompleteCostBasis && (
+                        <span className="text-[10px] font-normal text-amber-500 ml-1">({data.holdingsWithBasisCount}/{data.holdingsTotalCount} w/ basis)</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-right font-black tabular-nums">{formatCurrency(data.totalCurrentValue, "SGD")}</td>
                     <td className="px-5 py-3 text-right font-semibold tabular-nums text-muted-foreground">{formatCurrency(data.totalCostBasis, "SGD")}</td>
                     <td className="px-5 py-3" />

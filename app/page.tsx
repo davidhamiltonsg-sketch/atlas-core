@@ -9,6 +9,7 @@ import { HealthGauge } from "@/components/charts/health-gauge"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { computePortfolioHealth } from "@/lib/health"
 import { ExecutionPlan } from "@/components/dashboard/execution-plan"
+import { CollapsibleSection } from "@/components/dashboard/collapsible-section"
 import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 
@@ -302,30 +303,30 @@ export default async function Dashboard() {
 
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
+            <a href="/ytd" className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2 hover:border-primary/30 hover:bg-accent/40 transition-colors group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
-                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               <p className="text-2xl font-black tabular-nums">{formatCurrency(totalValue, "SGD")}</p>
               <p className="text-[11px] text-muted-foreground">
                 SGD · USD/SGD {usdSgdRate.toFixed(4)}
               </p>
-            </div>
+            </a>
 
-            <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
+            <a href="/governance" className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2 hover:border-primary/30 hover:bg-accent/40 transition-colors group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Active Rules</span>
-                <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               <p className="text-2xl font-black tabular-nums">{activeRules}</p>
-              <p className="text-[11px] text-muted-foreground">Governance rules enforced</p>
-            </div>
+              <p className="text-[11px] text-muted-foreground">{activeRules}/{totalRules} governance rules active</p>
+            </a>
 
-            <div className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 ${driftAlerts > 0 ? "border-amber-400/40" : "border-border"}`}>
+            <a href="/portfolio" className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Drift Alerts</span>
-                <AlertTriangle className={`h-3.5 w-3.5 ${driftAlerts > 0 ? "text-amber-500" : "text-muted-foreground"}`} />
+                <AlertTriangle className={`h-3.5 w-3.5 ${driftAlerts > 0 ? "text-amber-500" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
               </div>
               <p className={`text-2xl font-black tabular-nums ${driftAlerts > 0 ? (hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}>
                 {driftAlerts}
@@ -333,17 +334,17 @@ export default async function Dashboard() {
               <p className="text-[11px] text-muted-foreground">
                 {driftAlerts === 0 ? "All within tolerance" : `${driftAlerts} position${driftAlerts > 1 ? "s" : ""} outside band`}
               </p>
-            </div>
+            </a>
 
-            <div className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 ${
-              onTrackPct === null ? "border-border" :
+            <a href="/forecast" className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${
+              onTrackPct === null ? "border-border hover:border-primary/30" :
               onTrackPct >= 95 ? "border-green-500/30" :
               onTrackPct >= 80 ? "border-yellow-400/30" : "border-red-500/30"
             }`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Goal Track</span>
                 <Activity className={`h-3.5 w-3.5 ${
-                  onTrackPct === null ? "text-muted-foreground" :
+                  onTrackPct === null ? "text-muted-foreground group-hover:text-primary transition-colors" :
                   onTrackPct >= 95 ? "text-green-500" :
                   onTrackPct >= 80 ? "text-yellow-400" : "text-red-500"
                 }`} />
@@ -356,12 +357,27 @@ export default async function Dashboard() {
                 {onTrackPct !== null ? `${onTrackPct.toFixed(0)}%` : "—"}
               </p>
               <p className="text-[11px] text-muted-foreground">vs base-case 2045 pace</p>
-            </div>
+            </a>
           </div>
 
           {/* Holdings Summary Table */}
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Your Holdings</h2>
+          <CollapsibleSection
+            title="Your Holdings"
+            defaultOpen={true}
+            badge={
+              hasBalance && (
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  hardBreaches > 0 ? "bg-red-500/10 text-red-500" :
+                  softBreaches > 0 ? "bg-amber-400/10 text-amber-500" :
+                  "bg-green-500/10 text-green-500"
+                }`}>
+                  {hardBreaches > 0 ? `${hardBreaches} hard breach` :
+                   softBreaches > 0 ? `${softBreaches} soft alert` :
+                   "All on track"}
+                </span>
+              )
+            }
+          >
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <div className="hidden sm:grid grid-cols-[32px_1fr_90px_70px_70px_70px] gap-2 px-4 py-2 bg-muted/30 border-b border-border">
                 {["", "Name", "Value", "Actual", "Target", "Status"].map((h, i) => (
@@ -410,27 +426,33 @@ export default async function Dashboard() {
                 <a href="/portfolio" className="font-semibold text-primary hover:underline">Manage holdings →</a>
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Next Execution Instructions */}
           <div id="execution">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
-              What To Do This Month
-            </h2>
-            <ExecutionPlan
-              positions={positions}
-              totalValue={totalValue}
-              hasBalance={hasBalance}
-              allocOrder={allocOrder}
-              hasAnyAlert={hasAnyAlert}
-              defaultContribution={monthlyContribution}
-              annualLumpSum={annualLumpSum}
-            />
+            <CollapsibleSection
+              title="What To Do This Month"
+              defaultOpen={true}
+              badge={
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {daysToContribution === 0 ? "Contribution due today" : `${daysToContribution}d to next contribution`}
+                </span>
+              }
+            >
+              <ExecutionPlan
+                positions={positions}
+                totalValue={totalValue}
+                hasBalance={hasBalance}
+                allocOrder={allocOrder}
+                hasAnyAlert={hasAnyAlert}
+                defaultContribution={monthlyContribution}
+                annualLumpSum={annualLumpSum}
+              />
+            </CollapsibleSection>
           </div>
 
           {/* How to use Atlas */}
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">How to Use Atlas</h2>
+          <CollapsibleSection title="How to Use Atlas" defaultOpen={false}>
             <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
               {[
                 {
@@ -488,11 +510,10 @@ export default async function Dashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* System overview */}
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">System Overview</h2>
+          <CollapsibleSection title="System Overview" defaultOpen={false}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {sections.map(({ title, desc, href }) => (
                 <a
@@ -508,7 +529,7 @@ export default async function Dashboard() {
                 </a>
               ))}
             </div>
-          </div>
+          </CollapsibleSection>
         </div>
 
         {/* Right sidebar — health + allocation */}
