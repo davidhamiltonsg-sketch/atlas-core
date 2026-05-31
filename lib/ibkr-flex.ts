@@ -147,16 +147,15 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
 
     if (!referenceCode) {
       const ibkrError = extractError(sendXml)
-      // Include raw snippet in all error paths for diagnosis
-      const rawSnippet = sendXml.replace(/\s+/g, " ").trim().slice(0, 500)
-      // Rate limit / temporary unavailability — tell user to wait or set a dedicated query
+      // Rate limit / temporary unavailability — tell user to wait
       if (RETRYABLE.some(s => sendXml.includes(s))) {
+        const errorCode = sendXml.match(/<ErrorCode>([^<]+)<\/ErrorCode>/)?.[1] ?? ""
         return {
           success: false,
-          error: `IBKR temporary error — Raw response: ${rawSnippet}`,
+          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError}. Wait 15–20 minutes before retrying — repeated requests extend the rate limit window.`,
         }
       }
-      return { success: false, error: `IBKR error: ${ibkrError} | Raw: ${rawSnippet}` }
+      return { success: false, error: `IBKR: ${ibkrError}` }
     }
 
     // Step 2: poll for result (max ~25s to stay within Vercel 30s limit)

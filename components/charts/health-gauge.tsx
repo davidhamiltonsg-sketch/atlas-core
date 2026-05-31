@@ -25,7 +25,7 @@ export function HealthGauge({ score, label }: Props) {
     <div className={`flex flex-col items-center ${animClass}`}>
       {/* Arc chart — half-circle, cy="100%" keeps arc at bottom of SVG */}
       <div style={{ width: 190, height: 105 }}>
-        <ResponsiveContainer width="100%" height={105}>
+        <ResponsiveContainer width={190} height={105}>
           <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
             {/* Background track */}
             <Pie
