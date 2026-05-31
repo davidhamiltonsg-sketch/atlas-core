@@ -5,20 +5,24 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import Anthropic from "@anthropic-ai/sdk"
 
-// Fetch live USD→SGD exchange rate from Yahoo Finance
+const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
+
+// Fetch live USD→SGD exchange rate from Yahoo Finance (query1 → query2 fallback)
 async function getUsdSgdRate(): Promise<number> {
-  try {
-    const res = await fetch(
-      "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d",
-      { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
-    )
-    if (res.ok) {
-      const d = await res.json()
-      const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-      if (rate && rate > 0) return rate
-    }
-  } catch {}
-  return 1.35 // fallback
+  for (const host of YF_HOSTS) {
+    try {
+      const res = await fetch(
+        `https://${host}/v8/finance/chart/USDSGD=X?interval=1d&range=1d`,
+        { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
+      )
+      if (res.ok) {
+        const d = await res.json()
+        const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
+        if (rate && rate > 0) return rate
+      }
+    } catch {}
+  }
+  return 1.35 // hardcoded fallback when both hosts unavailable
 }
 
 // Manual update: create new snapshots for one or more holdings
@@ -67,42 +71,51 @@ export async function refreshLivePrices(): Promise<{ success: boolean; updated?:
 
   if (holdings.length === 0) return { success: false, error: "No holdings found" }
 
-  // Yahoo Finance API — map our tickers to YF symbols
+  // Yahoo Finance API — try batch quote on query1, then query2 as fallback
   const symbols = holdings.map(h => h.ticker).join(",")
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,shortName`
 
   let priceMap: Record<string, number> = {}
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; AtlasPortfolio/1.0)" },
-      cache: "no-store",
-    })
-    if (!res.ok) {
-      // Fallback to v8 chart API for individual tickers
-      for (const h of holdings) {
-        const r = await fetch(
-          `https://query1.finance.yahoo.com/v8/finance/chart/${h.ticker}?interval=1d&range=1d`,
-          { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
-        )
-        if (r.ok) {
-          const d = await r.json()
-          const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-          if (price) priceMap[h.ticker] = price
+  let batchSuccess = false
+
+  for (const host of YF_HOSTS) {
+    try {
+      const res = await fetch(
+        `https://${host}/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,shortName`,
+        { headers: { "User-Agent": "Mozilla/5.0 (compatible; AtlasPortfolio/1.0)" }, cache: "no-store" }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        const quotes: Array<{ symbol: string; regularMarketPrice: number }> = data?.quoteResponse?.result ?? []
+        for (const q of quotes) {
+          if (q.regularMarketPrice) priceMap[q.symbol] = q.regularMarketPrice
         }
+        if (Object.keys(priceMap).length > 0) { batchSuccess = true; break }
       }
-    } else {
-      const data = await res.json()
-      const quotes: Array<{ symbol: string; regularMarketPrice: number }> = data?.quoteResponse?.result ?? []
-      for (const q of quotes) {
-        if (q.regularMarketPrice) priceMap[q.symbol] = q.regularMarketPrice
+    } catch {}
+  }
+
+  // Per-ticker fallback: try v8/chart on query1 then query2 for any missing tickers
+  if (!batchSuccess || Object.keys(priceMap).length < holdings.length) {
+    const missing = holdings.filter(h => !priceMap[h.ticker])
+    for (const h of missing) {
+      for (const host of YF_HOSTS) {
+        try {
+          const r = await fetch(
+            `https://${host}/v8/finance/chart/${h.ticker}?interval=1d&range=1d`,
+            { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
+          )
+          if (r.ok) {
+            const d = await r.json()
+            const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice
+            if (price) { priceMap[h.ticker] = price; break }
+          }
+        } catch {}
       }
     }
-  } catch {
-    return { success: false, error: "Price API unavailable" }
   }
 
   if (Object.keys(priceMap).length === 0) {
-    return { success: false, error: "No prices returned from market data API" }
+    return { success: false, error: "Price API unavailable — both Yahoo Finance endpoints failed" }
   }
 
   const usdSgdRate = await getUsdSgdRate()

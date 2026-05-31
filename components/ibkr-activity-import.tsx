@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { X, RefreshCw, Check, AlertCircle, ArrowUpCircle, Loader2, TrendingUp } from "lucide-react"
+import { useState, useTransition, useMemo } from "react"
+import { X, RefreshCw, Check, AlertCircle, ArrowUpCircle, Loader2, TrendingUp, Info, ShieldAlert } from "lucide-react"
 
 interface Execution {
   tradeID: string
@@ -52,6 +52,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
   // Toggle selection
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set())
   const [selectedDivs, setSelectedDivs] = useState<Set<string>>(new Set())
+  const [behaviourAcknowledged, setBehaviourAcknowledged] = useState(false)
 
   async function handleFetch() {
     setState("fetching")
@@ -109,6 +110,20 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
   const newTrades = executions.filter(e => !e.alreadyImported && e.holdingKnown)
   const newDivs = dividends.filter(d => !d.alreadyImported && d.holdingKnown)
   const totalNew = selectedTrades.size + selectedDivs.size
+
+  // Units reconciliation: aggregate net unit changes for selected trades
+  const sellSummary = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const e of executions) {
+      if (!selectedTrades.has(e.tradeID)) continue
+      if (!map[e.symbol]) map[e.symbol] = 0
+      map[e.symbol] += e.buySell === "SELL" ? -e.quantity : e.quantity
+    }
+    return map
+  }, [executions, selectedTrades])
+
+  const hasSells = executions.some(e => selectedTrades.has(e.tradeID) && e.buySell === "SELL")
+  const canImport = totalNew > 0 && (!hasSells || behaviourAcknowledged)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -329,6 +344,48 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                   </div>
                 )}
               </div>
+
+            {/* Units reconciliation notice — shown whenever there are net unit changes */}
+            {Object.keys(sellSummary).some(k => sellSummary[k] !== 0) && (
+              <div className="rounded-lg border border-blue-400/30 bg-blue-400/5 px-4 py-3 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-semibold text-blue-500">Update your portfolio snapshot after import</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Trade log records the transaction — snapshot units must also be updated manually on the Portfolio page:
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {Object.entries(sellSummary)
+                      .filter(([, delta]) => delta !== 0)
+                      .map(([ticker, delta]) => (
+                        <li key={ticker} className="text-[11px] tabular-nums font-semibold">
+                          <span className={delta > 0 ? "text-green-500" : "text-red-500"}>
+                            {ticker}: {delta > 0 ? "+" : ""}{delta} units
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Behaviour log gate — required acknowledgment for SELL trades */}
+            {hasSells && (
+              <label className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-400/5 px-4 py-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={behaviourAcknowledged}
+                  onChange={e => setBehaviourAcknowledged(e.target.checked)}
+                  className="mt-0.5 shrink-0 accent-amber-500"
+                />
+                <div className="flex items-start gap-1.5">
+                  <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    <span className="font-semibold">Governance gate:</span> I confirm this sale was reviewed against the investment policy (v5.8 §2–3), justified by the Behaviour Log, and does not constitute panic selling or speculation.
+                  </p>
+                </div>
+              </label>
+            )}
             </div>
           )}
         </div>
@@ -344,7 +401,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
             </button>
             <button
               onClick={handleConfirm}
-              disabled={isPending || totalNew === 0}
+              disabled={isPending || !canImport}
               className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 transition-colors"
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}

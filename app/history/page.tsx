@@ -40,7 +40,7 @@ async function getHistoryData(userId: string) {
       return {
         date,
         label: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }),
-        value: values.reduce((s, v) => s + v!, 0),
+        value: values.reduce<number>((s, v) => s + v!, 0),
       }
     })
     .filter((x): x is { date: string; label: string; value: number } => x !== null)

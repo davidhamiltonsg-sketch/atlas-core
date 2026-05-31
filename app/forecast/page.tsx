@@ -7,6 +7,7 @@ import { redirect } from "next/navigation"
 import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
 
 const SINGAPORE_SAVINGS_RATE = 0.030
+const VT_HISTORICAL_RATE = 0.095  // VT (Total World) 9.5% p.a. long-run historical CAGR
 const CONE_VOL = 0.15  // annual return volatility for P10/P90 band
 
 const returnScenarios = [
@@ -80,6 +81,7 @@ export default async function Forecast() {
     const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
     const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.15, yr, CONTRIBUTION_GROWTH_RATE)
     const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, SINGAPORE_SAVINGS_RATE, yr, CONTRIBUTION_GROWTH_RATE)
+    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, VT_HISTORICAL_RATE, yr, CONTRIBUTION_GROWTH_RATE)
     const coneP10      = coneProjection(base, yr, -1.28)
     const coneP90      = coneProjection(base, yr,  1.28)
     const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
@@ -92,10 +94,12 @@ export default async function Forecast() {
       base,
       aggressive,
       savings,
+      vtBenchmark,
       realConservative: toReal(conservative, yr),
       realBase:         toReal(base, yr),
       realAggressive:   toReal(aggressive, yr),
       realSavings:      toReal(savings, yr),
+      realVtBenchmark:  toReal(vtBenchmark, yr),
       coneP10,
       coneP90,
       realConeP10:  toReal(coneP10, yr),

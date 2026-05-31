@@ -19,11 +19,13 @@ export interface ExtendedForecastPoint {
   base: number
   aggressive: number
   savings: number
+  vtBenchmark: number
   // Real (inflation-adjusted)
   realConservative: number
   realBase: number
   realAggressive: number
   realSavings: number
+  realVtBenchmark: number
   // Uncertainty cone (log-normal P10/P90 around base)
   coneP10: number
   coneP90: number
@@ -69,11 +71,12 @@ function ScenarioTooltip({ active, payload, label, inflated }: {
   inflated?: boolean
 }) {
   if (!active || !payload?.length) return null
-  const order = ["aggressive", "base", "conservative", "savings"]
+  const order = ["aggressive", "base", "vtBenchmark", "conservative", "savings"]
   const sorted = [...payload].sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
   const nameMap: Record<string, string> = {
     aggressive:   "Best case (15%)",
     base:         "Base case (10%)",
+    vtBenchmark:  "Pure VT (9.5% p.a.)",
     conservative: "Conservative (5%)",
     savings:      "Cash savings (3%)",
   }
@@ -190,6 +193,7 @@ function ScenarioChart({ data, currentValue, milestones, inflated }: {
     base:         inflated ? d.realBase         : d.base,
     aggressive:   inflated ? d.realAggressive   : d.aggressive,
     savings:      inflated ? d.realSavings       : d.savings,
+    vtBenchmark:  inflated ? d.realVtBenchmark   : d.vtBenchmark,
   }))
   const maxVal = inflated
     ? data[data.length - 1].realAggressive
@@ -215,6 +219,10 @@ function ScenarioChart({ data, currentValue, milestones, inflated }: {
             <stop offset="5%"  stopColor="#64748b" stopOpacity={0.12} />
             <stop offset="95%" stopColor="#64748b" stopOpacity={0.01} />
           </linearGradient>
+          <linearGradient id="sgVt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#f97316" stopOpacity={0.12} />
+            <stop offset="95%" stopColor="#f97316" stopOpacity={0.01} />
+          </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} interval={1} />
@@ -227,6 +235,7 @@ function ScenarioChart({ data, currentValue, milestones, inflated }: {
         ))}
         <Area type="monotone" dataKey="savings"      name="savings"       stroke="#64748b" strokeWidth={1.5} strokeDasharray="5 3" fill="url(#sgSavings)"      dot={false} activeDot={{ r: 3 }} animationDuration={1000} />
         <Area type="monotone" dataKey="conservative" name="conservative"  stroke="#a78bfa" strokeWidth={2}   fill="url(#sgConservative)" dot={false} activeDot={{ r: 3 }} animationBegin={150} animationDuration={1000} />
+        <Area type="monotone" dataKey="vtBenchmark"  name="vtBenchmark"   stroke="#f97316" strokeWidth={1.5} strokeDasharray="6 3" fill="url(#sgVt)" dot={false} activeDot={{ r: 3 }} animationBegin={250} animationDuration={1000} />
         <Area type="monotone" dataKey="base"         name="base"          stroke="#6366f1" strokeWidth={2.5} fill="url(#sgBase)"          dot={false} activeDot={{ r: 4 }} animationBegin={300} animationDuration={1000} />
         <Area type="monotone" dataKey="aggressive"   name="aggressive"    stroke="#22c55e" strokeWidth={2}   fill="url(#sgAggressive)"   dot={false} activeDot={{ r: 3 }} animationBegin={450} animationDuration={1000} />
       </AreaChart>

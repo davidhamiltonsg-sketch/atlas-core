@@ -11,6 +11,7 @@ interface SettingsClientProps {
   monthlyContribution: number
   annualLumpSum: number
   contributionGrowthRate: number
+  riskFreeRate: number
 }
 
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
@@ -39,7 +40,7 @@ function StatusMessage({ msg }: { msg: { type: "success" | "error"; text: string
   )
 }
 
-export function SettingsClient({ initialName, initialEmail, role, monthlyContribution, annualLumpSum, contributionGrowthRate }: SettingsClientProps) {
+export function SettingsClient({ initialName, initialEmail, role, monthlyContribution, annualLumpSum, contributionGrowthRate, riskFreeRate }: SettingsClientProps) {
   // Profile
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
@@ -152,6 +153,23 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">× p.a.</span>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">e.g. 0.05 = 5% annual growth in contributions. Used in the forecast model.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Risk-Free Rate (Sharpe baseline)</label>
+            <div className="relative">
+              <input
+                name="riskFreeRate"
+                type="number"
+                step="0.001"
+                min="0"
+                max="1"
+                required
+                defaultValue={riskFreeRate}
+                className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">p.a.</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">e.g. 0.04 = 4% (current MAS T-bill proxy). Drives the Sharpe ratio on the Risk page.</p>
           </div>
           <StatusMessage msg={contribMsg} />
           <button

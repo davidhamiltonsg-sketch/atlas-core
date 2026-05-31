@@ -41,11 +41,14 @@ function hhiLabel(h: number): { label: string; color: string } {
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
 async function getRiskData(userId: string) {
-  const holdings = await db.holding.findMany({
-    where: { userId },
-    include: { snapshots: { orderBy: { date: "asc" } } },
-    orderBy: { targetPct: "desc" },
-  })
+  const [holdings, user] = await Promise.all([
+    db.holding.findMany({
+      where: { userId },
+      include: { snapshots: { orderBy: { date: "asc" } } },
+      orderBy: { targetPct: "desc" },
+    }),
+    db.user.findUnique({ where: { id: userId }, select: { riskFreeRate: true } }),
+  ])
 
   // ── Step 1: Deduplicate snapshots per holding per date ─────────────────────
   // Multiple syncs on the same day create duplicate snapshots. Summing all of
@@ -75,7 +78,7 @@ async function getRiskData(userId: string) {
     .map(date => {
       const values = holdingsWithData.map(h => holdingDateMaps.get(h.id)!.get(date))
       if (values.some(v => v === undefined)) return null
-      return { date, value: values.reduce((s, v) => s + v!, 0) }
+      return { date, value: values.reduce<number>((s, v) => s + v!, 0) }
     })
     .filter((x): x is { date: string; value: number } => x !== null)
 
@@ -97,8 +100,8 @@ async function getRiskData(userId: string) {
   const periodsPerYear = 365 / Math.max(avgDays, 1)
   const annualisedReturn = Math.pow(1 + avgPeriodReturn, periodsPerYear) - 1
 
-  // Sharpe (risk-free = 4% annual — Singapore T-bill proxy)
-  const riskFree = 0.04
+  // Sharpe (risk-free rate from user settings, defaulting to 4% SGD T-bill proxy)
+  const riskFree = user?.riskFreeRate ?? 0.04
   const sharpe = annualisedVol > 0 ? (annualisedReturn - riskFree) / annualisedVol : null
 
   // Max Drawdown
@@ -153,6 +156,7 @@ async function getRiskData(userId: string) {
     annualisedVol,
     annualisedReturn,
     sharpe,
+    riskFree,
     maxDrawdown,
     drawdownStart,
     drawdownEnd,
@@ -256,6 +260,7 @@ export default async function RiskPage() {
                   {data.sharpe.toFixed(2)}
                 </p>
                 <p className={`text-[11px] font-semibold mt-0.5 ${sharpeInfo?.color}`}>{sharpeInfo?.label}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Rf = {(data.riskFree * 100).toFixed(2)}% (Settings)</p>
               </>
             ) : (
               <p className="text-2xl font-black text-muted-foreground">—</p>
@@ -296,32 +301,39 @@ export default async function RiskPage() {
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="px-5 py-4 border-b border-border flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-500" />
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value at Risk (95% Confidence)</h2>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value at Risk — Parametric 95%</h2>
+            </div>
+            <div className="mx-5 mt-4 rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 flex items-start gap-2">
+              <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                <span className="font-semibold">Parametric VaR — assumes normality.</span>{" "}
+                ETF returns exhibit fat tails (leptokurtosis): crash-scenario losses are routinely 2–3× larger than this model predicts.
+                Use these figures as a lower-bound estimate, not a ceiling.
+              </p>
             </div>
             <div className="p-5 grid grid-cols-2 gap-6">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Daily VaR (1-day)</p>
+                <p className="text-xs text-muted-foreground mb-1">Daily VaR (1-day, 95%)</p>
                 <p className="text-xl font-black tabular-nums text-orange-500">
                   {formatCurrency(data.var95Daily, "SGD")}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  5% chance of losing more than this in a single day (parametric, normal distribution)
+                  5% chance of exceeding this loss in a single day
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Monthly VaR (30-day)</p>
+                <p className="text-xs text-muted-foreground mb-1">Monthly VaR (30-day, 95%)</p>
                 <p className="text-xl font-black tabular-nums text-orange-500">
                   {formatCurrency(data.var95Monthly, "SGD")}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  5% chance of losing more than this in a single month
+                  5% chance of exceeding this loss in a single month
                 </p>
               </div>
             </div>
             <div className="px-5 pb-4">
               <p className="text-[11px] text-muted-foreground">
                 Based on annualised volatility of {formatPercent(data.annualisedVol * 100, 1, false)}.
-                VaR assumes normally distributed returns — actual fat-tail risk may be higher.
                 Portfolio value: {formatCurrency(data.totalValue, "SGD")}.
               </p>
             </div>
@@ -460,11 +472,11 @@ export default async function RiskPage() {
             </div>
             <div>
               <p className="font-semibold text-foreground mb-0.5">Sharpe Ratio</p>
-              <p>Excess return over risk-free rate (4% SGD proxy) divided by annualised volatility. Requires at least 3 data points.</p>
+              <p>Excess return over the risk-free rate (configurable in Settings — currently {(data.riskFree * 100).toFixed(2)}% SGD proxy) divided by annualised volatility. Requires at least 3 data points.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground mb-0.5">Value at Risk (VaR)</p>
-              <p>Parametric VaR assuming normal distribution. The 95% VaR represents the loss not exceeded with 95% probability over the given horizon.</p>
+              <p>Parametric VaR assuming normally distributed returns (1.645σ × √horizon × portfolio value). Fat-tailed assets like equity ETFs regularly exceed this — treat as a lower-bound stress figure, not a ceiling.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground mb-0.5">HHI Concentration</p>

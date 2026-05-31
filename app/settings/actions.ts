@@ -38,19 +38,22 @@ export async function updateContributionSettingsAction(formData: FormData) {
   const monthly = parseFloat(formData.get("monthlyContribution") as string)
   const annual = parseFloat(formData.get("annualLumpSum") as string)
   const growth = parseFloat(formData.get("contributionGrowthRate") as string)
+  const rfr = parseFloat(formData.get("riskFreeRate") as string)
 
   if (isNaN(monthly) || monthly < 0) return { error: "Invalid monthly contribution." }
   if (isNaN(annual) || annual < 0) return { error: "Invalid annual lump sum." }
   if (isNaN(growth) || growth < 0 || growth > 1) return { error: "Growth rate must be between 0 and 1." }
+  if (isNaN(rfr) || rfr < 0 || rfr > 1) return { error: "Risk-free rate must be between 0 and 1." }
 
   await db.user.update({
     where: { id: session.userId },
-    data: { monthlyContribution: monthly, annualLumpSum: annual, contributionGrowthRate: growth, updatedAt: new Date() },
+    data: { monthlyContribution: monthly, annualLumpSum: annual, contributionGrowthRate: growth, riskFreeRate: rfr, updatedAt: new Date() },
   })
 
   revalidatePath("/settings")
   revalidatePath("/")
   revalidatePath("/forecast")
+  revalidatePath("/risk")
   return { success: true }
 }
 

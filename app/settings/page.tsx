@@ -19,6 +19,7 @@ export default async function SettingsPage() {
         monthlyContribution={user?.monthlyContribution ?? 3000}
         annualLumpSum={user?.annualLumpSum ?? 20000}
         contributionGrowthRate={user?.contributionGrowthRate ?? 0.05}
+        riskFreeRate={user?.riskFreeRate ?? 0.04}
       />
     </Shell>
   )

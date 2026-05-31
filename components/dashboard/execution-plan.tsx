@@ -170,11 +170,7 @@ export function ExecutionPlan({
 
           const StatusIcon = isHealthy ? CheckCircle2 : isSoft ? AlertTriangle : XCircle
           const under = p.driftPct < 0
-          const iconWrapCls = isHard
-            ? "pulse-red"
-            : isSoft
-            ? (under ? "pulse-yellow" : "pulse-orange")
-            : ""
+          const iconWrapCls = isHard ? "pulse-red" : ""
           const iconCls = isHealthy
             ? "text-green-500"
             : isSoft

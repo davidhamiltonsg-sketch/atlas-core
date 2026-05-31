@@ -42,11 +42,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
     : "text-green-500"
   const StatusIcon = h.isHard ? XCircle : h.isSoft ? AlertTriangle : CheckCircle2
   const statusIconCls = driftColor
-  const pulseCls = h.isHard
-    ? "pulse-red"
-    : h.isSoft
-    ? (under ? "pulse-yellow" : "pulse-orange")
-    : ""
+  const pulseCls = h.isHard ? "pulse-red" : ""
   const rowAccent = h.isHard
     ? "border-l-4 border-red-500 bg-red-500/[0.02]"
     : h.isSoft

@@ -15,6 +15,7 @@ model User {
   monthlyContribution  Float                @default(3000)
   annualLumpSum        Float                @default(20000)
   contributionGrowthRate Float              @default(0.05)
+  riskFreeRate         Float                @default(0.04)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   holdings             Holding[]

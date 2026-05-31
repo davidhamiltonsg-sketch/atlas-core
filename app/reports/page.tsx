@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { formatCurrency, formatPercent } from "@/lib/utils"
 import {
   AlertTriangle, CheckCircle2, TrendingUp, Activity, XCircle,
-  ShieldCheck, Globe, Layers, BarChart3, FileText, Zap,
+  ShieldCheck, Globe, Layers, BarChart3, FileText, Zap, Info,
 } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
@@ -57,6 +57,11 @@ const SECTOR_CAPS = {
   us:            { label: "US Equity Dependency",    elevated: 70, excessive: 80 },
   ai:            { label: "AI Infrastructure",       elevated: 20, excessive: 28 },
 }
+
+// Date the ETF look-through weights (COMPANY_WEIGHTS, SECTOR_WEIGHTS, GEO_WEIGHTS) were last reviewed.
+// Update this whenever you re-check the ETF composition data against the fund fact sheets.
+const LOOK_THROUGH_LAST_REVIEWED = new Date("2026-01-01")
+const LOOK_THROUGH_STALE_DAYS = 90
 
 // Pairwise overlap data (approximate % of ETF-A that is shared with ETF-B, weighted)
 const OVERLAP_MATRIX: Record<string, Record<string, number>> = {
@@ -313,6 +318,8 @@ export default async function Reports() {
   } = await getReportData(session.userId)
 
   const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+  const lookThroughAgeDays = Math.floor((Date.now() - LOOK_THROUGH_LAST_REVIEWED.getTime()) / 86_400_000)
+  const lookThroughStale = lookThroughAgeDays > LOOK_THROUGH_STALE_DAYS
   const snapshotDate = positions[0]?.snapshotDate
     ? new Date(positions[0].snapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "—"
@@ -421,6 +428,25 @@ export default async function Reports() {
         </div>
         <ExportPdfButton />
       </div>
+
+      {/* Look-through staleness warning */}
+      {lookThroughStale && (
+        <div className="mb-4 no-print flex items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-400/5 px-4 py-3">
+          <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+              ETF look-through data is {lookThroughAgeDays} days old
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+              Company and sector exposure weights (COMPANY_WEIGHTS, SECTOR_WEIGHTS) were last reviewed on{" "}
+              {LOOK_THROUGH_LAST_REVIEWED.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
+              ETF compositions drift as funds rebalance. Update the weights in{" "}
+              <code className="font-mono text-[10px]">app/reports/page.tsx</code> and refresh{" "}
+              <code className="font-mono text-[10px]">LOOK_THROUGH_LAST_REVIEWED</code> after reviewing the current fund fact sheets.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Alert banners */}
       {excessiveCompanies.length > 0 && (
