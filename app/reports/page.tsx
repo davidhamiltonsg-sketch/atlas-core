@@ -236,6 +236,26 @@ function statusFor(value: number, soft: number, hard: number): "healthy" | "elev
   return "healthy"
 }
 
+// Recommend non-overweight tickers with lowest combined exposure to the given sector keys
+function bestAlternatives(
+  sectors: string[],
+  positions: Array<{ ticker: string; driftPct: number }>,
+): string {
+  type SectorKey = "semiconductor" | "digital" | "us" | "ai"
+  const ranked = positions
+    .filter(p => p.driftPct <= 0)
+    .map(p => ({
+      ticker: p.ticker,
+      exp: sectors.reduce((s, k) => s + (SECTOR_WEIGHTS[p.ticker]?.[k as SectorKey] ?? 0), 0),
+    }))
+    .sort((a, b) => a.exp - b.exp)
+    .slice(0, 2)
+    .map(p => p.ticker)
+  if (ranked.length === 0) return "your other holdings"
+  if (ranked.length === 1) return ranked[0]
+  return `${ranked[0]} or ${ranked[1]}`
+}
+
 function StatusBadge({ status, size = "sm", tip }: { status: string; size?: "sm" | "xs"; tip?: string }) {
   const base = size === "xs"
     ? "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold cursor-help"
@@ -342,12 +362,13 @@ export default async function Reports() {
   // Breach banners
   const excessiveCompanies = companies.filter((c) => companyExposure[c] >= COMPANY_CAPS[c].hard)
   const excessiveSectors   = sectorKeys.filter((k) => sectorExposure[k] >= SECTOR_CAPS[k].excessive)
+  const elevatedSectors    = sectorKeys.filter((k) => sectorExposure[k] >= SECTOR_CAPS[k].elevated)
 
   // Executive summary — auto-generated, plain English
   const summaryPoints: { text: string; severity: "ok" | "warn" | "critical" }[] = []
   if (hardBreaches > 0) summaryPoints.push({ text: `${hardBreaches} holding${hardBreaches > 1 ? "s have" : " has"} drifted far outside its target range — you need to act before your next investment date. See the action plan below.`, severity: "critical" })
   if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to QQQM and SMH until this resolves.`, severity: "warn" })
-  if (sectorAlerts > 0) summaryPoints.push({ text: `Your portfolio is overexposed to ${sectorAlerts} theme${sectorAlerts > 1 ? "s" : ""} (e.g. semiconductors or tech). Put your next contributions into VT or VWO instead.`, severity: "warn" })
+  if (sectorAlerts > 0) summaryPoints.push({ text: `Your portfolio is overexposed to ${sectorAlerts} theme${sectorAlerts > 1 ? "s" : ""} (e.g. semiconductors or tech). Put your next contributions into ${bestAlternatives(elevatedSectors, positions)} instead.`, severity: "warn" })
   if (geoExposure.us > 70) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward VT and VWO to re-balance.`, severity: "warn" })
   if (hhiPct > 15) summaryPoints.push({ text: `Your portfolio is more concentrated than it looks — it behaves like you own only ${effectiveN.toFixed(1)} equally-sized positions. Consider spreading contributions more evenly.`, severity: "warn" })
   if (summaryPoints.length === 0) summaryPoints.push({ text: "Everything looks good — all holdings are within their target ranges and no limits have been breached. Keep following your standard monthly plan.", severity: "ok" })
@@ -427,7 +448,7 @@ export default async function Reports() {
               🟡 Theme limit reached — {excessiveSectors.map((k) => SECTOR_CAPS[k].label).join(", ")}
             </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-              Too much of your money is tied to one theme. Redirect your next contributions to VT or VWO to spread the risk.
+              Too much of your money is tied to one theme. Redirect your next contributions to {bestAlternatives(excessiveSectors, positions)} to spread the risk.
             </p>
           </div>
         </div>
@@ -935,10 +956,11 @@ export default async function Reports() {
             const value = sectorExposure[key]
             const status = statusFor(value, elevated, excessive)
             const pctOfElevated = (value / elevated) * 100
+            const alt = bestAlternatives([key], positions)
             const responses: Record<string, string> = {
               healthy:   "🟢 All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
-              elevated:  "🟡 Getting close to the limit — keep an eye on this. Put your next contributions into VT or VWO instead.",
-              excessive: "🔴 Over the limit — stop buying the ETFs that drive this theme (QQQM and/or SMH) until this comes down.",
+              elevated:  `🟡 Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
+              excessive: `🔴 Over the limit — stop buying the ETFs that drive this theme (QQQM and/or SMH) until this comes down. Redirect contributions to ${alt}.`,
             }
             // Contribution by ETF for this sector
             const contribs = positions.map(p => {
