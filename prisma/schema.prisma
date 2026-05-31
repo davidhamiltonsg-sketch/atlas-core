@@ -111,6 +111,18 @@ model Dividend {
 }
 
 // Watchlist for potential future positions
+// Cached ETF look-through data (company/sector/geo weights) — refreshed via UI
+model EtfLookThrough {
+  id             String   @id @default(cuid())
+  ticker         String   @unique
+  companyWeights String   // JSON: Record<string, number> — % per mega-cap company
+  sectorWeights  String   // JSON: {semiconductor, digital, us, ai}
+  geoWeights     String   // JSON: {us, intlDev, emerging, crypto}
+  source         String   @default("yahoo_finance")
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+}
+
 model WatchlistItem {
   id        String   @id @default(cuid())
   userId    String

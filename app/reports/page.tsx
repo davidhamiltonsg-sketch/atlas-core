@@ -11,8 +11,9 @@ import { computePortfolioHealth } from "@/lib/health"
 import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure-bar-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { ExportPdfButton } from "@/components/reports/export-pdf-button"
+import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
 
-// ─── Static Data ──────────────────────────────────────────────────────────────
+// ─── Static Data (hardcoded fallbacks — overridden by DB when refreshed) ──────
 
 const COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
   VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
@@ -75,7 +76,7 @@ const OVERLAP_MATRIX: Record<string, Record<string, number>> = {
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
 async function getReportData(userId: string) {
-  const [holdings, rules] = await Promise.all([
+  const [holdings, rules, lookThroughRecords] = await Promise.all([
     db.holding.findMany({
       where: { userId },
       include: {
@@ -83,7 +84,27 @@ async function getReportData(userId: string) {
       },
     }),
     db.governanceRule.findMany({ where: { active: true }, orderBy: { category: "asc" } }),
+    db.etfLookThrough.findMany(),
   ])
+
+  // Build live look-through maps — DB data wins over hardcoded fallbacks
+  const liveCompanyWeights = { ...COMPANY_WEIGHTS }
+  const liveSectorWeights  = { ...SECTOR_WEIGHTS }
+  const liveGeoWeights     = { ...GEO_WEIGHTS }
+  let   lookThroughUpdatedAt: Date | null = null
+
+  for (const lt of lookThroughRecords) {
+    try {
+      liveCompanyWeights[lt.ticker] = JSON.parse(lt.companyWeights)
+      liveSectorWeights[lt.ticker]  = JSON.parse(lt.sectorWeights)
+      liveGeoWeights[lt.ticker]     = JSON.parse(lt.geoWeights)
+      if (!lookThroughUpdatedAt || lt.updatedAt > lookThroughUpdatedAt) {
+        lookThroughUpdatedAt = lt.updatedAt
+      }
+    } catch {
+      // malformed record — skip, keep fallback
+    }
+  }
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
 
@@ -123,12 +144,12 @@ async function getReportData(userId: string) {
     }
   })
 
-  // Company look-through
+  // Company look-through — uses live DB data where available, else hardcoded fallback
   const companies = Object.keys(COMPANY_CAPS)
   const companyExposure: Record<string, number> = {}
   for (const company of companies) {
     companyExposure[company] = positions.reduce((sum, p) => {
-      const etfWeight = COMPANY_WEIGHTS[p.ticker]?.[company] ?? 0
+      const etfWeight = liveCompanyWeights[p.ticker]?.[company] ?? 0
       return sum + (p.actualPct / 100) * etfWeight
     }, 0)
   }
@@ -136,7 +157,7 @@ async function getReportData(userId: string) {
   // Sector exposure
   const sectorExposure: Record<string, number> = { semiconductor: 0, digital: 0, us: 0, ai: 0 }
   for (const p of positions) {
-    const sw = SECTOR_WEIGHTS[p.ticker]
+    const sw = liveSectorWeights[p.ticker]
     if (sw) {
       sectorExposure.semiconductor += (p.actualPct / 100) * sw.semiconductor
       sectorExposure.digital       += (p.actualPct / 100) * sw.digital
@@ -148,7 +169,7 @@ async function getReportData(userId: string) {
   // Geographic exposure
   const geoExposure = { us: 0, intlDev: 0, emerging: 0, crypto: 0 }
   for (const p of positions) {
-    const gw = GEO_WEIGHTS[p.ticker]
+    const gw = liveGeoWeights[p.ticker]
     if (gw) {
       geoExposure.us       += (p.actualPct / 100) * gw.us
       geoExposure.intlDev  += (p.actualPct / 100) * gw.intlDev
@@ -229,7 +250,7 @@ async function getReportData(userId: string) {
     totalValue, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, softBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
-    rules, ruleCategories,
+    rules, ruleCategories, lookThroughUpdatedAt,
   }
 }
 
@@ -314,11 +335,13 @@ export default async function Reports() {
     totalValue, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
-    rules, ruleCategories,
+    rules, ruleCategories, lookThroughUpdatedAt,
   } = await getReportData(session.userId)
 
   const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-  const lookThroughAgeDays = Math.floor((Date.now() - LOOK_THROUGH_LAST_REVIEWED.getTime()) / 86_400_000)
+  // Staleness: prefer DB updatedAt; fall back to hardcoded review date
+  const lookThroughRef = lookThroughUpdatedAt ?? LOOK_THROUGH_LAST_REVIEWED
+  const lookThroughAgeDays = Math.floor((Date.now() - lookThroughRef.getTime()) / 86_400_000)
   const lookThroughStale = lookThroughAgeDays > LOOK_THROUGH_STALE_DAYS
   const snapshotDate = positions[0]?.snapshotDate
     ? new Date(positions[0].snapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
@@ -405,93 +428,105 @@ export default async function Reports() {
   return (
     <Shell title="Reports" subtitle="Overlap & concentration engine — v5.8" userName={session.name} isAdmin={session.role === "admin"}>
 
-      {/* Print-only cover header */}
+      {/* ── Print-only cover page ── hidden on screen, rendered in PDF ── */}
       <div className="print-header hidden">
-        {/* Title row */}
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">Atlas Core · Governed Digital Economy Architecture</p>
-            <h1 className="text-[22pt] font-black text-gray-900 leading-tight">Annual Portfolio Report</h1>
-            <p className="text-[9pt] text-gray-500 mt-0.5">v5.8 · {reportDate} · Confidential — personal use only</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[8pt] text-gray-500 uppercase tracking-wider">Total Portfolio Value</p>
-            <p className="text-[20pt] font-black text-gray-900 leading-tight">{formatCurrency(totalValue, "SGD")}</p>
-            <p className="text-[8pt] text-gray-500">Snapshot: {snapshotDate}</p>
-          </div>
-        </div>
+
+        {/* Eyebrow + title */}
+        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v5.8</p>
+        <h1>Annual Portfolio Report</h1>
+        <p className="ph-sub">{reportDate} &nbsp;·&nbsp; Personal &amp; Confidential</p>
+
+        <hr className="ph-divider" />
+
         {/* Key metrics strip */}
-        <div className="flex gap-6 border-t border-gray-200 pt-2 mt-1">
-          <div>
-            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Health Score</p>
-            <p className={`text-[13pt] font-black ${healthScore >= 80 ? "text-green-700" : healthScore >= 65 ? "text-amber-600" : "text-red-600"}`}>
+        <div className="ph-metrics">
+          <div className="ph-metric">
+            <p className="ph-metric-label">Total Value</p>
+            <p className="ph-metric-value">{formatCurrency(totalValue, "SGD")}</p>
+            <p className="ph-metric-sub">Snapshot {snapshotDate}</p>
+          </div>
+          <div className="ph-metric">
+            <p className="ph-metric-label">Health Score</p>
+            <p className={`ph-metric-value ${healthScore >= 80 ? "good" : healthScore >= 65 ? "warn" : "crit"}`}>
               {healthScore}/100
             </p>
-            <p className="text-[7pt] text-gray-500">{healthLabel}</p>
+            <p className="ph-metric-sub">{health.overallLabel}</p>
           </div>
-          <div>
-            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Drift Alerts</p>
-            <p className={`text-[13pt] font-black ${driftAlerts > 0 ? "text-red-600" : "text-green-700"}`}>{driftAlerts}</p>
-            <p className="text-[7pt] text-gray-500">{hardBreaches} hard breach{hardBreaches !== 1 ? "es" : ""}</p>
+          <div className="ph-metric">
+            <p className="ph-metric-label">Drift Alerts</p>
+            <p className={`ph-metric-value ${driftAlerts > 0 ? "crit" : "good"}`}>{driftAlerts}</p>
+            <p className="ph-metric-sub">{hardBreaches} hard breach{hardBreaches !== 1 ? "es" : ""}</p>
           </div>
-          <div>
-            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Concentration</p>
-            <p className={`text-[13pt] font-black ${hhiPct > 18 ? "text-red-600" : hhiPct > 10 ? "text-amber-600" : "text-green-700"}`}>{concentrationRating}</p>
-            <p className="text-[7pt] text-gray-500">HHI {hhiPct.toFixed(1)}% · {effectiveN.toFixed(1)} eff. positions</p>
+          <div className="ph-metric">
+            <p className="ph-metric-label">Concentration</p>
+            <p className={`ph-metric-value ${hhiPct > 18 ? "crit" : hhiPct > 10 ? "warn" : "good"}`}>{concentrationRating}</p>
+            <p className="ph-metric-sub">HHI {hhiPct.toFixed(1)}% · {effectiveN.toFixed(1)} eff. positions</p>
           </div>
-          <div>
-            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Company Alerts</p>
-            <p className={`text-[13pt] font-black ${companyBreaches > 0 ? "text-amber-600" : "text-green-700"}`}>{companyBreaches}</p>
-            <p className="text-[7pt] text-gray-500">{sectorBreaches} sector alert{sectorBreaches !== 1 ? "s" : ""}</p>
+          <div className="ph-metric">
+            <p className="ph-metric-label">US Exposure</p>
+            <p className={`ph-metric-value ${geoExposure.us > 80 ? "crit" : geoExposure.us > 70 ? "warn" : "good"}`}>
+              {geoExposure.us.toFixed(0)}%
+            </p>
+            <p className="ph-metric-sub">hard limit 80%</p>
           </div>
-          <div>
-            <p className="text-[7pt] uppercase tracking-wider text-gray-400">US Exposure</p>
-            <p className={`text-[13pt] font-black ${geoExposure.us > 80 ? "text-red-600" : geoExposure.us > 70 ? "text-amber-600" : "text-green-700"}`}>{geoExposure.us.toFixed(0)}%</p>
-            <p className="text-[7pt] text-gray-500">limit 80% hard</p>
-          </div>
-          <div className="ml-auto text-right">
-            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Holdings</p>
-            <p className="text-[13pt] font-black text-gray-800">{positions.length}</p>
-            <p className="text-[7pt] text-gray-500">ETF positions</p>
+          <div className="ph-metric">
+            <p className="ph-metric-label">Company Alerts</p>
+            <p className={`ph-metric-value ${companyBreaches > 0 ? "warn" : "good"}`}>{companyBreaches}</p>
+            <p className="ph-metric-sub">{sectorBreaches} sector alert{sectorBreaches !== 1 ? "s" : ""}</p>
           </div>
         </div>
+
         {/* Compact holdings table */}
-        <table className="w-full mt-3 text-[7.5pt]" style={{ borderCollapse: "collapse" }}>
+        <table className="ph-table">
           <thead>
-            <tr style={{ borderBottom: "0.5pt solid #ccc", background: "#f5f5f5" }}>
-              <th style={{ textAlign: "left", padding: "2pt 4pt" }}>Ticker</th>
-              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Actual %</th>
-              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Target %</th>
-              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Drift</th>
-              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Value (SGD)</th>
-              <th style={{ textAlign: "center", padding: "2pt 4pt" }}>Status</th>
+            <tr>
+              <th style={{ width: "15%" }}>Ticker</th>
+              <th style={{ width: "30%", textAlign: "left" }}>Name</th>
+              <th>Actual</th>
+              <th>Target</th>
+              <th>Drift</th>
+              <th>Value (SGD)</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {positions.map(p => (
-              <tr key={p.ticker} style={{ borderBottom: "0.4pt solid #e5e5e5" }}>
-                <td style={{ padding: "2pt 4pt", fontWeight: "700" }}>{p.ticker}</td>
-                <td style={{ padding: "2pt 4pt", textAlign: "right" }}>{p.actualPct.toFixed(1)}%</td>
-                <td style={{ padding: "2pt 4pt", textAlign: "right" }}>{p.targetPct.toFixed(1)}%</td>
-                <td style={{ padding: "2pt 4pt", textAlign: "right", color: p.driftPct > 0 ? "#c05c00" : p.driftPct < 0 ? "#0055cc" : "#555" }}>
+              <tr key={p.ticker}>
+                <td style={{ fontWeight: 700 }}>{p.ticker}</td>
+                <td style={{ textAlign: "left", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</td>
+                <td>{p.actualPct.toFixed(1)}%</td>
+                <td>{p.targetPct.toFixed(1)}%</td>
+                <td className={p.driftPct > 3 ? "warn" : p.driftPct < -3 ? "warn" : ""}>
                   {p.driftPct >= 0 ? "+" : ""}{p.driftPct.toFixed(1)}%
                 </td>
-                <td style={{ padding: "2pt 4pt", textAlign: "right" }}>{formatCurrency(p.value, "SGD")}</td>
-                <td style={{ padding: "2pt 4pt", textAlign: "center", color: p.overCap ? "#c00" : p.outsideBand ? "#c05c00" : "#166534" }}>
-                  {p.overCap ? "HARD BREACH" : p.outsideBand ? "Outside band" : "Healthy"}
+                <td>{formatCurrency(p.value, "SGD")}</td>
+                <td className={p.overCap ? "breach" : p.outsideBand ? "warn" : "healthy"}>
+                  {p.overCap ? "Hard breach" : p.outsideBand ? "Outside band" : "Healthy"}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        <p className="ph-footer">
+          Generated by Atlas Core · {reportDate} · For personal investment reference only · Not financial advice
+        </p>
       </div>
 
       {/* Screen page header */}
       <div className="no-print flex items-center justify-between mb-5">
         <div>
           <p className="text-xs text-muted-foreground">Generated {reportDate} · Snapshot {snapshotDate}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Holdings data: {lookThroughUpdatedAt
+              ? `refreshed ${lookThroughUpdatedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })} from Yahoo Finance`
+              : "using hardcoded estimates — click Refresh Holdings Data"}
+          </p>
         </div>
-        <ExportPdfButton />
+        <div className="flex items-center gap-3">
+          <RefreshLookThroughButton lastUpdated={lookThroughUpdatedAt} />
+          <ExportPdfButton />
+        </div>
       </div>
 
       {/* Look-through staleness warning */}
