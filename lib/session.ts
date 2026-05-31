@@ -1,9 +1,20 @@
 import { SignJWT, jwtVerify } from "jose"
 import { cookies } from "next/headers"
 
-const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "atlas-core-secret-key-change-in-production"
-)
+const rawSecret = process.env.SESSION_SECRET ?? "atlas-core-secret-key-change-in-production"
+
+if (
+  process.env.NODE_ENV === "production" &&
+  rawSecret === "atlas-core-secret-key-change-in-production"
+) {
+  // Crash loudly rather than silently run with a known-weak secret
+  throw new Error(
+    "[atlas-core] SESSION_SECRET env var is not set. " +
+      "Set a strong random secret in your .env (e.g. openssl rand -hex 32)."
+  )
+}
+
+const SECRET = new TextEncoder().encode(rawSecret)
 const COOKIE = "atlas_session"
 const EXPIRES_IN = 60 * 60 * 24 * 7 // 7 days
 

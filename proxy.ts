@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
+import { jwtVerify } from "jose"
+
+const SECRET = new TextEncoder().encode(
+  process.env.SESSION_SECRET ?? "atlas-core-secret-key-change-in-production"
+)
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"]
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Allow public paths
@@ -19,10 +24,19 @@ export function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check for session cookie — full JWT verification happens in server components
+  // Verify JWT — not just presence but cryptographic validity
   const token = req.cookies.get("atlas_session")?.value
   if (!token) {
     return NextResponse.redirect(new URL("/login", req.url))
+  }
+
+  try {
+    await jwtVerify(token, SECRET)
+  } catch {
+    // Expired or tampered token — clear cookie and redirect
+    const res = NextResponse.redirect(new URL("/login", req.url))
+    res.cookies.delete("atlas_session")
+    return res
   }
 
   return NextResponse.next()

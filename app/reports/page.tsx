@@ -403,22 +403,87 @@ export default async function Reports() {
   }
 
   return (
-    <Shell title="Reports" subtitle="Overlap & concentration engine — v5.2" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Reports" subtitle="Overlap & concentration engine — v5.8" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Print-only cover header */}
       <div className="print-header hidden">
-        <div className="flex items-start justify-between">
+        {/* Title row */}
+        <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Atlas Core · GDEA Portfolio</p>
-            <h1 className="text-2xl font-black text-gray-900">Portfolio Risk & Concentration Report</h1>
-            <p className="text-sm text-gray-500 mt-1">v5.2 — Governed Digital Economy Architecture · {reportDate}</p>
+            <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">Atlas Core · Governed Digital Economy Architecture</p>
+            <h1 className="text-[22pt] font-black text-gray-900 leading-tight">Annual Portfolio Report</h1>
+            <p className="text-[9pt] text-gray-500 mt-0.5">v5.8 · {reportDate} · Confidential — personal use only</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">Total Value</p>
-            <p className="text-xl font-black text-gray-900">{formatCurrency(totalValue, "SGD")}</p>
-            <p className="text-xs text-gray-500">Snapshot: {snapshotDate}</p>
+            <p className="text-[8pt] text-gray-500 uppercase tracking-wider">Total Portfolio Value</p>
+            <p className="text-[20pt] font-black text-gray-900 leading-tight">{formatCurrency(totalValue, "SGD")}</p>
+            <p className="text-[8pt] text-gray-500">Snapshot: {snapshotDate}</p>
           </div>
         </div>
+        {/* Key metrics strip */}
+        <div className="flex gap-6 border-t border-gray-200 pt-2 mt-1">
+          <div>
+            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Health Score</p>
+            <p className={`text-[13pt] font-black ${healthScore >= 80 ? "text-green-700" : healthScore >= 65 ? "text-amber-600" : "text-red-600"}`}>
+              {healthScore}/100
+            </p>
+            <p className="text-[7pt] text-gray-500">{healthLabel}</p>
+          </div>
+          <div>
+            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Drift Alerts</p>
+            <p className={`text-[13pt] font-black ${driftAlerts > 0 ? "text-red-600" : "text-green-700"}`}>{driftAlerts}</p>
+            <p className="text-[7pt] text-gray-500">{hardBreaches} hard breach{hardBreaches !== 1 ? "es" : ""}</p>
+          </div>
+          <div>
+            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Concentration</p>
+            <p className={`text-[13pt] font-black ${hhiPct > 18 ? "text-red-600" : hhiPct > 10 ? "text-amber-600" : "text-green-700"}`}>{concentrationRating}</p>
+            <p className="text-[7pt] text-gray-500">HHI {hhiPct.toFixed(1)}% · {effectiveN.toFixed(1)} eff. positions</p>
+          </div>
+          <div>
+            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Company Alerts</p>
+            <p className={`text-[13pt] font-black ${companyBreaches > 0 ? "text-amber-600" : "text-green-700"}`}>{companyBreaches}</p>
+            <p className="text-[7pt] text-gray-500">{sectorBreaches} sector alert{sectorBreaches !== 1 ? "s" : ""}</p>
+          </div>
+          <div>
+            <p className="text-[7pt] uppercase tracking-wider text-gray-400">US Exposure</p>
+            <p className={`text-[13pt] font-black ${geoExposure.us > 80 ? "text-red-600" : geoExposure.us > 70 ? "text-amber-600" : "text-green-700"}`}>{geoExposure.us.toFixed(0)}%</p>
+            <p className="text-[7pt] text-gray-500">limit 80% hard</p>
+          </div>
+          <div className="ml-auto text-right">
+            <p className="text-[7pt] uppercase tracking-wider text-gray-400">Holdings</p>
+            <p className="text-[13pt] font-black text-gray-800">{positions.length}</p>
+            <p className="text-[7pt] text-gray-500">ETF positions</p>
+          </div>
+        </div>
+        {/* Compact holdings table */}
+        <table className="w-full mt-3 text-[7.5pt]" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "0.5pt solid #ccc", background: "#f5f5f5" }}>
+              <th style={{ textAlign: "left", padding: "2pt 4pt" }}>Ticker</th>
+              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Actual %</th>
+              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Target %</th>
+              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Drift</th>
+              <th style={{ textAlign: "right", padding: "2pt 4pt" }}>Value (SGD)</th>
+              <th style={{ textAlign: "center", padding: "2pt 4pt" }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {positions.map(p => (
+              <tr key={p.ticker} style={{ borderBottom: "0.4pt solid #e5e5e5" }}>
+                <td style={{ padding: "2pt 4pt", fontWeight: "700" }}>{p.ticker}</td>
+                <td style={{ padding: "2pt 4pt", textAlign: "right" }}>{p.actualPct.toFixed(1)}%</td>
+                <td style={{ padding: "2pt 4pt", textAlign: "right" }}>{p.targetPct.toFixed(1)}%</td>
+                <td style={{ padding: "2pt 4pt", textAlign: "right", color: p.driftPct > 0 ? "#c05c00" : p.driftPct < 0 ? "#0055cc" : "#555" }}>
+                  {p.driftPct >= 0 ? "+" : ""}{p.driftPct.toFixed(1)}%
+                </td>
+                <td style={{ padding: "2pt 4pt", textAlign: "right" }}>{formatCurrency(p.value, "SGD")}</td>
+                <td style={{ padding: "2pt 4pt", textAlign: "center", color: p.overCap ? "#c00" : p.outsideBand ? "#c05c00" : "#166534" }}>
+                  {p.overCap ? "HARD BREACH" : p.outsideBand ? "Outside band" : "Healthy"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Screen page header */}

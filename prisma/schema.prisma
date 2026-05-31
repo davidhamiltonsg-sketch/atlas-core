@@ -103,6 +103,8 @@ model Dividend {
   ticker    String
   amount    Float    // SGD amount received
   units     Float    // units held at time of dividend
+  isDrip    Boolean  @default(false)   // true = dividend reinvested as additional units
+  dripUnits Float?                     // additional units acquired via DRIP
   paymentDate DateTime
   note      String?
   createdAt DateTime @default(now())

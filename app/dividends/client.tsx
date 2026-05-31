@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, Trash2, Coins, Loader2, Check, AlertCircle, X, Download } from "lucide-react"
+import { Plus, Trash2, Coins, Loader2, Check, AlertCircle, X, Download, RefreshCw } from "lucide-react"
 import { addDividendAction, deleteDividendAction } from "./actions"
 import { IBKRActivityImport } from "@/components/ibkr-activity-import"
 
@@ -10,6 +10,8 @@ type Dividend = {
   ticker: string
   amount: number
   units: number
+  isDrip: boolean
+  dripUnits: number | null
   paymentDate: string
   note: string | null
 }
@@ -23,6 +25,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
   const [dividends, setDividends] = useState(initialDividends)
   const [showForm, setShowForm] = useState(false)
   const [showIBKRImport, setShowIBKRImport] = useState(false)
+  const [isDrip, setIsDrip] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -30,12 +33,15 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
     e.preventDefault()
     setMsg(null)
     const formData = new FormData(e.currentTarget)
+    // Manually pass isDrip since checkbox value isn't reliable as boolean
+    formData.set("isDrip", isDrip ? "true" : "false")
     const form = e.currentTarget
     startTransition(async () => {
       const result = await addDividendAction(formData)
       if (result.success) {
-        setMsg({ type: "success", text: "Dividend recorded." })
+        setMsg({ type: "success", text: isDrip ? "DRIP dividend recorded — BUY trade also logged." : "Dividend recorded." })
         setShowForm(false)
+        setIsDrip(false)
         form.reset()
         window.location.reload()
       } else {
@@ -160,6 +166,45 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Note (optional)</label>
               <input name="note" placeholder="Q1 2025 distribution…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
             </div>
+            {/* DRIP toggle */}
+            <div className={`rounded-lg border p-3 transition-colors ${isDrip ? "border-indigo-500/40 bg-indigo-500/5" : "border-border bg-muted/20"}`}>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isDrip}
+                  onChange={e => setIsDrip(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-indigo-500"
+                />
+                <div>
+                  <span className="text-xs font-semibold flex items-center gap-1.5">
+                    <RefreshCw className="h-3 w-3 text-indigo-500" />
+                    DRIP — Dividend Reinvestment Plan
+                  </span>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Dividend was reinvested as additional ETF units (not received as cash)
+                  </p>
+                </div>
+              </label>
+              {isDrip && (
+                <div className="mt-3 pt-3 border-t border-indigo-500/20">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Units Acquired via DRIP <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="dripUnits"
+                    type="number"
+                    step="0.000001"
+                    min="0.000001"
+                    required={isDrip}
+                    placeholder="e.g. 0.9743"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    A BUY trade will also be recorded in the trade log for these units.
+                  </p>
+                </div>
+              )}
+            </div>
             <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Record
@@ -182,10 +227,10 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                 <tr className="border-b border-border bg-muted/30">
                   <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Date</th>
                   <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Ticker</th>
-                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Units</th>
+                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Units Held</th>
                   <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Amount (SGD)</th>
                   <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Per Unit</th>
-                  <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Note</th>
+                  <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Type / Note</th>
                   <th className="px-5 py-2.5" />
                 </tr>
               </thead>
@@ -197,7 +242,17 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                     <td className="px-5 py-3 text-right tabular-nums">{d.units.toLocaleString()}</td>
                     <td className="px-5 py-3 text-right tabular-nums font-semibold text-green-500">S${d.amount.toLocaleString("en-SG", { maximumFractionDigits: 2 })}</td>
                     <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">S${(d.amount / d.units).toFixed(4)}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{d.note || "—"}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {d.isDrip && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-indigo-500/20">
+                            <RefreshCw className="h-2.5 w-2.5" />
+                            DRIP{d.dripUnits ? ` +${d.dripUnits} units` : ""}
+                          </span>
+                        )}
+                        <span className="text-muted-foreground">{d.note || (d.isDrip ? "" : "—")}</span>
+                      </div>
+                    </td>
                     <td className="px-5 py-3">
                       <button onClick={() => handleDelete(d.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
                         <Trash2 className="h-3.5 w-3.5" />
