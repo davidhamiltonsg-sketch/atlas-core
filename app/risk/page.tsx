@@ -47,39 +47,46 @@ async function getRiskData(userId: string) {
     orderBy: { targetPct: "desc" },
   })
 
-  // Build time-series of portfolio totals.
-  // Only include dates where ALL holdings have a snapshot — partial-data dates
-  // (e.g. a sync that captured only some positions) create massive spurious
-  // "returns" that blow up the volatility calculation.
-  const holdingsWithData = holdings.filter(h => h.snapshots.length > 0)
-  const numRequired = holdingsWithData.length
-
-  const dateMap = new Map<string, number>()
-  const dateCounts = new Map<string, number>()
+  // ── Step 1: Deduplicate snapshots per holding per date ─────────────────────
+  // Multiple syncs on the same day create duplicate snapshots. Summing all of
+  // them inflates the portfolio total (3 syncs → 3× the actual value) and
+  // produces a fake "ATH" followed by a 66% drawdown.
+  // We keep the LATEST snapshot value for each holding on each calendar date.
+  const holdingDateMaps = new Map<string, Map<string, number>>()
   for (const h of holdings) {
+    const dm = new Map<string, number>()
     for (const s of h.snapshots) {
-      const key = s.date.toISOString().split("T")[0]
-      dateMap.set(key, (dateMap.get(key) ?? 0) + s.value)
-      dateCounts.set(key, (dateCounts.get(key) ?? 0) + 1)
+      // snapshots ordered asc — later ones overwrite earlier ones on the same date
+      dm.set(s.date.toISOString().split("T")[0], s.value)
     }
+    holdingDateMaps.set(h.id, dm)
   }
 
-  const timeline = Array.from(dateMap.entries())
-    .filter(([key]) => numRequired === 0 || (dateCounts.get(key) ?? 0) >= numRequired)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, value]) => ({ date, value }))
+  const holdingsWithData = holdings.filter(h => holdingDateMaps.get(h.id)!.size > 0)
 
-  // Period returns
+  // ── Step 2: Build portfolio timeline (complete dates only) ─────────────────
+  // Only include dates where EVERY holding has exactly one value — partial dates
+  // (some holdings synced, others not) create the same inflation problem.
+  const allDates = [...new Set(
+    holdingsWithData.flatMap(h => [...holdingDateMaps.get(h.id)!.keys()])
+  )].sort()
+
+  const timeline = allDates
+    .map(date => {
+      const values = holdingsWithData.map(h => holdingDateMaps.get(h.id)!.get(date))
+      if (values.some(v => v === undefined)) return null
+      return { date, value: values.reduce((s, v) => s + v!, 0) }
+    })
+    .filter((x): x is { date: string; value: number } => x !== null)
+
+  // ── Step 3: Period returns on clean timeline ───────────────────────────────
   const periodReturns: number[] = []
   const daysBetween: number[] = []
   for (let i = 1; i < timeline.length; i++) {
     const prev = timeline[i - 1]
     const curr = timeline[i]
-    if (prev.value > 0) {
-      periodReturns.push((curr.value - prev.value) / prev.value)
-    }
-    const msGap = new Date(curr.date).getTime() - new Date(prev.date).getTime()
-    daysBetween.push(msGap / 86_400_000)
+    if (prev.value > 0) periodReturns.push((curr.value - prev.value) / prev.value)
+    daysBetween.push((new Date(curr.date).getTime() - new Date(prev.date).getTime()) / 86_400_000)
   }
 
   const avgDays = daysBetween.length > 0 ? mean(daysBetween) : 30
@@ -88,60 +95,48 @@ async function getRiskData(userId: string) {
   const avgPeriodReturn = periodReturns.length > 0 ? mean(periodReturns) : 0
   const annualisedReturn = avgPeriodReturn * (365 / Math.max(avgDays, 1))
 
-  // Sharpe (risk-free = 4% USD annual — Singapore T-bill proxy)
+  // Sharpe (risk-free = 4% annual — Singapore T-bill proxy)
   const riskFree = 0.04
   const sharpe = annualisedVol > 0 ? (annualisedReturn - riskFree) / annualisedVol : null
 
   // Max Drawdown
-  let peak = 0
-  let maxDrawdown = 0
-  let drawdownStart = ""
-  let drawdownEnd = ""
-  let peakDate = ""
-  let currentDrawdown = 0
+  let peak = 0, maxDrawdown = 0, drawdownStart = "", drawdownEnd = "", peakDate = "", currentDrawdown = 0
   for (const { date, value } of timeline) {
-    if (value > peak) {
-      peak = value
-      peakDate = date
-    }
+    if (value > peak) { peak = value; peakDate = date }
     const dd = (value - peak) / Math.max(peak, 1)
-    if (dd < maxDrawdown) {
-      maxDrawdown = dd
-      drawdownStart = peakDate
-      drawdownEnd = date
-    }
+    if (dd < maxDrawdown) { maxDrawdown = dd; drawdownStart = peakDate; drawdownEnd = date }
   }
   const lastValue = timeline[timeline.length - 1]?.value ?? 0
   if (peak > 0) currentDrawdown = (lastValue - peak) / peak
 
-  // VaR 95% (parametric, assuming normal dist)
-  // 1.645 sigma for 95% confidence
-  const var95Daily = annualisedVol / Math.sqrt(252) * 1.645 * lastValue
-  const var95Monthly = annualisedVol / Math.sqrt(12) * 1.645 * lastValue
+  // VaR 95% parametric (1.645σ)
+  const var95Daily   = annualisedVol / Math.sqrt(252) * 1.645 * lastValue
+  const var95Monthly = annualisedVol / Math.sqrt(12)  * 1.645 * lastValue
 
-  // Per-holding stats
+  // ── Step 4: Per-holding stats using deduplicated snapshots ─────────────────
   const holdingStats = holdings.map(h => {
-    const snaps = h.snapshots
+    const dm = holdingDateMaps.get(h.id) ?? new Map<string, number>()
+    const sortedDates = [...dm.keys()].sort()
     const hReturns: number[] = []
     const hDaysBetween: number[] = []
-    for (let i = 1; i < snaps.length; i++) {
-      if (snaps[i - 1].value > 0) {
-        hReturns.push((snaps[i].value - snaps[i - 1].value) / snaps[i - 1].value)
-      }
-      hDaysBetween.push((snaps[i].date.getTime() - snaps[i - 1].date.getTime()) / 86_400_000)
+    for (let i = 1; i < sortedDates.length; i++) {
+      const prevVal = dm.get(sortedDates[i - 1])!
+      const currVal = dm.get(sortedDates[i])!
+      if (prevVal > 0) hReturns.push((currVal - prevVal) / prevVal)
+      hDaysBetween.push(
+        (new Date(sortedDates[i]).getTime() - new Date(sortedDates[i - 1]).getTime()) / 86_400_000
+      )
     }
     const hAvgDays = hDaysBetween.length > 0 ? mean(hDaysBetween) : avgDays
-    const latestSnap = snaps[snaps.length - 1]
-    const hSd = stdDev(hReturns)
-    const hAnnVol = annualise(hSd, Math.max(hAvgDays, 1))
+    const latestDate = sortedDates[sortedDates.length - 1]
     return {
       ticker: h.ticker,
       name: h.name,
       color: h.color,
       targetPct: h.targetPct,
-      latestValue: latestSnap?.value ?? 0,
-      annualisedVol: hAnnVol,
-      dataPoints: snaps.length,
+      latestValue: latestDate ? (dm.get(latestDate) ?? 0) : 0,
+      annualisedVol: annualise(stdDev(hReturns), Math.max(hAvgDays, 1)),
+      dataPoints: sortedDates.length,
     }
   })
 
