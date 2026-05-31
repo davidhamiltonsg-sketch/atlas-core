@@ -47,16 +47,25 @@ async function getRiskData(userId: string) {
     orderBy: { targetPct: "desc" },
   })
 
-  // Build time-series of portfolio totals
+  // Build time-series of portfolio totals.
+  // Only include dates where ALL holdings have a snapshot — partial-data dates
+  // (e.g. a sync that captured only some positions) create massive spurious
+  // "returns" that blow up the volatility calculation.
+  const holdingsWithData = holdings.filter(h => h.snapshots.length > 0)
+  const numRequired = holdingsWithData.length
+
   const dateMap = new Map<string, number>()
+  const dateCounts = new Map<string, number>()
   for (const h of holdings) {
     for (const s of h.snapshots) {
       const key = s.date.toISOString().split("T")[0]
       dateMap.set(key, (dateMap.get(key) ?? 0) + s.value)
+      dateCounts.set(key, (dateCounts.get(key) ?? 0) + 1)
     }
   }
 
   const timeline = Array.from(dateMap.entries())
+    .filter(([key]) => numRequired === 0 || (dateCounts.get(key) ?? 0) >= numRequired)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, value]) => ({ date, value }))
 
@@ -114,14 +123,17 @@ async function getRiskData(userId: string) {
   const holdingStats = holdings.map(h => {
     const snaps = h.snapshots
     const hReturns: number[] = []
+    const hDaysBetween: number[] = []
     for (let i = 1; i < snaps.length; i++) {
       if (snaps[i - 1].value > 0) {
         hReturns.push((snaps[i].value - snaps[i - 1].value) / snaps[i - 1].value)
       }
+      hDaysBetween.push((snaps[i].date.getTime() - snaps[i - 1].date.getTime()) / 86_400_000)
     }
+    const hAvgDays = hDaysBetween.length > 0 ? mean(hDaysBetween) : avgDays
     const latestSnap = snaps[snaps.length - 1]
     const hSd = stdDev(hReturns)
-    const hAnnVol = annualise(hSd, avgDays)
+    const hAnnVol = annualise(hSd, Math.max(hAvgDays, 1))
     return {
       ticker: h.ticker,
       name: h.name,

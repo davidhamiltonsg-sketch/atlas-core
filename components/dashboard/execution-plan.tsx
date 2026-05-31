@@ -31,8 +31,11 @@ function calculateSuggestedAllocations(
   positions: Position[],
   totalMonthly: number
 ): Record<string, number> {
-  const isOverweight = (p: Position) =>
-    p.actualPct > p.targetPct && p.status !== "healthy"
+  // Exclude any position above its target from new contributions — the
+  // tolerance band governs alert severity, not whether to keep buying.
+  // A position at 12% vs 10% target should not receive money even if
+  // it's within the "healthy" drift band.
+  const isOverweight = (p: Position) => p.actualPct > p.targetPct
 
   const active = positions.filter(p => !isOverweight(p))
   const result: Record<string, number> = {}
