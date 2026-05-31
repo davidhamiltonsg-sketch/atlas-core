@@ -90,8 +90,11 @@ async function getDashboardData(userId: string) {
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0
-  const prevTotalValue = historyPoints.length >= 2 ? historyPoints[historyPoints.length - 2].value : null
-  const valueChange = prevTotalValue !== null ? totalValue - prevTotalValue : null
+  // Compare the last two complete-date sparkline points (both deduplicated) for a
+  // consistent value-change figure that matches what the sparkline shows
+  const valueChange = historyPoints.length >= 2
+    ? historyPoints[historyPoints.length - 1].value - historyPoints[historyPoints.length - 2].value
+    : null
 
   const positions = holdings.map((h) => {
     const value = h.snapshots[0]?.value ?? 0

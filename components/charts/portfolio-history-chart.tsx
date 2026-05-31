@@ -20,9 +20,9 @@ interface Props {
 }
 
 function fmt(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`
-  return `$${v.toFixed(0)}`
+  if (v >= 1_000_000) return `S$${(v / 1_000_000).toFixed(2)}M`
+  if (v >= 1_000) return `S$${(v / 1_000).toFixed(0)}K`
+  return `S$${v.toFixed(0)}`
 }
 
 function CustomTooltip({ active, payload, label }: {
@@ -71,8 +71,8 @@ export function PortfolioHistoryChart({ data, height = 90 }: Props) {
           stroke={color}
           strokeWidth={2}
           fill="url(#histGrad)"
-          dot={false}
-          activeDot={{ r: 3, fill: color }}
+          dot={height > 90 ? { r: 3, fill: color, strokeWidth: 0 } : false}
+          activeDot={{ r: 4, fill: color }}
           isAnimationActive={true}
           animationDuration={800}
         />

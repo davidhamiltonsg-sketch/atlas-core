@@ -93,7 +93,9 @@ async function getRiskData(userId: string) {
   const periodSd = stdDev(periodReturns)
   const annualisedVol = annualise(periodSd, avgDays)
   const avgPeriodReturn = periodReturns.length > 0 ? mean(periodReturns) : 0
-  const annualisedReturn = avgPeriodReturn * (365 / Math.max(avgDays, 1))
+  // Geometric annualisation: (1 + avgPeriodReturn)^(periods/year) - 1
+  const periodsPerYear = 365 / Math.max(avgDays, 1)
+  const annualisedReturn = Math.pow(1 + avgPeriodReturn, periodsPerYear) - 1
 
   // Sharpe (risk-free = 4% annual — Singapore T-bill proxy)
   const riskFree = 0.04
