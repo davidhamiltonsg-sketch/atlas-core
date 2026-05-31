@@ -16,6 +16,7 @@ export interface HistoryPoint {
 
 interface Props {
   data: HistoryPoint[]
+  height?: number
 }
 
 function fmt(v: number): string {
@@ -38,10 +39,10 @@ function CustomTooltip({ active, payload, label }: {
   )
 }
 
-export function PortfolioHistoryChart({ data }: Props) {
+export function PortfolioHistoryChart({ data, height = 90 }: Props) {
   if (data.length < 2) {
     return (
-      <div className="flex items-center justify-center h-[90px] text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-center text-[11px] text-muted-foreground" style={{ height }}>
         Not enough snapshots yet
       </div>
     )
@@ -53,7 +54,7 @@ export function PortfolioHistoryChart({ data }: Props) {
   const color = isGain ? "#22c55e" : "#ef4444"
 
   return (
-    <ResponsiveContainer width="100%" height={90}>
+    <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
@@ -61,8 +62,8 @@ export function PortfolioHistoryChart({ data }: Props) {
             <stop offset="95%" stopColor={color} stopOpacity={0.02} />
           </linearGradient>
         </defs>
-        <XAxis dataKey="label" hide />
-        <YAxis domain={[min, max]} hide />
+        <XAxis dataKey="label" hide={height <= 90} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+        <YAxis domain={[min, max]} hide={height <= 90} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={fmt} width={60} />
         <Tooltip content={<CustomTooltip />} />
         <Area
           type="monotone"

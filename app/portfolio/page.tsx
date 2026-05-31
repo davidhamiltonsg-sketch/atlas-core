@@ -10,15 +10,7 @@ import { HoldingRow } from "@/components/portfolio/holding-row"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
-
-// v5.8 hard drift thresholds (Section 3.1) — BTC has no lower hard trigger (underweight is a soft alert only)
-const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-  VT:   { low: 42, high: 62 },
-  QQQM: { low: 15, high: 31 },
-  SMH:  { low: 5,  high: 15 },
-  VWO:  { low: 3,  high: 13 },
-  BTC:  { high: 8  },
-}
+import { HARD_THRESHOLDS } from "@/lib/constants"
 
 async function getPortfolioData(userId: string) {
   const holdings = await db.holding.findMany({

@@ -10,6 +10,7 @@ import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-cha
 import { computePortfolioHealth } from "@/lib/health"
 import { ExecutionPlan } from "@/components/dashboard/execution-plan"
 import { HealthMethodology } from "@/components/health-methodology"
+import { HARD_THRESHOLDS } from "@/lib/constants"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -34,15 +35,6 @@ function projectPortfolio(
     if (year > 0) value += annualLumpSum
   }
   return value
-}
-
-// v5.8 hard drift thresholds (Section 3.1)
-const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-  VT:   { low: 42, high: 62 },
-  QQQM: { low: 15, high: 31 },
-  SMH:  { low: 5,  high: 15 },
-  VWO:  { low: 3,  high: 13 },
-  BTC:  { high: 8  },
 }
 
 type ActionStatus = "healthy" | "soft" | "hard"
@@ -72,19 +64,29 @@ async function getDashboardData(userId: string) {
     getUsdSgdRate(),
   ])
 
-  // Build portfolio value history (index 0 = latest, align across holdings)
-  const historyPoints: Array<{ label: string; value: number }> = []
-  const maxSnaps = Math.max(...holdings.map(h => h.snapshots.length))
-  for (let i = maxSnaps - 1; i >= 0; i--) {
-    const total = holdings.reduce((sum, h) => sum + (h.snapshots[i]?.value ?? 0), 0)
-    const date = holdings.find(h => h.snapshots[i])?.snapshots[i]?.date
-    if (date && total > 0) {
-      historyPoints.push({
-        label: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-        value: total,
-      })
+  // Build portfolio value history — deduplicate by date, align across holdings
+  // (index-based alignment breaks when holdings have different snapshot counts;
+  //  multiple syncs on the same day also inflate the total if summed naively)
+  const holdingDateMaps = new Map<string, Map<string, number>>()
+  for (const h of holdings) {
+    const dm = new Map<string, number>()
+    for (const s of h.snapshots) {
+      dm.set(s.date.toISOString().split("T")[0], s.value)
     }
+    holdingDateMaps.set(h.id, dm)
   }
+  const holdingsWithData = holdings.filter(h => holdingDateMaps.get(h.id)!.size > 0)
+  const allDates = [...new Set(
+    holdingsWithData.flatMap(h => [...holdingDateMaps.get(h.id)!.keys()])
+  )].sort()
+  // Keep last 8 complete dates (all holdings present)
+  const completeDates = allDates.filter(date =>
+    holdingsWithData.every(h => holdingDateMaps.get(h.id)!.has(date))
+  ).slice(-8)
+  const historyPoints: Array<{ label: string; value: number }> = completeDates.map(date => ({
+    label: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    value: holdingsWithData.reduce((sum, h) => sum + holdingDateMaps.get(h.id)!.get(date)!, 0),
+  }))
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0

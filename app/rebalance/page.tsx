@@ -4,14 +4,7 @@ import { formatCurrency } from "@/lib/utils"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { GitCompare, ArrowUp, ArrowDown, Minus } from "lucide-react"
-
-const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-  VT:   { low: 40, high: 62 },
-  QQQM: { low: 16, high: 31 },
-  SMH:  { high: 15 },
-  VWO:  { low: 4,  high: 12 },
-  BTC:  { high: 8 },
-}
+import { HARD_THRESHOLDS } from "@/lib/constants"
 
 async function getRebalanceData(userId: string) {
   const holdings = await db.holding.findMany({
@@ -39,8 +32,8 @@ async function getRebalanceData(userId: string) {
     const deviation = value - targetValue // positive = overweight in SGD
 
     // Contribution-based: how many months to correct via contributions alone?
-    // Assume $3000/mo contribution; this is just an estimate
-    const correctionMonths = Math.abs(deviation) > 0 ? Math.ceil(Math.abs(deviation) / 300) : 0
+    // Assume SGD 3,000/mo contribution; this is just an estimate
+    const correctionMonths = Math.abs(deviation) > 0 ? Math.ceil(Math.abs(deviation) / 3000) : 0
 
     return {
       ticker: h.ticker,

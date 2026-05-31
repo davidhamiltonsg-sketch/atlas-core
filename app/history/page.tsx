@@ -14,36 +14,51 @@ async function getHistoryData(userId: string) {
     },
   })
 
-  // Build a map of date → total portfolio value
-  const dateMap = new Map<string, number>()
+  // Deduplicate: keep latest snapshot value per holding per calendar date
+  // (Multiple IBKR syncs on the same day create duplicate records; summing them inflates the total)
+  const holdingDateMaps = new Map<string, Map<string, { value: number; units: number; price: number }>>()
   for (const h of holdings) {
-    for (const snap of h.snapshots) {
-      const key = snap.date.toISOString().split("T")[0]
-      dateMap.set(key, (dateMap.get(key) ?? 0) + snap.value)
+    const dm = new Map<string, { value: number; units: number; price: number }>()
+    for (const s of h.snapshots) {
+      // snapshots ordered asc — later ones naturally overwrite earlier ones on the same date
+      dm.set(s.date.toISOString().split("T")[0], { value: s.value, units: s.units, price: s.price })
     }
+    holdingDateMaps.set(h.id, dm)
   }
 
-  const sorted = Array.from(dateMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, value]) => ({
-      label: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }),
-      value,
-      date,
-    }))
+  const holdingsWithData = holdings.filter(h => holdingDateMaps.get(h.id)!.size > 0)
 
-  // Per-holding history
-  const holdingHistory = holdings.map(h => ({
-    ticker: h.ticker,
-    name: h.name,
-    color: h.color,
-    snapshots: h.snapshots.map(s => ({
-      date: s.date.toISOString().split("T")[0],
-      label: new Date(s.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-      value: s.value,
-      units: s.units,
-      price: s.price,
-    })),
-  }))
+  // Portfolio timeline: only include dates where ALL holdings have data
+  const allDates = [...new Set(
+    holdingsWithData.flatMap(h => [...holdingDateMaps.get(h.id)!.keys()])
+  )].sort()
+
+  const sorted = allDates
+    .map(date => {
+      const values = holdingsWithData.map(h => holdingDateMaps.get(h.id)!.get(date)?.value)
+      if (values.some(v => v === undefined)) return null
+      return {
+        date,
+        label: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }),
+        value: values.reduce((s, v) => s + v!, 0),
+      }
+    })
+    .filter((x): x is { date: string; label: string; value: number } => x !== null)
+
+  // Per-holding history (deduplicated — one row per date)
+  const holdingHistory = holdings.map(h => {
+    const dm = holdingDateMaps.get(h.id) ?? new Map<string, { value: number; units: number; price: number }>()
+    const dedupedSnaps = [...dm.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, s]) => ({
+        date,
+        label: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        value: s.value,
+        units: s.units,
+        price: s.price,
+      }))
+    return { ticker: h.ticker, name: h.name, color: h.color, snapshots: dedupedSnaps }
+  })
 
   return { history: sorted, holdingHistory }
 }
@@ -106,7 +121,7 @@ export default async function HistoryPage() {
             <p className="text-xs text-muted-foreground mt-0.5">{history.length} snapshots · SGD</p>
           </div>
           <div className="p-4">
-            <PortfolioHistoryChart data={chartPoints} />
+            <PortfolioHistoryChart data={chartPoints} height={280} />
           </div>
         </div>
       ) : (
