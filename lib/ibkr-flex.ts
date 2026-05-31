@@ -84,21 +84,24 @@ function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividend
   const executions: FlexExecution[] = []
   const dividends: FlexDividend[] = []
 
-  // Parse executions
-  const execRe = /<Execution\s+([^>]+)\/?>/g
+  // Parse executions — handles both <Execution> (Executions section) and
+  // <Trade> (Trades section, Options: Execution) formats from IBKR Activity Flex
+  const execRe = /<(?:Execution|Trade)\s+([^>]+)\/?>/g
   let m: RegExpExecArray | null
   while ((m = execRe.exec(xml)) !== null) {
     const a = m[1]
-    const symbol   = attr(a, "symbol")
-    const tradeID  = attr(a, "tradeID")
-    const buySell  = attr(a, "buySell") as "BUY" | "SELL"
-    const quantity = parseFloat(attr(a, "quantity"))
-    const price    = parseFloat(attr(a, "tradePrice"))
-    const currency = attr(a, "currency")
-    const fxRate   = parseFloat(attr(a, "fxRateToBase")) || 1.35
-    const tradeDate = attr(a, "tradeDate")
+    const buySell = attr(a, "buySell") as "BUY" | "SELL"
+    if (buySell !== "BUY" && buySell !== "SELL") continue // skip non-execution Trade elements
 
-    if (symbol && tradeID && (buySell === "BUY" || buySell === "SELL") && !isNaN(quantity) && !isNaN(price)) {
+    const symbol    = attr(a, "symbol")
+    const tradeID   = attr(a, "tradeID")
+    const quantity  = parseFloat(attr(a, "quantity"))
+    const price     = parseFloat(attr(a, "tradePrice"))
+    const currency  = attr(a, "currency")
+    const fxRate    = parseFloat(attr(a, "fxRateToBase")) || 1.35
+    const tradeDate = attr(a, "tradeDate") || attr(a, "dateTime")?.split(";")?.[0] || ""
+
+    if (symbol && tradeID && !isNaN(quantity) && !isNaN(price)) {
       executions.push({ tradeID, symbol, buySell, quantity: Math.abs(quantity), price, currency, fxRate, tradeDate })
     }
   }
@@ -164,7 +167,7 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
       if (!getRes.ok) return { success: false, error: `IBKR GetStatement HTTP ${getRes.status}` }
       const xml = await getRes.text()
 
-      if (xml.includes("<Execution") || xml.includes("<CashTransaction")) {
+      if (xml.includes("<Execution") || xml.includes("<Trade ") || xml.includes("<CashTransaction")) {
         const { executions, dividends, accountId } = parseFlexActivity(xml)
         return { success: true, executions, dividends, accountId }
       }
