@@ -55,7 +55,7 @@ export function AllocationDonut({ data, totalValue }: Props) {
     <div className="flex flex-col items-center gap-0 chart-enter">
       {/* Donut */}
       <div className="relative w-full" style={{ height: 260 }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             {/* Outer ring: actual allocation */}
             <Pie
