@@ -154,7 +154,9 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
           error: `IBKR could not generate the report right now. This usually means the same query was used recently (rate limited). Wait 2–3 minutes and try again, or configure IBKR_FLEX_QUERY_ID_ACTIVITY as a dedicated activity query in your .env.`,
         }
       }
-      return { success: false, error: ibkrError }
+      // Include raw snippet so the caller can diagnose without server logs
+      const rawSnippet = sendXml.replace(/\s+/g, " ").trim().slice(0, 400)
+      return { success: false, error: `IBKR error: ${ibkrError} | Raw: ${rawSnippet}` }
     }
 
     // Step 2: poll for result (max ~25s to stay within Vercel 30s limit)
