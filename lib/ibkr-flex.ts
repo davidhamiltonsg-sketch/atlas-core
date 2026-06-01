@@ -142,11 +142,23 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
     if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
 
     const sendXml = await sendRes.text()
-    const referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
-    const getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
+
+    // IBKR v3 returns ReferenceCode as an XML element: <ReferenceCode>12345</ReferenceCode>
+    // (older integrations may have used attribute form; we check both)
+    const referenceCode =
+      sendXml.match(/referenceCode="([^"]+)"/)?.[1] ??
+      sendXml.match(/<ReferenceCode>([^<]+)<\/ReferenceCode>/i)?.[1]
+
+    // URL can also be element or attribute
+    const getUrl =
+      sendXml.match(/url="([^"]+)"/)?.[1] ??
+      sendXml.match(/<Url>([^<]+)<\/Url>/i)?.[1] ??
+      `${FLEX_BASE}.GetStatement`
 
     if (!referenceCode) {
       const ibkrError = extractError(sendXml)
+      // Log first 600 chars of raw response to help diagnose unexpected formats
+      console.error("[ibkr-flex] SendRequest no referenceCode. Raw XML (600):", sendXml.slice(0, 600))
       // Rate limit / temporary unavailability — tell user to wait
       if (RETRYABLE.some(s => sendXml.includes(s))) {
         const errorCode = sendXml.match(/<ErrorCode>([^<]+)<\/ErrorCode>/)?.[1] ?? ""
@@ -193,10 +205,16 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
     if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
 
     const sendXml = await sendRes.text()
-    const referenceCode = sendXml.match(/referenceCode="([^"]+)"/)?.[1]
-    const getUrl = sendXml.match(/url="([^"]+)"/)?.[1] ?? `${FLEX_BASE}.GetStatement`
+    const referenceCode =
+      sendXml.match(/referenceCode="([^"]+)"/)?.[1] ??
+      sendXml.match(/<ReferenceCode>([^<]+)<\/ReferenceCode>/i)?.[1]
+    const getUrl =
+      sendXml.match(/url="([^"]+)"/)?.[1] ??
+      sendXml.match(/<Url>([^<]+)<\/Url>/i)?.[1] ??
+      `${FLEX_BASE}.GetStatement`
 
     if (!referenceCode) {
+      console.error("[ibkr-flex] fetchFlexPositions no referenceCode. Raw XML (600):", sendXml.slice(0, 600))
       return { success: false, error: extractError(sendXml) }
     }
 

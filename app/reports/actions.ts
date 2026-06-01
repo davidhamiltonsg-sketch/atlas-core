@@ -7,36 +7,68 @@ import { revalidatePath } from "next/cache"
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
 // ── Yahoo Finance crumb auth ──────────────────────────────────────────────────
-// v10/quoteSummary requires a crumb token obtained by first collecting cookies from
-// finance.yahoo.com, then calling /v1/test/getcrumb with those cookies.
-// We cache in module scope (persists for the life of the Next.js server process).
+// v10/quoteSummary requires a crumb token. The cookie dance (load finance.yahoo.com
+// then call /v1/test/getcrumb) is unreliable on Vercel Singapore because Yahoo
+// redirects server-side requests to a GDPR consent page.
+//
+// Strategy (three-step fallback):
+//  1. Try crumb endpoint directly — works on many server environments without cookies
+//  2. Try cookie dance via finance.yahoo.com (may fail on consent-page redirect)
+//  3. Proceed without crumb — Yahoo falls back gracefully for some queries
 
 let _cachedCrumb  = ""
 let _cachedCookie = ""
 let _crumbCachedAt = 0
 const CRUMB_TTL = 55 * 60 * 1000 // 55 minutes
 
+function isValidCrumb(s: string): boolean {
+  return Boolean(s) && s !== "null" && s.length > 2 && !s.startsWith("<") && !s.includes("<!DOCTYPE")
+}
+
 async function getYFCrumb(): Promise<{ crumb: string; cookie: string } | null> {
   if (_cachedCrumb && Date.now() - _crumbCachedAt < CRUMB_TTL) {
     return { crumb: _cachedCrumb, cookie: _cachedCookie }
   }
+
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+  // ── Attempt 1: direct crumb fetch (no cookie) ──────────────────────────────
+  for (const host of YF_HOSTS) {
+    try {
+      const res = await fetch(`https://${host}/v1/test/getcrumb`, {
+        headers: { "User-Agent": UA, "Accept": "*/*" },
+        cache: "no-store",
+      })
+      if (!res.ok) continue
+      const crumb = (await res.text()).trim()
+      if (isValidCrumb(crumb)) {
+        _cachedCrumb  = crumb
+        _cachedCookie = ""
+        _crumbCachedAt = Date.now()
+        return { crumb, cookie: "" }
+      }
+    } catch { continue }
+  }
+
+  // ── Attempt 2: cookie dance via finance.yahoo.com ─────────────────────────
+  // Yahoo may redirect to consent page on server IPs — we follow redirects and
+  // collect whatever cookies come back.
   try {
-    // Step 1: load finance.yahoo.com to collect session cookies
     const pageRes = await fetch("https://finance.yahoo.com/", {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
       },
       redirect: "follow",
       cache: "no-store",
     })
 
-    // Collect Set-Cookie values — getSetCookie() is available in Node 18+
+    // getSetCookie() available in Node 18+; fallback to raw header string
     const rawCookies: string[] =
       typeof (pageRes.headers as Record<string, unknown>).getSetCookie === "function"
         ? ((pageRes.headers as unknown as { getSetCookie(): string[] }).getSetCookie())
-        : [pageRes.headers.get("set-cookie") ?? ""]
+        : (pageRes.headers.get("set-cookie") ?? "").split(/,(?=[^;]+=[^;]+)/)
 
     const cookieStr = rawCookies
       .filter(Boolean)
@@ -44,29 +76,27 @@ async function getYFCrumb(): Promise<{ crumb: string; cookie: string } | null> {
       .filter(Boolean)
       .join("; ")
 
-    // Step 2: fetch the crumb using those cookies
-    for (const host of YF_HOSTS) {
-      try {
-        const crumbRes = await fetch(`https://${host}/v1/test/getcrumb`, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "*/*",
-            "Cookie": cookieStr,
-          },
-          cache: "no-store",
-        })
-        if (!crumbRes.ok) continue
-        const crumb = (await crumbRes.text()).trim()
-        // A valid crumb is a short alphanumeric string; reject HTML/null responses
-        if (crumb && crumb !== "null" && crumb.length > 2 && !crumb.startsWith("<")) {
-          _cachedCrumb  = crumb
-          _cachedCookie = cookieStr
-          _crumbCachedAt = Date.now()
-          return { crumb, cookie: cookieStr }
-        }
-      } catch { continue }
+    if (cookieStr) {
+      for (const host of YF_HOSTS) {
+        try {
+          const crumbRes = await fetch(`https://${host}/v1/test/getcrumb`, {
+            headers: { "User-Agent": UA, "Accept": "*/*", "Cookie": cookieStr },
+            cache: "no-store",
+          })
+          if (!crumbRes.ok) continue
+          const crumb = (await crumbRes.text()).trim()
+          if (isValidCrumb(crumb)) {
+            _cachedCrumb  = crumb
+            _cachedCookie = cookieStr
+            _crumbCachedAt = Date.now()
+            return { crumb, cookie: cookieStr }
+          }
+        } catch { continue }
+      }
     }
   } catch {}
+
+  console.warn("[yahoo-finance] Could not obtain crumb — proceeding without it")
   return null
 }
 
