@@ -95,9 +95,32 @@ async function getReportData(userId: string) {
 
   for (const lt of lookThroughRecords) {
     try {
-      liveCompanyWeights[lt.ticker] = JSON.parse(lt.companyWeights)
-      liveSectorWeights[lt.ticker]  = JSON.parse(lt.sectorWeights)
-      liveGeoWeights[lt.ticker]     = JSON.parse(lt.geoWeights)
+      const dbCw = JSON.parse(lt.companyWeights) as Record<string, number>
+      const dbSw = JSON.parse(lt.sectorWeights)  as { semiconductor: number; digital: number; us: number; ai: number }
+      const dbGw = JSON.parse(lt.geoWeights)     as { us: number; intlDev: number; emerging: number; crypto: number }
+
+      const fallbackSw = SECTOR_WEIGHTS[lt.ticker]
+      const fallbackGw = GEO_WEIGHTS[lt.ticker]
+
+      // Quality-check sector weights: if a significant hardcoded weight is zero in the DB,
+      // the Yahoo fetch returned empty sectorWeightings — keep the hardcoded fallback instead.
+      const sectorLooksBad = fallbackSw && (
+        (fallbackSw.semiconductor > 5  && (dbSw.semiconductor ?? 0) === 0) ||
+        (fallbackSw.digital       > 20 && (dbSw.digital       ?? 0) === 0)
+      )
+      if (!sectorLooksBad) liveSectorWeights[lt.ticker] = dbSw
+
+      // Quality-check geo weights: if hardcoded US% is significant but DB shows 0,
+      // Yahoo returned no countryWeightings (e.g. VT treated like EM-only).
+      const geoLooksBad = fallbackGw &&
+        fallbackGw.us > 10 && (dbGw.us ?? 0) === 0
+      if (!geoLooksBad) liveGeoWeights[lt.ticker] = dbGw
+
+      // Quality-check company weights: if all weights are 0 for a non-BTC ETF,
+      // Yahoo returned no holdings — keep hardcoded fallback.
+      const cwSum = Object.values(dbCw).reduce((s, v) => s + v, 0)
+      if (lt.ticker === "BTC" || cwSum > 0) liveCompanyWeights[lt.ticker] = dbCw
+
       if (!lookThroughUpdatedAt || lt.updatedAt > lookThroughUpdatedAt) {
         lookThroughUpdatedAt = lt.updatedAt
       }
