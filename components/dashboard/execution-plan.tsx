@@ -33,8 +33,9 @@ type Props = {
 
 // Market-aware DCA: routes monthly money considering drift AND market conditions
 // (skips overbought positions at 52-week highs, deploys into confirmed dips via the
-// three-tranche rule, never feeds exit candidates). Falls back to drift-only logic
-// for positions with no market overlay.
+// three-tranche rule, accumulates underweight conviction holdings toward target, and
+// never feeds an overweight position). Falls back to drift-only logic for positions
+// with no market overlay.
 function calculateSuggestedAllocations(
   positions: Position[],
   totalMonthly: number

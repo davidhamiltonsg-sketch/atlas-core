@@ -1,5 +1,6 @@
-// v6.0 hard drift thresholds (Section 3.1)
-// BTC has no lower hard trigger — underweight is soft-alert only
+// v6.1 hard drift thresholds (Section 3.1)
+// BTC has no lower hard trigger — underweight is soft-alert only (it's a held
+// conviction asset: accumulate on weakness toward target, never sold at a loss)
 // SMH cap tightened 15% → 12% (Principle 04)
 export const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
   VT:   { low: 42, high: 62 },
@@ -9,7 +10,7 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
   BTC:  { high: 8  },
 }
 
-// v6.0 Command Centre — market-aware governance rules from pattern analysis
+// v6.1 Command Centre — market-aware governance rules from pattern analysis
 // These complement Section 3 drift bands with market-condition-aware overlays
 export const COMMAND_CENTRE_RULES = {
   minHoldDays: 90,         // 3-month hold before any sale

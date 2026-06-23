@@ -11,8 +11,12 @@
 // triggered steps in the order they unlock. The 3-month hold rule is already
 // baked into each step — nothing here asks you to break it.
 //
-// Market levels and timings were fact-checked against live IBKR data and market
-// sources on 23 Jun 2026 (see lib/next-best-move.ts → MARKET_STATE for sourcing).
+// Core principle: a loss is not a sell signal. Conviction holdings (incl. BTC) are
+// accumulated on weakness toward target and sold only on a broken thesis; the SGOV
+// buffer is built from new contributions, never by liquidating a position.
+//
+// Macro states and SGOV/SMH levels were re-verified against market sources on
+// 24 Jun 2026 (see lib/next-best-move.ts → MARKET_STATE for sourcing notes).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Urgency = "CRITICAL" | "HIGH" | "MEDIUM"
@@ -32,32 +36,32 @@ export interface ActionStep {
 
 export const ACTION_PLAN: ActionStep[] = [
   {
-    when: "Right now",
-    urgency: "CRITICAL",
+    when: "This month, and each month it stays below target",
+    urgency: "HIGH",
     ticker: "BTC",
-    what: "Check when you bought your BTC — if it's been 3 months or more, sell all of it",
-    why: "BTC is down 27% and losing you money every day. It's not diversifying your portfolio — it's just adding risk with no benefit. The proceeds (~$4,400) go into your defensive buffer.",
+    what: "Keep BTC — and accumulate it on weakness toward its 7% target (it's currently underweight). Do not sell it.",
+    why: "A loss is not a sell signal. The unrealised loss is a sunk cost; what matters is whether you'd buy at today's price — and at a lower weight, adding moves you toward target at a better cost basis. BTC is a held conviction position, capped at 8%. Sell only if the thesis breaks, never because of a red number.",
   },
   {
     when: "This week",
     urgency: "HIGH",
     ticker: "SMH",
     what: "Set price alerts on your phone: SMH @ $590, $550, $510",
-    why: "SMH is at its peak. You don't add at the peak — you prepare your orders and wait. When the alert fires, you move fast with your pre-planned tranches.",
+    why: "SMH is at its peak (~$669, near its 52-week high). You don't add at the peak — you prepare your orders and wait. When the alert fires, you move fast with your pre-planned tranches.",
   },
   {
     when: "This week",
     urgency: "HIGH",
     ticker: "VWO",
-    what: "Make a binary decision on VWO: either add 71 more shares OR sell all 129 shares",
-    why: "129 shares at 5.2% of your portfolio is the worst of both worlds — not enough to matter if EM wins, enough to drag if it doesn't. Commit or exit. No middle ground.",
+    what: "Make a binary decision on VWO: either add 71 more shares OR trim it to zero",
+    why: "129 shares at ~5% of your portfolio is the worst of both worlds — not enough to matter if EM wins, enough to drag if it doesn't. Commit to a meaningful size or exit. No middle ground. (This is a sizing decision, not a loss-driven sale.)",
   },
   {
-    when: "After BTC is sold",
+    when: "Start this month — build gradually",
     urgency: "HIGH",
     ticker: "SGOV",
-    what: "Buy SGOV (iShares 0–3 Month Treasury) — target $12,000–$15,000 worth",
-    why: "This is your shock absorber. Currently yielding about 3.85% with zero equity correlation. When the next market shock hits (Iran, tariffs, rate hike), SGOV holds value while everything else drops — and you use it to buy the dip cheaply.",
+    what: "Start an SGOV (iShares 0–3 Month Treasury) position and grow it toward 8–10% of NAV using your new monthly contributions — never by selling another holding",
+    why: "This is your shock absorber. Yielding about 3.85% (SEC 3.55%) with zero equity correlation. When the next market shock hits (Hormuz, tariffs, rate hike), SGOV holds value while everything else drops — and you use it to buy the dip cheaply. Build it from contributions over a few months so you never have to liquidate a position to be protected.",
   },
   {
     when: "When SMH drops to $590",

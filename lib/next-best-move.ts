@@ -10,16 +10,22 @@
 // asset) or a market risk (overbought / shock window) is live, the plan adapts.
 //
 // PRECEDENCE (highest wins — this is the law of the system):
-//   1. Hard cap breach (§4 concentration / §2 position cap)  → TRIM
-//   2. Defensive gap (no shock buffer in a live-risk window)  → BUILD BUFFER
-//   3. Structural loser (a position bleeding with no thesis)  → EXIT
-//   4. Market opportunity (confirmed dip in a quality asset)  → DEPLOY TO DIP
-//   5. Hard drift underweight                                 → FILL UNDERWEIGHT
-//   6. Soft drift                                             → REDIRECT
-//   7. Healthy                                                → STANDARD DCA
+//   1. Hard cap / concentration breach (§4 / §2 position cap)      → TRIM to target
+//   2. Defensive gap (buffer below floor)                          → BUILD SGOV from NEW contributions (never by selling)
+//   3. Market opportunity (confirmed dip in a quality asset)       → DEPLOY tranche 1 into the dip
+//   4. Conviction underweight (e.g. BTC below target)             → ACCUMULATE on weakness toward target (never sell at a loss)
+//   5. Hard drift underweight                                      → FILL the biggest gap
+//   6. Soft drift                                                  → REDIRECT the contribution
+//   7. Healthy                                                     → STANDARD DCA (skip 52-week highs)
 //
-// All price levels, yields, and risk states below were fact-checked against live
-// IBKR data and market sources on 23 Jun 2026. See MARKET_STATE for sourcing notes.
+// CORE PRINCIPLE — a loss is not a sell signal. Hold/sell of a conviction asset is
+// forward-looking ("would I buy at today's price?"), never driven by an unrealised
+// loss (a sunk cost). A conviction asset is sold ONLY on a broken thesis. The shock
+// buffer is built from new contributions, never by liquidating a held position.
+//
+// Macro states and the SGOV/SMH levels below were re-verified against live market
+// sources on 24 Jun 2026 (see MARKET_STATE). Per-position levels for VT/QQQM/VWO are
+// carried from the prior 23 Jun snapshot and may be stale — treat as UNVERIFIED.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Severity = "critical" | "high" | "medium" | "low" | "none"
@@ -41,34 +47,41 @@ export interface PositionInput {
 // Each field carries the real, verified figure — no invented numbers.
 
 export const MARKET_STATE = {
-  asOf: "2026-06-23",
-  // SGOV yield — VERIFIED: 30-day SEC yield 3.53% (28 May), dividend yield 3.85% (18 Jun 2026).
-  // Previously mis-stated as 4.8%. Corrected.
+  asOf: "2026-06-24",
+  // SGOV yield — VERIFIED 24 Jun 2026: dividend yield 3.85% (18 Jun), 30-day SEC yield 3.55% (17 Jun).
   sgovYieldPct: 3.85,
-  // Iran / Strait of Hormuz — VERIFIED: situation is volatile and de-escalating as of
-  // mid-Jun 2026. Brent fell to ~$78 (lowest since 3 Mar) ahead of a framework deal to
-  // end the US–Israel war on Iran; Iran expected to reopen the Strait. Risk is now
-  // TWO-SIDED: a deal removes the overhang (bullish), a breakdown re-closes it (bearish).
-  iranRiskState: "de-escalating-volatile" as const,
-  // US–China tariff truce — VERIFIED: extended to 10 Nov 2026. Section 301 talks ongoing.
+  sgovSecYieldPct: 3.55,
+  // Iran / Strait of Hormuz — VERIFIED 24 Jun 2026: VOLATILE AND CONTESTED. A 17 Jun
+  // memorandum to end the conflict and reopen the Strait collapsed within days; Iran
+  // RE-CLOSED the Strait on 20 Jun citing Israeli violations (US military denies). Geneva
+  // talks were postponed 19 Jun. Brent ~$77–80 mid-to-late Jun. Risk is genuinely TWO-SIDED
+  // and fluid week to week: a durable deal removes the overhang (bullish); sustained closure
+  // spikes oil and inflation (bearish). Do not trade the headlines.
+  iranRiskState: "volatile-contested" as const,
+  // US–China tariff truce — VERIFIED 24 Jun 2026: extended to 10 Nov 2026 (Busan Trump–Xi
+  // deal, 30 Oct 2025); renegotiated annually. Section 301 exclusions extended to same date.
   tariffTruceExpiry: "2026-11-10",
-  // Fed — VERIFIED: on hold at 3.50–3.75%. Jun 2026 dot plot split (9 hike / 8 hold).
-  // Goldman revised to zero cuts in 2026 (7 Jun). Rate-hike risk ~30% by Q1 2027.
+  // Fed — VERIFIED 24 Jun 2026: held at 3.50–3.75% for a 4th consecutive meeting (17 Jun);
+  // first meeting under chair Kevin Warsh; statement dropped prior easing language and nodded
+  // to possible hikes ahead. Stance: on hold, hawkish-risk.
   fedStance: "on-hold-hawkish-risk" as const,
   positions: {
     SMH: {
-      price: 664.50, lo52: 257.12, hi52: 663.80, histVolPct: 52.8,
-      // Overbought: at 52w high, Bollinger breach (2 Jun), MACD sell (9 Jun), RSI cooled (5 Jun)
+      // VERIFIED 24 Jun 2026: ~$668.91, 52w range $265.74–$671.83 — at/near 52w high (overbought).
+      price: 668.91, lo52: 265.74, hi52: 671.83, histVolPct: 52.8, // histVolPct UNVERIFIED (estimate)
       condition: "overbought" as const,
       dipEntry1: 590, dipEntry2: 550, dipEntry3: 510,
     },
+    // VT/QQQM/VWO levels below are UNVERIFIED — carried from the prior 23 Jun snapshot.
     QQQM: { price: 303.41, lo52: 214.72, hi52: 308.21, histVolPct: 23.7, condition: "extended" as const, dipEntry1: 285, dipEntry2: 270, dipEntry3: 255 },
     VT:   { price: 157.53, lo52: 121.51, hi52: 159.41, histVolPct: 15.5, condition: "accumulate" as const, dipEntry1: 148, dipEntry2: 142, dipEntry3: 135 },
     VWO:  { price: 61.20,  lo52: 46.31,  hi52: 61.35,  histVolPct: 20.6, condition: "decide" as const,     dipEntry1: 59,  dipEntry2: 56,  dipEntry3: 52 },
-    BTC:  { price: 28.44,  lo52: 0,      hi52: 0,      histVolPct: 0,    condition: "exit" as const,        dipEntry1: 0,   dipEntry2: 0,   dipEntry3: 0 },
+    // BTC is a HELD CONVICTION asset, not an exit candidate. Underweight vs its 7% target →
+    // accumulate on weakness toward target under its 8% cap. (price UNVERIFIED; no 52w market overlay.)
+    BTC:  { price: 28.44,  lo52: 0,      hi52: 0,      histVolPct: 0,    condition: "accumulate" as const,  dipEntry1: 0,   dipEntry2: 0,   dipEntry3: 0 },
   } as Record<string, {
     price: number; lo52: number; hi52: number; histVolPct: number
-    condition: "overbought" | "extended" | "accumulate" | "decide" | "exit"
+    condition: "overbought" | "extended" | "accumulate" | "decide"
     dipEntry1: number; dipEntry2: number; dipEntry3: number
   }>,
 } as const
@@ -88,6 +101,11 @@ export const RULES = {
   // How far below recent high counts as a "dip worth deploying into"
   dipTriggerPct: 12,
 } as const
+
+// Held conviction assets. These may run above target (under their hard cap) and are
+// NEVER sold to fund anything; an underweight conviction asset is accumulated on
+// weakness toward target. Selling one requires a broken thesis — never a paper loss.
+export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC"] as const
 
 // ─── A SINGLE ACTION ─────────────────────────────────────────────────────────
 
@@ -177,10 +195,9 @@ export function computeMarketAwareDca(
   }
 
   // Step 1 — decide who is eligible to receive money this month.
-  // Eligible = under target AND not overbought AND not an exit candidate.
+  // Eligible = under target AND not overbought. Underweight conviction holdings
+  // (incl. BTC) ARE eligible — we accumulate on weakness toward target.
   const eligible = positions.filter((p) => {
-    const cond = MARKET_STATE.positions[p.ticker]?.condition
-    if (cond === "exit") return false                 // never feed a position we're exiting
     if (isOverweight(p)) return false                 // never feed an overweight position
     if (isOverbought(p.ticker) && p.ticker !== "VT") return false  // never buy the top (VT exempt — it's the anchor)
     return true
@@ -224,7 +241,7 @@ export function computeMarketAwareDca(
       distributeByWeight(eligible, monthlyAmount, result, standard)
       // Flag if the overlay changed anything vs a naive proportional split
       const someoneSkipped = positions.some(
-        (p) => !eligible.includes(p) && !isOverweight(p) && MARKET_STATE.positions[p.ticker]?.condition !== "exit"
+        (p) => !eligible.includes(p) && !isOverweight(p)
       )
       if (someoneSkipped) {
         marketOverlayActive = true
@@ -244,8 +261,7 @@ export function computeMarketAwareDca(
     if (a.amount === 0) {
       a.tag = "zeroed"
       if (!a.reason) {
-        if (MARKET_STATE.positions[p.ticker]?.condition === "exit") a.reason = "Exit candidate — no new money."
-        else if (isOverweight(p)) a.reason = "Above target — paused."
+        if (isOverweight(p)) a.reason = "Above target — paused."
         else if (isOverbought(p.ticker)) a.reason = "At 52-week high — not buying the top."
         else a.reason = "Paused this month."
       }
@@ -324,35 +340,23 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     }
   }
 
-  // ── PRECEDENCE 2: Defensive gap → BUILD BUFFER ────────────────────────────
-  // Is there a shock buffer (SGOV / cash-like)? If not, and a risk window is live, fix it.
+  // ── PRECEDENCE 2: Defensive gap → BUILD BUFFER (from NEW contributions) ────
+  // Is there a shock buffer (SGOV / cash-like)? If it's below the floor, build it
+  // gradually from new contributions. NEVER fund it by selling a held position.
   const buffer = positions.find((p) => ["SGOV", "AGG", "CASH"].includes(p.ticker))
   const bufferPct = buffer ? buffer.actualPct : 0
   if (hasBalance && bufferPct < RULES.shockBufferMinPct) {
     return {
       severity: "high", ticker: "SGOV",
       action: "Build your shock buffer",
-      what: `Buy SGOV (short-term Treasury) until it is ${RULES.shockBufferTargetPct}% of your portfolio. Fund it by exiting BTC first.`,
-      why: `You have ${bufferPct.toFixed(0)}% in defensive assets — below the ${RULES.shockBufferMinPct}% floor. With the Iran situation volatile and a Fed rate-hike risk live, you need dry powder. SGOV currently yields about ${MARKET_STATE.sgovYieldPct}%.`,
-      when: "This week. Buy SGOV the same day BTC settles.",
+      what: `Start an SGOV (short-term Treasury) position and grow it toward ${RULES.shockBufferTargetPct}% of your portfolio using your new monthly contributions over the next few months. Do not sell anything to fund it.`,
+      why: `You have ${bufferPct.toFixed(0)}% in defensive assets — below the ${RULES.shockBufferMinPct}% floor. With the Strait of Hormuz situation volatile and Fed rate-hike risk live, you need dry powder. SGOV yields about ${MARKET_STATE.sgovYieldPct}% (SEC ${MARKET_STATE.sgovSecYieldPct}%) with zero equity correlation. Build it from contributions — never by liquidating a holding.`,
+      when: "Start this month; add a little each month until it reaches the 8–10% floor.",
       color: "#10b981",
     }
   }
 
-  // ── PRECEDENCE 3: Structural loser → EXIT ─────────────────────────────────
-  const btc = positions.find((p) => p.ticker === "BTC")
-  if (btc && btc.value > 0) {
-    return {
-      severity: "high", ticker: "BTC",
-      action: "Exit BTC",
-      what: "Sell all of your BTC position as soon as your 90-day hold allows.",
-      why: "BTC is down about 27% with no income and no diversification benefit — it adds risk without protecting anything. The cash is better used as your SGOV shock buffer.",
-      when: "Check your purchase date. If it's been 90+ days, sell now.",
-      color: "#f59e0b",
-    }
-  }
-
-  // ── PRECEDENCE 4: Market opportunity → DEPLOY TO DIP ──────────────────────
+  // ── PRECEDENCE 3: Market opportunity → DEPLOY TO DIP ──────────────────────
   if (hasBalance) {
     for (const p of positions) {
       const ds = dipState(p.ticker)
@@ -367,6 +371,32 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
           when: "Now for Tranche 1. Tranche 2 after 3 green weeks. Tranche 3 once the uptrend is clear.",
           color: p.color,
         }
+      }
+    }
+  }
+
+  // ── PRECEDENCE 4: Conviction underweight → ACCUMULATE (never sell at a loss) ─
+  // A held conviction asset below target is an opportunity to accumulate on weakness
+  // toward target — NOT a sell. The decision is forward-looking (would I buy at today's
+  // price?); an unrealised loss is a sunk cost, never a trigger. Only a broken thesis
+  // justifies selling a conviction asset. Skip any that are overbought (buy on weakness,
+  // not at the top).
+  if (hasBalance) {
+    const convictionUnder = positions
+      .filter((p) => (CONVICTION_TICKERS as readonly string[]).includes(p.ticker)
+        && p.actualPct < p.targetPct
+        && !isOverbought(p.ticker))
+      .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
+    if (convictionUnder.length > 0) {
+      const p = convictionUnder[0]
+      const capLine = p.hardCapPct !== null ? ` Keep it under its ${p.hardCapPct}% cap.` : ""
+      return {
+        severity: "medium", ticker: p.ticker,
+        action: `Accumulate ${p.ticker} toward ${p.targetPct}%`,
+        what: `${p.ticker} is underweight at ${p.actualPct.toFixed(1)}% versus its ${p.targetPct}% target. Direct this month's contribution into it to accumulate on weakness toward target.${capLine}`,
+        why: `${p.ticker} is a held conviction position. What matters is today's price, not any past loss: at a lower weight you are adding toward target at a better cost basis. A red number is a sunk cost — never a reason to sell.`,
+        when: "With this month's contribution, while it stays below target.",
+        color: p.color,
       }
     }
   }

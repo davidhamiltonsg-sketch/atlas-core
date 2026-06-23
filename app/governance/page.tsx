@@ -68,7 +68,7 @@ const monthlySteps = [
     step: 1,
     question: "Has any hard cap been breached?",
     detail: "Check ticker allocations and look-through concentration (§4).",
-    yes: "Execute mandated response immediately: BTC >8% → trim to target; QQQM >30% → halt + trim; SMH >15% → trim; Nvidia >13% → reduce cluster exposure. Then go to Step 6.",
+    yes: "Execute mandated response immediately: BTC >8% → trim to target; QQQM >30% → halt + trim; SMH >12% → trim to 10%; Nvidia >13% → reduce cluster exposure. Then go to Step 6.",
     no: "Proceed to Step 2.",
   },
   {
@@ -157,7 +157,7 @@ export default async function Governance() {
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.0" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.1" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Command Centre callout */}
       <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.05] p-4 mb-6 flex items-start gap-3">
@@ -165,9 +165,9 @@ export default async function Governance() {
           <span className="text-sm">⚡</span>
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.0 — Market-aware DCA + always-on Next Best Move</p>
+          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.1 — A loss is not a sell signal</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Contributions now adapt to market conditions: the engine skips positions at 52-week highs, deploys into confirmed dips in three tranches, and never feeds an exit candidate. Every screen ends in one clear instruction — what to do, why, and when.
+            Conviction holdings (incl. BTC) are accumulated on weakness toward target and sold only on a broken thesis — never because of an unrealised loss. The SGOV shock buffer is built from new contributions, never by liquidating a position. Contributions still adapt to conditions: the engine skips positions at 52-week highs, deploys into confirmed dips in three tranches, and never feeds an overweight position. Every screen ends in one clear instruction — what to do, why, and when.
           </p>
           <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
             Go to Command Centre →

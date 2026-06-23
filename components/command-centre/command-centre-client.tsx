@@ -48,14 +48,14 @@ const MARKET_DATA: Record<string, {
   SMH: {
     ytdPct: 84.52,
     histVolPct: 52.8,
-    lo52: 257.12,
-    hi52: 663.80,
+    lo52: 265.74,
+    hi52: 671.83,
     avgCost: 292.09,
     signal: "HOLD",
     signalColor: "amber",
     entryZone: "$550 – $590",
     entryTrigger: "Price drops below $590 AND holds for 3 consecutive days",
-    scanNote: "At 52-week high. Bollinger Band breach Jun 2. MACD sell signal Jun 9. Vol at 53% (elevated). Pattern: every prior breach at these signals preceded a 12–20% pullback. Do NOT add here — wait for the dip.",
+    scanNote: "At/near its 52-week high (~$669, range $266–$672 as of 24 Jun 2026). Vol elevated. Pattern: prior breaches at these levels preceded 12–20% pullbacks. Do NOT add here — wait for the dip, then deploy in tranches.",
     confidence: 78,
   },
   QQQM: {
@@ -93,8 +93,8 @@ const MARKET_DATA: Record<string, {
     signal: "DECIDE",
     signalColor: "orange",
     entryZone: "$56 – $59 if adding",
-    entryTrigger: "Go to 200 shares: wait for $58–59 dip. Exit: sell all when 3-month hold allows.",
-    scanNote: "At its 52-week high. Half-conviction position (5.2% weight) — too small to matter if EM wins, big enough to drag if it doesn't. Binary decision: commit to 10% allocation (200 shares) OR exit entirely. No middle ground.",
+    entryTrigger: "Commit: add toward 200 shares on a $58–59 dip. Or right-size: trim to zero when the 3-month hold allows.",
+    scanNote: "At its 52-week high. Half-conviction position (~5% weight) — too small to matter if EM wins, big enough to drag if it doesn't. This is a sizing decision, not a loss-driven sale: commit to a meaningful 10% allocation (200 shares) OR trim it out. No middle ground.",
     confidence: 50,
   },
   BTC: {
@@ -103,12 +103,12 @@ const MARKET_DATA: Record<string, {
     lo52: 0,
     hi52: 0,
     avgCost: 38.98,
-    signal: "EXIT",
-    signalColor: "red",
-    entryZone: "N/A — EXIT only",
-    entryTrigger: "Exit as soon as your 3-month hold period is satisfied",
-    scanNote: "–27% YTD, –27% on your cost. No income. No diversification benefit. Adds volatility without offsetting any risk in the rest of the portfolio. The 3-month hold rule applies — check your purchase date. Once eligible: sell everything and move proceeds to SGOV (defensive buffer) or VT.",
-    confidence: 85,
+    signal: "BUY",
+    signalColor: "green",
+    entryZone: "Accumulate on weakness toward 7% (cap 8%)",
+    entryTrigger: "Underweight vs 7% target → direct contributions here on weakness; hold otherwise",
+    scanNote: "A loss is not a sell signal. BTC is a held conviction position (target 7%, hard cap 8%), currently underweight. The unrealised loss is a sunk cost — the only question is whether you'd buy at today's price, and at a lower weight you'd be adding toward target at a better cost basis. Accumulate on weakness; do NOT sell to fund anything. Sell only if the thesis breaks — never because of a red number. It stays meaningful but psychologically unimportant; never the largest holding.",
+    confidence: 70,
   },
 }
 
@@ -128,14 +128,14 @@ const RISKS = [
   },
   {
     id: "R2",
-    name: "Iran War – energy shock (now two-sided)",
+    name: "Strait of Hormuz – energy shock (two-sided, contested)",
     level: "HIGH" as const,
-    prob: 40,
-    horizon: "De-escalating — but volatile",
-    plain: "The US–Israel war on Iran since February 2026 disrupted shipping through the Strait of Hormuz and pushed oil up sharply. As of late June, a framework deal to end the war is close: Brent has fallen to around $78 (its lowest since early March) as markets price in Iran reopening the Strait. The risk is now two-sided — a signed deal removes the overhang and is bullish; a breakdown re-closes the Strait and spikes oil and inflation again. Reporting is genuinely fluid week to week.",
-    portfolioHit: "If the deal breaks down: VT –10%, QQQM –12%, SMH –15%, portfolio NAV could drop ~SGD 20,000. If the deal signs: a relief rally, mildly positive for all equity positions.",
-    whatToDo: "Hold your equities either way — do not trade the headlines. Your SGOV buffer (funded from the BTC exit) is the protection if it breaks down. Only signal worth acting on: oil sustained back above $90 = reduce SMH. A signed deal = no action needed, just let it run.",
-    recovery: "If it breaks down: 4–8 weeks for US tech, assuming no Fed rate hike follows. If it signs: the overhang clears immediately.",
+    prob: 45,
+    horizon: "Volatile — contested",
+    plain: "The Strait of Hormuz remains contested as of 24 Jun 2026. A 17 Jun memorandum to end the conflict and reopen the Strait collapsed within days — Iran RE-CLOSED the Strait on 20 Jun citing Israeli violations (the US military denies them), and Geneva talks were postponed on 19 Jun. Brent is around $77–80. The risk is genuinely two-sided and fluid: a durable deal removes the overhang (bullish); sustained closure spikes oil and inflation again (bearish). Reporting changes week to week.",
+    portfolioHit: "If closure persists / escalates: VT –10%, QQQM –12%, SMH –15%, portfolio NAV could drop ~SGD 20,000. If a durable deal sticks: a relief rally, mildly positive for all equity positions.",
+    whatToDo: "Hold your equities either way — do not trade the headlines. Your SGOV buffer (built gradually from monthly contributions) is the protection if it escalates. Only signal worth acting on: oil sustained back above $90 = reduce SMH. A durable deal = no action needed, just let it run.",
+    recovery: "If it escalates: 4–8 weeks for US tech, assuming no Fed rate hike follows. If a deal sticks: the overhang clears quickly.",
   },
   {
     id: "R3",
@@ -214,10 +214,10 @@ const PRINCIPLES = [
   },
   {
     number: "05",
-    name: "Exit BTC. Keep the Conviction Assets",
+    name: "A Loss Is Not a Sell Signal",
     category: "Position Sizing",
-    plain: "BTC serves no role in a 2045 retirement portfolio at its current weight and return profile. Exit it. QQQM and SMH are conviction assets — they can run above target weight, but never above their hard caps.",
-    why: "BTC is –27% and adding volatility with no income or diversification. QQQM and SMH have structural tailwinds from AI capex. Choose your battles.",
+    plain: "Never sell a conviction holding because it's showing a loss. The decision is forward-looking — would you buy at today's price? An underweight conviction asset (BTC, QQQM, SMH) is accumulated on weakness toward target, under its hard cap. Sell only on a broken thesis.",
+    why: "An unrealised loss is a sunk cost — it tells you nothing about future returns. Selling a quality asset because it's red is how investors lock in losses and miss the recovery. BTC stays a held position (target 7%, cap 8%): meaningful but psychologically unimportant, never the largest holding.",
     color: "orange",
   },
   {
@@ -579,10 +579,10 @@ export function CommandCentreClient({ positions, totalValue, nextBestMove }: Pro
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               <span className="font-semibold text-foreground">Your missing layer.</span>{" "}
-              Currently yielding about 3.85%. Zero equity correlation. When the next shock hits, SGOV holds value — and gives you dry powder to buy the dip. Target: $12,000–$15,000 (8–10% of NAV). Fund from BTC exit proceeds.
+              Yielding about 3.85% (SEC 3.55%). Zero equity correlation. When the next shock hits, SGOV holds value — and gives you dry powder to buy the dip. Target: 8–10% of NAV, built gradually from your new monthly contributions — never by selling another holding.
             </p>
             <div className="mt-2 text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
-              <ArrowRight className="h-3 w-3" /> Buy at market — no timing required. Do this the same day BTC is sold.
+              <ArrowRight className="h-3 w-3" /> Start this month and add a little each month until it reaches the 8–10% floor. No market timing required.
             </div>
           </div>
         </div>
@@ -780,11 +780,12 @@ export function CommandCentreClient({ positions, totalValue, nextBestMove }: Pro
           <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/[0.06] to-violet-500/[0.06] p-5">
             <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">The strategy in one paragraph</p>
             <p className="text-sm text-foreground leading-relaxed">
-              <span className="font-bold">Exit BTC</span> and immediately buy SGOV as your shock absorber.{" "}
+              <span className="font-bold">Build an SGOV buffer</span> from your monthly contributions as your shock absorber — never by selling a holding.{" "}
               <span className="font-bold">Hold SMH and QQQM</span> — do not add at current highs.{" "}
               When SMH corrects to $590 or below (it will — it always does after a run like this), <span className="font-bold">deploy in three tranches</span>.{" "}
               <span className="font-bold">Accumulate VT steadily</span> — it&apos;s your 2045 compounding engine.{" "}
-              <span className="font-bold">Make a binary VWO decision</span>: 200 shares or zero.{" "}
+              <span className="font-bold">Keep BTC and accumulate it on weakness</span> toward 7% — a loss is not a sell signal.{" "}
+              <span className="font-bold">Make a binary VWO sizing call</span>: 200 shares or zero.{" "}
               Watch <span className="font-bold">November 10</span> for the tariff expiry — it&apos;s either a non-event or the best buying window of the year.{" "}
               If the <span className="font-bold">Fed cuts rates</span>, buy QQQM the same day.{" "}
               Patient at highs. Aggressive at lows. Protected in between.

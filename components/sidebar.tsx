@@ -120,7 +120,7 @@ export function Sidebar({ open, onClose, isAdmin = false }: SidebarProps) {
             </div>
             <div>
               <p className="text-sm font-bold tracking-tight leading-none">Atlas Core</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">v6.0 · GDEA</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">v6.1 · GDEA</p>
             </div>
           </div>
           <button
