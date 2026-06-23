@@ -28,6 +28,8 @@
 // carried from the prior 23 Jun snapshot and may be stale — treat as UNVERIFIED.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { getBtcModifier, COMBINED_TECH_RULE, type BtcCyclePhase } from "@/lib/constants"
+
 export type Severity = "critical" | "high" | "medium" | "low" | "none"
 
 export interface PositionInput {
@@ -107,6 +109,47 @@ export const RULES = {
 // weakness toward target. Selling one requires a broken thesis — never a paper loss.
 export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC"] as const
 
+// ─── LIVE MARKET OVERLAY (Finnhub, §F1) ──────────────────────────────────────
+// A live overlay can replace the hardcoded price / 52-week levels / volatility used
+// by the recommendation logic. When absent (no key, fetch failed), the engine falls
+// back to the verified MARKET_STATE constants above.
+export interface LiveMarketPos { price: number; lo52: number; hi52: number; histVolPct: number }
+export type EngineMarket = Record<string, LiveMarketPos>
+
+export interface EngineOptions {
+  /** Live price/52w/vol overlay per ticker (from lib/finnhub). Falls back to MARKET_STATE. */
+  market?: EngineMarket
+  /** Current BTC halving-cycle phase, for the floating BTC hard cap (§4.1). */
+  btcCyclePhase?: BtcCyclePhase
+}
+
+/** Merge a live overlay over the hardcoded MARKET_STATE positions. */
+function resolveMarket(override?: EngineMarket): EngineMarket {
+  const base: EngineMarket = {}
+  for (const [t, m] of Object.entries(MARKET_STATE.positions)) {
+    base[t] = { price: m.price, lo52: m.lo52, hi52: m.hi52, histVolPct: m.histVolPct }
+  }
+  if (override) {
+    for (const [t, m] of Object.entries(override)) {
+      // Only overlay sane values; a 0/NaN live read keeps the verified fallback.
+      base[t] = {
+        price:      m.price > 0 ? m.price : base[t]?.price ?? 0,
+        lo52:       m.lo52  > 0 ? m.lo52  : base[t]?.lo52  ?? 0,
+        hi52:       m.hi52  > 0 ? m.hi52  : base[t]?.hi52  ?? 0,
+        histVolPct: m.histVolPct > 0 ? m.histVolPct : base[t]?.histVolPct ?? 0,
+      }
+    }
+  }
+  return base
+}
+
+/** Combined QQQM+SMH exposure (§4.3) as a whole-number percent of NAV. */
+export function combinedTechPct(positions: PositionInput[]): number {
+  return positions
+    .filter((p) => (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker))
+    .reduce((s, p) => s + p.actualPct, 0)
+}
+
 // ─── A SINGLE ACTION ─────────────────────────────────────────────────────────
 
 export interface NextMove {
@@ -146,8 +189,8 @@ export interface DcaPlan {
 const isOverweight = (p: PositionInput) => p.actualPct > p.targetPct
 
 // Helper: is a position in a confirmed dip (a real opportunity to deploy into)?
-function dipState(ticker: string): "deep" | "moderate" | "none" {
-  const m = MARKET_STATE.positions[ticker]
+function dipState(ticker: string, market: EngineMarket): "deep" | "moderate" | "none" {
+  const m = market[ticker]
   if (!m || m.hi52 === 0) return "none"
   const fromHigh = ((m.price - m.hi52) / m.hi52) * 100
   if (fromHigh <= -RULES.dipTriggerPct - 5) return "deep"      // >17% off high
@@ -156,8 +199,8 @@ function dipState(ticker: string): "deep" | "moderate" | "none" {
 }
 
 // Helper: is a position overbought (at/near 52w high)?
-function isOverbought(ticker: string): boolean {
-  const m = MARKET_STATE.positions[ticker]
+function isOverbought(ticker: string, market: EngineMarket): boolean {
+  const m = market[ticker]
   if (!m || m.hi52 === 0) return false
   const fromHigh = ((m.price - m.hi52) / m.hi52) * 100
   return fromHigh >= -RULES.overboughtThresholdPct
@@ -177,8 +220,10 @@ function isOverbought(ticker: string): boolean {
 
 export function computeMarketAwareDca(
   positions: PositionInput[],
-  monthlyAmount: number
+  monthlyAmount: number,
+  opts: EngineOptions = {}
 ): DcaPlan {
+  const market = resolveMarket(opts.market)
   const result: Record<string, DcaAllocation> = {}
   const standard: Record<string, number> = {}
 
@@ -194,22 +239,35 @@ export function computeMarketAwareDca(
     return { allocations: Object.values(result), headline: "No contribution to deploy.", marketOverlayActive: false, overlayNote: null }
   }
 
+  // §4.3 — combined QQQM+SMH ceiling. At/above the soft ceiling, halt NEW buys of
+  // both until combined falls back below it (concentration override on contributions).
+  const combinedTech = combinedTechPct(positions)
+  const techHalted = combinedTech >= COMBINED_TECH_RULE.softCeiling
+
   // Step 1 — decide who is eligible to receive money this month.
   // Eligible = under target AND not overbought. Underweight conviction holdings
   // (incl. BTC) ARE eligible — we accumulate on weakness toward target.
   const eligible = positions.filter((p) => {
     if (isOverweight(p)) return false                 // never feed an overweight position
-    if (isOverbought(p.ticker) && p.ticker !== "VT") return false  // never buy the top (VT exempt — it's the anchor)
+    if (isOverbought(p.ticker, market) && p.ticker !== "VT") return false  // never buy the top (VT exempt — it's the anchor)
+    if (techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)) return false // §4.3 halt
     return true
   })
 
   // Step 2 — is there a confirmed dip we should preferentially deploy into?
+  // (Tech names are excluded while the combined ceiling is breached.)
   const dipTickers = positions
-    .filter((p) => dipState(p.ticker) !== "none" && !isOverweight(p))
+    .filter((p) => dipState(p.ticker, market) !== "none" && !isOverweight(p)
+      && !(techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)))
     .map((p) => p.ticker)
 
   let marketOverlayActive = false
   let overlayNote: string | null = null
+
+  if (techHalted) {
+    marketOverlayActive = true
+    overlayNote = `Combined QQQM+SMH is ${combinedTech.toFixed(1)}% — at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). New QQQM and SMH buys are paused this month; that money is redirected until combined falls below ${COMBINED_TECH_RULE.softCeiling - 2}%.`
+  }
 
   if (dipTickers.length > 0) {
     // OPPORTUNITY MODE: a quality asset has dipped. Tranche-deploy into it.
@@ -220,7 +278,7 @@ export function computeMarketAwareDca(
     result[dipTicker].amount += dipBudget
     result[dipTicker].tag = "dip-buy"
     result[dipTicker].reason = `Confirmed dip — deploying Tranche 1 (30%) into the opportunity.`
-    overlayNote = `${dipTicker} has dropped into a buy zone. Deploying 30% now (Tranche 1); hold the rest for Tranches 2–3 as the recovery confirms.`
+    if (!overlayNote) overlayNote = `${dipTicker} has dropped into a buy zone. Deploying 30% now (Tranche 1); hold the rest for Tranches 2–3 as the recovery confirms.`
 
     // Remaining money goes to the eligible set by target weight.
     const remaining = monthlyAmount - dipBudget
