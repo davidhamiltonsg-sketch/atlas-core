@@ -319,8 +319,9 @@ export function computeMarketAwareDca(
     if (a.amount === 0) {
       a.tag = "zeroed"
       if (!a.reason) {
-        if (isOverweight(p)) a.reason = "Above target — paused."
-        else if (isOverbought(p.ticker)) a.reason = "At 52-week high — not buying the top."
+        if (techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)) a.reason = `Paused — combined tech over the ${COMBINED_TECH_RULE.softCeiling}% ceiling (§4.3).`
+        else if (isOverweight(p)) a.reason = "Above target — paused."
+        else if (isOverbought(p.ticker, market)) a.reason = "At 52-week high — not buying the top."
         else a.reason = "Paused this month."
       }
     } else if (a.tag !== "dip-buy") {
@@ -366,11 +367,27 @@ function distributeByWeight(
 // guessing. If everything is healthy, the move is "keep doing your standard DCA."
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function computeNextBestMove(positions: PositionInput[], totalValue: number): NextMove {
+export function computeNextBestMove(positions: PositionInput[], totalValue: number, opts: EngineOptions = {}): NextMove {
   const hasBalance = totalValue > 0
+  const market = resolveMarket(opts.market)
+  const btcCap = getBtcModifier(undefined, opts.btcCyclePhase).hardHigh
 
   // ── PRECEDENCE 1: Hard cap / concentration breach → TRIM ──────────────────
   if (hasBalance) {
+    // §4.3 — combined QQQM+SMH HARD ceiling. Trim the semis tilt (SMH) first.
+    const combined = combinedTechPct(positions)
+    if (combined > COMBINED_TECH_RULE.hardCeiling) {
+      const smhPos = positions.find((p) => p.ticker === "SMH")
+      const trimTicker = smhPos ? "SMH" : "QQQM"
+      return {
+        severity: "critical", ticker: trimTicker,
+        action: `Trim ${trimTicker} — combined tech over cap`,
+        what: `Combined QQQM+SMH is ${combined.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${trimTicker} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
+        why: `${COMBINED_TECH_RULE.rationale} Combined concentration this high is the rule the system protects first.`,
+        when: "At your next dealing window (respecting the 90-day hold on the most recent lots).",
+        color: smhPos?.color ?? "#a78bfa",
+      }
+    }
     // SMH concentration cap (12%) — the §4 override
     const smh = positions.find((p) => p.ticker === "SMH")
     if (smh && smh.actualPct > RULES.smhConcentrationCapPct) {
@@ -383,8 +400,21 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
         color: "#ef4444",
       }
     }
-    // Any position over its hard cap
+    // BTC floating hard cap (§4.1) — cap flexes with the halving cycle phase.
+    const btc = positions.find((p) => p.ticker === "BTC")
+    if (btc && btc.actualPct > btcCap) {
+      return {
+        severity: "critical", ticker: "BTC",
+        action: `Trim BTC back to target`,
+        what: `Sell enough BTC to bring it from ${btc.actualPct.toFixed(1)}% back toward its ${btc.targetPct}% target.`,
+        why: `BTC is over its ${btcCap}% cycle-aware hard cap (${getBtcModifier(undefined, opts.btcCyclePhase).label} phase, §4.1). Concentration this high is the rule the system protects first.`,
+        when: "At your next dealing window (respecting the 90-day hold).",
+        color: btc.color,
+      }
+    }
+    // Any other position over its hard cap (BTC handled above by the floating cap)
     for (const p of positions) {
+      if (p.ticker === "BTC") continue
       if (p.hardCapPct !== null && p.actualPct > p.hardCapPct) {
         return {
           severity: "critical", ticker: p.ticker,
@@ -417,9 +447,9 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   // ── PRECEDENCE 3: Market opportunity → DEPLOY TO DIP ──────────────────────
   if (hasBalance) {
     for (const p of positions) {
-      const ds = dipState(p.ticker)
+      const ds = dipState(p.ticker, market)
       if (ds !== "none" && !isOverweight(p)) {
-        const m = MARKET_STATE.positions[p.ticker]
+        const m = market[p.ticker]
         const fromHigh = (((m.price - m.hi52) / m.hi52) * 100).toFixed(0)
         return {
           severity: "high", ticker: p.ticker,
@@ -443,7 +473,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     const convictionUnder = positions
       .filter((p) => (CONVICTION_TICKERS as readonly string[]).includes(p.ticker)
         && p.actualPct < p.targetPct
-        && !isOverbought(p.ticker))
+        && !isOverbought(p.ticker, market))
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
     if (convictionUnder.length > 0) {
       const p = convictionUnder[0]
@@ -505,7 +535,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   // Even here we never leave the user guessing. We tell them what to do AND flag
   // if anything is overbought so they don't blindly buy the top.
   const overboughtNames = positions
-    .filter((p) => isOverbought(p.ticker) && p.ticker !== "VT")
+    .filter((p) => isOverbought(p.ticker, market) && p.ticker !== "VT")
     .map((p) => p.ticker)
 
   if (overboughtNames.length > 0) {

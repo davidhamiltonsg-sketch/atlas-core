@@ -15,6 +15,8 @@ import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
 import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { ActionPlan } from "@/components/dashboard/action-plan"
+import { BufferStatus } from "@/components/dashboard/buffer-status"
+import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -209,9 +211,25 @@ async function getDashboardData(userId: string) {
     hardCapPct: p.hardCapPct ?? null, toleranceBand: p.toleranceBand ?? 2.5,
     latestPrice: p.latestPrice ?? 0,
   }))
-  const nextBestMove = computeNextBestMove(moveInputs, totalValue)
+  // F1 — live market overlay (price/52w) replaces hardcoded figures in the engine.
+  // Degrades gracefully to verified constants (marked stale) if Finnhub is unavailable.
+  const [marketSnapshot, sgov] = await Promise.all([getLiveMarketPositions(), getSgovYield()])
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions })
 
-  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove }
+  // F2 — buffer status: SGOV as % of NAV vs the 8–10% band.
+  const sgovPos = positions.find(p => ["SGOV", "AGG", "CASH"].includes(p.ticker))
+  const bufferPct = sgovPos ? sgovPos.actualPct : 0
+  const bufferTargetLow = 8, bufferTargetHigh = 10
+  const sgovValue = (bufferPct / 100) * totalValue
+  const bufferNeeded = Math.max(0, (bufferTargetLow / 100) * totalValue - sgovValue)
+  const bufferMonthsToBand = bufferNeeded > 0 && monthlyContribution > 0
+    ? Math.ceil(bufferNeeded / monthlyContribution) : 0
+
+  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
+    marketAsOf: marketSnapshot.asOf, marketStale: marketSnapshot.stale, marketNote: marketSnapshot.note,
+    marketOverride: marketSnapshot.positions,
+    bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
+    sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale }
 }
 
 const sections = [
@@ -231,6 +249,9 @@ export default async function Dashboard() {
     daysSinceUpdate, latestSnapshotDate, base2045, yearsTo2045, daysToContribution,
     nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum,
     contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
+    marketAsOf, marketStale, marketOverride,
+    bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
+    sgovYieldPct, sgovSecYieldPct, sgovStale,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
@@ -315,7 +336,7 @@ export default async function Dashboard() {
         <div className="space-y-5 min-w-0">
 
           {/* Next Best Move — the single clearest action, always present */}
-          {hasBalance && <NextBestMove move={nextBestMove} />}
+          {hasBalance && <NextBestMove move={nextBestMove} dataAsOf={marketAsOf} stale={marketStale} />}
 
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -463,6 +484,7 @@ export default async function Dashboard() {
                 hasAnyAlert={hasAnyAlert}
                 defaultContribution={monthlyContribution}
                 annualLumpSum={annualLumpSum}
+                marketOverride={marketOverride}
               />
             </CollapsibleSection>
           </div>
