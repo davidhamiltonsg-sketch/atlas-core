@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { NextMove } from "@/lib/next-best-move"
+import { ACTION_PLAN as ACTIONS, URGENCY_STYLES } from "@/lib/action-plan"
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -172,79 +173,9 @@ const RISKS = [
 ]
 
 // ─── ACTION CALENDAR ─────────────────────────────────────────────────────────
-
-const ACTIONS = [
-  {
-    when: "Right now",
-    urgency: "CRITICAL" as const,
-    ticker: "BTC",
-    what: "Check when you bought your BTC — if it's been 3 months or more, sell all of it",
-    why: "BTC is down 27% and losing you money every day. It's not diversifying your portfolio — it's just adding risk with no benefit. The proceeds (~$4,400) go into your defensive buffer.",
-  },
-  {
-    when: "This week",
-    urgency: "HIGH" as const,
-    ticker: "SMH",
-    what: "Set price alerts on your phone: SMH @ $590, $550, $510",
-    why: "SMH is at its peak. You don't add at the peak — you prepare your orders and wait. When the alert fires, you move fast with your pre-planned tranches.",
-  },
-  {
-    when: "This week",
-    urgency: "HIGH" as const,
-    ticker: "VWO",
-    what: "Make a binary decision on VWO: either add 71 more shares OR sell all 129 shares",
-    why: "129 shares at 5.2% of your portfolio is the worst of both worlds — not enough to matter if EM wins, enough to drag if it doesn't. Commit or exit. No middle ground.",
-  },
-  {
-    when: "After BTC is sold",
-    urgency: "HIGH" as const,
-    ticker: "SGOV",
-    what: "Buy SGOV (iShares 0–3 Month Treasury) — target $12,000–$15,000 worth",
-    why: "This is your shock absorber. Currently yielding about 3.85% with zero equity correlation. When the next market shock hits (Iran, tariffs, rate hike), SGOV holds value while everything else drops — and you use it to buy the dip cheaply.",
-  },
-  {
-    when: "When SMH drops to $590",
-    urgency: "MEDIUM" as const,
-    ticker: "SMH",
-    what: "Buy Tranche 1: spend 30% of what you planned to invest in SMH",
-    why: "Don't go all-in on the first dip. The three-tranche rule means you average into the entry — reducing timing risk. If SMH keeps falling, your later tranches get a better price.",
-  },
-  {
-    when: "3 weeks after SMH bottoms",
-    urgency: "MEDIUM" as const,
-    ticker: "SMH",
-    what: "After 3 consecutive green weekly closes: buy Tranche 2 (40% of your planned SMH investment)",
-    why: "Three green weeks from the bottom is the historical confirmation signal. Every sustained SMH recovery in the last 5 years showed this pattern. Tranche 2 is the main deployment.",
-  },
-  {
-    when: "Monthly — every month",
-    urgency: "MEDIUM" as const,
-    ticker: "VT",
-    what: "On any week VT drops to $148 or below: buy 10–15 shares",
-    why: "VT is your retirement anchor. It has the lowest volatility in your portfolio. Steady accumulation at fair prices compounds powerfully over your 2045 timeline.",
-  },
-  {
-    when: "Sep – Oct 2026",
-    urgency: "MEDIUM" as const,
-    ticker: "ALL",
-    what: "Monitor US–China tariff news — if negotiations are failing, reduce SMH by 5–8 shares",
-    why: "The tariff truce expires Nov 10. If it's looking shaky in September, reduce your biggest risk position before the event rather than reacting after.",
-  },
-  {
-    when: "Nov 10, 2026",
-    urgency: "HIGH" as const,
-    ticker: "SMH + QQQM",
-    what: "If tariff talks break down: wait 2 weeks, THEN buy SMH and QQQM aggressively",
-    why: "The April 2025 tariff shock was devastating for 2 weeks — then reversed completely in 6. Don't sell. Don't panic. Have your limit orders pre-set and deploy in week 2 of any breakdown.",
-  },
-  {
-    when: "Whenever the Fed cuts rates",
-    urgency: "HIGH" as const,
-    ticker: "QQQM",
-    what: "Execute immediately on cut announcement: buy 15 shares of QQQM, 30 shares of VT",
-    why: "When the Fed cuts, QQQM historically gains 12–18% in the following 90 days. This is a same-day trade. Have your orders ready. Don't wait for confirmation — the market front-runs the cut.",
-  },
-]
+// The action sequence now lives in lib/action-plan.ts (ACTION_PLAN) so the
+// Dashboard and this Command Centre calendar render from one source of truth.
+// Imported above as ACTIONS.
 
 // ─── GOVERNANCE PRINCIPLES (merged + upgraded) ────────────────────────────────
 
@@ -339,11 +270,7 @@ const LEVEL_STYLES = {
   LOW: "bg-slate-500/10 text-slate-500 ring-1 ring-slate-500/20",
 } as const
 
-const URGENCY_STYLES = {
-  CRITICAL: { dot: "bg-red-500", border: "border-red-500/25 bg-red-500/[0.04]", badge: "bg-red-500/10 text-red-600 dark:text-red-400" },
-  HIGH: { dot: "bg-amber-500", border: "border-amber-500/25 bg-amber-500/[0.04]", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  MEDIUM: { dot: "bg-blue-500", border: "border-border bg-card", badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
-} as const
+// URGENCY_STYLES is imported from lib/action-plan (shared with the dashboard).
 
 const SIGNAL_STYLES = {
   BUY: "bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/25",

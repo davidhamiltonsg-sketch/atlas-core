@@ -14,6 +14,7 @@ import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
 import { NextBestMove } from "@/components/dashboard/next-best-move"
+import { ActionPlan } from "@/components/dashboard/action-plan"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -465,6 +466,22 @@ export default async function Dashboard() {
               />
             </CollapsibleSection>
           </div>
+
+          {/* Your Action Plan — the staged, step-by-step sequence (source of truth,
+              shared with the Command Centre "When to Act" calendar) */}
+          {hasBalance && (
+            <CollapsibleSection
+              title="Your Action Plan — Step by Step"
+              defaultOpen={true}
+              badge={
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  Do these in order
+                </span>
+              }
+            >
+              <ActionPlan />
+            </CollapsibleSection>
+          )}
 
           {/* How to use Atlas */}
           <CollapsibleSection title="How to Use Atlas" defaultOpen={false}>
