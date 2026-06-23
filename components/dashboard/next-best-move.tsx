@@ -54,9 +54,12 @@ const SEVERITY_CONFIG = {
   },
 } as const
 
-export function NextBestMove({ move }: { move: NextMove }) {
+export function NextBestMove({ move, dataAsOf, stale }: { move: NextMove; dataAsOf?: string; stale?: boolean }) {
   const cfg = SEVERITY_CONFIG[move.severity]
   const { Icon } = cfg
+  const asOfLabel = dataAsOf
+    ? new Date(dataAsOf).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : null
 
   return (
     <div className={`rounded-2xl border-2 ${cfg.ring} ${cfg.bg} ${cfg.glow} overflow-hidden`}>
