@@ -4,6 +4,7 @@ import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-group"
+import { FloatingCapsSection } from "@/components/governance/floating-caps-section"
 
 // v5.8 thresholds (Section 2 hard caps + Section 3.1 drift bands)
 const thresholds = [
@@ -52,15 +53,6 @@ const thresholds = [
     hardHigh: 8, hardLow: 0,  // no lower hard trigger (underweight is soft alert only)
     color: "#f59e0b",
   },
-]
-
-// conviction = asymmetric trim rule (§3.5): do not trim unless Section 2 hard cap is breached
-const thresholdDisplay = [
-  { ticker: "VT",   positionCap: "60%", target: "52%", classification: "Global Core",              healthy: "46–58%", soft: "<46% or >58%", hard: "<42% or >62%", color: "#6366f1", conviction: false },
-  { ticker: "QQQM", positionCap: "30%", target: "23%", classification: "Digital Economy Engine",   healthy: "18–28%", soft: "<18% or >28%", hard: "<15% or >31%", color: "#8b5cf6", conviction: true  },
-  { ticker: "SMH",  positionCap: "12%", target: "10%", classification: "AI Infrastructure Tilt",   healthy: "7–12%",  soft: "<7% or >12%",  hard: "<5% or >12%",  color: "#a78bfa", conviction: true  },
-  { ticker: "VWO",  positionCap: "13%", target: "8%",  classification: "Geographic Diversifier",   healthy: "5–11%",  soft: "<5% or >11%",  hard: "<3% or >13%",  color: "#c4b5fd", conviction: false },
-  { ticker: "BTC",  positionCap: "8%",  target: "7%",  classification: "Bitcoin — Volatility Cap", healthy: "6–8%",   soft: "<6%",          hard: ">8%",          color: "#f59e0b", conviction: false },
 ]
 
 const monthlySteps = [
@@ -316,46 +308,8 @@ export default async function Governance() {
         </div>
       </div>
 
-      {/* Threshold table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Allocation Governance Thresholds</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Position Cap (§2) = absolute ceiling requiring trim. Drift triggers (§3.1) govern contribution redirection.
-            Conviction assets (★) may not be trimmed unless Position Cap is breached.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                {["Asset", "Classification", "Target", "Position Cap §2", "Healthy Range", "Soft Trigger §3.1", "Hard Trigger §3.1"].map((h) => (
-                  <th key={h} className="px-4 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {thresholdDisplay.map(({ ticker, positionCap, target, classification, healthy, soft, hard, color, conviction }) => (
-                <tr key={ticker} className="hover:bg-accent/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="font-bold">{ticker}</span>
-                      {conviction && <span className="text-[9px] font-bold text-indigo-400 bg-indigo-400/10 px-1.5 py-0.5 rounded-full">★ Conviction</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{classification}</td>
-                  <td className="px-4 py-3 font-semibold">{target}</td>
-                  <td className="px-4 py-3 font-semibold text-red-400">{positionCap}</td>
-                  <td className="px-4 py-3 text-green-500">{healthy}</td>
-                  <td className="px-4 py-3 text-amber-500">{soft}</td>
-                  <td className="px-4 py-3 text-red-500">{hard}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Floating governance caps (§4) — replaces the static threshold table in v6.1 */}
+      <FloatingCapsSection />
 
       {/* Response protocol */}
       <div className="grid gap-3 sm:grid-cols-3 mb-6">

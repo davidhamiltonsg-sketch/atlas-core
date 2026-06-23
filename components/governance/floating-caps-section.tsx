@@ -4,7 +4,7 @@ import { useState } from "react"
 import {
   TICKER_TARGETS, HARD_THRESHOLDS,
   BTC_CYCLE_MODIFIERS, getBtcCyclePhase, type BtcCyclePhase,
-  SMH_SOFT_BANDS, getSmhSoftBand, getSmhCyclePhase,
+  getSmhSoftBand, getSmhCyclePhase,
   COMBINED_TECH_RULE,
 } from "@/lib/constants"
 import { Bitcoin, Cpu, Layers, Info } from "lucide-react"

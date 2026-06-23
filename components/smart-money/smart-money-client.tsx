@@ -19,6 +19,10 @@ const SOURCE_META: Record<SmartMoneySource, { label: string; Icon: typeof Landma
 
 const DAYS_OPTIONS = [30, 60, 90, 180] as const
 
+// All trade actions are always included (no action filter in this UI). Module-level
+// so its reference is stable across renders.
+const ALL_ACTIONS: Set<TradeAction> = new Set(["buy", "sell", "option_call", "option_put", "exchange"])
+
 function fmtDate(d: string): string {
   const date = new Date(d)
   if (isNaN(date.getTime())) return d
@@ -33,28 +37,36 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
 
   // Filters (applied client-side over the full 180-day pull)
   const [sources,   setSources]   = useState<Set<SmartMoneySource>>(new Set(["congress", "insider", "influencer"]))
-  const [actions,   setActions]   = useState<Set<TradeAction>>(new Set(["buy", "sell", "option_call", "option_put", "exchange"]))
   const [atlasOnly, setAtlasOnly] = useState(initialAtlasOnly)
   const [daysBack,  setDaysBack]  = useState<number>(90)
   const [search,    setSearch]    = useState("")
 
-  async function load() {
-    setLoading(true)
-    setFetchError(null)
-    try {
-      const res = await fetch("/api/smart-money?daysBack=180")
-      const data: ApiResponse = await res.json()
-      if (data.error) setFetchError(data.error)
-      setMissingKey(Boolean(data.feeds?.some(f => f.error?.includes("FINNHUB_API_KEY"))))
-      setAllTrades(data.trades ?? [])
-    } catch {
-      setFetchError("Could not reach the Smart Money feed.")
-    } finally {
-      setLoading(false)
-    }
+  // Applies fetched data to state — only ever called from a promise callback,
+  // never synchronously inside the mount effect.
+  function applyData(data: ApiResponse) {
+    setFetchError(data.error ?? null)
+    setMissingKey(Boolean(data.feeds?.some(f => f.error?.includes("FINNHUB_API_KEY"))))
+    setAllTrades(data.trades ?? [])
+    setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  function refresh() {
+    setLoading(true)
+    setFetchError(null)
+    fetch("/api/smart-money?daysBack=180")
+      .then(r => r.json() as Promise<ApiResponse>)
+      .then(applyData)
+      .catch(() => { setFetchError("Could not reach the Smart Money feed."); setLoading(false) })
+  }
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/smart-money?daysBack=180")
+      .then(r => r.json() as Promise<ApiResponse>)
+      .then(d => { if (active) applyData(d) })
+      .catch(() => { if (active) { setFetchError("Could not reach the Smart Money feed."); setLoading(false) } })
+    return () => { active = false }
+  }, [])
 
   const filtered = useMemo(() => {
     const cutoff = new Date()
@@ -62,13 +74,13 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
     const q = search.trim().toLowerCase()
     return allTrades.filter(t => {
       if (!sources.has(t.source)) return false
-      if (!actions.has(t.action)) return false
+      if (!ALL_ACTIONS.has(t.action)) return false
       if (atlasOnly && !t.atlasOverlap) return false
       if (new Date(t.tradeDate) < cutoff) return false
       if (q && !t.actor.toLowerCase().includes(q) && !t.ticker.toLowerCase().includes(q)) return false
       return true
     })
-  }, [allTrades, sources, actions, atlasOnly, daysBack, search])
+  }, [allTrades, sources, atlasOnly, daysBack, search])
 
   const stats = useMemo(() => {
     const congress = filtered.filter(t => t.source === "congress")
@@ -82,7 +94,7 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
   }, [filtered])
 
   function toggleSource(s: SmartMoneySource) {
-    setSources(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n })
+    setSources(prev => { const n = new Set(prev); if (n.has(s)) n.delete(s); else n.add(s); return n })
   }
 
   return (
@@ -124,7 +136,7 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
             )}>
             ◈ Atlas overlaps only
           </button>
-          <button onClick={load} disabled={loading}
+          <button onClick={refresh} disabled={loading}
             className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/60 disabled:opacity-50">
             <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />Refresh
           </button>
