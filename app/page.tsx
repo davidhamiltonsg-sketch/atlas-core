@@ -637,6 +637,20 @@ export default async function Dashboard() {
             />
           </div>
 
+          {/* Shock buffer status (F2) */}
+          {hasBalance && (
+            <BufferStatus
+              currentPct={bufferPct}
+              targetLow={bufferTargetLow}
+              targetHigh={bufferTargetHigh}
+              monthsToBand={bufferMonthsToBand}
+              yieldPct={sgovYieldPct}
+              secYieldPct={sgovSecYieldPct}
+              monthlyContribution={monthlyContribution}
+              stale={sgovStale}
+            />
+          )}
+
           {/* Portfolio value history */}
           {historyPoints.length >= 2 && (
             <div className="rounded-xl border border-border bg-card p-4 card-elevated">
