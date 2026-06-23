@@ -22,6 +22,7 @@ import {
   CalendarDays,
   Download,
   Zap,
+  Landmark,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
@@ -29,6 +30,7 @@ import { ThemeToggle } from "./theme-toggle"
 const mainNav = [
   { href: "/",                  label: "Dashboard",        icon: LayoutDashboard },
   { href: "/command-centre",    label: "Command Centre",   icon: Zap },
+  { href: "/smart-money",       label: "Smart Money",      icon: Landmark },
   { href: "/portfolio",         label: "Portfolio",        icon: PieChart },
   { href: "/governance",        label: "Governance",       icon: ShieldCheck },
   { href: "/behaviour",         label: "Behaviour",        icon: Brain },

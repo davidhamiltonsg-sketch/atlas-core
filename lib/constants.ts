@@ -1,15 +1,186 @@
-// v6.1 hard drift thresholds (Section 3.1)
+/**
+ * Atlas Core — Governance Constants
+ * Version: 6.1
+ *
+ * Changes from v6.0:
+ * - BTC: Halving cycle modifier (§4.1)
+ * - SMH: Cycle-aware soft band (§4.2)
+ * - NEW: Combined tech concentration rule QQQM+SMH (§4.3)
+ * - Hard caps remain static — floating applies to soft bands only
+ *   (BTC's hard cap is the one exception: it floats by cycle phase.)
+ *
+ * UNITS — IMPORTANT:
+ *   Allocation targets, caps, soft/healthy bands and the combined-tech ceilings are
+ *   expressed as WHOLE-NUMBER PERCENTAGES (e.g. 52 = 52% of NAV). This matches how
+ *   HARD_THRESHOLDS is consumed across the app (app/page.tsx, app/portfolio,
+ *   app/rebalance compare against actualPct on a 0–100 scale). Do NOT switch these
+ *   to fractions without updating every consumer.
+ *   Price-from-high inputs and tranche weights are decimal RATIOS (e.g. -0.05 = 5%
+ *   below the 52-week high; 0.30 = 30% of a tranche), because they are not allocations.
+ */
+
+// Target weights (whole-number percent of NAV)
+export const TICKER_TARGETS: Record<string, number> = {
+  VT:   52,
+  QQQM: 23,
+  SMH:  10,
+  VWO:  8,
+  BTC:  7,
+}
+
+// v6.1 hard drift thresholds (Section 3.1) — whole-number percent
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
-// conviction asset: accumulate on weakness toward target, never sold at a loss)
-// SMH cap tightened 15% → 12% (Principle 04)
+// conviction asset: accumulate on weakness toward target, never sold at a loss).
+// SMH cap tightened 15% → 12% (Principle 04).
+// BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
+// floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
 export const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
   VT:   { low: 42, high: 62 },
   QQQM: { low: 15, high: 31 },
   SMH:  { low: 5,  high: 12 },
   VWO:  { low: 3,  high: 13 },
-  BTC:  { high: 8  },
+  BTC:  { high: 8 }, // base = Normal phase; see BTC cycle modifier (§4.1)
 }
 
+// ─── §4.1 — BTC HALVING CYCLE MODIFIER ───────────────────────────────────────
+export type BtcCyclePhase = 'post_halving_bull' | 'normal' | 'bear'
+
+export interface BtcCycleModifier {
+  phase:     BtcCyclePhase
+  hardHigh:  number  // % of NAV
+  target:    number  // % of NAV
+  softHigh:  number  // % of NAV
+  label:     string
+  rationale: string
+}
+
+export const BTC_CYCLE_MODIFIERS: Record<BtcCyclePhase, BtcCycleModifier> = {
+  post_halving_bull: {
+    phase: 'post_halving_bull', hardHigh: 10, target: 8, softHigh: 9,
+    label: 'Post-Halving Bull',
+    rationale: '12–24 months post-halving. Wider cap reflects historically elevated return window.',
+  },
+  normal: {
+    phase: 'normal', hardHigh: 8, target: 7, softHigh: 8,
+    label: 'Normal',
+    rationale: 'Standard governance. No halving catalyst active.',
+  },
+  bear: {
+    phase: 'bear', hardHigh: 6, target: 5, softHigh: 5.5,
+    label: 'Bear / Risk-Off',
+    rationale: 'BTC drawdown >50% from cycle high. Reduce exposure ceiling.',
+  },
+}
+
+/**
+ * @param btcPriceVsCycleHigh price ÷ cycle-high as a ratio (e.g. 0.45 = 55% drawdown)
+ * @param manualOverride optional forced phase
+ */
+export function getBtcCyclePhase(
+  btcPriceVsCycleHigh?: number,
+  manualOverride?: BtcCyclePhase
+): BtcCyclePhase {
+  if (manualOverride) return manualOverride
+  const halvingDate = new Date('2024-04-19')
+  const now = new Date()
+  const monthsSinceHalving =
+    (now.getFullYear() - halvingDate.getFullYear()) * 12 +
+    (now.getMonth() - halvingDate.getMonth())
+  if (btcPriceVsCycleHigh !== undefined && btcPriceVsCycleHigh < 0.50) return 'bear'
+  if (monthsSinceHalving <= 24) return 'post_halving_bull'
+  return 'normal'
+}
+
+export function getBtcModifier(
+  btcPriceVsCycleHigh?: number,
+  manualOverride?: BtcCyclePhase
+): BtcCycleModifier {
+  return BTC_CYCLE_MODIFIERS[getBtcCyclePhase(btcPriceVsCycleHigh, manualOverride)]
+}
+
+// ─── §4.2 — SMH CYCLE-AWARE SOFT BAND ────────────────────────────────────────
+export type SmhCyclePhase = 'top' | 'mid' | 'bottom'
+
+export interface SmhSoftBand {
+  phase:       SmhCyclePhase
+  softLow:     number  // % of NAV
+  softHigh:    number  // % of NAV
+  healthyLow:  number  // % of NAV
+  healthyHigh: number  // % of NAV
+  label:       string
+  signal:      string
+}
+
+export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
+  top: {
+    phase: 'top', softLow: 7, softHigh: 10, healthyLow: 9, healthyHigh: 10,
+    label: 'Cycle Top',
+    signal: 'SMH within 5% of 52-week high. Hold only. No new buys.',
+  },
+  mid: {
+    phase: 'mid', softLow: 7, softHigh: 12, healthyLow: 7, healthyHigh: 12,
+    label: 'Mid-Cycle',
+    signal: 'Standard soft band applies.',
+  },
+  bottom: {
+    phase: 'bottom', softLow: 5, softHigh: 14, healthyLow: 7, healthyHigh: 14,
+    label: 'Cycle Bottom',
+    signal: 'SMH >20% off 52-week high. Soft band widens — accumulation window.',
+  },
+}
+
+/** @param pctFromHigh price-from-52w-high as a ratio (e.g. -0.05 = 5% below high) */
+export function getSmhCyclePhase(pctFromHigh: number): SmhCyclePhase {
+  if (pctFromHigh > -0.05) return 'top'
+  if (pctFromHigh < -0.20) return 'bottom'
+  return 'mid'
+}
+
+export function getSmhSoftBand(pctFromHigh: number): SmhSoftBand {
+  return SMH_SOFT_BANDS[getSmhCyclePhase(pctFromHigh)]
+}
+
+// ─── §4.3 — COMBINED TECH CONCENTRATION RULE (NEW in v6.1) ────────────────────
+// Display/governance rule. QQQM+SMH combined exposure as a whole-number percent.
+export const COMBINED_TECH_RULE = {
+  tickers:     ['QQQM', 'SMH'] as const,
+  softCeiling: 38,
+  hardCeiling: 42,
+  label:       'Combined Tech Concentration',
+  rationale:   'QQQM+SMH combined exposure. Semis overlap means individual caps understate concentration risk.',
+  action: {
+    soft: 'Flag for review. No new QQQM or SMH buys until combined falls below 36%.',
+    hard: 'Halt all QQQM and SMH contributions. Review at next monthly cycle.',
+  },
+} as const
+
+export const BEHAVIORAL_RULES = {
+  holdPeriodDays:        90,
+  contributionLagMonths: 3,
+  dipTranches: { first: 0.30, second: 0.40, third: 0.30 }, // proportions of intended capital
+  nearHighThreshold:     0.03, // ratio: within 3% of 52w high
+  sgovHighSkip:          true,
+} as const
+
+export const DCA_PARAMS = {
+  monthlyContribution:  3000,
+  annualJanuaryBoost:  20000,
+  currency:            'USD',
+  brokerageAccount:    'IBKR Singapore',
+  horizonYear:         2045,
+} as const
+
+// SGOV yield — verified 24 Jun 2026 (30-day SEC 3.55% on 17 Jun; dividend yield 3.85% on 18 Jun)
+export const SGOV_YIELD = {
+  thirtyDaySec:  0.0355,
+  dividendYield: 0.0385,
+  lastVerified:  '2026-06',
+} as const
+
+export const GOVERNANCE_VERSION = '6.1' as const
+export const GOVERNANCE_UPDATED = '2026-06' as const
+
+// ─── LEGACY (v6.0) — retained; no external importer, kept for reference ───────
 // v6.1 Command Centre — market-aware governance rules from pattern analysis
 // These complement Section 3 drift bands with market-condition-aware overlays
 export const COMMAND_CENTRE_RULES = {

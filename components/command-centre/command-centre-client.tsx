@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils"
 import type { NextMove } from "@/lib/next-best-move"
 import { ACTION_PLAN as ACTIONS, URGENCY_STYLES } from "@/lib/action-plan"
+import { SmartMoneyIndicator } from "@/components/smart-money/indicator"
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -398,6 +399,9 @@ export function CommandCentreClient({ positions, totalValue, nextBestMove }: Pro
           </div>
         </div>
       </div>
+
+      {/* Smart Money — read-only intelligence overlap indicator (v6.1) */}
+      <SmartMoneyIndicator />
 
       {/* Top summary strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
