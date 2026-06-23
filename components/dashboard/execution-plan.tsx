@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, CheckCircle2, XCircle, Zap } from "lucide-react"
+import { AlertTriangle, CheckCircle2, XCircle, Zap, TrendingDown } from "lucide-react"
+import { computeMarketAwareDca, type PositionInput } from "@/lib/next-best-move"
 
 type ActionStatus = "healthy" | "soft" | "hard"
 
@@ -15,6 +16,9 @@ type Position = {
   driftPct: number
   status: ActionStatus
   instruction: string
+  hardCapPct?: number | null
+  toleranceBand?: number
+  latestPrice?: number
 }
 
 type Props = {
@@ -27,34 +31,25 @@ type Props = {
   annualLumpSum?: number
 }
 
+// Market-aware DCA: routes monthly money considering drift AND market conditions
+// (skips overbought positions at 52-week highs, deploys into confirmed dips via the
+// three-tranche rule, never feeds exit candidates). Falls back to drift-only logic
+// for positions with no market overlay.
 function calculateSuggestedAllocations(
   positions: Position[],
   totalMonthly: number
-): Record<string, number> {
-  // Exclude any position above its target from new contributions — the
-  // tolerance band governs alert severity, not whether to keep buying.
-  // A position at 12% vs 10% target should not receive money even if
-  // it's within the "healthy" drift band.
-  const isOverweight = (p: Position) => p.actualPct > p.targetPct
-
-  const active = positions.filter(p => !isOverweight(p))
-  const result: Record<string, number> = {}
-  positions.forEach(p => { result[p.ticker] = 0 })
-
-  if (active.length === 0 || totalMonthly <= 0) return result
-
-  const activeTotalTarget = active.reduce((sum, p) => sum + p.targetPct, 0)
-  const rounded = active.map(p => ({
-    ticker: p.ticker,
-    amount: Math.round(((p.targetPct / activeTotalTarget) * totalMonthly) / 10) * 10,
+): { amounts: Record<string, number>; overlayNote: string | null; marketOverlayActive: boolean } {
+  const inputs: PositionInput[] = positions.map(p => ({
+    ticker: p.ticker, name: p.name, color: p.color, value: p.value,
+    actualPct: p.actualPct, targetPct: p.targetPct,
+    hardCapPct: p.hardCapPct ?? null, toleranceBand: p.toleranceBand ?? 2.5,
+    latestPrice: p.latestPrice ?? 0,
   }))
-  const diff = totalMonthly - rounded.reduce((s, a) => s + a.amount, 0)
-  if (diff !== 0 && rounded.length > 0) {
-    const maxIdx = rounded.reduce((mi, a, i, arr) => a.amount > arr[mi].amount ? i : mi, 0)
-    rounded[maxIdx].amount += diff
-  }
-  rounded.forEach(a => { result[a.ticker] = a.amount })
-  return result
+  const plan = computeMarketAwareDca(inputs, totalMonthly)
+  const amounts: Record<string, number> = {}
+  positions.forEach(p => { amounts[p.ticker] = 0 })
+  for (const a of plan.allocations) amounts[a.ticker] = a.amount
+  return { amounts, overlayNote: plan.overlayNote, marketOverlayActive: plan.marketOverlayActive }
 }
 
 export function ExecutionPlan({
@@ -80,7 +75,8 @@ export function ExecutionPlan({
   }
 
   // Recalculate all allocation data client-side based on current contribution
-  const suggested = calculateSuggestedAllocations(positions, contribution)
+  const dcaPlan = calculateSuggestedAllocations(positions, contribution)
+  const suggested = dcaPlan.amounts
   const newTotalValue = totalValue + contribution
 
   // Standard amounts: proportional to target % of total contribution
@@ -160,6 +156,19 @@ export function ExecutionPlan({
           )}
         </div>
       </div>
+
+      {/* Market overlay note — explains why the plan adapted to conditions */}
+      {dcaPlan.marketOverlayActive && dcaPlan.overlayNote && (
+        <div className="px-5 py-3 border-b border-indigo-500/20 bg-indigo-500/[0.05] flex gap-2.5">
+          <TrendingDown className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-0.5">
+              Plan adjusted for market conditions
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{dcaPlan.overlayNote}</p>
+          </div>
+        </div>
+      )}
 
       {/* Position rows */}
       <div className="divide-y divide-border">
@@ -394,7 +403,7 @@ export function ExecutionPlan({
                 {allocOrder.map(ticker => {
                   const pos = positions.find(p => p.ticker === ticker)
                   if (!pos) return null
-                  const lumpSuggested = calculateSuggestedAllocations(positions, annualLumpSum)
+                  const lumpSuggested = calculateSuggestedAllocations(positions, annualLumpSum).amounts
                   const amount = lumpSuggested[ticker] ?? 0
                   const standard = Math.round((pos.targetPct / 100) * annualLumpSum / 100) * 100
                   const isZeroed = amount === 0

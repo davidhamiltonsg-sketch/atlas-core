@@ -12,6 +12,8 @@ import { ExecutionPlan } from "@/components/dashboard/execution-plan"
 import { CollapsibleSection } from "@/components/dashboard/collapsible-section"
 import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
+import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
+import { NextBestMove } from "@/components/dashboard/next-best-move"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -129,7 +131,7 @@ async function getDashboardData(userId: string) {
       instruction = `${h.ticker} is right on track at ${actualPct.toFixed(1)}% (target: ${h.targetPct}%). Keep investing your normal amount each month.`
     }
 
-    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction }
+    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice: h.snapshots[0]?.price ?? 0 }
   })
 
   const hasAnyAlert = positions.some(p => p.status !== "healthy")
@@ -198,7 +200,17 @@ async function getDashboardData(userId: string) {
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct }
+  // ── Next Best Move — the single highest-priority action across all signals ──
+  // Market-aware: considers drift, concentration, opportunity (dips), and risk.
+  const moveInputs: PositionInput[] = positions.map(p => ({
+    ticker: p.ticker, name: p.name, color: p.color, value: p.value,
+    actualPct: p.actualPct, targetPct: p.targetPct,
+    hardCapPct: p.hardCapPct ?? null, toleranceBand: p.toleranceBand ?? 2.5,
+    latestPrice: p.latestPrice ?? 0,
+  }))
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue)
+
+  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove }
 }
 
 const sections = [
@@ -217,7 +229,7 @@ export default async function Dashboard() {
     healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData,
     daysSinceUpdate, latestSnapshotDate, base2045, yearsTo2045, daysToContribution,
     nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum,
-    contributionGrowthRate, usdSgdRate, onTrackPct,
+    contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
@@ -300,6 +312,9 @@ export default async function Dashboard() {
       {/* Main layout: left = content, right = health + donut */}
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-5 min-w-0">
+
+          {/* Next Best Move — the single clearest action, always present */}
+          {hasBalance && <NextBestMove move={nextBestMove} />}
 
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -29,9 +29,9 @@ const thresholds = [
     ticker: "SMH",
     target: 10,
     classification: "AI Infrastructure Tilt",
-    healthyLow: 7, healthyHigh: 13,
-    softLow: 5, softHigh: 15,
-    hardHigh: 15, hardLow: 5,
+    healthyLow: 7, healthyHigh: 12,
+    softLow: 5, softHigh: 12,
+    hardHigh: 12, hardLow: 5,  // v6.0: hard cap tightened 15% → 12% (Principle 04)
     color: "#a78bfa",
   },
   {
@@ -58,7 +58,7 @@ const thresholds = [
 const thresholdDisplay = [
   { ticker: "VT",   positionCap: "60%", target: "52%", classification: "Global Core",              healthy: "46–58%", soft: "<46% or >58%", hard: "<42% or >62%", color: "#6366f1", conviction: false },
   { ticker: "QQQM", positionCap: "30%", target: "23%", classification: "Digital Economy Engine",   healthy: "18–28%", soft: "<18% or >28%", hard: "<15% or >31%", color: "#8b5cf6", conviction: true  },
-  { ticker: "SMH",  positionCap: "15%", target: "10%", classification: "AI Infrastructure Tilt",   healthy: "7–13%",  soft: "<7% or >13%",  hard: "<5% or >15%",  color: "#a78bfa", conviction: true  },
+  { ticker: "SMH",  positionCap: "12%", target: "10%", classification: "AI Infrastructure Tilt",   healthy: "7–12%",  soft: "<7% or >12%",  hard: "<5% or >12%",  color: "#a78bfa", conviction: true  },
   { ticker: "VWO",  positionCap: "13%", target: "8%",  classification: "Geographic Diversifier",   healthy: "5–11%",  soft: "<5% or >11%",  hard: "<3% or >13%",  color: "#c4b5fd", conviction: false },
   { ticker: "BTC",  positionCap: "8%",  target: "7%",  classification: "Bitcoin — Volatility Cap", healthy: "6–8%",   soft: "<6%",          hard: ">8%",          color: "#f59e0b", conviction: false },
 ]
@@ -157,7 +157,23 @@ export default async function Governance() {
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v5.8" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.0" userName={session.name} isAdmin={session.role === "admin"}>
+
+      {/* Command Centre callout */}
+      <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.05] p-4 mb-6 flex items-start gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
+          <span className="text-sm">⚡</span>
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.0 — Market-aware DCA + always-on Next Best Move</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Contributions now adapt to market conditions: the engine skips positions at 52-week highs, deploys into confirmed dips in three tranches, and never feeds an exit candidate. Every screen ends in one clear instruction — what to do, why, and when.
+          </p>
+          <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+            Go to Command Centre →
+          </a>
+        </div>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">

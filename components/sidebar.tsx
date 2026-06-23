@@ -21,17 +21,19 @@ import {
   Coins,
   CalendarDays,
   Download,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
 
 const mainNav = [
-  { href: "/",              label: "Dashboard",    icon: LayoutDashboard },
-  { href: "/portfolio",     label: "Portfolio",    icon: PieChart },
-  { href: "/governance",    label: "Governance",   icon: ShieldCheck },
-  { href: "/behaviour",     label: "Behaviour",    icon: Brain },
-  { href: "/reports",       label: "Reports",      icon: FileBarChart2 },
-  { href: "/forecast",      label: "Forecast",     icon: TrendingUp },
+  { href: "/",                  label: "Dashboard",        icon: LayoutDashboard },
+  { href: "/command-centre",    label: "Command Centre",   icon: Zap },
+  { href: "/portfolio",         label: "Portfolio",        icon: PieChart },
+  { href: "/governance",        label: "Governance",       icon: ShieldCheck },
+  { href: "/behaviour",         label: "Behaviour",        icon: Brain },
+  { href: "/reports",           label: "Reports",          icon: FileBarChart2 },
+  { href: "/forecast",          label: "Forecast",         icon: TrendingUp },
 ]
 
 const trackingNav = [
@@ -118,7 +120,7 @@ export function Sidebar({ open, onClose, isAdmin = false }: SidebarProps) {
             </div>
             <div>
               <p className="text-sm font-bold tracking-tight leading-none">Atlas Core</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">v5.2 · GDEA</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">v6.0 · GDEA</p>
             </div>
           </div>
           <button
