@@ -293,7 +293,7 @@ export function computeMarketAwareDca(
         result["VT"].tag = "boosted"
         result["VT"].reason = "All growth positions are at highs — routing to VT, the lowest-volatility anchor, rather than chasing tops."
         marketOverlayActive = true
-        overlayNote = "Every growth position is near its 52-week high. This month's money goes to VT instead of buying at the top."
+        if (!overlayNote) overlayNote = "Every growth position is near its 52-week high. This month's money goes to VT instead of buying at the top."
       }
     } else {
       distributeByWeight(eligible, monthlyAmount, result, standard)
@@ -304,9 +304,9 @@ export function computeMarketAwareDca(
       if (someoneSkipped) {
         marketOverlayActive = true
         const skipped = positions
-          .filter((p) => !eligible.includes(p) && isOverbought(p.ticker) && p.ticker !== "VT")
+          .filter((p) => !eligible.includes(p) && isOverbought(p.ticker, market) && p.ticker !== "VT")
           .map((p) => p.ticker)
-        if (skipped.length > 0) {
+        if (skipped.length > 0 && !overlayNote) {
           overlayNote = `Skipping ${skipped.join(" and ")} this month — ${skipped.length > 1 ? "they are" : "it is"} at a 52-week high. That money is redirected to positions with better entry points.`
         }
       }
