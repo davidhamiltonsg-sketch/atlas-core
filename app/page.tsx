@@ -304,7 +304,7 @@ export default async function Dashboard() {
               Soft Drift — {softBreaches} position{softBreaches > 1 ? "s" : ""} outside tolerance
             </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-              Redirect next month's contributions according to the allocation plan below.
+              Redirect next month&apos;s contributions according to the allocation plan below.
             </p>
           </div>
           <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">View steps ↓</span>

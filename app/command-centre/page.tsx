@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { CommandCentreClient } from "@/components/command-centre/command-centre-client"
 import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
+import { getLiveMarketPositions } from "@/lib/finnhub"
 
 async function getLivePortfolioData(userId: string) {
   const holdings = await db.holding.findMany({
@@ -32,7 +33,8 @@ async function getLivePortfolioData(userId: string) {
     targetPct: p.targetPct, hardCapPct: p.hardCapPct,
     toleranceBand: p.toleranceBand, latestPrice: p.latestPrice,
   }))
-  const nextBestMove = computeNextBestMove(moveInputs, totalValue)
+  const marketSnapshot = await getLiveMarketPositions()
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions })
 
   return { positions, totalValue, nextBestMove }
 }

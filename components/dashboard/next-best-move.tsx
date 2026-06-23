@@ -102,13 +102,24 @@ export function NextBestMove({ move, dataAsOf, stale }: { move: NextMove; dataAs
           </div>
         </div>
 
-        <a
-          href="/command-centre"
-          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-400 transition-colors"
-        >
-          See the full plan in Command Centre
-          <ArrowRight className="h-3.5 w-3.5" />
-        </a>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <a
+            href="/command-centre"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-400 transition-colors"
+          >
+            See the full plan in Command Centre
+            <ArrowRight className="h-3.5 w-3.5" />
+          </a>
+          {asOfLabel && (
+            <span className="text-[10px] text-muted-foreground">
+              {stale ? (
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold">⚠ verified figures</span>
+              ) : (
+                <>live data · {asOfLabel}</>
+              )}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { AlertTriangle, CheckCircle2, XCircle, Zap, TrendingDown } from "lucide-react"
-import { computeMarketAwareDca, type PositionInput } from "@/lib/next-best-move"
+import { computeMarketAwareDca, type PositionInput, type EngineMarket } from "@/lib/next-best-move"
 
 type ActionStatus = "healthy" | "soft" | "hard"
 
@@ -29,6 +29,7 @@ type Props = {
   hasAnyAlert: boolean
   defaultContribution?: number
   annualLumpSum?: number
+  marketOverride?: EngineMarket
 }
 
 // Market-aware DCA: routes monthly money considering drift AND market conditions
@@ -38,7 +39,8 @@ type Props = {
 // with no market overlay.
 function calculateSuggestedAllocations(
   positions: Position[],
-  totalMonthly: number
+  totalMonthly: number,
+  market?: EngineMarket
 ): { amounts: Record<string, number>; overlayNote: string | null; marketOverlayActive: boolean } {
   const inputs: PositionInput[] = positions.map(p => ({
     ticker: p.ticker, name: p.name, color: p.color, value: p.value,
@@ -46,7 +48,7 @@ function calculateSuggestedAllocations(
     hardCapPct: p.hardCapPct ?? null, toleranceBand: p.toleranceBand ?? 2.5,
     latestPrice: p.latestPrice ?? 0,
   }))
-  const plan = computeMarketAwareDca(inputs, totalMonthly)
+  const plan = computeMarketAwareDca(inputs, totalMonthly, market ? { market } : undefined)
   const amounts: Record<string, number> = {}
   positions.forEach(p => { amounts[p.ticker] = 0 })
   for (const a of plan.allocations) amounts[a.ticker] = a.amount
@@ -61,6 +63,7 @@ export function ExecutionPlan({
   hasAnyAlert: initialHasAnyAlert,
   defaultContribution = 3000,
   annualLumpSum = 20000,
+  marketOverride,
 }: Props) {
   const [contribution, setContribution] = useState(defaultContribution)
   const [inputVal, setInputVal] = useState(String(defaultContribution))
@@ -76,7 +79,7 @@ export function ExecutionPlan({
   }
 
   // Recalculate all allocation data client-side based on current contribution
-  const dcaPlan = calculateSuggestedAllocations(positions, contribution)
+  const dcaPlan = calculateSuggestedAllocations(positions, contribution, marketOverride)
   const suggested = dcaPlan.amounts
   const newTotalValue = totalValue + contribution
 
@@ -404,7 +407,7 @@ export function ExecutionPlan({
                 {allocOrder.map(ticker => {
                   const pos = positions.find(p => p.ticker === ticker)
                   if (!pos) return null
-                  const lumpSuggested = calculateSuggestedAllocations(positions, annualLumpSum).amounts
+                  const lumpSuggested = calculateSuggestedAllocations(positions, annualLumpSum, marketOverride).amounts
                   const amount = lumpSuggested[ticker] ?? 0
                   const standard = Math.round((pos.targetPct / 100) * annualLumpSum / 100) * 100
                   const isZeroed = amount === 0

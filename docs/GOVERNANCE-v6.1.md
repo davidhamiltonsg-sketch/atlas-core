@@ -215,7 +215,7 @@ On top of §5.4 the router:
 
 The dashboard's single "Next Best Move" walks this ladder and returns the first hit:
 
-1. **Hard cap / concentration breach** → TRIM to target
+1. **Hard cap / concentration breach** → TRIM to target. The engine now enforces three caps here: the **combined QQQM+SMH ceiling** (trim if > 42%, §4.3), the **SMH cap** (12%), and the **floating BTC cap** (by cycle phase, §4.1 — 8% in the current Normal phase).
 2. **Defensive gap** (buffer < 8%) → BUILD SGOV **from new contributions** (never by selling)
 3. **Market opportunity** (confirmed dip) → DEPLOY tranche 1 into the dip
 4. **Conviction underweight** (e.g. BTC below target) → ACCUMULATE on weakness toward target (never sell at a loss)
@@ -249,6 +249,51 @@ Only verified figures (no invented numbers); anything unconfirmed is marked UNVE
 
 ---
 
+---
+
+## 13. Behavioural Pre-Commitments
+
+Binding rules decided **in advance**, so no decision is made in the heat of a shock. Where
+two conflict, the most conservative (do-less, sell-nothing) interpretation wins. The larger
+long-term threat is not the shock — it is well-intentioned tinkering. (Rendered in full on
+the Governance page; summarised here.)
+
+**A — Shock response.** A1 Policy shock (>~10% from a discrete event): no action for **14 days**,
+then deploy the buffer into the most beaten-down quality holding in tranches; sell nothing.
+A2 Macro shock (sustained decline): hold everything, keep contributing, do not redesign.
+A3 *A loss is never a sell trigger* — sell only on a broken thesis. A4 *Never crystallise a
+loss to fund something else* — buffers/positions/rebalances come from new contributions only.
+
+**B — Buying discipline.** B1 Don't buy within ~3% of a 52-week high (VT exempt). B2 Three-tranche
+entry (30/40/30). B3 Accumulate underweight conviction on weakness toward target.
+
+**C — Structural limits.** C1 Hard caps inviolable (SMH ≤ 12%, BTC ≤ cycle cap, combined tech ≤ 42%).
+C2 Maintain an 8–10% buffer once built, from contributions only. C3 No half-convictions.
+
+**D — Anti-tinkering throttles.** D1 **One discretionary change per quarter** (rule-mandated
+actions are unlimited). D2 **72-hour cooling-off** on anything not already mandated by a written
+rule. D3 New positions require a written thesis and a one-quarter wait.
+
+**E — Cadence.** E1 The monthly 5-minute check: caps → underweights → scheduled-events calendar →
+act only if a rule fires; otherwise close the app.
+
+> *Pre-decide behaviour, automate away the chances to override it, and keep a buffer that needs
+> no prediction. Shocks recover; accumulated tinkering does not.*
+
+---
+
+## 14. Live data (v6.1)
+
+The recommendation engine now reads **live price and 52-week levels from Finnhub** (`lib/finnhub.ts`,
+server-side, cached ~30 min) in place of hardcoded figures, with graceful degradation: on any
+failure it falls back to the verified `MARKET_STATE` constants and marks the read **STALE** rather
+than showing a guess as live. The dashboard also shows a **buffer-status indicator** (SGOV vs the
+8–10% band, months-to-band, live yield) and a read-only **scheduled-events calendar** (FOMC/CPI,
+earnings, known policy dates) labelled *context, not signals*. No sentiment scores, shock-probability
+numbers, push prompts, or streaming tickers are used — by design, to reduce intervention frequency.
+
+---
+
 *This document reflects the rules as encoded in `lib/constants.ts`, `lib/next-best-move.ts`,
-`lib/action-plan.ts`, `lib/health.ts`, the Governance page, and the seeded rule register
-(`prisma/seed.ts`). When the code and this document disagree, the code is authoritative.*
+`lib/action-plan.ts`, `lib/finnhub.ts`, `lib/health.ts`, the Governance page, and the seeded rule
+register (`prisma/seed.ts`). When the code and this document disagree, the code is authoritative.*

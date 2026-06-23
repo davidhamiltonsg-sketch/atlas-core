@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-group"
 import { FloatingCapsSection } from "@/components/governance/floating-caps-section"
+import { PreCommitments } from "@/components/governance/pre-commitments"
 
 // v5.8 thresholds (Section 2 hard caps + Section 3.1 drift bands)
 const thresholds = [
@@ -310,6 +311,9 @@ export default async function Governance() {
 
       {/* Floating governance caps (§4) — replaces the static threshold table in v6.1 */}
       <FloatingCapsSection />
+
+      {/* Behavioural pre-commitments (decided in advance) */}
+      <PreCommitments />
 
       {/* Response protocol */}
       <div className="grid gap-3 sm:grid-cols-3 mb-6">

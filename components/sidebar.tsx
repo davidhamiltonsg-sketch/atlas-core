@@ -31,6 +31,7 @@ const mainNav = [
   { href: "/",                  label: "Dashboard",        icon: LayoutDashboard },
   { href: "/command-centre",    label: "Command Centre",   icon: Zap },
   { href: "/smart-money",       label: "Smart Money",      icon: Landmark },
+  { href: "/calendar",          label: "Calendar & Rules", icon: CalendarDays },
   { href: "/portfolio",         label: "Portfolio",        icon: PieChart },
   { href: "/governance",        label: "Governance",       icon: ShieldCheck },
   { href: "/behaviour",         label: "Behaviour",        icon: Brain },
