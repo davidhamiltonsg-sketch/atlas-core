@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas Core — Governance Document v6.3</title>
+<style>
+  :root{
+    --bg:#0b0d17; --panel:#12152370; --card:#161a2b; --border:#262b40;
+    --ink:#e7e9f3; --muted:#9aa3bd; --faint:#6b7393;
+    --indigo:#8b8cf6; --violet:#a78bfa; --green:#34d399; --amber:#fbbf24;
+    --red:#f87171; --blue:#60a5fa; --cyan:#22d3ee;
+    --maxw:880px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:linear-gradient(180deg,#0b0d17,#0e1120 40%,#0b0d17);
+    color:var(--ink);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:48px 24px 96px}
+  a{color:var(--indigo); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* Masthead */
+  .masthead{
+    border:1px solid var(--border); border-radius:18px; overflow:hidden;
+    background:radial-gradient(120% 160% at 0% 0%, #1b1f3a 0%, #12152a 55%, #0e1022 100%);
+    margin-bottom:40px;
+  }
+  .masthead .bar{height:5px;background:linear-gradient(90deg,var(--indigo),var(--violet),var(--cyan))}
+  .masthead .body{padding:32px 34px}
+  .logo{display:inline-flex;align-items:center;gap:12px;margin-bottom:18px}
+  .logo .mark{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;font-weight:800;letter-spacing:.5px;
+    box-shadow:0 6px 20px rgba(99,102,241,.4)
+  }
+  .logo .name{font-weight:800;font-size:18px;letter-spacing:.2px}
+  .logo .sub{color:var(--muted);font-size:12px}
+  h1{font-size:30px;line-height:1.2;margin:6px 0 10px;letter-spacing:-.4px}
+  .lede{color:var(--muted);font-size:15px;max-width:62ch;margin:0}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .pill{font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--border);background:#0d1020;color:var(--muted)}
+  .pill.v{color:var(--indigo);border-color:#3a3f7a;background:#171a36}
+  .pill.g{color:var(--green);border-color:#1f5c47;background:#0f2a22}
+
+  /* TOC */
+  nav.toc{
+    border:1px solid var(--border);border-radius:14px;background:var(--card);
+    padding:18px 22px;margin-bottom:40px;
+  }
+  nav.toc h2{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint);margin:0 0 12px}
+  nav.toc ol{margin:0;padding:0;list-style:none;columns:2;column-gap:30px}
+  nav.toc li{margin:0 0 7px;font-size:13.5px;break-inside:avoid}
+  nav.toc .n{color:var(--faint);font-variant-numeric:tabular-nums;margin-right:8px}
+
+  /* Sections */
+  section{margin:0 0 42px;scroll-margin-top:20px}
+  h2.sec{font-size:21px;margin:0 0 6px;letter-spacing:-.2px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h2.sec .s{color:var(--indigo);font-weight:800;margin-right:10px}
+  h3{font-size:15px;margin:24px 0 8px;color:var(--ink)}
+  p{margin:10px 0}
+  .note{color:var(--muted);font-size:13.5px}
+  .callout{
+    border:1px solid var(--border);border-left:3px solid var(--indigo);
+    background:#11142a;border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0;font-size:14px
+  }
+  .callout.warn{border-left-color:var(--amber);background:#1c1707}
+  .callout.law{border-left-color:var(--green);background:#0f1f1a}
+  .callout strong{color:var(--ink)}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;
+    border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  thead th{
+    background:#1a1e33;color:var(--muted);text-align:left;font-weight:600;
+    padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap
+  }
+  tbody td{padding:11px 14px;border-top:1px solid var(--border);vertical-align:top}
+  tbody tr:nth-child(even){background:#10131f}
+  td.tk{font-weight:800}
+  .num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  .c-green{color:var(--green)} .c-amber{color:var(--amber)} .c-red{color:var(--red)}
+  .c-blue{color:var(--blue)} .c-violet{color:var(--violet)} .c-muted{color:var(--muted)}
+  .star{font-size:10px;font-weight:800;color:var(--indigo);background:#1a1d3a;border:1px solid #34386e;border-radius:999px;padding:1px 7px;margin-left:6px}
+
+  /* Dot legend swatch */
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:baseline}
+
+  /* Cards grid */
+  .grid{display:grid;gap:14px;margin:16px 0}
+  .grid.c3{grid-template-columns:repeat(3,1fr)}
+  .grid.c2{grid-template-columns:repeat(2,1fr)}
+  .cardx{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:16px}
+  .cardx h4{margin:0 0 4px;font-size:13.5px}
+  .cardx .big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+  .cardx p{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+  .tag{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+    padding:3px 8px;border-radius:999px;margin-bottom:8px}
+  .tag.bull{color:var(--green);background:#0f2a22} .tag.norm{color:var(--blue);background:#0e1d33}
+  .tag.bear{color:var(--red);background:#2a1111} .tag.new{color:var(--violet);background:#1c1633}
+
+  /* Ordered step ladder */
+  ol.ladder{counter-reset:step;list-style:none;padding:0;margin:16px 0}
+  ol.ladder li{position:relative;padding:12px 0 12px 46px;border-top:1px solid var(--border)}
+  ol.ladder li:first-child{border-top:none}
+  ol.ladder li::before{
+    counter-increment:step;content:counter(step);
+    position:absolute;left:0;top:12px;width:28px;height:28px;border-radius:8px;
+    background:#1a1d3a;border:1px solid #34386e;color:var(--indigo);font-weight:800;
+    display:grid;place-items:center;font-size:13px
+  }
+  ol.ladder b{color:var(--ink)}
+  .arrow{color:var(--green);font-weight:700}
+
+  /* Pre-commitment groups */
+  .pc{border:1px solid var(--border);border-radius:12px;background:var(--card);margin:12px 0;overflow:hidden}
+  .pc .hd{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:800;font-size:13px;letter-spacing:.3px;
+    display:flex;align-items:center;gap:8px}
+  .pc .hd .ix{font-size:11px;font-weight:800;color:#0b0d17;background:var(--indigo);border-radius:6px;padding:2px 7px}
+  .pc .rule{padding:11px 16px;border-top:1px solid var(--border)}
+  .pc .rule:first-of-type{border-top:none}
+  .pc .rid{font-weight:800;color:var(--violet);font-size:12px;margin-right:8px}
+  .pc .rule .t{font-weight:700;font-size:13.5px}
+  .pc .rule .d{color:var(--muted);font-size:12.5px;margin-top:3px}
+
+  .reg{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:12px 0}
+  .reg .cat{background:#1a1e33;padding:9px 14px;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--indigo);border-top:1px solid var(--border)}
+  .reg .cat:first-child{border-top:none}
+  .reg .r{padding:10px 14px;border-top:1px solid var(--border)}
+  .reg .r .t{font-weight:700;font-size:13px}
+  .reg .r .d{color:var(--muted);font-size:12.5px;margin-top:2px}
+
+  footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--border);color:var(--faint);font-size:12px}
+  code{background:#161a2b;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:12.5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--cyan)}
+
+  @media(max-width:680px){
+    nav.toc ol{columns:1}
+    .grid.c3,.grid.c2{grid-template-columns:1fr}
+    h1{font-size:24px}
+  }
+  @media print{
+    :root{--bg:#fff;--card:#fff;--border:#d4d7e2;--ink:#14161f;--muted:#4b5066;--faint:#7a7f95}
+    body{background:#fff;color:#14161f;font-size:11.5px}
+    .masthead{background:#f4f5fb}
+    thead th{background:#eef0f7;color:#3a3f55}
+    tbody tr:nth-child(even){background:#f7f8fc}
+    .callout,.cardx,.pc,.reg,nav.toc{background:#fff}
+    section{break-inside:avoid}
+    a{color:#3730a3}
+    .wrap{max-width:none;padding:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ───────────────────────── MASTHEAD ───────────────────────── -->
+  <div class="masthead">
+    <div class="bar"></div>
+    <div class="body">
+      <div class="logo">
+        <span class="mark">AC</span>
+        <span><span class="name">Atlas Core</span><br><span class="sub">Investment Operating System · GDEA</span></span>
+      </div>
+      <h1>Governance Document</h1>
+      <p class="lede">The constitution of a single, rules-first portfolio built to a 2045 retirement horizon.
+        Its governing principle: <strong>automated governance, manual execution</strong> — the system decides
+        <em>what</em> from fixed rules; the human only <em>executes</em> inside approved dealing windows.
+        Discipline beats tinkering.</p>
+      <div class="pills">
+        <span class="pill v">Version 6.3</span>
+        <span class="pill">Updated June 2026</span>
+        <span class="pill g">Market overlay verified 24 Jun 2026</span>
+        <span class="pill">Horizon 2045</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────────────────────── TOC ───────────────────────── -->
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><span class="n">1</span><a href="#s1">The Portfolio</a></li>
+      <li><span class="n">1.2</span><a href="#s1-2">SGOV Drawdown Rules</a></li>
+      <li><span class="n">2</span><a href="#s2">Position Caps (§2)</a></li>
+      <li><span class="n">3</span><a href="#s3">Drift Governance (§3.1)</a></li>
+      <li><span class="n">4</span><a href="#s4">Look-Through Concentration (§4)</a></li>
+      <li><span class="n">4.1</span><a href="#s41">BTC Halving-Cycle Cap</a></li>
+      <li><span class="n">4.2</span><a href="#s42">SMH Cycle-Aware Soft Band</a></li>
+      <li><span class="n">4.3</span><a href="#s43">Combined Tech Concentration</a></li>
+      <li><span class="n">5</span><a href="#s5">The Contribution Engine (§5)</a></li>
+      <li><span class="n">6</span><a href="#s6">Behavioural Guards (§6)</a></li>
+      <li><span class="n">7</span><a href="#s7">Minimum-Hold &amp; Tranche Rules</a></li>
+      <li><span class="n">8</span><a href="#s8">Compliance (§7)</a></li>
+      <li><span class="n">9</span><a href="#s9">Rebalancing Cadence</a></li>
+      <li><span class="n">10</span><a href="#s10">Precedence &amp; Next Best Move</a></li>
+      <li><span class="n">11</span><a href="#s11">Governance Rule Register (37)</a></li>
+      <li><span class="n">12</span><a href="#s12">Market Overlay</a></li>
+      <li><span class="n">13</span><a href="#s13">Behavioural Pre-Commitments</a></li>
+      <li><span class="n">14</span><a href="#s14">Live Data</a></li>
+      <li><span class="n">A</span><a href="#sA">Appendix — Health Score</a></li>
+      <li><span class="n">B</span><a href="#sB">Appendix — Horizon Transition</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 — PORTFOLIO -->
+  <section id="s1">
+    <h2 class="sec"><span class="s">1</span>The Portfolio</h2>
+    <p>Five core positions, each with a fixed target weight and an identity (its <em>job</em>). A sixth
+      position — <strong>SGOV</strong> — is the defensive shock buffer, built from new contributions.</p>
+    <table>
+      <thead><tr><th>Asset</th><th>Name</th><th class="num">Target</th><th>Identity / Job</th></tr></thead>
+      <tbody>
+        <tr><td class="tk"><span class="dot" style="background:#6366f1"></span>VT</td><td>Vanguard Total World Stock ETF</td><td class="num">52%</td><td>Global Core — diversification anchor &amp; behavioural stabiliser</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#8b5cf6"></span>QQQM<span class="star">★ conviction</span></td><td>Invesco NASDAQ-100 ETF</td><td class="num">23%</td><td>Digital Economy Engine — primary long-term growth</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#a78bfa"></span>SMH<span class="star">★ conviction</span></td><td>VanEck Semiconductor ETF</td><td class="num">10%</td><td>AI Infrastructure Tilt — targeted, <em>not</em> the foundation</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#c4b5fd"></span>VWO</td><td>Vanguard FTSE Emerging Markets ETF</td><td class="num">8%</td><td>Geographic Diversifier</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>BTC<span class="star">★ conviction</span></td><td>Grayscale Bitcoin Mini ETF</td><td class="num">7%</td><td>Optionality Overlay — meaningful, psychologically unimportant</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#10b981"></span>SGOV</td><td>iShares 0–3 Month Treasury ETF</td><td class="num">8–10%</td><td>Shock Buffer — dry powder, zero equity correlation</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>Core principle — a loss is never a sell signal.</strong> BTC is a held
+      conviction asset. When underweight it is <em>accumulated on weakness toward target</em> under its cap —
+      never liquidated. The SGOV buffer is established from new monthly contributions, never by selling.</div>
+    <div class="callout warn"><strong>SGOV — FX risk acknowledgement.</strong> SGOV is denominated in USD and holds
+      US Treasury bills. Because portfolio metrics are tracked in SGD, a declining USD/SGD rate can temporarily erode
+      the buffer's real value. This is accepted by design: SGOV's job is market-shock absorption and dry powder, not
+      SGD yield optimisation. Do not substitute a SGD-denominated cash instrument — the shock-buffer function requires
+      USD liquidity aligned with the portfolio's base currency.</div>
+
+    <h3 id="s1-2">§1.2 — SGOV Drawdown Rules <span class="star" style="margin-left:4px">NEW</span></h3>
+    <p>The buffer is <strong>spent only</strong> under the three conditions below. Outside them, SGOV is held
+      and replenished from contributions. No ambiguity is left about when the buffer gets drawn down.</p>
+    <table>
+      <thead><tr><th>Condition</th><th>When it applies</th><th>How it is drawn</th></tr></thead>
+      <tbody>
+        <tr><td class="tk c-green">1 · Policy-shock deployment</td><td>An <strong>A1</strong> trigger fires (&gt;~10% drop from a discrete event) <em>and</em> the 14-day wait has elapsed.</td><td>Deploy the buffer in tranches (30 / 40 / 30) into the most beaten-down quality holding. Nothing else is sold.</td></tr>
+        <tr><td class="tk c-amber">2 · Hard-cap trim parking</td><td>Proceeds arise from a mandated §2 / §4 hard-cap trim.</td><td>Park the proceeds in SGOV temporarily, then redeploy per the §5 contribution engine. A holding bay — not new spending.</td></tr>
+        <tr><td class="tk c-blue">3 · One-off contribution bridge</td><td>A single planned monthly contribution cannot be funded in time (cash-timing only).</td><td>Bridge that one contribution from SGOV, then replenish in full from the next contribution.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn"><strong>Macro shock (A2) explicitly holds SGOV.</strong> A sustained decline is
+      <em>not</em> a drawdown trigger — keep the buffer intact and keep contributing. Any reason not listed above
+      is disallowed.</div>
+  </section>
+
+  <!-- 2 — POSITION CAPS -->
+  <section id="s2">
+    <h2 class="sec"><span class="s">2</span>Position Caps</h2>
+    <p>An absolute ceiling that <strong>requires a trim</strong> if breached — distinct from drift triggers
+      (§3), which only redirect new money.</p>
+    <table>
+      <thead><tr><th>Asset</th><th class="num">Position Cap</th><th>Conviction?</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">VT</td><td class="num">60%</td><td class="c-muted">—</td></tr>
+        <tr><td class="tk">QQQM</td><td class="num">30%</td><td class="c-violet">★</td></tr>
+        <tr><td class="tk">SMH</td><td class="num c-red">12% <span class="c-muted">(tightened from 15%)</span></td><td class="c-violet">★</td></tr>
+        <tr><td class="tk">VWO</td><td class="num">13%</td><td class="c-muted">—</td></tr>
+        <tr><td class="tk">BTC</td><td class="num">8% <span class="c-muted">(floats by cycle — §4.1)</span></td><td class="c-violet">★</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>Conviction rule (§3.5).</strong> Conviction assets (QQQM, SMH, BTC) may run
+      above target weight and <strong>may not be trimmed</strong> unless their §2 cap is breached, and
+      <strong>may not be sold on a loss</strong> — only on a broken thesis.</div>
+  </section>
+
+  <!-- 3 — DRIFT -->
+  <section id="s3">
+    <h2 class="sec"><span class="s">3</span>Drift Governance <span class="note" style="font-size:14px">— the contribution router (§3.1)</span></h2>
+    <p>Each position has three zones. Drift triggers govern <strong>where new contributions go</strong> — they
+      do not, by themselves, force a sale.</p>
+    <table>
+      <thead><tr><th>Asset</th><th class="num">Target</th><th class="num">Healthy</th><th class="num">Soft trigger</th><th class="num">Hard trigger</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">VT</td><td class="num">52%</td><td class="num c-green">46–58%</td><td class="num c-amber">&lt;46% / &gt;58%</td><td class="num c-red">&lt;42% / &gt;62%</td></tr>
+        <tr><td class="tk">QQQM</td><td class="num">23%</td><td class="num c-green">18–28%</td><td class="num c-amber">&lt;18% / &gt;28%</td><td class="num c-red">&lt;15% / &gt;31%</td></tr>
+        <tr><td class="tk">SMH</td><td class="num">10%</td><td class="num c-green">7–12%</td><td class="num c-amber">&lt;7% / &gt;12%</td><td class="num c-red">&lt;5% / &gt;12%</td></tr>
+        <tr><td class="tk">VWO</td><td class="num">8%</td><td class="num c-green">5–11%</td><td class="num c-amber">&lt;5% / &gt;11%</td><td class="num c-red">&lt;3% / &gt;13%</td></tr>
+        <tr><td class="tk">BTC</td><td class="num">7%</td><td class="num c-green">6–8%</td><td class="num c-amber">&lt;6%</td><td class="num c-red">&gt;8%</td></tr>
+      </tbody>
+    </table>
+    <div class="grid c3">
+      <div class="cardx"><span class="tag bull">Healthy</span><h4>No action</h4><p>Within band — continue the monthly schedule unchanged.</p></div>
+      <div class="cardx"><span class="tag" style="color:var(--amber);background:#1c1707">Soft trigger</span><h4>Redirect</h4><p>Route new capital to underweight positions for 2–3 months. No selling.</p></div>
+      <div class="cardx"><span class="tag bear">Hard trigger</span><h4>Review trim</h4><p>Halt buys on the breaching position; assess a selective trim at the next dealing window.</p></div>
+    </div>
+    <p class="note">BTC has <strong>no lower hard trigger</strong> — being underweight is a soft alert that
+      invites accumulation, never a forced action.</p>
+  </section>
+
+  <!-- 4 — LOOK-THROUGH -->
+  <section id="s4">
+    <h2 class="sec"><span class="s">4</span>Look-Through Concentration <span class="note" style="font-size:14px">— the highest law</span></h2>
+    <p>§4 governs <strong>effective</strong> exposure after looking through every fund to its underlying
+      companies and sectors. <strong>§4 overrides everything, including conviction.</strong></p>
+
+    <h3>Sector &amp; cluster caps</h3>
+    <table>
+      <thead><tr><th>Exposure</th><th class="num">Soft cap</th><th class="num">Hard cap</th></tr></thead>
+      <tbody>
+        <tr><td>Semiconductor</td><td class="num c-amber">16%</td><td class="num c-red">20%</td></tr>
+        <tr><td>Digital Economy (combined)</td><td class="num c-amber">48%</td><td class="num c-red">54%</td></tr>
+        <tr><td>US Market (total effective)</td><td class="num c-amber">70%</td><td class="num c-red">78%</td></tr>
+        <tr><td>AI Infrastructure cluster</td><td class="num c-amber">38%</td><td class="num c-red">46%</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Single-company caps (effective look-through)</h3>
+    <table>
+      <thead><tr><th>Company</th><th class="num">Soft cap</th><th class="num">Hard cap</th></tr></thead>
+      <tbody>
+        <tr><td>Nvidia</td><td class="num c-amber">10%</td><td class="num c-red">13%</td></tr>
+        <tr><td>Microsoft</td><td class="num c-amber">10%</td><td class="num c-red">13%</td></tr>
+        <tr><td>Apple</td><td class="num c-amber">8%</td><td class="num c-red">11%</td></tr>
+        <tr><td>Amazon</td><td class="num c-amber">7%</td><td class="num c-red">9%</td></tr>
+        <tr><td>Meta / Alphabet (each)</td><td class="num c-amber">6%</td><td class="num c-red">8%</td></tr>
+        <tr><td>Broadcom / TSMC (each)</td><td class="num c-amber">5%</td><td class="num c-red">7%</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn"><strong>Redundant-ETF prevention (permanent).</strong> VGT, FTEC, XLK, SOXX, IGV
+      and similar overlapping technology ETFs are <strong>permanently excluded</strong> — they add concentration
+      without diversification. Not subject to review.</div>
+  </section>
+
+  <!-- 4.1 BTC CYCLE -->
+  <section id="s41">
+    <h2 class="sec"><span class="s">4.1</span>BTC Halving-Cycle Cap <span class="note" style="font-size:14px">— floating</span></h2>
+    <p>BTC's hard cap is the one cap that <strong>flexes with the halving cycle</strong>. Phase is derived from
+      months since the 19 Apr 2024 halving (≤24 → bull) and drawdown from the cycle high (price &lt; 50% of high → bear).</p>
+    <div class="grid c3">
+      <div class="cardx"><span class="tag bull">Post-Halving Bull</span><h4>12–24 mo post-halving</h4>
+        <div class="big">10%</div><p>Target 8% · soft 9%. Wider cap reflects the historically elevated return window.</p></div>
+      <div class="cardx" style="border-color:#34386e"><span class="tag norm">Normal — current</span><h4>No halving catalyst</h4>
+        <div class="big">8%</div><p>Target 7% · soft 8%. Standard governance. <strong>Active as of Jun 2026 (~26 mo post-halving).</strong></p></div>
+      <div class="cardx"><span class="tag bear">Bear / Risk-Off</span><h4>Drawdown &gt;50% from high</h4>
+        <div class="big">6%</div><p>Target 5% · soft 5.5%. Reduce the exposure ceiling.</p></div>
+    </div>
+  </section>
+
+  <!-- 4.2 SMH BAND -->
+  <section id="s42">
+    <h2 class="sec"><span class="s">4.2</span>SMH Cycle-Aware Soft Band</h2>
+    <p>SMH's <strong>soft band flexes by distance from its 52-week high</strong>, while its 12% hard cap holds.</p>
+    <table>
+      <thead><tr><th>Phase</th><th>Trigger</th><th class="num">Soft band</th><th class="num">Healthy</th><th>Signal</th></tr></thead>
+      <tbody>
+        <tr><td class="tk c-red">Cycle Top</td><td>within 5% of 52w high</td><td class="num">7–10%</td><td class="num">9–10%</td><td>Hold only. No new buys.</td></tr>
+        <tr><td class="tk c-amber">Mid-Cycle</td><td>standard</td><td class="num">7–12%</td><td class="num">7–12%</td><td>Standard soft band applies.</td></tr>
+        <tr><td class="tk c-green">Cycle Bottom</td><td>&gt;20% off 52w high</td><td class="num">5–14%</td><td class="num">7–14%</td><td>Soft band widens — accumulation window.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 4.3 COMBINED TECH -->
+  <section id="s43">
+    <h2 class="sec"><span class="s">4.3</span>Combined Tech Concentration <span class="star" style="margin-left:6px">NEW · v6.1</span></h2>
+    <p>QQQM and SMH overlap heavily in semiconductors, so their individual caps understate true concentration.
+      A combined ceiling closes the gap — and the engine <strong>enforces it</strong>.</p>
+    <div class="grid c2">
+      <div class="cardx"><span class="tag" style="color:var(--amber);background:#1c1707">Soft ceiling</span>
+        <div class="big c-amber">38%</div><p>Flag for review. Halt new QQQM &amp; SMH buys until combined falls back below 36%.</p></div>
+      <div class="cardx"><span class="tag bear">Hard ceiling</span>
+        <div class="big c-red">42%</div><p>Trim the semis tilt (SMH first) until combined is back under 38%. Surfaces as the Next Best Move TRIM.</p></div>
+    </div>
+  </section>
+
+  <!-- 5 — CONTRIBUTION ENGINE -->
+  <section id="s5">
+    <h2 class="sec"><span class="s">5</span>The Contribution Engine</h2>
+    <p><strong>Cadence.</strong> Monthly contribution of <strong>$3,000</strong>, plus an
+      <strong>annual January lump sum of $20,000</strong>, 5% annual contribution growth. Currency USD;
+      brokerage IBKR Singapore; contribution date the 15th.</p>
+
+    <h3>§5.4 — Monthly Decision Engine (under five minutes, in order)</h3>
+    <ol class="ladder">
+      <li><b>Hard cap breached?</b> → execute the mandated trim immediately (BTC &gt; cycle cap → trim; QQQM &gt;30% → halt + trim; <b>SMH &gt;12% → trim to 10%</b>; combined QQQM+SMH &gt;42% → trim; Nvidia &gt;13% → reduce cluster). Then step 6.</li>
+      <li><b>Any asset below target?</b> → direct 100% of the contribution to the most underweight asset. Then step 6.</li>
+      <li><b>Any asset above its soft band?</b> → pause contributions there, redirect to underweights (unless §4 overrides). Then step 6.</li>
+      <li><b>Structural-review trigger active?</b> (§4.4) → schedule a review within 30 days; keep contributing. Then step 6.</li>
+      <li><b>Normal deployment</b> → split at target weights: VT 52 · QQQM 23 · SMH 10 · VWO 8 · BTC 7. Then step 6.</li>
+      <li><b>Drawdown &gt;25% from ATH?</b> → activate the Crash Protocol (§6.2). Continue DCA unchanged. No discretionary sales.</li>
+      <li><b>Compliance confirmation</b> → within dealing window, contribution executed, governance log updated, drift + concentration reviewed.</li>
+      <li><b>System closure</b> → close. Do not monitor daily. Reopen only at the next scheduled review.</li>
+    </ol>
+
+    <h3>Market-aware DCA overlay</h3>
+    <p>On top of §5.4 the router: <strong>skips any position within ~3% of its 52-week high</strong> (VT exempt —
+      the continuous anchor); <strong>deploys into confirmed dips</strong> (≥12% off high) via the three-tranche
+      rule <strong>30% / 40% / 30%</strong>; treats an <strong>underweight conviction holding (incl. BTC) as
+      eligible</strong>; <strong>never feeds an overweight position</strong>; and shows an on-screen note when the
+      plan adapts.</p>
+
+    <h3>Worked example — June 2026 conditions</h3>
+    <p>With SMH at its 52-week high (~$669), QQQM extended, VWO near its high, and BTC underweight, the engine in
+      June 2026 reasons as follows:</p>
+    <table>
+      <thead><tr><th>Position</th><th>Status</th><th>Engine decision</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">SMH</td><td class="c-red">At 52-week high (~$669)</td><td>Skip — overbought. No new money.</td></tr>
+        <tr><td class="tk">QQQM</td><td class="c-amber">Extended / near high</td><td>Skip — within 3% of high. Redirect.</td></tr>
+        <tr><td class="tk">VWO</td><td class="c-amber">At high, at target weight</td><td>Skip — at top and fully weighted.</td></tr>
+        <tr><td class="tk">BTC</td><td class="c-green">Underweight conviction</td><td>Eligible — accumulate toward 7% target.</td></tr>
+        <tr><td class="tk">VT</td><td class="c-green">Anchor, exempt from high rule</td><td>Eligible — receives remainder of contribution.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Result: the June contribution splits between BTC (to close the underweight) and VT (the continuous
+      anchor). SMH, QQQM and VWO receive nothing this month — not because they are bad holdings, but because buying at
+      the top is the worst entry. The old drift-only engine would have added to all three; the market-aware engine
+      redirects the capital to better entries.</p>
+  </section>
+
+  <!-- 6 — BEHAVIOURAL GUARDS -->
+  <section id="s6">
+    <h2 class="sec"><span class="s">6</span>Behavioural Guards <span class="note" style="font-size:14px">— the anti-emotion layer</span></h2>
+    <table>
+      <thead><tr><th>Rule</th><th>Mandate</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">A Loss Is Not a Sell Signal</td><td>Never sell a conviction holding because it shows a loss. The decision is forward-looking; sell only on a broken thesis.</td></tr>
+        <tr><td class="tk">Market-Timing Ban</td><td>No tactical shifts on headlines, elections, macro predictions, or short-term underperformance. Permanently prohibited.</td></tr>
+        <tr><td class="tk">Panic-Selling Prohibition</td><td>No sells in a drawdown without a 48-hour cooling-off and a rule-based justification. A &gt;25% fall should <em>increase</em> contributions.</td></tr>
+        <tr><td class="tk">Redesign Moratorium</td><td>No structural change within 90 days of the last; no redesign more than once every 3 years without a structurally justified reason.</td></tr>
+        <tr><td class="tk">Approved Reasons for Change</td><td>Allowed: major life change, retirement-horizon change, liquidity need, risk-tolerance change, or a <strong>sustained base-salary / primary-income change &gt;15% held for 12+ consecutive months</strong> (excludes one-off bonuses, FX fluctuation, or temporary secondment pay). Not allowed: headlines, boredom, social media, temporary underperformance.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Broken-thesis criteria <span class="note" style="font-weight:400">— the only valid sell trigger for a conviction asset (A3)</span></h3>
+    <p>A conviction asset is sold <strong>only</strong> when its thesis is broken by the enforceable test below —
+      never on price action or a paper loss.</p>
+    <table>
+      <thead><tr><th>Asset</th><th>Thesis is broken when…</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">QQQM</td><td>A <strong>structural loss of pricing power</strong> in the US digital-economy mega-caps <em>and</em> a credible non-US alternative emerges <em>at scale</em>.</td></tr>
+        <tr><td class="tk">SMH</td><td>A <strong>capex reversal sustained 3+ quarters</strong> <em>and</em> a <strong>structural (not cyclical)</strong> decline in AI-compute demand.</td></tr>
+        <tr><td class="tk">BTC</td><td>A <strong>protocol-level vulnerability</strong>, a <strong>multi-sovereign reversal</strong> of adoption, or replacement by a <strong>superior network</strong>. <span class="c-muted">Single-jurisdiction regulatory pressure explicitly does <strong>not</strong> qualify.</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>§6.2 — Market Crash Protocol</h3>
+    <table>
+      <thead><tr><th class="num">Drawdown from ATH</th><th>Mandated behaviour</th></tr></thead>
+      <tbody>
+        <tr><td class="num c-green">&gt; 10%</td><td>Normal. Continue contributions.</td></tr>
+        <tr><td class="num c-amber">&gt; 15%</td><td>Discourage changes. Reinforce the thesis.</td></tr>
+        <tr><td class="num" style="color:#fb923c">&gt; 25%</td><td>Maintain schedule. Check monthly only.</td></tr>
+        <tr><td class="num c-red">&gt; 40%</td><td>Do not open the portfolio more than monthly. <strong>Do not sell.</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="note"><em>Large declines feel permanent while they are happening. Historically they have not been.</em></p>
+  </section>
+
+  <!-- 7 — CONSTANTS -->
+  <section id="s7">
+    <h2 class="sec"><span class="s">7</span>Minimum-Hold &amp; Tranche Rules</h2>
+    <table>
+      <thead><tr><th>Constant</th><th class="num">Value</th><th>Rationale</th></tr></thead>
+      <tbody>
+        <tr><td>Minimum hold before any sale</td><td class="num">90 days</td><td>Forces conviction at entry. Before buying, ask: would I hold through a 20% drop? If not, don't buy. Eliminates churn.</td></tr>
+        <tr><td>SMH concentration cap (§4 override)</td><td class="num">12%</td><td>SMH earns ~half the portfolio's active return from ~a tenth of its weight. A tighter cap protects the compounding base on a 25% correction.</td></tr>
+        <tr><td>Shock-buffer target / floor</td><td class="num">10% / 8%</td><td>In the April 2025 tariff shock, zero defensive allocation meant the dip couldn't be bought at its deepest. SGOV fixes this permanently.</td></tr>
+        <tr><td>Entry tranches (1 / 2 / 3)</td><td class="num">30% / 40% / 30%</td><td>Day-one buyers historically underperformed week-two buyers by 8–12% across major drop-to-rise events. Averaging in beats guessing the bottom.</td></tr>
+        <tr><td>"Overbought — do not add" threshold</td><td class="num">within 3% of 52w high</td><td>Adding at the top is the worst entry; SMH/QQQM at highs have preceded 12–20% pullbacks. VT is exempt as the continuous anchor.</td></tr>
+        <tr><td>"Dip worth deploying into"</td><td class="num">≥12% below recent high</td><td>The threshold at which a quality dip is treated as a tranche-1 opportunity rather than noise.</td></tr>
+        <tr><td>SMH alert ladder</td><td class="num">$590 · $550 · $510</td><td>Pre-set price alerts so a correction is met with prepared orders, not improvised decisions.</td></tr>
+        <tr><td>Contribution lag (deploy)</td><td class="num">3 months</td><td>Window over which a redirect or tranche plan is allowed to play out before reassessment.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 8 — COMPLIANCE -->
+  <section id="s8">
+    <h2 class="sec"><span class="s">8</span>Compliance</h2>
+    <ul>
+      <li><strong>Manual execution only</strong> — inside approved dealing windows, with employer pre-approval where firm policy requires it.</li>
+      <li><strong>Monthly execution cadence</strong> — confirm dealing window → review allocation vs target → check look-through concentration → generate drift-adjusted plan → execute and log each transaction (date, asset, amount, price) → update the intelligence log.</li>
+      <li><strong>Dealing window (defined)</strong> — opens the <strong>3rd business day after the 15th</strong> and closes the <strong>last business day of that month</strong>. All routine execution happens inside this window.<br>
+        <span class="note"><strong>Hard-cap breach exception:</strong> a mandated trim executes on the <strong>first available business day after the breach is confirmed</strong> (outside the window if necessary), with a <strong>mandatory governance-log entry</strong>.</span></li>
+      <li><strong>Emergency-reserve rule</strong> — adequate reserves held <em>outside</em> the portfolio at all times. The portfolio is never the emergency fund. No withdrawals before 2045 except documented extraordinary circumstances.</li>
+    </ul>
+  </section>
+
+  <!-- 9 — REBALANCING CADENCE -->
+  <section id="s9">
+    <h2 class="sec"><span class="s">9</span>Rebalancing Cadence</h2>
+    <table>
+      <thead><tr><th>Cadence</th><th>Scope</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">Monthly</td><td>Allocation + contribution glance only.</td></tr>
+        <tr><td class="tk">Quarterly</td><td>Strategic review — drift, overlap, concentration, behavioural audit.</td></tr>
+        <tr><td class="tk">Annual (January)</td><td>Formal rebalance, unless a hard threshold breaches mid-year.</td></tr>
+        <tr><td class="tk c-red">Emergency trigger</td><td>Portfolio falls &gt;25%, or any hard cap is breached.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 10 — PRECEDENCE -->
+  <section id="s10">
+    <h2 class="sec"><span class="s">10</span>Precedence &amp; the Next Best Move</h2>
+    <div class="callout law"><strong>The order of laws (absolute):</strong>
+      §4 Look-Through Concentration → §3 Drift Governance → §5 Contribution Engine → all other sections.<br>
+      Concentration always overrides conviction · hard triggers always override soft alerts ·
+      <strong>a paper loss never overrides anything</strong>.</div>
+    <h3>Next Best Move — the engine's decision ladder</h3>
+    <p>The single highest-priority action is the first rung that fires:</p>
+    <ol class="ladder">
+      <li><b>Hard cap / concentration breach</b> <span class="arrow">→ TRIM to target.</span> Enforces the combined QQQM+SMH ceiling (&gt;42%), the SMH cap (12%), and the floating BTC cap (8% in the Normal phase).</li>
+      <li><b>Defensive gap</b> (buffer &lt;8%) <span class="arrow">→ BUILD SGOV</span> from new contributions — never by selling.</li>
+      <li><b>Market opportunity</b> (confirmed dip) <span class="arrow">→ DEPLOY tranche 1</span> into the dip.</li>
+      <li><b>Conviction underweight</b> (e.g. BTC below target) <span class="arrow">→ ACCUMULATE</span> on weakness toward target — never sell at a loss.</li>
+      <li><b>Hard drift underweight</b> <span class="arrow">→ FILL</span> the biggest gap.</li>
+      <li><b>Soft drift</b> <span class="arrow">→ REDIRECT</span> the contribution.</li>
+      <li><b>Healthy</b> <span class="arrow">→ STANDARD DCA</span> (skip anything at a 52-week high).</li>
+    </ol>
+    <p class="note">There is never a "nothing to do" that leaves the user guessing — if everything is healthy, the move is "keep doing your standard DCA."</p>
+  </section>
+
+  <!-- 11 — RULE REGISTER -->
+  <section id="s11">
+    <h2 class="sec"><span class="s">11</span>Governance Rule Register <span class="note" style="font-size:14px">— 37 enforced rules, 9 categories</span></h2>
+    <div class="reg">
+      <div class="cat">VT Governance · 4</div>
+      <div class="r"><div class="t">VT — Healthy Range</div><div class="d">Target 52%. Soft drift outside the healthy band → redirect contributions. Hard drift &lt;42% or &gt;62% → rebalance review.</div></div>
+      <div class="r"><div class="t">VT — Diversification Anchor</div><div class="d">Anchor, behavioural stabiliser, anti-fragility layer. Prevents thematic concentration, US-only dependency, emotional fragility.</div></div>
+      <div class="r"><div class="t">VT Underweight Response</div><div class="d">Portfolio becoming too thematic/fragile → redirect all contributions to VT until restored.</div></div>
+      <div class="r"><div class="t">VT Overweight Response</div><div class="d">Portfolio too defensive/diluted → redirect contributions toward QQQM to restore balance.</div></div>
+
+      <div class="cat">QQQM Governance · 4</div>
+      <div class="r"><div class="t">QQQM — Healthy Range</div><div class="d">Target 23%. Healthy 18–28%. Hard drift &lt;15% or &gt;31%.</div></div>
+      <div class="r"><div class="t">QQQM — Digital Economy Engine</div><div class="d">Dominant long-term growth engine: software, cloud, hyperscalers, platforms, AI monetisation, enterprise digitisation.</div></div>
+      <div class="r"><div class="t">QQQM Underweight Response</div><div class="d">Underexposed to digital expansion → increase QQQM contributions.</div></div>
+      <div class="r"><div class="t">QQQM Overweight Response</div><div class="d">Too dependent on US mega-cap tech / valuation-sensitive → pause incremental QQQM accumulation.</div></div>
+
+      <div class="cat">SMH Governance · 2</div>
+      <div class="r"><div class="t">SMH — Healthy Range</div><div class="d">Target 10%. Healthy 7–12%. Soft drift &gt;12% → halt accumulation. Hard cap 12% → selectively trim (tightened from 15%).</div></div>
+      <div class="r"><div class="t">SMH — AI Infrastructure Tilt Identity Rule</div><div class="d">A targeted tilt, not the foundation. Semiconductor concentration must never become the dominant portfolio risk.</div></div>
+
+      <div class="cat">VWO Governance · 3</div>
+      <div class="r"><div class="t">VWO — Identity &amp; Thesis</div><div class="d"><strong>Geographic diversifier.</strong> Holds long-run exposure to the demographic and productivity-convergence story across emerging markets (principally EM Asia — China, India, Taiwan, South Korea). Not a tactical trade on any single country or commodity cycle; reduces structural US-and-Europe dependency. <strong>Broken-thesis:</strong> breaks if EM equity structurally de-couples from global growth for 5+ years <em>and</em> the convergence thesis is falsified by sustained productivity stagnation across EM Asia broadly. Capital controls in a single major EM economy do not break it.</div></div>
+      <div class="r"><div class="t">VWO — Healthy Range</div><div class="d">Target 8%. Healthy 5–11%. Hard drift &lt;3% or &gt;13%.</div></div>
+      <div class="r"><div class="t">VWO Response Rules</div><div class="d">Underweight → resume modest accumulation toward target. Overweight → pause accumulation, redirect to underweights. Never trimmed for being down.</div></div>
+
+      <div class="cat">BTC Governance · 2</div>
+      <div class="r"><div class="t">BTC — Healthy Range</div><div class="d">Target 7%. Healthy 6–8%. Hard drift &gt;8% (cycle-aware) → trim toward target. Underweight → accumulate on weakness.</div></div>
+      <div class="r"><div class="t">BTC — Optionality Overlay Identity Rule</div><div class="d">Asymmetric optionality — meaningful but psychologically unimportant. Never the largest or second-largest holding.</div></div>
+
+      <div class="cat">Overlap &amp; Concentration (§4) · 11</div>
+      <div class="r"><div class="t">Semiconductor Dependency</div><div class="d">Cap 16% / 20%. Elevated 16–20% → pause SMH; excessive &gt;20% → halt SMH, redirect to VT.</div></div>
+      <div class="r"><div class="t">Digital Economy Dependency</div><div class="d">Cap 48% / 54%. Elevated → increase VT/VWO; excessive → halt QQQM &amp; SMH accumulation.</div></div>
+      <div class="r"><div class="t">US Market Dependency</div><div class="d">Cap 70% / 78%. Elevated → prioritise VT/VWO; excessive → pause all tech concentration increases.</div></div>
+      <div class="r"><div class="t">AI Infrastructure Cluster</div><div class="d">Cap 38% / 46%. Elevated → reduce SMH additions, favour VT; excessive → halt SMH, reduce QQQM.</div></div>
+      <div class="r"><div class="t">Nvidia Exposure Cap</div><div class="d">Soft 10%, hard 13% across VT/QQQM/SMH. Hard breach → pause SMH &amp; QQQM, assess trim. Monitor quarterly.</div></div>
+      <div class="r"><div class="t">Microsoft Exposure Cap</div><div class="d">Soft 10%, hard 13% across VT/QQQM. Hard breach → pause QQQM, redirect to VT.</div></div>
+      <div class="r"><div class="t">Apple Exposure Cap</div><div class="d">Soft 8%, hard 11%. Hard breach → pause QQQM, redirect to VT or VWO.</div></div>
+      <div class="r"><div class="t">Amazon Exposure Cap</div><div class="d">Soft 7%, hard 9%. Hard breach → pause QQQM accumulation.</div></div>
+      <div class="r"><div class="t">Meta &amp; Alphabet Exposure Cap</div><div class="d">Soft 6% each, hard 8% each. Hard breach → redirect future QQQM contributions to VT.</div></div>
+      <div class="r"><div class="t">Broadcom &amp; TSMC Exposure Cap</div><div class="d">Soft 5% each, hard 7% each. Hard breach → halt SMH accumulation.</div></div>
+      <div class="r"><div class="t">Redundant ETF Prevention</div><div class="d">Permanently excluded: VGT, FTEC, XLK, SOXX, IGV and similar. Concentration without diversification. Not subject to review.</div></div>
+
+      <div class="cat">Rebalancing · 2</div>
+      <div class="r"><div class="t">Rebalancing Priority Order</div><div class="d">1) redirect contributions to underweights → 2) pause/halt overweights → 3) selective trim only on hard breach → 4) avoid wholesale redesign.</div></div>
+      <div class="r"><div class="t">Review &amp; Rebalance Cadence</div><div class="d">Monthly glance · quarterly strategic review · annual formal rebalance (January) · emergency on &gt;25% fall or hard-cap breach.</div></div>
+
+      <div class="cat">Behavioural Guards · 5</div>
+      <div class="r"><div class="t">Market Timing Ban</div><div class="d">No tactical shifts on headlines, elections, macro predictions, or short-term underperformance. Permanently prohibited. <em>Why it works: every policy shock of the last five years reversed within ~eight weeks, recoveries averaging +22%. Selling the shock means missing the recovery.</em></div></div>
+      <div class="r"><div class="t">Panic Selling Prohibition</div><div class="d">No sells in a drawdown without a 48-hour cooling-off and a rule-based justification. &gt;25% falls increase contributions, not exits. <em>Why it works: the 2022 rate cycle dropped everything 25–40%; those who held and kept buying are up over 100% today. Those who sold are not.</em></div></div>
+      <div class="r"><div class="t">Redesign Moratorium</div><div class="d">No structural change within 90 days of the last; no redesign more than once every 3 years without a structural reason.</div></div>
+      <div class="r"><div class="t">Approved Reasons for Strategy Changes</div><div class="d">Allowed: life / horizon / liquidity / risk-tolerance changes, or a sustained base-salary / primary-income change &gt;15% held for 12+ consecutive months (excludes one-off bonuses, FX fluctuation, temporary secondment pay). Not allowed: headlines, elections, boredom, social media, optimisation addiction.</div></div>
+      <div class="r"><div class="t">Market Crash Protocol</div><div class="d">&gt;10% normal · &gt;15% reinforce thesis · &gt;25% check monthly only · &gt;40% do not open &gt;monthly, do not sell.</div></div>
+
+      <div class="cat">Compliance · 4</div>
+      <div class="r"><div class="t">Manual Execution Only</div><div class="d">Manual execution, automated governance. Approved dealing windows + employer pre-approval where required.</div></div>
+      <div class="r"><div class="t">Monthly Execution Cadence</div><div class="d">Confirm window → review allocation → check look-through → generate drift-adjusted plan → execute &amp; log → update log.</div></div>
+      <div class="r"><div class="t">Dealing Window</div><div class="d">Routine execution only inside the window — 3rd business day after the 15th → last business day of the month. Hard-cap breach exception: first available business day after confirmation, with a mandatory governance-log entry.</div></div>
+      <div class="r"><div class="t">Emergency Reserve Rule</div><div class="d">Maintain reserves outside the portfolio. The portfolio is not the emergency fund. No withdrawals before 2045 except documented exceptions.</div></div>
+    </div>
+  </section>
+
+  <!-- 12 — MARKET OVERLAY & RISK REGISTER -->
+  <section id="s12">
+    <h2 class="sec"><span class="s">12</span>Market Overlay &amp; Risk Register <span class="note" style="font-size:14px">— verified 24 Jun 2026</span></h2>
+    <p>Only verified figures (no invented numbers); anything unconfirmed is marked <code>UNVERIFIED</code> in-code.
+      Live values are pulled from Finnhub (§14) with this as the fallback. Probabilities are judgment calls; the facts
+      behind them are not.</p>
+
+    <h3>Verified market data</h3>
+    <table>
+      <thead><tr><th>Input</th><th>Verified state</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">SGOV yield</td><td>Dividend yield 3.85% (18 Jun) · 30-day SEC yield 3.55% (17 Jun).</td></tr>
+        <tr><td class="tk">SMH</td><td>~$668.91; 52-week range $265.74–$671.83 — at/near its high → overbought, do not add.</td></tr>
+        <tr><td class="tk">Strait of Hormuz / Iran</td><td><strong>Volatile &amp; contested:</strong> a 17 Jun reopening deal collapsed; Iran re-closed the strait 20 Jun; Geneva talks postponed 19 Jun. Brent ~$77–80. Two-sided, fluid.</td></tr>
+        <tr><td class="tk">Fed</td><td>Held 3.50–3.75% for a 4th consecutive meeting (17 Jun); chair Warsh; dropped easing language, nodded to possible hikes → on-hold, hawkish.</td></tr>
+        <tr><td class="tk">US–China tariff truce</td><td>Expires 10 Nov 2026 (Busan deal); renegotiated annually.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Live risk register</h3>
+    <table>
+      <thead><tr><th>Risk</th><th class="num">Prob.</th><th>Level</th><th>Mandated response</th></tr></thead>
+      <tbody>
+        <tr><td><strong class="c-red">SMH correction</strong><br><span class="c-muted" style="font-size:12px">At 52-week high after a large run; overbought signals active.</span></td><td class="num c-red">~72%</td><td><span class="tag bear">HIGH</span></td><td>Do not add. Alert ladder $590 · $550 · $510; deploy in tranches when alerts fire.</td></tr>
+        <tr><td><strong class="c-amber">Iran / Hormuz (two-sided)</strong><br><span class="c-muted" style="font-size:12px">Deal collapsed 20 Jun; strait re-closed; Brent ~$77–80; fluid.</span></td><td class="num c-amber">~40%</td><td><span class="tag" style="color:var(--amber);background:#1c1707">HIGH</span></td><td>Hold equities either way. SGOV is the protection on a breakdown. Act only if Brent sustains above $90 (reduce SMH).</td></tr>
+        <tr><td><strong class="c-amber">US–China tariff expiry</strong><br><span class="c-muted" style="font-size:12px">Truce expires 10 Nov 2026; last breakdown took SMH −17% in two weeks.</span></td><td class="num c-amber">~35%</td><td><span class="tag" style="color:var(--amber);background:#1c1707">MEDIUM</span></td><td>Monitor from September. If shaky by October, trim SMH 5–8 shares. On breakdown, wait two weeks then deploy per A1.</td></tr>
+        <tr><td><strong class="c-blue">Fed rate-hike risk</strong><br><span class="c-muted" style="font-size:12px">On hold; dot plot split; Warsh hawkish. A hike = 2022 playbook for growth.</span></td><td class="num c-blue">~30%</td><td><span class="tag norm">MEDIUM</span></td><td>SGOV holds value if rates rise. Watch CPI/PCE; above 3.5% re-acceleration, trim QQQM as insurance.</td></tr>
+        <tr><td><strong class="c-muted">Taiwan tail risk</strong><br><span class="c-muted" style="font-size:12px">TSMC ~10% of SMH; a conflict would be structural — SMH −30 to −50%.</span></td><td class="num c-muted">~8%</td><td><span class="tag norm">LOW</span></td><td>Cannot fully hedge without options. Best protection is the 12% SMH cap — do not let it drift higher.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 13 — PRE-COMMITMENTS -->
+  <section id="s13">
+    <h2 class="sec"><span class="s">13</span>Behavioural Pre-Commitments</h2>
+    <p>Binding rules decided <strong>in advance</strong>, so no decision is made in the heat of a shock. Where
+      two conflict, the most conservative (do-less, sell-nothing) interpretation wins. The larger long-term
+      threat is not the shock — it is well-intentioned tinkering.</p>
+
+    <div class="pc">
+      <div class="hd"><span class="ix">A</span> Shock response (decided before the shock)</div>
+      <div class="rule"><span class="rid">A1</span><span class="t">Policy shock.</span><div class="d">On a &gt;~10% drop from a discrete event (tariff, geopolitics, regulation): take <strong>no action for 14 calendar days</strong>, then deploy the buffer into the most beaten-down quality holding in tranches. Sell nothing.</div></div>
+      <div class="rule"><span class="rid">A2</span><span class="t">Macro shock.</span><div class="d">On a sustained decline (rate cycle, recession, de-rating): hold everything, continue scheduled contributions unchanged, do not redesign. The 2022 rule.</div></div>
+      <div class="rule"><span class="rid">A3</span><span class="t">A loss is never a sell trigger.</span><div class="d">Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: "Would I buy this at today's price?" If yes, do not sell.<br><br>
+        <strong>Broken-thesis criteria (per conviction asset):</strong><br><br>
+        <strong>QQQM:</strong> breaks if US mega-cap tech structurally loses pricing power for 3+ consecutive years <em>and</em> a credible non-US digital-economy alternative emerges at equivalent scale. Valuation de-rating, a rate cycle, or a single bad earnings year do not break it.<br><br>
+        <strong>SMH:</strong> breaks if semiconductor capex growth reverses for 3+ consecutive quarters <em>and</em> AI-compute demand enters a sustained <em>structural</em> decline — not a cyclical inventory correction. Cyclical downturns within a secular upcycle do not break it.<br><br>
+        <strong>BTC:</strong> breaks if (a) a critical protocol-layer vulnerability is confirmed unresolved, or (b) sovereign adoption reverses across 3+ major economies simultaneously with no recovery path, or (c) a technically superior monetary-layer replacement achieves a dominant network effect. Single-jurisdiction regulatory pressure, price drawdown alone, or short-cycle sentiment do not break it.</div></div>
+      <div class="rule"><span class="rid">A4</span><span class="t">Never crystallise a loss to fund something else.</span><div class="d">Buffers, new positions and rebalances are funded from new contributions — never by selling an underwater position.</div></div>
+    </div>
+
+    <div class="pc">
+      <div class="hd"><span class="ix">B</span> Buying discipline</div>
+      <div class="rule"><span class="rid">B1</span><span class="t">Don't buy the top.</span><div class="d">Do not add to any position within ~3% of its 52-week high. VT (the broad-market anchor) is exempt. Redirect skipped money to the anchor or hold it.</div></div>
+      <div class="rule"><span class="rid">B2</span><span class="t">Three-tranche entry.</span><div class="d">Never deploy full intended capital on the first signal. Split 30% / 40% / 30%: 30% on the first dip, 40% after three green weeks from the trough, 30% once the uptrend confirms.</div></div>
+      <div class="rule"><span class="rid">B3</span><span class="t">Accumulate conviction on weakness.</span><div class="d">An underweight conviction holding (e.g. BTC below its 7% target) is accumulated on weakness toward target, under its cap — never exited for being down.</div></div>
+    </div>
+
+    <div class="pc">
+      <div class="hd"><span class="ix">C</span> Structural limits</div>
+      <div class="rule"><span class="rid">C1</span><span class="t">Hard caps are inviolable.</span><div class="d">SMH ≤ 12%, BTC ≤ its cycle cap, combined QQQM+SMH ≤ 42% (§4.3). A breach triggers a trim back to target. No debate, no exceptions.</div></div>
+      <div class="rule"><span class="rid">C2</span><span class="t">Maintain an 8–10% defensive buffer at all times once built.</span><div class="d">Built only from new contributions (see A4).</div></div>
+      <div class="rule"><span class="rid">C3</span><span class="t">No half-convictions.</span><div class="d">Every position is either sized to matter when it wins or exited. No orphan positions too small to help and large enough to drag.</div></div>
+    </div>
+
+    <div class="pc">
+      <div class="hd"><span class="ix">D</span> Anti-tinkering throttles (protection from self)</div>
+      <div class="rule"><span class="rid">D1</span><span class="t">One discretionary change per quarter, maximum.</span><div class="d">Rule-mandated actions (cap trims, scheduled DCA) are unlimited. Discretionary changes — new ideas, re-weights, additions — are capped at one per calendar quarter.</div></div>
+      <div class="rule"><span class="rid">D2</span><span class="t">72-hour cooling-off.</span><div class="d">Any action not already mandated by a written rule waits 72 hours before execution. Most urges do not survive three days.</div></div>
+      <div class="rule"><span class="rid">D3</span><span class="t">New positions require a written thesis and a one-quarter wait.</span><div class="d">No impulse tickers. The five/six-position structure is the default and changing it is deliberately slow.</div></div>
+    </div>
+
+    <div class="pc">
+      <div class="hd"><span class="ix">E</span> Cadence</div>
+      <div class="rule"><span class="rid">E1</span><span class="t">The monthly 5-minute check.</span><div class="d">Once a month: check caps (trim if breached) → check underweights (route the contribution) → check the scheduled-events calendar → act only if a rule fires. Otherwise, close the app.</div></div>
+    </div>
+
+    <div class="callout law"><em>Pre-decide behaviour, automate away the chances to override it, and keep a buffer
+      that needs no prediction. Shocks recover; accumulated tinkering does not.</em></div>
+  </section>
+
+  <!-- 14 — LIVE DATA -->
+  <section id="s14">
+    <h2 class="sec"><span class="s">14</span>Live Data</h2>
+    <p>The recommendation engine reads <strong>live price and 52-week levels from Finnhub</strong>
+      (<code>lib/finnhub.ts</code>, server-side, cached ~30 min) in place of hardcoded figures, with graceful
+      degradation: on any failure it falls back to the verified §12 constants and marks the read
+      <strong>STALE</strong> rather than showing a guess as live. The dashboard adds a <strong>buffer-status
+      indicator</strong> (SGOV vs the 8–10% band, months-to-band, live yield) and a read-only
+      <strong>scheduled-events calendar</strong> (FOMC/CPI, earnings, known policy dates) labelled
+      <em>context, not signals</em>. No sentiment scores, shock-probability numbers, push prompts or streaming
+      tickers are used — by design, to reduce intervention frequency.</p>
+  </section>
+
+  <!-- APPENDIX A — HEALTH -->
+  <section id="sA">
+    <h2 class="sec"><span class="s">A</span>Appendix — Portfolio Health Score</h2>
+    <p>A 0–100 composite of four independent dimensions. <strong>Governed concentration within caps is not
+      penalised</strong> — only unmanaged breaches are.</p>
+    <table>
+      <thead><tr><th>Dimension</th><th class="num">Weight</th><th>Measures</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">Structural</td><td class="num">40%</td><td>Allocation drift and tolerance breaches.</td></tr>
+        <tr><td class="tk">Behavioural</td><td class="num">25%</td><td>Share of governance rules left active.</td></tr>
+        <tr><td class="tk">Concentration</td><td class="num">25%</td><td>Only hard-cap company/sector breaches.</td></tr>
+        <tr><td class="tk">Execution</td><td class="num">10%</td><td>Data freshness (how recently you snapshotted).</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Overall labels: <span class="c-green">≥80 "Good standing"</span> ·
+      <span class="c-amber">≥65 "Review recommended"</span> · <span class="c-red">else "Action required."</span></p>
+  </section>
+
+  <!-- APPENDIX B — HORIZON TRANSITION -->
+  <section id="sB">
+    <h2 class="sec"><span class="s">B</span>Appendix — Horizon Transition Framework <span class="star" style="margin-left:6px">NEW · v6.2</span></h2>
+    <p>Atlas Core is an accumulation system. At <strong>T-minus 5 years (2040)</strong> a mandatory transition review
+      is triggered — not before. The review converts the framework from a contribution-maximising, volatility-tolerant
+      accumulation structure into a sequenced drawdown plan. The accumulation rules (DCA, conviction holds, crash
+      protocol) remain in force until that review is complete and a Distribution Governance Document is ratified.</p>
+
+    <h3>T-5 review trigger (2040)</h3>
+    <div class="callout law"><strong>In January 2040</strong>, schedule a structured review with this mandatory agenda:
+      (1) recalculate the retirement income requirement in SGD real terms; (2) assess portfolio value vs the 2045
+      target; (3) define a target asset allocation for the distribution phase; (4) draft a liquidation sequence and
+      timeline; (5) decide annuity vs drawdown vs hybrid given tax and jurisdiction at that time.
+      <strong>Output: a ratified Distribution Governance Document replacing this appendix.</strong></div>
+
+    <h3>Provisional liquidation sequence <span class="note" style="font-weight:400">— subject to the 2040 review</span></h3>
+    <p>If the 2040 review is not yet complete and a partial drawdown becomes unavoidable before 2045, the provisional
+      sequence is:</p>
+    <table>
+      <thead><tr><th class="num">Order</th><th>Asset</th><th>Rationale</th></tr></thead>
+      <tbody>
+        <tr><td class="num c-green">1st</td><td class="tk">SGOV</td><td>Shock buffer — the only position designed to be spent. No equity-correlation loss by liquidating early.</td></tr>
+        <tr><td class="num c-amber">2nd</td><td class="tk">BTC</td><td>Highest volatility, smallest dependency on the remaining horizon. Optionality value diminishes near distribution.</td></tr>
+        <tr><td class="num c-amber">3rd</td><td class="tk">SMH</td><td>Concentrated tilt — largest idiosyncratic and cycle-sensitive risk. Reduce before broad equity.</td></tr>
+        <tr><td class="num" style="color:#fb923c">4th</td><td class="tk">VWO</td><td>Geographic diversifier — reduce EM exposure as the horizon shortens and currency/liquidity risk becomes material.</td></tr>
+        <tr><td class="num c-red">5th</td><td class="tk">QQQM</td><td>Growth engine — liquidate late; most of the long-run return profile lives here.</td></tr>
+        <tr><td class="num c-red">Last</td><td class="tk">VT</td><td>Core anchor — held longest; its diversification and stability are most valuable during the distribution phase itself.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn"><strong>This sequence is provisional.</strong> It is a pre-decided default to prevent
+      panic-order decisions under time pressure — not a finalised distribution plan. The 2040 review supersedes it
+      entirely. Do not begin executing it before that review unless an extraordinary documented circumstance applies.</div>
+
+    <h3>Glide path — de-risking schedule (T-5 → T-0)</h3>
+    <table>
+      <thead><tr><th class="num">Year</th><th class="num">Indicative equity ceiling</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td class="num">2040</td><td class="num">90%</td><td>Complete the transition review. Ratify the Distribution Governance Document. No allocation change yet.</td></tr>
+        <tr><td class="num">2041</td><td class="num">85%</td><td>Begin gradual BTC reduction toward a 4% target. Rebuild SGOV to ~15%.</td></tr>
+        <tr><td class="num">2042</td><td class="num">80%</td><td>Begin SMH reduction toward 6%. Increase VT weight as the stable core grows.</td></tr>
+        <tr><td class="num">2043</td><td class="num">75%</td><td>Further de-risk: QQQM toward 18%, VWO toward 5%; SGOV + bonds/cash toward 20%.</td></tr>
+        <tr><td class="num">2044</td><td class="num">70%</td><td>Final accumulation year. Transition contributions from growth to income / preservation.</td></tr>
+        <tr><td class="num">2045</td><td class="num">per 2040 review</td><td>Distribution phase begins. Governance transfers to the Distribution Document.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">All figures are indicative defaults only. The 2040 review sets the actual targets based on
+      balance, income need, market conditions, and jurisdiction at that time.</p>
+  </section>
+
+  <footer>
+    Atlas Core — Governance Document v6.3 · Generated June 2026 ·
+    Reflects the rules encoded in <code>lib/constants.ts</code>, <code>lib/next-best-move.ts</code>,
+    <code>lib/action-plan.ts</code>, <code>lib/finnhub.ts</code>, <code>lib/health.ts</code>, the Governance
+    page, and the seeded rule register (<code>prisma/seed.ts</code>). When the code and this document disagree,
+    the code is authoritative.
+  </footer>
+
+</div>
+</body>
+</html>
