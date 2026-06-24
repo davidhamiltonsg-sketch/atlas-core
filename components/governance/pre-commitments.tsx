@@ -18,7 +18,7 @@ const GROUPS: Group[] = [
     rules: [
       { id: "A1", name: "Policy shock", body: "On a >~10% drop from a discrete event (tariff, geopolitics, regulation): take NO action for 14 calendar days, then deploy the buffer into the most beaten-down quality holding in tranches. Sell nothing." },
       { id: "A2", name: "Macro shock", body: "On a sustained decline (rate cycle, recession, de-rating): hold everything, continue scheduled contributions unchanged, do not redesign. The 2022 rule — holders who kept buying recovered." },
-      { id: "A3", name: "A loss is never a sell trigger", body: "Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: “Would I buy this at today's price?” If yes, do not sell." },
+      { id: "A3", name: "A loss is never a sell trigger", body: "Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: “Would I buy this at today's price?” If yes, do not sell. Broken-thesis tests — QQQM: structural pricing-power loss for 3+ years AND a credible non-US alternative at scale. SMH: capex reversal 3+ quarters AND a structural (not cyclical) AI-compute decline. Bitcoin sleeve (BTC/IBIT): protocol-layer vulnerability, multi-sovereign adoption reversal, or a superior replacement network — single-jurisdiction regulatory pressure does not qualify." },
       { id: "A4", name: "Never crystallise a loss to fund something else", body: "Buffers, new positions and rebalances are funded from new contributions — never by selling an underwater position. Stops loss-aversion disguising itself as risk management." },
     ],
   },

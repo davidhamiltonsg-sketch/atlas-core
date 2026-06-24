@@ -56,6 +56,18 @@ const holdings = [
     color: "#f59e0b",
     snapshot: { units: 154, price: 33.58, value: 6620.85 },
   },
+  {
+    // Bitcoin sleeve (target vehicle). BTC is transitioned into IBIT like-for-like; the
+    // engine governs BTC + IBIT as ONE sleeve (combined target 7%, combined 8% cycle cap).
+    // Seeded at 0% target — the split shifts from BTC to IBIT as the transition proceeds.
+    ticker: "IBIT",
+    name: "iShares Bitcoin Trust ETF",
+    targetPct: 0,
+    hardCapPct: 8,
+    toleranceBand: 1,
+    color: "#f59e0b",
+    snapshot: { units: 0, price: 0, value: 0 },
+  },
 ]
 
 const governanceRules = [

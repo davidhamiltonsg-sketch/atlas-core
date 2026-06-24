@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas Core — Governance Document v6.3</title>
+<title>Atlas Core — Governance Document v6.4</title>
 <style>
   :root{
     --bg:#0b0d17; --panel:#12152370; --card:#161a2b; --border:#262b40;
@@ -173,7 +173,7 @@
         <em>what</em> from fixed rules; the human only <em>executes</em> inside approved dealing windows.
         Discipline beats tinkering.</p>
       <div class="pills">
-        <span class="pill v">Version 6.3</span>
+        <span class="pill v">Version 6.4</span>
         <span class="pill">Updated June 2026</span>
         <span class="pill g">Market overlay verified 24 Jun 2026</span>
         <span class="pill">Horizon 2045</span>
@@ -199,7 +199,7 @@
       <li><span class="n">8</span><a href="#s8">Compliance (§7)</a></li>
       <li><span class="n">9</span><a href="#s9">Rebalancing Cadence</a></li>
       <li><span class="n">10</span><a href="#s10">Precedence &amp; Next Best Move</a></li>
-      <li><span class="n">11</span><a href="#s11">Governance Rule Register (37)</a></li>
+      <li><span class="n">11</span><a href="#s11">Governance Rule Register (38)</a></li>
       <li><span class="n">12</span><a href="#s12">Market Overlay</a></li>
       <li><span class="n">13</span><a href="#s13">Behavioural Pre-Commitments</a></li>
       <li><span class="n">14</span><a href="#s14">Live Data</a></li>
@@ -220,10 +220,18 @@
         <tr><td class="tk"><span class="dot" style="background:#8b5cf6"></span>QQQM<span class="star">★ conviction</span></td><td>Invesco NASDAQ-100 ETF</td><td class="num">23%</td><td>Digital Economy Engine — primary long-term growth</td></tr>
         <tr><td class="tk"><span class="dot" style="background:#a78bfa"></span>SMH<span class="star">★ conviction</span></td><td>VanEck Semiconductor ETF</td><td class="num">10%</td><td>AI Infrastructure Tilt — targeted, <em>not</em> the foundation</td></tr>
         <tr><td class="tk"><span class="dot" style="background:#c4b5fd"></span>VWO</td><td>Vanguard FTSE Emerging Markets ETF</td><td class="num">8%</td><td>Geographic Diversifier</td></tr>
-        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>BTC<span class="star">★ conviction</span></td><td>Grayscale Bitcoin Mini ETF</td><td class="num">7%</td><td>Optionality Overlay — meaningful, psychologically unimportant</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>BTC<span class="star">★ conviction</span></td><td>Grayscale Bitcoin Mini ETF</td><td class="num">7% → 0%</td><td>Bitcoin sleeve (legacy) — transitioning out, like-for-like, into IBIT</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>IBIT<span class="star">★ conviction</span><span class="star" style="margin-left:4px">NEW · v6.4</span></td><td>iShares Bitcoin Trust ETF</td><td class="num">0% → 7%</td><td>Bitcoin sleeve (target vehicle) — more tax-effective BTC exposure</td></tr>
         <tr><td class="tk"><span class="dot" style="background:#10b981"></span>SGOV</td><td>iShares 0–3 Month Treasury ETF</td><td class="num">8–10%</td><td>Shock Buffer — dry powder, zero equity correlation</td></tr>
       </tbody>
     </table>
+    <div class="callout"><strong>The Bitcoin sleeve — BTC → IBIT (v6.4).</strong> IBIT (iShares Bitcoin Trust) is the
+      more tax-effective vehicle for the same exposure. BTC is being transitioned into IBIT <strong>like-for-like</strong>:
+      BTC and IBIT are governed as a <strong>single Bitcoin sleeve</strong> — combined target <strong>7%</strong>,
+      combined cycle-aware hard cap <strong>8%</strong> (§4.1) — never 7% each. As the transition proceeds, the BTC
+      target steps down and the IBIT target steps up by the same amount; every Bitcoin rule (conviction hold,
+      accumulate-on-weakness, cap, broken-thesis) applies to the sleeve, not to either ticker alone. A like-for-like
+      switch is not a sale for a loss — it is a vehicle change at equivalent exposure.</div>
     <div class="callout"><strong>Core principle — a loss is never a sell signal.</strong> BTC is a held
       conviction asset. When underweight it is <em>accumulated on weakness toward target</em> under its cap —
       never liquidated. The SGOV buffer is established from new monthly contributions, never by selling.</div>
@@ -261,7 +269,7 @@
         <tr><td class="tk">QQQM</td><td class="num">30%</td><td class="c-violet">★</td></tr>
         <tr><td class="tk">SMH</td><td class="num c-red">12% <span class="c-muted">(tightened from 15%)</span></td><td class="c-violet">★</td></tr>
         <tr><td class="tk">VWO</td><td class="num">13%</td><td class="c-muted">—</td></tr>
-        <tr><td class="tk">BTC</td><td class="num">8% <span class="c-muted">(floats by cycle — §4.1)</span></td><td class="c-violet">★</td></tr>
+        <tr><td class="tk">Bitcoin (BTC + IBIT)</td><td class="num">8% <span class="c-muted">(combined sleeve; floats by cycle — §4.1)</span></td><td class="c-violet">★</td></tr>
       </tbody>
     </table>
     <div class="callout"><strong>Conviction rule (§3.5).</strong> Conviction assets (QQQM, SMH, BTC) may run
@@ -329,8 +337,9 @@
 
   <!-- 4.1 BTC CYCLE -->
   <section id="s41">
-    <h2 class="sec"><span class="s">4.1</span>BTC Halving-Cycle Cap <span class="note" style="font-size:14px">— floating</span></h2>
-    <p>BTC's hard cap is the one cap that <strong>flexes with the halving cycle</strong>. Phase is derived from
+    <h2 class="sec"><span class="s">4.1</span>Bitcoin (BTC + IBIT) Halving-Cycle Cap <span class="note" style="font-size:14px">— floating</span></h2>
+    <p>The <strong>Bitcoin sleeve</strong> (BTC + IBIT combined) carries the one hard cap that <strong>flexes with the
+      halving cycle</strong>. The cap applies to the sleeve total, not to either ticker alone. Phase is derived from
       months since the 19 Apr 2024 halving (≤24 → bull) and drawdown from the cycle high (price &lt; 50% of high → bear).</p>
     <div class="grid c3">
       <div class="cardx"><span class="tag bull">Post-Halving Bull</span><h4>12–24 mo post-halving</h4>
@@ -520,7 +529,7 @@
 
   <!-- 11 — RULE REGISTER -->
   <section id="s11">
-    <h2 class="sec"><span class="s">11</span>Governance Rule Register <span class="note" style="font-size:14px">— 37 enforced rules, 9 categories</span></h2>
+    <h2 class="sec"><span class="s">11</span>Governance Rule Register <span class="note" style="font-size:14px">— 38 enforced rules, 9 categories</span></h2>
     <div class="reg">
       <div class="cat">VT Governance · 4</div>
       <div class="r"><div class="t">VT — Healthy Range</div><div class="d">Target 52%. Soft drift outside the healthy band → redirect contributions. Hard drift &lt;42% or &gt;62% → rebalance review.</div></div>
@@ -543,9 +552,10 @@
       <div class="r"><div class="t">VWO — Healthy Range</div><div class="d">Target 8%. Healthy 5–11%. Hard drift &lt;3% or &gt;13%.</div></div>
       <div class="r"><div class="t">VWO Response Rules</div><div class="d">Underweight → resume modest accumulation toward target. Overweight → pause accumulation, redirect to underweights. Never trimmed for being down.</div></div>
 
-      <div class="cat">BTC Governance · 2</div>
-      <div class="r"><div class="t">BTC — Healthy Range</div><div class="d">Target 7%. Healthy 6–8%. Hard drift &gt;8% (cycle-aware) → trim toward target. Underweight → accumulate on weakness.</div></div>
-      <div class="r"><div class="t">BTC — Optionality Overlay Identity Rule</div><div class="d">Asymmetric optionality — meaningful but psychologically unimportant. Never the largest or second-largest holding.</div></div>
+      <div class="cat">Bitcoin Governance (BTC + IBIT) · 3</div>
+      <div class="r"><div class="t">Bitcoin Sleeve — Healthy Range</div><div class="d">Combined BTC + IBIT target 7%. Healthy 6–8%. Hard drift &gt;8% (cycle-aware) → trim the sleeve toward target. Underweight → accumulate on weakness. All Bitcoin rules apply to the <strong>combined</strong> sleeve, never to either ticker alone.</div></div>
+      <div class="r"><div class="t">Bitcoin — Optionality Overlay Identity Rule</div><div class="d">Asymmetric optionality — meaningful but psychologically unimportant. The Bitcoin sleeve is never the largest or second-largest holding.</div></div>
+      <div class="r"><div class="t">BTC → IBIT Transition Rule <span class="star">NEW · v6.4</span></div><div class="d">IBIT (iShares Bitcoin Trust) is the more tax-effective vehicle for the same exposure. BTC is moved into IBIT <strong>like-for-like</strong>: as it proceeds, the BTC target steps down and the IBIT target steps up by the same amount, keeping the sleeve at 7% / 8%. A like-for-like switch is a vehicle change at equivalent exposure — <strong>not</strong> a sale for a loss, and not governed by A3 broken-thesis criteria.</div></div>
 
       <div class="cat">Overlap &amp; Concentration (§4) · 11</div>
       <div class="r"><div class="t">Semiconductor Dependency</div><div class="d">Cap 16% / 20%. Elevated 16–20% → pause SMH; excessive &gt;20% → halt SMH, redirect to VT.</div></div>
@@ -626,7 +636,7 @@
         <strong>Broken-thesis criteria (per conviction asset):</strong><br><br>
         <strong>QQQM:</strong> breaks if US mega-cap tech structurally loses pricing power for 3+ consecutive years <em>and</em> a credible non-US digital-economy alternative emerges at equivalent scale. Valuation de-rating, a rate cycle, or a single bad earnings year do not break it.<br><br>
         <strong>SMH:</strong> breaks if semiconductor capex growth reverses for 3+ consecutive quarters <em>and</em> AI-compute demand enters a sustained <em>structural</em> decline — not a cyclical inventory correction. Cyclical downturns within a secular upcycle do not break it.<br><br>
-        <strong>BTC:</strong> breaks if (a) a critical protocol-layer vulnerability is confirmed unresolved, or (b) sovereign adoption reverses across 3+ major economies simultaneously with no recovery path, or (c) a technically superior monetary-layer replacement achieves a dominant network effect. Single-jurisdiction regulatory pressure, price drawdown alone, or short-cycle sentiment do not break it.</div></div>
+        <strong>BTC / IBIT (Bitcoin sleeve):</strong> breaks if (a) a critical protocol-layer vulnerability is confirmed unresolved, or (b) sovereign adoption reverses across 3+ major economies simultaneously with no recovery path, or (c) a technically superior monetary-layer replacement achieves a dominant network effect. Single-jurisdiction regulatory pressure, price drawdown alone, or short-cycle sentiment do not break it.</div></div>
       <div class="rule"><span class="rid">A4</span><span class="t">Never crystallise a loss to fund something else.</span><div class="d">Buffers, new positions and rebalances are funded from new contributions — never by selling an underwater position.</div></div>
     </div>
 
@@ -741,7 +751,7 @@
   </section>
 
   <footer>
-    Atlas Core — Governance Document v6.3 · Generated June 2026 ·
+    Atlas Core — Governance Document v6.4 · Generated June 2026 ·
     Reflects the rules encoded in <code>lib/constants.ts</code>, <code>lib/next-best-move.ts</code>,
     <code>lib/action-plan.ts</code>, <code>lib/finnhub.ts</code>, <code>lib/health.ts</code>, the Governance
     page, and the seeded rule register (<code>prisma/seed.ts</code>). When the code and this document disagree,

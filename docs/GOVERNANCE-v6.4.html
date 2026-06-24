@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas Core — Governance Document v6.1</title>
+<title>Atlas Core — Governance Document v6.4</title>
 <style>
   :root{
     --bg:#0b0d17; --panel:#12152370; --card:#161a2b; --border:#262b40;
@@ -173,7 +173,7 @@
         <em>what</em> from fixed rules; the human only <em>executes</em> inside approved dealing windows.
         Discipline beats tinkering.</p>
       <div class="pills">
-        <span class="pill v">Version 6.1 · rev. 2</span>
+        <span class="pill v">Version 6.4</span>
         <span class="pill">Updated June 2026</span>
         <span class="pill g">Market overlay verified 24 Jun 2026</span>
         <span class="pill">Horizon 2045</span>
@@ -199,7 +199,7 @@
       <li><span class="n">8</span><a href="#s8">Compliance (§7)</a></li>
       <li><span class="n">9</span><a href="#s9">Rebalancing Cadence</a></li>
       <li><span class="n">10</span><a href="#s10">Precedence &amp; Next Best Move</a></li>
-      <li><span class="n">11</span><a href="#s11">Governance Rule Register (37)</a></li>
+      <li><span class="n">11</span><a href="#s11">Governance Rule Register (38)</a></li>
       <li><span class="n">12</span><a href="#s12">Market Overlay</a></li>
       <li><span class="n">13</span><a href="#s13">Behavioural Pre-Commitments</a></li>
       <li><span class="n">14</span><a href="#s14">Live Data</a></li>
@@ -220,13 +220,26 @@
         <tr><td class="tk"><span class="dot" style="background:#8b5cf6"></span>QQQM<span class="star">★ conviction</span></td><td>Invesco NASDAQ-100 ETF</td><td class="num">23%</td><td>Digital Economy Engine — primary long-term growth</td></tr>
         <tr><td class="tk"><span class="dot" style="background:#a78bfa"></span>SMH<span class="star">★ conviction</span></td><td>VanEck Semiconductor ETF</td><td class="num">10%</td><td>AI Infrastructure Tilt — targeted, <em>not</em> the foundation</td></tr>
         <tr><td class="tk"><span class="dot" style="background:#c4b5fd"></span>VWO</td><td>Vanguard FTSE Emerging Markets ETF</td><td class="num">8%</td><td>Geographic Diversifier</td></tr>
-        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>BTC<span class="star">★ conviction</span></td><td>Grayscale Bitcoin Mini ETF</td><td class="num">7%</td><td>Optionality Overlay — meaningful, psychologically unimportant</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>BTC<span class="star">★ conviction</span></td><td>Grayscale Bitcoin Mini ETF</td><td class="num">7% → 0%</td><td>Bitcoin sleeve (legacy) — transitioning out, like-for-like, into IBIT</td></tr>
+        <tr><td class="tk"><span class="dot" style="background:#f59e0b"></span>IBIT<span class="star">★ conviction</span><span class="star" style="margin-left:4px">NEW · v6.4</span></td><td>iShares Bitcoin Trust ETF</td><td class="num">0% → 7%</td><td>Bitcoin sleeve (target vehicle) — more tax-effective BTC exposure</td></tr>
         <tr><td class="tk"><span class="dot" style="background:#10b981"></span>SGOV</td><td>iShares 0–3 Month Treasury ETF</td><td class="num">8–10%</td><td>Shock Buffer — dry powder, zero equity correlation</td></tr>
       </tbody>
     </table>
+    <div class="callout"><strong>The Bitcoin sleeve — BTC → IBIT (v6.4).</strong> IBIT (iShares Bitcoin Trust) is the
+      more tax-effective vehicle for the same exposure. BTC is being transitioned into IBIT <strong>like-for-like</strong>:
+      BTC and IBIT are governed as a <strong>single Bitcoin sleeve</strong> — combined target <strong>7%</strong>,
+      combined cycle-aware hard cap <strong>8%</strong> (§4.1) — never 7% each. As the transition proceeds, the BTC
+      target steps down and the IBIT target steps up by the same amount; every Bitcoin rule (conviction hold,
+      accumulate-on-weakness, cap, broken-thesis) applies to the sleeve, not to either ticker alone. A like-for-like
+      switch is not a sale for a loss — it is a vehicle change at equivalent exposure.</div>
     <div class="callout"><strong>Core principle — a loss is never a sell signal.</strong> BTC is a held
       conviction asset. When underweight it is <em>accumulated on weakness toward target</em> under its cap —
       never liquidated. The SGOV buffer is established from new monthly contributions, never by selling.</div>
+    <div class="callout warn"><strong>SGOV — FX risk acknowledgement.</strong> SGOV is denominated in USD and holds
+      US Treasury bills. Because portfolio metrics are tracked in SGD, a declining USD/SGD rate can temporarily erode
+      the buffer's real value. This is accepted by design: SGOV's job is market-shock absorption and dry powder, not
+      SGD yield optimisation. Do not substitute a SGD-denominated cash instrument — the shock-buffer function requires
+      USD liquidity aligned with the portfolio's base currency.</div>
 
     <h3 id="s1-2">§1.2 — SGOV Drawdown Rules <span class="star" style="margin-left:4px">NEW</span></h3>
     <p>The buffer is <strong>spent only</strong> under the three conditions below. Outside them, SGOV is held
@@ -256,7 +269,7 @@
         <tr><td class="tk">QQQM</td><td class="num">30%</td><td class="c-violet">★</td></tr>
         <tr><td class="tk">SMH</td><td class="num c-red">12% <span class="c-muted">(tightened from 15%)</span></td><td class="c-violet">★</td></tr>
         <tr><td class="tk">VWO</td><td class="num">13%</td><td class="c-muted">—</td></tr>
-        <tr><td class="tk">BTC</td><td class="num">8% <span class="c-muted">(floats by cycle — §4.1)</span></td><td class="c-violet">★</td></tr>
+        <tr><td class="tk">Bitcoin (BTC + IBIT)</td><td class="num">8% <span class="c-muted">(combined sleeve; floats by cycle — §4.1)</span></td><td class="c-violet">★</td></tr>
       </tbody>
     </table>
     <div class="callout"><strong>Conviction rule (§3.5).</strong> Conviction assets (QQQM, SMH, BTC) may run
@@ -324,8 +337,9 @@
 
   <!-- 4.1 BTC CYCLE -->
   <section id="s41">
-    <h2 class="sec"><span class="s">4.1</span>BTC Halving-Cycle Cap <span class="note" style="font-size:14px">— floating</span></h2>
-    <p>BTC's hard cap is the one cap that <strong>flexes with the halving cycle</strong>. Phase is derived from
+    <h2 class="sec"><span class="s">4.1</span>Bitcoin (BTC + IBIT) Halving-Cycle Cap <span class="note" style="font-size:14px">— floating</span></h2>
+    <p>The <strong>Bitcoin sleeve</strong> (BTC + IBIT combined) carries the one hard cap that <strong>flexes with the
+      halving cycle</strong>. The cap applies to the sleeve total, not to either ticker alone. Phase is derived from
       months since the 19 Apr 2024 halving (≤24 → bull) and drawdown from the cycle high (price &lt; 50% of high → bear).</p>
     <div class="grid c3">
       <div class="cardx"><span class="tag bull">Post-Halving Bull</span><h4>12–24 mo post-halving</h4>
@@ -389,6 +403,24 @@
       rule <strong>30% / 40% / 30%</strong>; treats an <strong>underweight conviction holding (incl. BTC) as
       eligible</strong>; <strong>never feeds an overweight position</strong>; and shows an on-screen note when the
       plan adapts.</p>
+
+    <h3>Worked example — June 2026 conditions</h3>
+    <p>With SMH at its 52-week high (~$669), QQQM extended, VWO near its high, and BTC underweight, the engine in
+      June 2026 reasons as follows:</p>
+    <table>
+      <thead><tr><th>Position</th><th>Status</th><th>Engine decision</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">SMH</td><td class="c-red">At 52-week high (~$669)</td><td>Skip — overbought. No new money.</td></tr>
+        <tr><td class="tk">QQQM</td><td class="c-amber">Extended / near high</td><td>Skip — within 3% of high. Redirect.</td></tr>
+        <tr><td class="tk">VWO</td><td class="c-amber">At high, at target weight</td><td>Skip — at top and fully weighted.</td></tr>
+        <tr><td class="tk">BTC</td><td class="c-green">Underweight conviction</td><td>Eligible — accumulate toward 7% target.</td></tr>
+        <tr><td class="tk">VT</td><td class="c-green">Anchor, exempt from high rule</td><td>Eligible — receives remainder of contribution.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Result: the June contribution splits between BTC (to close the underweight) and VT (the continuous
+      anchor). SMH, QQQM and VWO receive nothing this month — not because they are bad holdings, but because buying at
+      the top is the worst entry. The old drift-only engine would have added to all three; the market-aware engine
+      redirects the capital to better entries.</p>
   </section>
 
   <!-- 6 — BEHAVIOURAL GUARDS -->
@@ -434,16 +466,16 @@
   <section id="s7">
     <h2 class="sec"><span class="s">7</span>Minimum-Hold &amp; Tranche Rules</h2>
     <table>
-      <thead><tr><th>Constant</th><th class="num">Value</th></tr></thead>
+      <thead><tr><th>Constant</th><th class="num">Value</th><th>Rationale</th></tr></thead>
       <tbody>
-        <tr><td>Minimum hold before any sale</td><td class="num">90 days</td></tr>
-        <tr><td>SMH concentration cap (§4 override)</td><td class="num">12%</td></tr>
-        <tr><td>Shock-buffer target / floor</td><td class="num">10% / 8%</td></tr>
-        <tr><td>Entry tranches (1 / 2 / 3)</td><td class="num">30% / 40% / 30%</td></tr>
-        <tr><td>"Overbought — do not add" threshold</td><td class="num">within 3% of 52w high</td></tr>
-        <tr><td>"Dip worth deploying into"</td><td class="num">≥12% below recent high</td></tr>
-        <tr><td>SMH alert ladder</td><td class="num">$590 · $550 · $510</td></tr>
-        <tr><td>Contribution lag (deploy)</td><td class="num">3 months</td></tr>
+        <tr><td>Minimum hold before any sale</td><td class="num">90 days</td><td>Forces conviction at entry. Before buying, ask: would I hold through a 20% drop? If not, don't buy. Eliminates churn.</td></tr>
+        <tr><td>SMH concentration cap (§4 override)</td><td class="num">12%</td><td>SMH earns ~half the portfolio's active return from ~a tenth of its weight. A tighter cap protects the compounding base on a 25% correction.</td></tr>
+        <tr><td>Shock-buffer target / floor</td><td class="num">10% / 8%</td><td>In the April 2025 tariff shock, zero defensive allocation meant the dip couldn't be bought at its deepest. SGOV fixes this permanently.</td></tr>
+        <tr><td>Entry tranches (1 / 2 / 3)</td><td class="num">30% / 40% / 30%</td><td>Day-one buyers historically underperformed week-two buyers by 8–12% across major drop-to-rise events. Averaging in beats guessing the bottom.</td></tr>
+        <tr><td>"Overbought — do not add" threshold</td><td class="num">within 3% of 52w high</td><td>Adding at the top is the worst entry; SMH/QQQM at highs have preceded 12–20% pullbacks. VT is exempt as the continuous anchor.</td></tr>
+        <tr><td>"Dip worth deploying into"</td><td class="num">≥12% below recent high</td><td>The threshold at which a quality dip is treated as a tranche-1 opportunity rather than noise.</td></tr>
+        <tr><td>SMH alert ladder</td><td class="num">$590 · $550 · $510</td><td>Pre-set price alerts so a correction is met with prepared orders, not improvised decisions.</td></tr>
+        <tr><td>Contribution lag (deploy)</td><td class="num">3 months</td><td>Window over which a redirect or tranche plan is allowed to play out before reassessment.</td></tr>
       </tbody>
     </table>
   </section>
@@ -497,7 +529,7 @@
 
   <!-- 11 — RULE REGISTER -->
   <section id="s11">
-    <h2 class="sec"><span class="s">11</span>Governance Rule Register <span class="note" style="font-size:14px">— 37 enforced rules, 9 categories</span></h2>
+    <h2 class="sec"><span class="s">11</span>Governance Rule Register <span class="note" style="font-size:14px">— 38 enforced rules, 9 categories</span></h2>
     <div class="reg">
       <div class="cat">VT Governance · 4</div>
       <div class="r"><div class="t">VT — Healthy Range</div><div class="d">Target 52%. Soft drift outside the healthy band → redirect contributions. Hard drift &lt;42% or &gt;62% → rebalance review.</div></div>
@@ -516,13 +548,14 @@
       <div class="r"><div class="t">SMH — AI Infrastructure Tilt Identity Rule</div><div class="d">A targeted tilt, not the foundation. Semiconductor concentration must never become the dominant portfolio risk.</div></div>
 
       <div class="cat">VWO Governance · 3</div>
-      <div class="r"><div class="t">VWO — Geographic Diversifier Identity / Thesis</div><div class="d">Emerging-markets diversifier reducing US-only dependency. Held for non-correlated geographic exposure, not as a growth engine.</div></div>
+      <div class="r"><div class="t">VWO — Identity &amp; Thesis</div><div class="d"><strong>Geographic diversifier.</strong> Holds long-run exposure to the demographic and productivity-convergence story across emerging markets (principally EM Asia — China, India, Taiwan, South Korea). Not a tactical trade on any single country or commodity cycle; reduces structural US-and-Europe dependency. <strong>Broken-thesis:</strong> breaks if EM equity structurally de-couples from global growth for 5+ years <em>and</em> the convergence thesis is falsified by sustained productivity stagnation across EM Asia broadly. Capital controls in a single major EM economy do not break it.</div></div>
       <div class="r"><div class="t">VWO — Healthy Range</div><div class="d">Target 8%. Healthy 5–11%. Hard drift &lt;3% or &gt;13%.</div></div>
       <div class="r"><div class="t">VWO Response Rules</div><div class="d">Underweight → resume modest accumulation toward target. Overweight → pause accumulation, redirect to underweights. Never trimmed for being down.</div></div>
 
-      <div class="cat">BTC Governance · 2</div>
-      <div class="r"><div class="t">BTC — Healthy Range</div><div class="d">Target 7%. Healthy 6–8%. Hard drift &gt;8% (cycle-aware) → trim toward target. Underweight → accumulate on weakness.</div></div>
-      <div class="r"><div class="t">BTC — Optionality Overlay Identity Rule</div><div class="d">Asymmetric optionality — meaningful but psychologically unimportant. Never the largest or second-largest holding.</div></div>
+      <div class="cat">Bitcoin Governance (BTC + IBIT) · 3</div>
+      <div class="r"><div class="t">Bitcoin Sleeve — Healthy Range</div><div class="d">Combined BTC + IBIT target 7%. Healthy 6–8%. Hard drift &gt;8% (cycle-aware) → trim the sleeve toward target. Underweight → accumulate on weakness. All Bitcoin rules apply to the <strong>combined</strong> sleeve, never to either ticker alone.</div></div>
+      <div class="r"><div class="t">Bitcoin — Optionality Overlay Identity Rule</div><div class="d">Asymmetric optionality — meaningful but psychologically unimportant. The Bitcoin sleeve is never the largest or second-largest holding.</div></div>
+      <div class="r"><div class="t">BTC → IBIT Transition Rule <span class="star">NEW · v6.4</span></div><div class="d">IBIT (iShares Bitcoin Trust) is the more tax-effective vehicle for the same exposure. BTC is moved into IBIT <strong>like-for-like</strong>: as it proceeds, the BTC target steps down and the IBIT target steps up by the same amount, keeping the sleeve at 7% / 8%. A like-for-like switch is a vehicle change at equivalent exposure — <strong>not</strong> a sale for a loss, and not governed by A3 broken-thesis criteria.</div></div>
 
       <div class="cat">Overlap &amp; Concentration (§4) · 11</div>
       <div class="r"><div class="t">Semiconductor Dependency</div><div class="d">Cap 16% / 20%. Elevated 16–20% → pause SMH; excessive &gt;20% → halt SMH, redirect to VT.</div></div>
@@ -542,8 +575,8 @@
       <div class="r"><div class="t">Review &amp; Rebalance Cadence</div><div class="d">Monthly glance · quarterly strategic review · annual formal rebalance (January) · emergency on &gt;25% fall or hard-cap breach.</div></div>
 
       <div class="cat">Behavioural Guards · 5</div>
-      <div class="r"><div class="t">Market Timing Ban</div><div class="d">No tactical shifts on headlines, elections, macro predictions, or short-term underperformance. Permanently prohibited.</div></div>
-      <div class="r"><div class="t">Panic Selling Prohibition</div><div class="d">No sells in a drawdown without a 48-hour cooling-off and a rule-based justification. &gt;25% falls increase contributions, not exits.</div></div>
+      <div class="r"><div class="t">Market Timing Ban</div><div class="d">No tactical shifts on headlines, elections, macro predictions, or short-term underperformance. Permanently prohibited. <em>Why it works: every policy shock of the last five years reversed within ~eight weeks, recoveries averaging +22%. Selling the shock means missing the recovery.</em></div></div>
+      <div class="r"><div class="t">Panic Selling Prohibition</div><div class="d">No sells in a drawdown without a 48-hour cooling-off and a rule-based justification. &gt;25% falls increase contributions, not exits. <em>Why it works: the 2022 rate cycle dropped everything 25–40%; those who held and kept buying are up over 100% today. Those who sold are not.</em></div></div>
       <div class="r"><div class="t">Redesign Moratorium</div><div class="d">No structural change within 90 days of the last; no redesign more than once every 3 years without a structural reason.</div></div>
       <div class="r"><div class="t">Approved Reasons for Strategy Changes</div><div class="d">Allowed: life / horizon / liquidity / risk-tolerance changes, or a sustained base-salary / primary-income change &gt;15% held for 12+ consecutive months (excludes one-off bonuses, FX fluctuation, temporary secondment pay). Not allowed: headlines, elections, boredom, social media, optimisation addiction.</div></div>
       <div class="r"><div class="t">Market Crash Protocol</div><div class="d">&gt;10% normal · &gt;15% reinforce thesis · &gt;25% check monthly only · &gt;40% do not open &gt;monthly, do not sell.</div></div>
@@ -556,11 +589,14 @@
     </div>
   </section>
 
-  <!-- 12 — MARKET OVERLAY -->
+  <!-- 12 — MARKET OVERLAY & RISK REGISTER -->
   <section id="s12">
-    <h2 class="sec"><span class="s">12</span>Market Overlay <span class="note" style="font-size:14px">— verified 24 Jun 2026</span></h2>
+    <h2 class="sec"><span class="s">12</span>Market Overlay &amp; Risk Register <span class="note" style="font-size:14px">— verified 24 Jun 2026</span></h2>
     <p>Only verified figures (no invented numbers); anything unconfirmed is marked <code>UNVERIFIED</code> in-code.
-      Live values are now pulled from Finnhub (§14) with this as the fallback.</p>
+      Live values are pulled from Finnhub (§14) with this as the fallback. Probabilities are judgment calls; the facts
+      behind them are not.</p>
+
+    <h3>Verified market data</h3>
     <table>
       <thead><tr><th>Input</th><th>Verified state</th></tr></thead>
       <tbody>
@@ -569,6 +605,18 @@
         <tr><td class="tk">Strait of Hormuz / Iran</td><td><strong>Volatile &amp; contested:</strong> a 17 Jun reopening deal collapsed; Iran re-closed the strait 20 Jun; Geneva talks postponed 19 Jun. Brent ~$77–80. Two-sided, fluid.</td></tr>
         <tr><td class="tk">Fed</td><td>Held 3.50–3.75% for a 4th consecutive meeting (17 Jun); chair Warsh; dropped easing language, nodded to possible hikes → on-hold, hawkish.</td></tr>
         <tr><td class="tk">US–China tariff truce</td><td>Expires 10 Nov 2026 (Busan deal); renegotiated annually.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Live risk register</h3>
+    <table>
+      <thead><tr><th>Risk</th><th class="num">Prob.</th><th>Level</th><th>Mandated response</th></tr></thead>
+      <tbody>
+        <tr><td><strong class="c-red">SMH correction</strong><br><span class="c-muted" style="font-size:12px">At 52-week high after a large run; overbought signals active.</span></td><td class="num c-red">~72%</td><td><span class="tag bear">HIGH</span></td><td>Do not add. Alert ladder $590 · $550 · $510; deploy in tranches when alerts fire.</td></tr>
+        <tr><td><strong class="c-amber">Iran / Hormuz (two-sided)</strong><br><span class="c-muted" style="font-size:12px">Deal collapsed 20 Jun; strait re-closed; Brent ~$77–80; fluid.</span></td><td class="num c-amber">~40%</td><td><span class="tag" style="color:var(--amber);background:#1c1707">HIGH</span></td><td>Hold equities either way. SGOV is the protection on a breakdown. Act only if Brent sustains above $90 (reduce SMH).</td></tr>
+        <tr><td><strong class="c-amber">US–China tariff expiry</strong><br><span class="c-muted" style="font-size:12px">Truce expires 10 Nov 2026; last breakdown took SMH −17% in two weeks.</span></td><td class="num c-amber">~35%</td><td><span class="tag" style="color:var(--amber);background:#1c1707">MEDIUM</span></td><td>Monitor from September. If shaky by October, trim SMH 5–8 shares. On breakdown, wait two weeks then deploy per A1.</td></tr>
+        <tr><td><strong class="c-blue">Fed rate-hike risk</strong><br><span class="c-muted" style="font-size:12px">On hold; dot plot split; Warsh hawkish. A hike = 2022 playbook for growth.</span></td><td class="num c-blue">~30%</td><td><span class="tag norm">MEDIUM</span></td><td>SGOV holds value if rates rise. Watch CPI/PCE; above 3.5% re-acceleration, trim QQQM as insurance.</td></tr>
+        <tr><td><strong class="c-muted">Taiwan tail risk</strong><br><span class="c-muted" style="font-size:12px">TSMC ~10% of SMH; a conflict would be structural — SMH −30 to −50%.</span></td><td class="num c-muted">~8%</td><td><span class="tag norm">LOW</span></td><td>Cannot fully hedge without options. Best protection is the 12% SMH cap — do not let it drift higher.</td></tr>
       </tbody>
     </table>
   </section>
@@ -584,7 +632,11 @@
       <div class="hd"><span class="ix">A</span> Shock response (decided before the shock)</div>
       <div class="rule"><span class="rid">A1</span><span class="t">Policy shock.</span><div class="d">On a &gt;~10% drop from a discrete event (tariff, geopolitics, regulation): take <strong>no action for 14 calendar days</strong>, then deploy the buffer into the most beaten-down quality holding in tranches. Sell nothing.</div></div>
       <div class="rule"><span class="rid">A2</span><span class="t">Macro shock.</span><div class="d">On a sustained decline (rate cycle, recession, de-rating): hold everything, continue scheduled contributions unchanged, do not redesign. The 2022 rule.</div></div>
-      <div class="rule"><span class="rid">A3</span><span class="t">A loss is never a sell trigger.</span><div class="d">Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: "Would I buy this at today's price?" If yes, do not sell. <strong>Broken-thesis criteria are defined per conviction asset in §6.</strong></div></div>
+      <div class="rule"><span class="rid">A3</span><span class="t">A loss is never a sell trigger.</span><div class="d">Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: "Would I buy this at today's price?" If yes, do not sell.<br><br>
+        <strong>Broken-thesis criteria (per conviction asset):</strong><br><br>
+        <strong>QQQM:</strong> breaks if US mega-cap tech structurally loses pricing power for 3+ consecutive years <em>and</em> a credible non-US digital-economy alternative emerges at equivalent scale. Valuation de-rating, a rate cycle, or a single bad earnings year do not break it.<br><br>
+        <strong>SMH:</strong> breaks if semiconductor capex growth reverses for 3+ consecutive quarters <em>and</em> AI-compute demand enters a sustained <em>structural</em> decline — not a cyclical inventory correction. Cyclical downturns within a secular upcycle do not break it.<br><br>
+        <strong>BTC / IBIT (Bitcoin sleeve):</strong> breaks if (a) a critical protocol-layer vulnerability is confirmed unresolved, or (b) sovereign adoption reverses across 3+ major economies simultaneously with no recovery path, or (c) a technically superior monetary-layer replacement achieves a dominant network effect. Single-jurisdiction regulatory pressure, price drawdown alone, or short-cycle sentiment do not break it.</div></div>
       <div class="rule"><span class="rid">A4</span><span class="t">Never crystallise a loss to fund something else.</span><div class="d">Buffers, new positions and rebalances are funded from new contributions — never by selling an underwater position.</div></div>
     </div>
 
@@ -651,51 +703,55 @@
 
   <!-- APPENDIX B — HORIZON TRANSITION -->
   <section id="sB">
-    <h2 class="sec"><span class="s">B</span>Appendix — Horizon Transition Framework <span class="star" style="margin-left:6px">NEW · PROVISIONAL</span></h2>
-    <p>How the accumulation portfolio becomes a drawdown portfolio approaching 2045. <strong>Everything in this
-      appendix is provisional</strong> and is finalised only at the mandatory 2040 review.</p>
+    <h2 class="sec"><span class="s">B</span>Appendix — Horizon Transition Framework <span class="star" style="margin-left:6px">NEW · v6.2</span></h2>
+    <p>Atlas Core is an accumulation system. At <strong>T-minus 5 years (2040)</strong> a mandatory transition review
+      is triggered — not before. The review converts the framework from a contribution-maximising, volatility-tolerant
+      accumulation structure into a sequenced drawdown plan. The accumulation rules (DCA, conviction holds, crash
+      protocol) remain in force until that review is complete and a Distribution Governance Document is ratified.</p>
 
-    <h3>T-5 (2040) — mandatory review trigger</h3>
-    <p>A full strategic review is <strong>mandatory in 2040</strong> (five years out). Until then the accumulation
-      rules stand unchanged. The 2040 review fixes the final liquidation order and glide path; the schedule below
-      is the working default.</p>
+    <h3>T-5 review trigger (2040)</h3>
+    <div class="callout law"><strong>In January 2040</strong>, schedule a structured review with this mandatory agenda:
+      (1) recalculate the retirement income requirement in SGD real terms; (2) assess portfolio value vs the 2045
+      target; (3) define a target asset allocation for the distribution phase; (4) draft a liquidation sequence and
+      timeline; (5) decide annuity vs drawdown vs hybrid given tax and jurisdiction at that time.
+      <strong>Output: a ratified Distribution Governance Document replacing this appendix.</strong></div>
 
-    <h3>Provisional liquidation sequence</h3>
-    <p>When drawdown begins, positions are realised in this order — buffer and least-core first, the diversified
-      anchor last:</p>
+    <h3>Provisional liquidation sequence <span class="note" style="font-weight:400">— subject to the 2040 review</span></h3>
+    <p>If the 2040 review is not yet complete and a partial drawdown becomes unavoidable before 2045, the provisional
+      sequence is:</p>
     <table>
       <thead><tr><th class="num">Order</th><th>Asset</th><th>Rationale</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td class="tk">SGOV</td><td>The cash buffer — zero-growth, built to be spent. Funds early income without touching equities.</td></tr>
-        <tr><td class="num">2</td><td class="tk">BTC</td><td>Highest volatility, pure optionality, no income. Realise before it can swing against the drawdown.</td></tr>
-        <tr><td class="num">3</td><td class="tk">SMH</td><td>Concentrated semis tilt — high-volatility satellite. Reduce single-sector risk early.</td></tr>
-        <tr><td class="num">4</td><td class="tk">VWO</td><td>Satellite diversifier — smaller long-term role than the core.</td></tr>
-        <tr><td class="num">5</td><td class="tk">QQQM</td><td>Growth engine — kept longer to compound; drawn before the anchor.</td></tr>
-        <tr><td class="num">6</td><td class="tk">VT</td><td>The diversified global anchor — lowest volatility; liquidated last for late-stage stability.</td></tr>
+        <tr><td class="num c-green">1st</td><td class="tk">SGOV</td><td>Shock buffer — the only position designed to be spent. No equity-correlation loss by liquidating early.</td></tr>
+        <tr><td class="num c-amber">2nd</td><td class="tk">BTC</td><td>Highest volatility, smallest dependency on the remaining horizon. Optionality value diminishes near distribution.</td></tr>
+        <tr><td class="num c-amber">3rd</td><td class="tk">SMH</td><td>Concentrated tilt — largest idiosyncratic and cycle-sensitive risk. Reduce before broad equity.</td></tr>
+        <tr><td class="num" style="color:#fb923c">4th</td><td class="tk">VWO</td><td>Geographic diversifier — reduce EM exposure as the horizon shortens and currency/liquidity risk becomes material.</td></tr>
+        <tr><td class="num c-red">5th</td><td class="tk">QQQM</td><td>Growth engine — liquidate late; most of the long-run return profile lives here.</td></tr>
+        <tr><td class="num c-red">Last</td><td class="tk">VT</td><td>Core anchor — held longest; its diversification and stability are most valuable during the distribution phase itself.</td></tr>
       </tbody>
     </table>
+    <div class="callout warn"><strong>This sequence is provisional.</strong> It is a pre-decided default to prevent
+      panic-order decisions under time pressure — not a finalised distribution plan. The 2040 review supersedes it
+      entirely. Do not begin executing it before that review unless an extraordinary documented circumstance applies.</div>
 
-    <h3>Indicative 2040–2045 glide path</h3>
-    <p>A de-risking schedule that lifts the defensive / income-oriented sleeve (SGOV + short-duration) toward ~40%
-      by 2045. Indicative only — the 2040 review sets the real numbers.</p>
+    <h3>Glide path — de-risking schedule (T-5 → T-0)</h3>
     <table>
-      <thead><tr><th class="num">Year</th><th class="num">Defensive sleeve</th><th>Action</th></tr></thead>
+      <thead><tr><th class="num">Year</th><th class="num">Indicative equity ceiling</th><th>Action</th></tr></thead>
       <tbody>
-        <tr><td class="num">2040 (T-5)</td><td class="num">~15%</td><td>Mandatory review. Begin lifting SGOV / short-duration above the buffer floor.</td></tr>
-        <tr><td class="num">2041</td><td class="num">~20%</td><td>Route new contributions primarily to the defensive sleeve.</td></tr>
-        <tr><td class="num">2042</td><td class="num">~25%</td><td>Begin trimming BTC, then SMH, into the sleeve per the sequence above.</td></tr>
-        <tr><td class="num">2043</td><td class="num">~30%</td><td>Continue de-risking satellites; preserve the VT / QQQM core.</td></tr>
-        <tr><td class="num">2044</td><td class="num">~35%</td><td>Shift toward income; hold ~2 years of spending in SGOV.</td></tr>
-        <tr><td class="num">2045 (T-0)</td><td class="num">~40%</td><td>Drawdown begins. The income sleeve funds spending; equities compound the remainder.</td></tr>
+        <tr><td class="num">2040</td><td class="num">90%</td><td>Complete the transition review. Ratify the Distribution Governance Document. No allocation change yet.</td></tr>
+        <tr><td class="num">2041</td><td class="num">85%</td><td>Begin gradual BTC reduction toward a 4% target. Rebuild SGOV to ~15%.</td></tr>
+        <tr><td class="num">2042</td><td class="num">80%</td><td>Begin SMH reduction toward 6%. Increase VT weight as the stable core grows.</td></tr>
+        <tr><td class="num">2043</td><td class="num">75%</td><td>Further de-risk: QQQM toward 18%, VWO toward 5%; SGOV + bonds/cash toward 20%.</td></tr>
+        <tr><td class="num">2044</td><td class="num">70%</td><td>Final accumulation year. Transition contributions from growth to income / preservation.</td></tr>
+        <tr><td class="num">2045</td><td class="num">per 2040 review</td><td>Distribution phase begins. Governance transfers to the Distribution Document.</td></tr>
       </tbody>
     </table>
-    <div class="callout warn"><strong>Provisional.</strong> This framework is a working default, not a commitment.
-      It is reviewed and finalised at the 2040 (T-5) mandatory review and may change with tax, health, longevity,
-      and market conditions at that time.</div>
+    <p class="note">All figures are indicative defaults only. The 2040 review sets the actual targets based on
+      balance, income need, market conditions, and jurisdiction at that time.</p>
   </section>
 
   <footer>
-    Atlas Core — Governance Document v6.1 (rev. 2) · Generated June 2026 ·
+    Atlas Core — Governance Document v6.4 · Generated June 2026 ·
     Reflects the rules encoded in <code>lib/constants.ts</code>, <code>lib/next-best-move.ts</code>,
     <code>lib/action-plan.ts</code>, <code>lib/finnhub.ts</code>, <code>lib/health.ts</code>, the Governance
     page, and the seeded rule register (<code>prisma/seed.ts</code>). When the code and this document disagree,

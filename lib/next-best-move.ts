@@ -81,6 +81,8 @@ export const MARKET_STATE = {
     // BTC is a HELD CONVICTION asset, not an exit candidate. Underweight vs its 7% target →
     // accumulate on weakness toward target under its 8% cap. (price UNVERIFIED; no 52w market overlay.)
     BTC:  { price: 28.44,  lo52: 0,      hi52: 0,      histVolPct: 0,    condition: "accumulate" as const,  dipEntry1: 0,   dipEntry2: 0,   dipEntry3: 0 },
+    // IBIT — tax-effective Bitcoin vehicle; BTC transitions here like-for-like. Same sleeve.
+    IBIT: { price: 0,      lo52: 0,      hi52: 0,      histVolPct: 0,    condition: "accumulate" as const,  dipEntry1: 0,   dipEntry2: 0,   dipEntry3: 0 },
   } as Record<string, {
     price: number; lo52: number; hi52: number; histVolPct: number
     condition: "overbought" | "extended" | "accumulate" | "decide"
@@ -107,7 +109,12 @@ export const RULES = {
 // Held conviction assets. These may run above target (under their hard cap) and are
 // NEVER sold to fund anything; an underweight conviction asset is accumulated on
 // weakness toward target. Selling one requires a broken thesis — never a paper loss.
-export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC"] as const
+export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC", "IBIT"] as const
+
+// The Bitcoin sleeve. BTC and IBIT are the SAME economic exposure (Bitcoin); IBIT is
+// the more tax-effective vehicle and BTC is being transitioned into it like-for-like.
+// They are governed as ONE sleeve: combined target 7%, combined cycle-aware cap (§4.1).
+export const BITCOIN_TICKERS = ["BTC", "IBIT"] as const
 
 // ─── LIVE MARKET OVERLAY (Finnhub, §F1) ──────────────────────────────────────
 // A live overlay can replace the hardcoded price / 52-week levels / volatility used
@@ -400,21 +407,25 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
         color: "#ef4444",
       }
     }
-    // BTC floating hard cap (§4.1) — cap flexes with the halving cycle phase.
-    const btc = positions.find((p) => p.ticker === "BTC")
-    if (btc && btc.actualPct > btcCap) {
+    // Bitcoin sleeve floating hard cap (§4.1) — BTC + IBIT COMBINED flex with the cycle phase.
+    const bitcoinPositions = positions.filter((p) => (BITCOIN_TICKERS as readonly string[]).includes(p.ticker))
+    const bitcoinPct = bitcoinPositions.reduce((s, p) => s + p.actualPct, 0)
+    if (bitcoinPositions.length > 0 && bitcoinPct > btcCap) {
+      // Trim the larger of the two Bitcoin holdings to bring the sleeve back to target.
+      const trim = [...bitcoinPositions].sort((a, b) => b.actualPct - a.actualPct)[0]
+      const sleeveLabel = bitcoinPositions.length > 1 ? "the Bitcoin sleeve (BTC + IBIT)" : trim.ticker
       return {
-        severity: "critical", ticker: "BTC",
-        action: `Trim BTC back to target`,
-        what: `Sell enough BTC to bring it from ${btc.actualPct.toFixed(1)}% back toward its ${btc.targetPct}% target.`,
-        why: `BTC is over its ${btcCap}% cycle-aware hard cap (${getBtcModifier(undefined, opts.btcCyclePhase).label} phase, §4.1). Concentration this high is the rule the system protects first.`,
+        severity: "critical", ticker: trim.ticker,
+        action: `Trim Bitcoin back to target`,
+        what: `${sleeveLabel} is at ${bitcoinPct.toFixed(1)}%, over its ${btcCap}% cap. Trim ${trim.ticker} to bring the sleeve back toward 7%.`,
+        why: `Bitcoin is over its ${btcCap}% cycle-aware hard cap (${getBtcModifier(undefined, opts.btcCyclePhase).label} phase, §4.1). The cap applies to BTC and IBIT combined — it is the concentration the system protects first.`,
         when: "At your next dealing window (respecting the 90-day hold).",
-        color: btc.color,
+        color: trim.color,
       }
     }
-    // Any other position over its hard cap (BTC handled above by the floating cap)
+    // Any other position over its hard cap (the Bitcoin sleeve is handled above by the floating cap)
     for (const p of positions) {
-      if (p.ticker === "BTC") continue
+      if ((BITCOIN_TICKERS as readonly string[]).includes(p.ticker)) continue
       if (p.hardCapPct !== null && p.actualPct > p.hardCapPct) {
         return {
           severity: "critical", ticker: p.ticker,

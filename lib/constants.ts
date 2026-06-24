@@ -20,12 +20,16 @@
  */
 
 // Target weights (whole-number percent of NAV)
+// Bitcoin sleeve = BTC + IBIT combined = 7% (see §4.1). BTC is being transitioned into
+// IBIT (the more tax-effective vehicle) like-for-like: as the transition proceeds the BTC
+// target steps down and IBIT steps up by the same amount, keeping the sleeve at 7%.
 export const TICKER_TARGETS: Record<string, number> = {
   VT:   52,
   QQQM: 23,
   SMH:  10,
   VWO:  8,
-  BTC:  7,
+  BTC:  7,   // legacy Bitcoin vehicle — transitioning out
+  IBIT: 0,   // target Bitcoin vehicle — rises as BTC falls; sleeve total stays 7%
 }
 
 // v6.1 hard drift thresholds (Section 3.1) — whole-number percent
@@ -39,7 +43,10 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
   QQQM: { low: 15, high: 31 },
   SMH:  { low: 5,  high: 12 },
   VWO:  { low: 3,  high: 13 },
+  // Bitcoin sleeve (BTC + IBIT) — no lower hard trigger; hard cap 8% applies to the
+  // COMBINED sleeve (the engine sums BTC + IBIT). Per-ticker values mirror the sleeve cap.
   BTC:  { high: 8 }, // base = Normal phase; see BTC cycle modifier (§4.1)
+  IBIT: { high: 8 }, // tax-effective Bitcoin vehicle — same sleeve as BTC
 }
 
 // ─── §4.1 — BTC HALVING CYCLE MODIFIER ───────────────────────────────────────
@@ -177,7 +184,7 @@ export const SGOV_YIELD = {
   lastVerified:  '2026-06',
 } as const
 
-export const GOVERNANCE_VERSION = '6.1' as const
+export const GOVERNANCE_VERSION = '6.4' as const
 export const GOVERNANCE_UPDATED = '2026-06' as const
 
 // ─── LEGACY (v6.0) — retained; no external importer, kept for reference ───────

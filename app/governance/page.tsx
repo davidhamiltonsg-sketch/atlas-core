@@ -150,7 +150,20 @@ export default async function Governance() {
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.1" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.4" userName={session.name} isAdmin={session.role === "admin"}>
+
+      {/* Full governance document */}
+      <a href="/atlas-core-governance.html" target="_blank" rel="noopener noreferrer"
+        className="rounded-xl border border-indigo-500/40 bg-gradient-to-r from-indigo-500/[0.08] to-violet-500/[0.06] p-4 mb-4 flex items-center gap-3 hover:from-indigo-500/[0.12] transition-colors group">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
+          <span className="text-sm">📄</span>
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-bold text-indigo-400">Full Governance Document (v6.4)</p>
+          <p className="text-xs text-muted-foreground">The complete constitution — all caps, bands, the 38-rule register, pre-commitments, market &amp; risk register, and the horizon transition framework.</p>
+        </div>
+        <span className="text-xs font-semibold text-indigo-400 group-hover:text-indigo-300 shrink-0">Open ↗</span>
+      </a>
 
       {/* Command Centre callout */}
       <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.05] p-4 mb-6 flex items-start gap-3">
@@ -158,9 +171,9 @@ export default async function Governance() {
           <span className="text-sm">⚡</span>
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.1 — A loss is not a sell signal</p>
+          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.4 — Bitcoin sleeve (BTC → IBIT), live data &amp; pre-commitments</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Conviction holdings (incl. BTC) are accumulated on weakness toward target and sold only on a broken thesis — never because of an unrealised loss. The SGOV shock buffer is built from new contributions, never by liquidating a position. Contributions still adapt to conditions: the engine skips positions at 52-week highs, deploys into confirmed dips in three tranches, and never feeds an overweight position. Every screen ends in one clear instruction — what to do, why, and when.
+            Conviction holdings are accumulated on weakness toward target and sold only on a broken thesis — never because of an unrealised loss. BTC and IBIT are governed as one Bitcoin sleeve (combined 7% target / 8% cycle cap), with BTC transitioning into the tax-effective IBIT like-for-like. The SGOV shock buffer is built from new contributions, never by liquidating a position. Every screen ends in one clear instruction — what to do, why, and when.
           </p>
           <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
             Go to Command Centre →
