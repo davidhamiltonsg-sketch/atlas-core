@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexActivity } from "@/lib/ibkr-flex"
+import { syncHoldingFromTrades, getUsdSgdRate } from "@/lib/holdings-sync"
 import { db } from "@/lib/db"
 
 export const maxDuration = 30
@@ -111,6 +113,7 @@ export async function PUT(req: Request) {
 
   let tradesImported = 0
   let dividendsImported = 0
+  const affectedTickers = new Set<string>()
 
   // Import executions
   for (const e of body.executions ?? []) {
@@ -120,6 +123,7 @@ export async function PUT(req: Request) {
     })
     if (exists) continue
 
+    affectedTickers.add(e.symbol.toUpperCase())
     const amountSgd = e.quantity * e.price * e.fxRate
     const trade = await db.trade.create({
       data: {
@@ -180,6 +184,16 @@ export async function PUT(req: Request) {
       },
     })
     dividendsImported++
+  }
+
+  // Apply imported executions to holdings so units/value flow through the app (creates new
+  // tickers like IBIT, updates units for sells/buys) — every page stays in sync.
+  if (affectedTickers.size > 0) {
+    const fx = await getUsdSgdRate()
+    for (const t of affectedTickers) await syncHoldingFromTrades(session.userId, t, fx)
+    for (const p of ["/", "/trades", "/contributions", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
+      revalidatePath(p)
+    }
   }
 
   return NextResponse.json({ tradesImported, dividendsImported })

@@ -91,10 +91,11 @@ async function getYtdData(userId: string) {
 
     const snapsBefore = h.snapshots.filter(s => s.date < ytdStart)
     const ytdStartSnap = snapsBefore[snapsBefore.length - 1]
-    const snapsInYear  = h.snapshots.filter(s => s.date >= ytdStart)
-    const firstYtdSnap = snapsInYear[0]
-
-    const startValue   = ytdStartSnap?.value ?? firstYtdSnap?.value ?? 0
+    // Beginning-of-year market value: ONLY a true pre-Jan-1 snapshot counts. If there is
+    // none, the position was (effectively) deployed this year → BMV = 0. Do NOT fall back to
+    // the first in-year snapshot: it's recorded after buys, which would double-count this
+    // year's purchases and fabricate a huge phantom loss.
+    const startValue   = ytdStartSnap?.value ?? 0
     const currentValue = latestSnap?.value ?? 0
     const units        = latestSnap?.units ?? 0
     const currentPrice = latestSnap?.price ?? 0
@@ -163,9 +164,7 @@ async function getYtdData(userId: string) {
   const totalStartValue = holdings.reduce((s, h) => {
     const snapsBefore = h.snapshots.filter(snap => snap.date < ytdStart)
     const ytdStartSnap = snapsBefore[snapsBefore.length - 1]
-    const snapsInYear  = h.snapshots.filter(snap => snap.date >= ytdStart)
-    const firstYtdSnap = snapsInYear[0]
-    return s + (ytdStartSnap?.value ?? firstYtdSnap?.value ?? 0)
+    return s + (ytdStartSnap?.value ?? 0)
   }, 0)
 
   const totalYtdBuysSgd  = ytdBuys.reduce((s, t) => s + t.amount, 0)

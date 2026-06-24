@@ -3,20 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
+import { getUsdSgdRate, syncHoldingFromTrades } from "@/lib/holdings-sync"
 
-async function getUsdSgdRate(): Promise<number> {
-  try {
-    const res = await fetch(
-      "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d",
-      { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
-    )
-    if (res.ok) {
-      const d = await res.json()
-      const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-      if (rate && rate > 0) return rate
-    }
-  } catch {}
-  return 1.35
+function revalidateAll() {
+  for (const p of ["/", "/trades", "/contributions", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings", "/rebalance"]) {
+    revalidatePath(p)
+  }
 }
 
 export async function addTradeAction(formData: FormData) {
@@ -64,9 +56,10 @@ export async function addTradeAction(formData: FormData) {
     })
   }
 
-  revalidatePath("/trades")
-  revalidatePath("/contributions")
-  revalidatePath("/ytd")
+  // Apply the trade to the holding so units/value flow through the entire app.
+  await syncHoldingFromTrades(session.userId, ticker, fxRate)
+
+  revalidateAll()
   return { success: true }
 }
 
@@ -86,8 +79,11 @@ export async function deleteTradeAction(id: string) {
   })
 
   await db.trade.delete({ where: { id } })
-  revalidatePath("/trades")
-  revalidatePath("/contributions")
-  revalidatePath("/ytd")
+
+  // Re-derive the holding's units from the remaining trades so a deletion stays consistent.
+  const fxRate = await getUsdSgdRate()
+  await syncHoldingFromTrades(session.userId, trade.ticker, fxRate)
+
+  revalidateAll()
   return { success: true }
 }
