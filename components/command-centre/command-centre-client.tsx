@@ -474,7 +474,31 @@ export function CommandCentreClient({ positions, totalValue, nextBestMove }: Pro
 
           {enriched.map((pos) => {
             const md = pos.market
-            if (!md) return null
+            // New / un-curated tickers (e.g. IBIT) — show a basic held-position card so they
+            // still appear here. No editorial signal yet; they're governed via the Rule Check.
+            if (!md) {
+              return (
+                <div key={pos.ticker} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: pos.color }} />
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm">{pos.ticker}</span>
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">HELD</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{pos.name}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-black">${pos.latestPrice.toFixed(2)}</p>
+                      <p className="text-[11px] text-muted-foreground">{pos.weightPct.toFixed(1)}% of portfolio</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-2 italic">Tracked holding — no scanner notes yet. It still follows your rules (see Rule Check on the dashboard).</p>
+                </div>
+              )
+            }
             const isOpen = openScan === pos.ticker
             const signalStyle = SIGNAL_STYLES[md.signal]
 

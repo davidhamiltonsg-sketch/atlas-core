@@ -135,19 +135,42 @@ async function getLiveAllocations(userId: string) {
   })
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const allocMap: Record<string, number> = {}
-  for (const h of holdings) {
+  const liveHoldings = holdings.map((h) => {
     const value = h.snapshots[0]?.value ?? 0
-    allocMap[h.ticker] = totalValue > 0 ? (value / totalValue) * 100 : 0
-  }
-  return allocMap
+    const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
+    allocMap[h.ticker] = actualPct
+    return {
+      ticker: h.ticker, name: h.name, color: h.color,
+      targetPct: h.targetPct, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand,
+      actualPct, units: h.snapshots[0]?.units ?? 0,
+    }
+  })
+  return { allocMap, liveHoldings }
 }
 
 export default async function Governance() {
   const session = await getSession()
   if (!session) redirect("/login")
-  const [grouped, allocMap] = await Promise.all([getRules(), getLiveAllocations(session.userId)])
+  const [grouped, { allocMap, liveHoldings }] = await Promise.all([getRules(), getLiveAllocations(session.userId)])
   const totalRules = Object.values(grouped).flat().length
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length
+
+  // Show a gauge for every holding: the curated core rows + any extra ticker you hold
+  // (e.g. IBIT) with bands synthesised from its own target / cap, so new tickers populate here.
+  const coreTickers = new Set(thresholds.map((t) => t.ticker))
+  const extraGauges = liveHoldings
+    .filter((h) => !coreTickers.has(h.ticker) && (h.actualPct > 0 || h.units > 0 || h.targetPct > 0))
+    .map((h) => {
+      const band = h.toleranceBand || 2.5
+      const hardHigh = h.hardCapPct ?? (h.targetPct > 0 ? Math.round(h.targetPct * 1.5) : Math.max(Math.ceil(h.actualPct * 1.3), 5))
+      return {
+        ticker: h.ticker, target: h.targetPct, classification: h.name,
+        healthyLow: Math.max(0, h.targetPct - band), healthyHigh: h.targetPct + band,
+        softLow: Math.max(0, h.targetPct - band), softHigh: h.targetPct + band,
+        hardHigh, hardLow: 0, color: h.color,
+      }
+    })
+  const gaugeRows = [...thresholds, ...extraGauges]
 
   return (
     <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.4" userName={session.name} isAdmin={session.role === "admin"}>
@@ -218,7 +241,7 @@ export default async function Governance() {
           </p>
         </div>
         <div className="divide-y divide-border">
-          {thresholds.map((t) => {
+          {gaugeRows.map((t) => {
             const actual = allocMap[t.ticker] ?? 0
             const isHard = actual > t.hardHigh || (t.hardLow > 0 && actual < t.hardLow)
             const isSoft = !isHard && (actual > t.healthyHigh || (t.healthyLow > 0 && actual < t.healthyLow))
