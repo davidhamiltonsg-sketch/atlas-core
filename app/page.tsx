@@ -17,6 +17,9 @@ import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { ActionPlan } from "@/components/dashboard/action-plan"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
 import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
+import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
+import { evaluateGovernance } from "@/lib/governance-status"
+import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -134,7 +137,11 @@ async function getDashboardData(userId: string) {
       instruction = `${h.ticker} is right on track at ${actualPct.toFixed(1)}% (target: ${h.targetPct}%). Keep investing your normal amount each month.`
     }
 
-    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice: h.snapshots[0]?.price ?? 0 }
+    // Stock performance — price move since the previous snapshot
+    const latestPrice = h.snapshots[0]?.price ?? 0
+    const prevPrice = h.snapshots[1]?.price ?? 0
+    const priceChangePct = prevPrice > 0 ? ((latestPrice - prevPrice) / prevPrice) * 100 : null
+    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct }
   })
 
   const hasAnyAlert = positions.some(p => p.status !== "healthy")
@@ -214,7 +221,18 @@ async function getDashboardData(userId: string) {
   // F1 — live market overlay (price/52w) replaces hardcoded figures in the engine.
   // Degrades gracefully to verified constants (marked stale) if Finnhub is unavailable.
   const [marketSnapshot, sgov] = await Promise.all([getLiveMarketPositions(), getSgovYield()])
-  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions })
+
+  // §4 — live look-through concentration (effective company/sector exposure across all funds)
+  const lookThrough = computeLookThrough(positions)
+  const ltBreach = worstLookThroughBreach(lookThrough)
+  const lookThroughBreach = ltBreach
+    ? {
+        label: ltBreach.label, pct: ltBreach.pct, hard: ltBreach.hard,
+        trimTicker: largestContributor(ltBreach.key, lookThrough.companies.includes(ltBreach) ? "company" : "sector", positions),
+      }
+    : undefined
+
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions, lookThroughBreach })
 
   // F2 — buffer status: SGOV as % of NAV vs the 8–10% band.
   const sgovPos = positions.find(p => ["SGOV", "AGG", "CASH"].includes(p.ticker))
@@ -225,19 +243,23 @@ async function getDashboardData(userId: string) {
   const bufferMonthsToBand = bufferNeeded > 0 && monthlyContribution > 0
     ? Math.ceil(bufferNeeded / monthlyContribution) : 0
 
+  // Governance alignment — are we inside our own rules right now?
+  const govAlignment = evaluateGovernance({ positions, bufferPct, lookThrough })
+
   return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf: marketSnapshot.asOf, marketStale: marketSnapshot.stale, marketNote: marketSnapshot.note,
     marketOverride: marketSnapshot.positions,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
-    sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale }
+    sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale,
+    govAlignment }
 }
 
 const sections = [
-  { title: "Portfolio Architecture", desc: "Holdings, target allocations, and hard caps.", href: "/portfolio" },
-  { title: "Governance Engine",      desc: "Rules, drift thresholds, and contribution routing logic.", href: "/governance" },
-  { title: "Behavioural System",     desc: "Maintain discipline. Log emotions. Resist over-optimisation.", href: "/behaviour" },
-  { title: "Reports",                desc: "Overlap and concentration engine — look-through exposure.", href: "/reports" },
-  { title: "Forecast Engine",        desc: "Compounding trajectories to the 2045 horizon.", href: "/forecast" },
+  { title: "Your Holdings",     desc: "Your funds, the target for each, and their limits.", href: "/portfolio" },
+  { title: "Your Rules",        desc: "The rules that keep you on track and where this month's money should go.", href: "/governance" },
+  { title: "Staying Calm",      desc: "Resist panic-selling and over-tweaking. Read this before any big move.", href: "/behaviour" },
+  { title: "What You Really Own", desc: "Look through your funds to the actual companies and sectors you hold.", href: "/reports" },
+  { title: "2045 Projection",   desc: "How your money could grow by your 2045 retirement target.", href: "/forecast" },
 ]
 
 export default async function Dashboard() {
@@ -251,7 +273,7 @@ export default async function Dashboard() {
     contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf, marketStale, marketOverride,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
-    sgovYieldPct, sgovSecYieldPct, sgovStale,
+    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
@@ -362,14 +384,14 @@ export default async function Dashboard() {
 
             <a href="/portfolio" className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Drift Alerts</span>
+                <span className="text-xs font-medium text-muted-foreground">Off Target</span>
                 <AlertTriangle className={`h-3.5 w-3.5 ${driftAlerts > 0 ? "text-amber-500" : "text-muted-foreground group-hover:text-primary transition-colors"}`} />
               </div>
               <p className={`text-2xl font-black tabular-nums ${driftAlerts > 0 ? (hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}>
                 {driftAlerts}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                {driftAlerts === 0 ? "All within tolerance" : `${driftAlerts} position${driftAlerts > 1 ? "s" : ""} outside band`}
+                {driftAlerts === 0 ? "All on target" : `${driftAlerts} holding${driftAlerts > 1 ? "s" : ""} off target`}
               </p>
             </a>
 
@@ -379,7 +401,7 @@ export default async function Dashboard() {
               onTrackPct >= 80 ? "border-yellow-400/30" : "border-red-500/30"
             }`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Goal Track</span>
+                <span className="text-xs font-medium text-muted-foreground">On Track</span>
                 <Activity className={`h-3.5 w-3.5 ${
                   onTrackPct === null ? "text-muted-foreground group-hover:text-primary transition-colors" :
                   onTrackPct >= 95 ? "text-green-500" :
@@ -393,9 +415,12 @@ export default async function Dashboard() {
               }`}>
                 {onTrackPct !== null ? `${onTrackPct.toFixed(0)}%` : "—"}
               </p>
-              <p className="text-[11px] text-muted-foreground">vs base-case 2045 pace</p>
+              <p className="text-[11px] text-muted-foreground">vs your plan for 2045</p>
             </a>
           </div>
+
+          {/* Rule check — alignment with governance rules, plain English */}
+          {hasBalance && govAlignment && <GovernanceAlignment data={govAlignment} />}
 
           {/* Holdings Summary Table */}
           <CollapsibleSection
@@ -445,7 +470,14 @@ export default async function Dashboard() {
                         <span className="text-xs font-bold">{p.ticker}</span>
                         <span className="text-xs text-muted-foreground ml-2 truncate hidden sm:inline">{p.name}</span>
                       </div>
-                      <span className="text-xs font-semibold hidden sm:block">{formatCurrency(p.value, "SGD")}</span>
+                      <div className="hidden sm:block" title={p.latestPrice ? `Last price $${p.latestPrice.toFixed(2)}` : undefined}>
+                        <span className="text-xs font-semibold">{formatCurrency(p.value, "SGD")}</span>
+                        {hasBalance && p.priceChangePct !== null && (
+                          <span className={`block text-[10px] tabular-nums ${p.priceChangePct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                            {p.priceChangePct >= 0 ? "▲" : "▼"} {Math.abs(p.priceChangePct).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs tabular-nums font-semibold hidden sm:block">{hasBalance ? `${p.actualPct.toFixed(1)}%` : "—"}</span>
                       <span className="text-xs tabular-nums text-muted-foreground hidden sm:block">{p.targetPct}%</span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit hidden sm:block ${hasBalance ? badgeCls : "bg-muted text-muted-foreground"}`}>{hasBalance ? badgeLabel : "Target"}</span>

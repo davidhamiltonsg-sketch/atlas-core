@@ -1,0 +1,132 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Atlas Core — Look-Through Concentration (§4)
+//
+// Computes EFFECTIVE exposure to individual companies and sectors after looking
+// through every ETF to its underlying holdings, so the §4 caps are enforceable —
+// not just documented. Caps here match the Governance Document (§4).
+//
+// Effective exposure for X = Σ over holdings of  (holding's % of NAV) × (ETF's % in X)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Approximate % of each ETF made up by each mega-cap (fund fact-sheet level).
+export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
+  VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
+  QQQM: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
+  SMH:  { Nvidia: 20.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 8.0, TSMC: 12.0 },
+  VWO:  { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
+  BTC:  {},
+  IBIT: {},
+  SGOV: {},
+}
+
+// Approximate sector / geography make-up of each ETF (% of the ETF).
+export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital: number; us: number; ai: number }> = {
+  VT:   { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
+  QQQM: { semiconductor: 13,  digital: 65, us: 100, ai: 35 },
+  SMH:  { semiconductor: 100, digital: 90, us: 75,  ai: 70 },
+  VWO:  { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
+  BTC:  { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
+  IBIT: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
+  SGOV: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
+}
+
+// Caps as written in the Governance Document (§4). Whole-number percent of NAV.
+export const LOOKTHROUGH_COMPANY_CAPS: Record<string, { soft: number; hard: number }> = {
+  Nvidia:    { soft: 10, hard: 13 },
+  Microsoft: { soft: 10, hard: 13 },
+  Apple:     { soft: 8,  hard: 11 },
+  Amazon:    { soft: 7,  hard: 9 },
+  Meta:      { soft: 6,  hard: 8 },
+  Alphabet:  { soft: 6,  hard: 8 },
+  Broadcom:  { soft: 5,  hard: 7 },
+  TSMC:      { soft: 5,  hard: 7 },
+}
+
+export const LOOKTHROUGH_SECTOR_CAPS: Record<string, { label: string; soft: number; hard: number }> = {
+  semiconductor: { label: "Semiconductor", soft: 16, hard: 20 },
+  digital:       { label: "Digital Economy", soft: 48, hard: 54 },
+  us:            { label: "US Market", soft: 70, hard: 78 },
+  ai:            { label: "AI Infrastructure", soft: 38, hard: 46 },
+}
+
+export type CapStatus = "ok" | "watch" | "breach"
+
+export interface ExposureLine {
+  key: string
+  label: string
+  pct: number
+  soft: number
+  hard: number
+  status: CapStatus
+}
+
+export interface LookThroughResult {
+  companies: ExposureLine[]
+  sectors: ExposureLine[]
+}
+
+function statusFor(pct: number, soft: number, hard: number): CapStatus {
+  if (pct > hard) return "breach"
+  if (pct > soft) return "watch"
+  return "ok"
+}
+
+/** Compute effective company + sector exposure for the live portfolio. */
+export function computeLookThrough(positions: Array<{ ticker: string; actualPct: number }>): LookThroughResult {
+  const companyTotals: Record<string, number> = {}
+  const sectorTotals: Record<string, number> = { semiconductor: 0, digital: 0, us: 0, ai: 0 }
+
+  for (const p of positions) {
+    const w = p.actualPct / 100
+    const cw = ETF_COMPANY_WEIGHTS[p.ticker.toUpperCase()] ?? {}
+    for (const [co, pct] of Object.entries(cw)) {
+      companyTotals[co] = (companyTotals[co] ?? 0) + w * pct
+    }
+    const sw = ETF_SECTOR_WEIGHTS[p.ticker.toUpperCase()]
+    if (sw) {
+      sectorTotals.semiconductor += w * sw.semiconductor
+      sectorTotals.digital       += w * sw.digital
+      sectorTotals.us            += w * sw.us
+      sectorTotals.ai            += w * sw.ai
+    }
+  }
+
+  const companies: ExposureLine[] = Object.keys(LOOKTHROUGH_COMPANY_CAPS).map((co) => {
+    const cap = LOOKTHROUGH_COMPANY_CAPS[co]
+    const pct = companyTotals[co] ?? 0
+    return { key: co, label: co, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard) }
+  }).sort((a, b) => b.pct - a.pct)
+
+  const sectors: ExposureLine[] = Object.keys(LOOKTHROUGH_SECTOR_CAPS).map((k) => {
+    const cap = LOOKTHROUGH_SECTOR_CAPS[k]
+    const pct = sectorTotals[k] ?? 0
+    return { key: k, label: cap.label, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard) }
+  }).sort((a, b) => b.pct - a.pct)
+
+  return { companies, sectors }
+}
+
+/** The single worst look-through breach (hard cap exceeded), if any — for the engine. */
+export function worstLookThroughBreach(lt: LookThroughResult): ExposureLine | null {
+  const breaches = [...lt.companies, ...lt.sectors]
+    .filter((l) => l.status === "breach")
+    .sort((a, b) => (b.pct - b.hard) - (a.pct - a.hard))
+  return breaches[0] ?? null
+}
+
+/** Which holding contributes most to a given company/sector — the one to trim. */
+export function largestContributor(
+  exposureKey: string,
+  kind: "company" | "sector",
+  positions: Array<{ ticker: string; actualPct: number }>
+): string | null {
+  let best: { ticker: string; contrib: number } | null = null
+  for (const p of positions) {
+    const t = p.ticker.toUpperCase()
+    const contrib = kind === "company"
+      ? (ETF_COMPANY_WEIGHTS[t]?.[exposureKey] ?? 0) * (p.actualPct / 100)
+      : ((ETF_SECTOR_WEIGHTS[t] as Record<string, number> | undefined)?.[exposureKey] ?? 0) * (p.actualPct / 100)
+    if (contrib > 0 && (!best || contrib > best.contrib)) best = { ticker: p.ticker, contrib }
+  }
+  return best?.ticker ?? null
+}

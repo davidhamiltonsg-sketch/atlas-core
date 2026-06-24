@@ -128,6 +128,8 @@ export interface EngineOptions {
   market?: EngineMarket
   /** Current BTC halving-cycle phase, for the floating BTC hard cap (§4.1). */
   btcCyclePhase?: BtcCyclePhase
+  /** Worst live §4 look-through breach (company/sector effective exposure over hard cap). */
+  lookThroughBreach?: { label: string; pct: number; hard: number; trimTicker: string | null }
 }
 
 /** Merge a live overlay over the hardcoded MARKET_STATE positions. */
@@ -381,6 +383,20 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
 
   // ── PRECEDENCE 1: Hard cap / concentration breach → TRIM ──────────────────
   if (hasBalance) {
+    // §4 — look-through concentration is the highest law (overrides conviction). A single
+    // company or sector seen through all ETFs combined is over its hard cap → trim.
+    if (opts.lookThroughBreach) {
+      const b = opts.lookThroughBreach
+      const ticker = b.trimTicker ?? "SMH"
+      return {
+        severity: "critical", ticker,
+        action: `Trim ${ticker} — ${b.label} over cap`,
+        what: `Your true ${b.label} exposure (seen through every fund combined) is ${b.pct.toFixed(1)}%, over the ${b.hard}% limit. Trim ${ticker}, its biggest source, until ${b.label} is back under ${b.hard}%.`,
+        why: `Overlapping funds can hide how much of one company or sector you really own. This combined limit is the first thing the system protects — it comes before everything else.`,
+        when: "At your next dealing window.",
+        color: "#ef4444",
+      }
+    }
     // §4.3 — combined QQQM+SMH HARD ceiling. Trim the semis tilt (SMH) first.
     const combined = combinedTechPct(positions)
     if (combined > COMBINED_TECH_RULE.hardCeiling) {
