@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
+import { fetchFlexPositions } from "@/lib/ibkr-flex"
 import Anthropic from "@anthropic-ai/sdk"
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
@@ -59,8 +60,14 @@ export async function updateHoldingsManually(
   revalidatePath("/forecast")
 }
 
-// Live price refresh: fetch current market prices from Yahoo Finance and create new snapshots
-export async function refreshLivePrices(): Promise<{ success: boolean; updated?: number; error?: string }> {
+// Live refresh: update prices AND share counts.
+// Share counts (units) can only come from the brokerage, so when IBKR Flex is configured
+// we pull live positions (units + mark price + value) — the source of truth. Holdings IBKR
+// doesn't report, and the case where IBKR is unconfigured/unavailable, fall back to Yahoo
+// Finance price-only with units carried forward.
+export async function refreshLivePrices(): Promise<{
+  success: boolean; updated?: number; unitsUpdated?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string
+}> {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
 
@@ -114,27 +121,62 @@ export async function refreshLivePrices(): Promise<{ success: boolean; updated?:
     }
   }
 
-  if (Object.keys(priceMap).length === 0) {
-    return { success: false, error: "Price API unavailable — both Yahoo Finance endpoints failed" }
+  // ── IBKR positions — brokerage truth for SHARE COUNTS (units + mark price + value) ──
+  const ibkrToken = process.env.IBKR_FLEX_TOKEN
+  const ibkrQuery = process.env.IBKR_FLEX_QUERY_ID
+  const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
+  let ibkrError: string | null = null
+  if (ibkrToken && ibkrQuery) {
+    const r = await fetchFlexPositions(ibkrToken, ibkrQuery)
+    if (r.success) {
+      for (const p of r.positions) {
+        posMap[p.symbol.toUpperCase()] = { units: p.units, markPrice: p.markPrice, positionValue: p.positionValue }
+      }
+    } else {
+      ibkrError = r.error
+    }
+  }
+  const haveIbkr = Object.keys(posMap).length > 0
+
+  if (Object.keys(priceMap).length === 0 && !haveIbkr) {
+    return {
+      success: false,
+      error: ibkrError
+        ? `Price API unavailable and IBKR sync failed: ${ibkrError}`
+        : "Price API unavailable — both Yahoo Finance endpoints failed",
+    }
   }
 
   const usdSgdRate = await getUsdSgdRate()
 
   let updated = 0
+  let unitsUpdated = 0
   for (const holding of holdings) {
-    const price = priceMap[holding.ticker]
     const latest = holding.snapshots[0]
-    if (!price || !latest) continue
+    const pos = posMap[holding.ticker.toUpperCase()]
+    const yh = priceMap[holding.ticker]
+
+    let units: number
+    let price: number
+    let value: number
+
+    if (pos) {
+      // Brokerage truth — update units AND price together.
+      units = pos.units
+      price = pos.markPrice
+      value = pos.positionValue > 0 ? pos.positionValue : pos.units * pos.markPrice * usdSgdRate
+      if (!latest || Math.abs((latest.units ?? 0) - units) > 1e-6) unitsUpdated++
+    } else if (yh && latest) {
+      // Yahoo price-only — carry units forward (no brokerage data for this holding).
+      units = latest.units
+      price = yh
+      value = latest.units * yh * usdSgdRate
+    } else {
+      continue
+    }
 
     await db.snapshot.create({
-      data: {
-        holdingId: holding.id,
-        units: latest.units,
-        price,
-        value: latest.units * price * usdSgdRate,
-        currency: "SGD",
-        date: new Date(),
-      },
+      data: { holdingId: holding.id, units, price, value, currency: "SGD", date: new Date() },
     })
     updated++
   }
@@ -145,7 +187,13 @@ export async function refreshLivePrices(): Promise<{ success: boolean; updated?:
   revalidatePath("/forecast")
   revalidatePath("/governance")
 
-  return { success: true, updated }
+  const note = ibkrToken && ibkrQuery && !haveIbkr
+    ? `IBKR sync unavailable (${ibkrError ?? "no positions returned"}) — prices updated from Yahoo; share counts unchanged.`
+    : (!ibkrToken || !ibkrQuery)
+    ? "Prices updated from Yahoo. Connect IBKR (IBKR_FLEX_TOKEN/QUERY_ID) to also sync share counts."
+    : undefined
+
+  return { success: true, updated, unitsUpdated, source: haveIbkr ? "ibkr" : "yahoo", note }
 }
 
 type ExtractResult =

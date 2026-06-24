@@ -12,6 +12,9 @@ import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 
+// Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
+export const maxDuration = 60
+
 async function getPortfolioData(userId: string) {
   const holdings = await db.holding.findMany({
     where: { userId },

@@ -11,6 +11,8 @@ interface AutoRefreshProps {
 export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [status, setStatus] = useState<"idle" | "refreshing" | "done" | "error">("idle")
+  const [synced, setSynced] = useState(false) // true when share counts were updated (IBKR)
+  const [note, setNote] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function doRefresh() {
@@ -19,9 +21,12 @@ export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
       const result = await refreshLivePrices()
       if (result.success) {
         setLastRefresh(new Date())
+        setSynced(result.source === "ibkr" && (result.unitsUpdated ?? 0) > 0)
+        setNote(result.note ?? null)
         setStatus("done")
-        setTimeout(() => setStatus("idle"), 3000)
+        setTimeout(() => setStatus("idle"), 3500)
       } else {
+        setNote(result.error ?? null)
         setStatus("error")
         setTimeout(() => setStatus("idle"), 5000)
       }
@@ -61,7 +66,10 @@ export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
         doRefresh().then(() => localStorage.setItem("atlas_last_auto_refresh", String(Date.now())))
       }}
       disabled={status === "refreshing"}
-      title={lastRefresh ? `Last auto-refresh: ${lastRefresh.toLocaleTimeString()}` : "Auto-refresh prices"}
+      title={
+        note ??
+        (lastRefresh ? `Last refresh: ${lastRefresh.toLocaleTimeString()}${synced ? " · share counts synced from IBKR" : ""}` : "Refresh prices and share counts")
+      }
       className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
         status === "done"
           ? "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400"
@@ -71,7 +79,10 @@ export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
       }`}
     >
       <RefreshCw className={`h-3.5 w-3.5 ${status === "refreshing" ? "animate-spin" : ""}`} />
-      {status === "refreshing" ? "Refreshing…" : status === "done" ? "Updated" : status === "error" ? "Failed" : "Refresh Prices"}
+      {status === "refreshing" ? "Refreshing…"
+        : status === "done" ? (synced ? "Shares + prices synced" : "Prices updated")
+        : status === "error" ? "Failed"
+        : "Refresh"}
     </button>
   )
 }

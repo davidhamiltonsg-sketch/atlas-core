@@ -6,7 +6,7 @@ import { refreshLivePrices } from "@/app/portfolio/actions"
 
 export function RefreshPricesButton() {
   const [isPending, startTransition] = useTransition()
-  const [result, setResult] = useState<{ success: boolean; updated?: number; error?: string } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; updated?: number; unitsUpdated?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string } | null>(null)
 
   function handleRefresh() {
     setResult(null)
@@ -31,17 +31,26 @@ export function RefreshPricesButton() {
       </button>
 
       {result && (
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+        <div className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs ${
           result.success
             ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
             : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
         }`}>
           {result.success
-            ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-            : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
-          {result.success
-            ? `${result.updated} price${result.updated !== 1 ? "s" : ""} updated from live market data`
-            : result.error ?? "Failed to fetch prices"}
+            ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            : <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+          <div>
+            <p>
+              {result.success
+                ? result.source === "ibkr"
+                  ? `${result.updated} holding${result.updated !== 1 ? "s" : ""} synced from IBKR — share counts + prices updated${result.unitsUpdated ? ` (${result.unitsUpdated} share count${result.unitsUpdated !== 1 ? "s" : ""} changed)` : ""}`
+                  : `${result.updated} price${result.updated !== 1 ? "s" : ""} updated from live market data`
+                : result.error ?? "Failed to fetch prices"}
+            </p>
+            {result.success && result.note && (
+              <p className="text-muted-foreground mt-0.5">{result.note}</p>
+            )}
+          </div>
         </div>
       )}
     </div>
