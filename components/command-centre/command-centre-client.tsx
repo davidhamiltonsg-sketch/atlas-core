@@ -467,7 +467,7 @@ export function CommandCentreClient({ positions, totalValue, nextBestMove }: Pro
             <div className="flex gap-2">
               <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">Live market scanner</span> — reads your live positions against current price levels, volatility, and pattern signals. BUY means act. HOLD means wait. EXIT means sell when your 3-month hold window allows.
+                <span className="font-semibold text-foreground">What each holding is doing now</span> — your holdings checked against current prices and how far they are from recent highs and lows. BUY means it's a good time to add. HOLD means wait. WATCH means keep an eye on it.
               </p>
             </div>
           </div>
@@ -747,8 +747,8 @@ export function CommandCentreClient({ positions, totalValue, nextBestMove }: Pro
         <div className="space-y-3">
           <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">10 principles that make you richer faster.</span>{" "}
-              These integrate your existing V5.8 governance framework with the new pattern-recognition rules derived from 5 years of portfolio history. Follow them in order of precedence — the lower the number, the higher the priority.
+              <span className="font-semibold text-foreground">10 simple rules that keep you on track.</span>{" "}
+              These combine your governance rules with patterns learned from the last 5 years. Follow them in order — the lower the number, the more important the rule.
             </p>
           </div>
 

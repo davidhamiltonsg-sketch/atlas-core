@@ -456,7 +456,7 @@ export default async function Dashboard() {
                       ? "bg-yellow-400/15 text-yellow-700 dark:text-yellow-400 ring-1 ring-yellow-400/30"
                       : "bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-1 ring-orange-500/30"
                     : "bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30"
-                  const badgeLabel = p.status === "healthy" ? "On track" : p.status === "soft" ? (under ? "Underweight" : "Overweight") : (under ? "Buy now" : "Halt buys")
+                  const badgeLabel = p.status === "healthy" ? "On track" : p.status === "soft" ? (under ? "A bit small" : "A bit big") : (under ? "Buy now" : "Stop buying")
                   const rowCls = p.status === "hard"
                     ? "border-l-4 border-red-500"
                     : p.status === "soft"

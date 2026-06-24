@@ -212,9 +212,9 @@ export default async function Governance() {
       {/* Live position gauges */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Live Position Status</h2>
+          <h2 className="text-sm font-semibold">Where Each Holding Stands</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Current allocation vs healthy, soft, and hard thresholds
+            How much you hold now vs the safe range, the early-warning band, and the hard limit
           </p>
         </div>
         <div className="divide-y divide-border">
@@ -332,9 +332,9 @@ export default async function Governance() {
       <div className="grid gap-3 sm:grid-cols-3 mb-6">
         {[
           {
-            label: "Healthy",
-            sub: "No action required",
-            text: "All positions within band. Continue monthly contribution schedule unchanged.",
+            label: "On track",
+            sub: "Nothing to do",
+            text: "Everything is within its target range. Keep investing your normal amount each month.",
             icon: CheckCircle2,
             color: "text-green-500",
             border: "border-green-500/20",
@@ -342,9 +342,9 @@ export default async function Governance() {
             pill: "bg-green-500/10 text-green-600 dark:text-green-400",
           },
           {
-            label: "Soft Trigger",
-            sub: "Redirect contributions",
-            text: "Redirect new capital to underweight positions for 2–3 months. No selling required.",
+            label: "Drifting",
+            sub: "Send new money elsewhere",
+            text: "A holding is starting to drift. Point the next 2–3 months of contributions at the holdings that are too small. No selling needed.",
             icon: AlertTriangle,
             color: "text-amber-500",
             border: "border-amber-500/20",
@@ -352,9 +352,9 @@ export default async function Governance() {
             pill: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
           },
           {
-            label: "Hard Trigger",
-            sub: "Rebalancing review required",
-            text: "Halt buys on the breaching position. Assess selective trim at the next dealing window.",
+            label: "Over the limit",
+            sub: "Time to act",
+            text: "A holding has passed its hard limit. Stop buying it, and trim a little back to target at your next dealing window.",
             icon: XCircle,
             color: "text-red-500",
             border: "border-red-500/20",
@@ -378,9 +378,9 @@ export default async function Governance() {
       {/* Monthly Decision Engine — §5.4 */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Monthly Decision Engine</h2>
+          <h2 className="text-sm font-semibold">Your Monthly 5-Minute Check</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            §5.4 — Execute every monthly contribution in under five minutes. No forecasting. No opinion. Follow the steps in order.
+            Run this each month before you invest. No predicting, no opinions — just follow the steps in order.
           </p>
         </div>
         <div className="divide-y divide-border">

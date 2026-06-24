@@ -207,10 +207,10 @@ export function ExecutionPlan({
             : "bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30"
 
           const badgeLabel = isHealthy
-            ? "Healthy"
+            ? "On track"
             : isSoft
-            ? (under ? "Underweight" : "Overweight")
-            : (under ? "Buy now" : "Halt buys")
+            ? (under ? "A bit small" : "A bit big")
+            : (under ? "Buy now" : "Stop buying")
 
           const badgeTip = isHealthy
             ? `${p.ticker} is within its target range of ${p.targetPct}% (±${Math.abs(p.driftPct).toFixed(1)}%). No action needed.`
@@ -290,7 +290,7 @@ export function ExecutionPlan({
                 <p className="text-[10px] text-muted-foreground mb-2">{amountSub}</p>
                 {p.suggestedAmount > 0 && (
                   <div className={`text-[10px] font-bold ${impvCls}`}>
-                    {impvSign}{Math.abs(p.driftImprovement).toFixed(1)}% drift
+                    {impvSign}{Math.abs(p.driftImprovement).toFixed(1)}% to target
                   </div>
                 )}
                 {p.suggestedAmount > 0 && (
@@ -377,7 +377,7 @@ export function ExecutionPlan({
           </div>
           <div className="h-8 w-px bg-border/50 hidden sm:block" />
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Avg drift improvement</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Avg move toward target</p>
             <p className="text-sm font-black tabular-nums text-green-500">
               {(() => {
                 const improving = positionsWithAlloc.filter(p => p.suggestedAmount > 0)
