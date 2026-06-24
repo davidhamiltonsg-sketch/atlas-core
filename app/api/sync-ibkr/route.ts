@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
 import { db } from "@/lib/db"
@@ -62,7 +63,7 @@ export async function PUT(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
 
   const body = await req.json() as {
-    positions: Array<{ holdingId: string; units: number; markPrice: number; positionValue: number }>
+    positions: Array<{ holdingId?: string | null; symbol?: string; units: number; markPrice: number; positionValue: number }>
   }
 
   if (!body.positions?.length) {
@@ -70,16 +71,32 @@ export async function PUT(req: Request) {
   }
 
   let updated = 0
+  let created = 0
   for (const pos of body.positions) {
-    // Verify this holding belongs to the session user
-    const holding = await db.holding.findFirst({
-      where: { id: pos.holdingId, userId: session.userId },
-    })
-    if (!holding) continue
+    // Resolve the holding: by id, else by symbol, else CREATE it (new ticker like IBIT).
+    let holdingId: string | null = null
+    if (pos.holdingId) {
+      const h = await db.holding.findFirst({ where: { id: pos.holdingId, userId: session.userId } })
+      if (h) holdingId = h.id
+    }
+    if (!holdingId) {
+      const sym = pos.symbol?.trim().toUpperCase()
+      if (!sym) continue
+      const existing = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
+      if (existing) {
+        holdingId = existing.id
+      } else {
+        const h = await db.holding.create({
+          data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
+        })
+        holdingId = h.id
+        created++
+      }
+    }
 
     await db.snapshot.create({
       data: {
-        holdingId: pos.holdingId,
+        holdingId,
         units:     pos.units,
         price:     pos.markPrice,
         value:     pos.positionValue, // SGD from IBKR (base currency)
@@ -90,5 +107,9 @@ export async function PUT(req: Request) {
     updated++
   }
 
-  return NextResponse.json({ updated })
+  for (const p of ["/", "/trades", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
+    revalidatePath(p)
+  }
+
+  return NextResponse.json({ updated, created })
 }

@@ -139,14 +139,15 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   }
 
   function handleConfirmIBKR() {
-    const matched = ibkrPositions.filter((p) => p.matched && p.holdingId)
+    // Send ALL positions — matched ones update in place, new tickers (e.g. IBIT) are created.
     startTransition(async () => {
       const res = await fetch("/api/sync-ibkr", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          positions: matched.map((p) => ({
+          positions: ibkrPositions.map((p) => ({
             holdingId:     p.holdingId,
+            symbol:        p.symbol,
             units:         p.units,
             markPrice:     p.markPrice,
             positionValue: p.positionValue,
@@ -161,8 +162,6 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-
-  const matchedIBKR = ibkrPositions.filter((p) => p.matched)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -285,7 +284,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                             : <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
                           }
                           <span className="text-xs font-bold">{pos.symbol}</span>
-                          {!pos.matched && <span className="text-[10px] text-muted-foreground">not in portfolio</span>}
+                          {!pos.matched && <span className="text-[10px] text-indigo-400">new — will be added</span>}
                         </div>
                         <div className="text-right">
                           <span className="text-xs font-semibold tabular-nums">
@@ -303,9 +302,9 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                       </div>
                     ))}
                   </div>
-                  {matchedIBKR.length === 0 && (
+                  {ibkrPositions.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-2">
-                      No tickers matched your portfolio holdings.
+                      No open positions returned by IBKR.
                     </p>
                   )}
                 </div>
@@ -440,14 +439,14 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               </div>
             )}
 
-            {mode === "ibkr" && ibkrState === "preview" && matchedIBKR.length > 0 && (
+            {mode === "ibkr" && ibkrState === "preview" && ibkrPositions.length > 0 && (
               <button
                 onClick={handleConfirmIBKR}
                 disabled={isPending || saved}
                 className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                Save {matchedIBKR.length} position{matchedIBKR.length !== 1 ? "s" : ""}
+                Save {ibkrPositions.length} position{ibkrPositions.length !== 1 ? "s" : ""}
               </button>
             )}
 

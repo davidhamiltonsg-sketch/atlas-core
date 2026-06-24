@@ -68,15 +68,16 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
       setExecutions(data.executions)
       setDividends(data.dividends)
       setAccountId(data.accountId)
-      // Pre-select all new importable items
+      // Pre-select all new importable items. New tickers (not yet in the portfolio) ARE
+      // included — importing them creates the holding so they populate the whole app.
       setSelectedTrades(new Set(
         (data.executions as Execution[])
-          .filter(e => !e.alreadyImported && e.holdingKnown)
+          .filter(e => !e.alreadyImported)
           .map(e => e.tradeID)
       ))
       setSelectedDivs(new Set(
         (data.dividends as Dividend[])
-          .filter(d => !d.alreadyImported && d.holdingKnown)
+          .filter(d => !d.alreadyImported)
           .map(d => d.transactionID)
       ))
       setState("preview")
@@ -107,8 +108,8 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
     })
   }
 
-  const newTrades = executions.filter(e => !e.alreadyImported && e.holdingKnown)
-  const newDivs = dividends.filter(d => !d.alreadyImported && d.holdingKnown)
+  const newTrades = executions.filter(e => !e.alreadyImported)
+  const newDivs = dividends.filter(d => !d.alreadyImported)
   const totalNew = selectedTrades.size + selectedDivs.size
 
   // Units reconciliation: aggregate net unit changes for selected trades
@@ -224,15 +225,13 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                   <div className="space-y-1.5">
                     {executions.map(e => {
                       const isSelected = selectedTrades.has(e.tradeID)
-                      const canSelect = !e.alreadyImported && e.holdingKnown
+                      const canSelect = !e.alreadyImported
                       return (
                         <label
                           key={e.tradeID}
                           className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border transition-colors ${
                             e.alreadyImported
                               ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
-                              : !e.holdingKnown
-                              ? "border-border bg-muted/30 opacity-40 cursor-not-allowed"
                               : isSelected
                               ? "border-indigo-500/40 bg-indigo-500/[0.06] cursor-pointer"
                               : "border-border bg-card cursor-pointer hover:bg-accent/30"
@@ -257,7 +256,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                               <span className={`text-xs font-bold ${e.buySell === "BUY" ? "text-green-500" : "text-red-500"}`}>{e.buySell}</span>
                               <span className="text-xs font-semibold">{e.symbol}</span>
                               <span className="text-[11px] text-muted-foreground">{e.quantity} × ${e.price.toFixed(2)}</span>
-                              {!e.holdingKnown && <span className="text-[10px] text-muted-foreground italic">not in portfolio</span>}
+                              {!e.holdingKnown && <span className="text-[10px] text-indigo-400 italic">new — will be added</span>}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -294,15 +293,13 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                   <div className="space-y-1.5">
                     {dividends.map(d => {
                       const isSelected = selectedDivs.has(d.transactionID)
-                      const canSelect = !d.alreadyImported && d.holdingKnown
+                      const canSelect = !d.alreadyImported
                       return (
                         <label
                           key={d.transactionID}
                           className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border transition-colors ${
                             d.alreadyImported
                               ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
-                              : !d.holdingKnown
-                              ? "border-border bg-muted/30 opacity-40 cursor-not-allowed"
                               : isSelected
                               ? "border-green-500/40 bg-green-500/[0.04] cursor-pointer"
                               : "border-border bg-card cursor-pointer hover:bg-accent/30"
@@ -326,7 +323,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-semibold">{d.symbol}</span>
                               <span className="text-[11px] text-muted-foreground truncate">{d.description}</span>
-                              {!d.holdingKnown && <span className="text-[10px] text-muted-foreground italic">not in portfolio</span>}
+                              {!d.holdingKnown && <span className="text-[10px] text-indigo-400 italic">new — will be added</span>}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
