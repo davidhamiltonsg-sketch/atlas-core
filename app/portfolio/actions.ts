@@ -65,9 +65,11 @@ export async function updateHoldingsManually(
 // we pull live positions (units + mark price + value) — the source of truth. Holdings IBKR
 // doesn't report, and the case where IBKR is unconfigured/unavailable, fall back to Yahoo
 // Finance price-only with units carried forward.
-export async function refreshLivePrices(): Promise<{
-  success: boolean; updated?: number; unitsUpdated?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string
+export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: boolean } = {}): Promise<{
+  success: boolean; updated?: number; unitsUpdated?: number; added?: number; removed?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string
 }> {
+  const withIbkr = opts.withIbkr !== false        // default: use IBKR when configured
+  const reconcile = opts.reconcile ?? withIbkr     // add/remove holdings only when we have brokerage truth
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
 
@@ -126,7 +128,7 @@ export async function refreshLivePrices(): Promise<{
   const ibkrQuery = process.env.IBKR_FLEX_QUERY_ID
   const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
   let ibkrError: string | null = null
-  if (ibkrToken && ibkrQuery) {
+  if (withIbkr && ibkrToken && ibkrQuery) {
     const r = await fetchFlexPositions(ibkrToken, ibkrQuery)
     if (r.success) {
       for (const p of r.positions) {
@@ -181,6 +183,46 @@ export async function refreshLivePrices(): Promise<{
     updated++
   }
 
+  // ── Reconcile holdings against the brokerage (only with a valid IBKR positions list) ──
+  // fetchFlexPositions only succeeds with a non-empty list, so this never wipes everything
+  // on a failed/empty report. Removal is SOFT (a 0-unit snapshot) — reversible, and it
+  // preserves value history; the holding drops out of allocations.
+  let added = 0
+  let removed = 0
+  if (reconcile && haveIbkr) {
+    const dbTickers = new Set(holdings.map(h => h.ticker.toUpperCase()))
+
+    // Add: positions IBKR reports that we don't track yet (created untracked, target 0%).
+    for (const [sym, p] of Object.entries(posMap)) {
+      if (dbTickers.has(sym)) continue
+      const created = await db.holding.create({
+        data: {
+          userId: session.userId, ticker: sym, name: sym,
+          targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b",
+        },
+      })
+      await db.snapshot.create({
+        data: {
+          holdingId: created.id, units: p.units, price: p.markPrice,
+          value: p.positionValue > 0 ? p.positionValue : p.units * p.markPrice * usdSgdRate,
+          currency: "SGD", date: new Date(),
+        },
+      })
+      added++
+    }
+
+    // Remove (soft): tracked holdings the brokerage no longer reports → zero them out.
+    for (const holding of holdings) {
+      if (posMap[holding.ticker.toUpperCase()]) continue
+      const latest = holding.snapshots[0]
+      if (!latest || latest.units === 0) continue // already closed / placeholder (e.g. SGOV, IBIT)
+      await db.snapshot.create({
+        data: { holdingId: holding.id, units: 0, price: latest.price, value: 0, currency: "SGD", date: new Date() },
+      })
+      removed++
+    }
+  }
+
   revalidatePath("/portfolio")
   revalidatePath("/")
   revalidatePath("/reports")
@@ -193,7 +235,7 @@ export async function refreshLivePrices(): Promise<{
     ? "Prices updated from Yahoo. Connect IBKR (IBKR_FLEX_TOKEN/QUERY_ID) to also sync share counts."
     : undefined
 
-  return { success: true, updated, unitsUpdated, source: haveIbkr ? "ibkr" : "yahoo", note }
+  return { success: true, updated, unitsUpdated, added, removed, source: haveIbkr ? "ibkr" : "yahoo", note }
 }
 
 type ExtractResult =

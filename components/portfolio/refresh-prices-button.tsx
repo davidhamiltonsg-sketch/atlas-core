@@ -6,7 +6,7 @@ import { refreshLivePrices } from "@/app/portfolio/actions"
 
 export function RefreshPricesButton() {
   const [isPending, startTransition] = useTransition()
-  const [result, setResult] = useState<{ success: boolean; updated?: number; unitsUpdated?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; updated?: number; unitsUpdated?: number; added?: number; removed?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string } | null>(null)
 
   function handleRefresh() {
     setResult(null)
@@ -43,9 +43,12 @@ export function RefreshPricesButton() {
             <p>
               {result.success
                 ? result.source === "ibkr"
-                  ? `${result.updated} holding${result.updated !== 1 ? "s" : ""} synced from IBKR — share counts + prices updated${result.unitsUpdated ? ` (${result.unitsUpdated} share count${result.unitsUpdated !== 1 ? "s" : ""} changed)` : ""}`
+                  ? `${result.updated} holding${result.updated !== 1 ? "s" : ""} synced from your broker — share counts and prices updated`
+                    + (result.unitsUpdated ? ` · ${result.unitsUpdated} share count${result.unitsUpdated !== 1 ? "s" : ""} changed` : "")
+                    + (result.added ? ` · ${result.added} new holding${result.added !== 1 ? "s" : ""} added` : "")
+                    + (result.removed ? ` · ${result.removed} sold-out holding${result.removed !== 1 ? "s" : ""} removed` : "")
                   : `${result.updated} price${result.updated !== 1 ? "s" : ""} updated from live market data`
-                : result.error ?? "Failed to fetch prices"}
+                : result.error ?? "Couldn't fetch prices"}
             </p>
             {result.success && result.note && (
               <p className="text-muted-foreground mt-0.5">{result.note}</p>

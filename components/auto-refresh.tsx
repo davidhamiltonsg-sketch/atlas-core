@@ -8,21 +8,38 @@ interface AutoRefreshProps {
   intervalHours?: number
 }
 
-export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
+// Auto-update on opening. Prices refresh on every open (short gate to avoid snapshot
+// spam); the heavier IBKR sync (share counts + add/remove reconciliation) runs on a
+// longer gate to respect IBKR Flex rate limits (~15–20 min between requests).
+const PRICE_GATE_MS = 15 * 60 * 1000      // 15 minutes
+const IBKR_GATE_MS  = 6 * 60 * 60 * 1000  // 6 hours
+const PRICE_KEY = "atlas_last_price_refresh"
+const IBKR_KEY  = "atlas_last_ibkr_sync"
+
+export function AutoRefresh({ intervalHours }: AutoRefreshProps) {
+  void intervalHours
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [status, setStatus] = useState<"idle" | "refreshing" | "done" | "error">("idle")
-  const [synced, setSynced] = useState(false) // true when share counts were updated (IBKR)
+  const [synced, setSynced] = useState(false) // true when share counts were synced from IBKR
   const [note, setNote] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function doRefresh() {
+  async function doRefresh(withIbkr: boolean) {
     setStatus("refreshing")
     try {
-      const result = await refreshLivePrices()
+      const result = await refreshLivePrices({ withIbkr, reconcile: withIbkr })
       if (result.success) {
+        localStorage.setItem(PRICE_KEY, String(Date.now()))
+        if (result.source === "ibkr") localStorage.setItem(IBKR_KEY, String(Date.now()))
         setLastRefresh(new Date())
-        setSynced(result.source === "ibkr" && (result.unitsUpdated ?? 0) > 0)
-        setNote(result.note ?? null)
+        const changed = (result.unitsUpdated ?? 0) + (result.added ?? 0) + (result.removed ?? 0)
+        setSynced(result.source === "ibkr" && changed > 0)
+        const parts = [
+          result.added ? `+${result.added} added` : "",
+          result.removed ? `−${result.removed} removed` : "",
+          result.unitsUpdated ? `${result.unitsUpdated} share count${result.unitsUpdated !== 1 ? "s" : ""} changed` : "",
+        ].filter(Boolean)
+        setNote(parts.length ? parts.join(" · ") : (result.note ?? null))
         setStatus("done")
         setTimeout(() => setStatus("idle"), 3500)
       } else {
@@ -37,34 +54,24 @@ export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
   }
 
   useEffect(() => {
-    // Check if we should auto-refresh based on last stored time
-    const stored = localStorage.getItem("atlas_last_auto_refresh")
-    const now = Date.now()
-    const intervalMs = intervalHours * 60 * 60 * 1000
-
-    if (!stored || now - parseInt(stored) > intervalMs) {
-      // Auto-refresh on mount if interval has passed
-      doRefresh().then(() => localStorage.setItem("atlas_last_auto_refresh", String(Date.now())))
+    function maybeRefresh() {
+      const now = Date.now()
+      const priceStamp = parseInt(localStorage.getItem(PRICE_KEY) ?? "0", 10)
+      const ibkrStamp = parseInt(localStorage.getItem(IBKR_KEY) ?? "0", 10)
+      const ibkrDue = now - ibkrStamp > IBKR_GATE_MS
+      const priceDue = now - priceStamp > PRICE_GATE_MS
+      if (priceDue || ibkrDue) doRefresh(ibkrDue)
     }
-
-    // Schedule periodic check
-    intervalRef.current = setInterval(() => {
-      const s = localStorage.getItem("atlas_last_auto_refresh")
-      if (!s || Date.now() - parseInt(s) > intervalMs) {
-        doRefresh().then(() => localStorage.setItem("atlas_last_auto_refresh", String(Date.now())))
-      }
-    }, 60 * 60 * 1000) // check every hour
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [intervalHours])
+    // Update on opening
+    maybeRefresh()
+    // And periodically while the tab stays open
+    intervalRef.current = setInterval(maybeRefresh, 30 * 60 * 1000)
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+  }, [])
 
   return (
     <button
-      onClick={() => {
-        doRefresh().then(() => localStorage.setItem("atlas_last_auto_refresh", String(Date.now())))
-      }}
+      onClick={() => doRefresh(true)} // manual click → full sync (prices + IBKR share counts + reconcile)
       disabled={status === "refreshing"}
       title={
         note ??
@@ -80,7 +87,7 @@ export function AutoRefresh({ intervalHours = 24 }: AutoRefreshProps) {
     >
       <RefreshCw className={`h-3.5 w-3.5 ${status === "refreshing" ? "animate-spin" : ""}`} />
       {status === "refreshing" ? "Refreshing…"
-        : status === "done" ? (synced ? "Shares + prices synced" : "Prices updated")
+        : status === "done" ? (synced ? "Synced ✓" : "Prices updated")
         : status === "error" ? "Failed"
         : "Refresh"}
     </button>
