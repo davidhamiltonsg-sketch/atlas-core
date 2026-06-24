@@ -30,6 +30,17 @@ export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital
   SGOV: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
 }
 
+// Geographic make-up of each ETF (% of the ETF): US / Intl-Developed / Emerging / Crypto.
+export const ETF_GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emerging: number; crypto: number }> = {
+  VT:   { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
+  QQQM: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
+  SMH:  { us: 75,  intlDev: 13, emerging: 12,  crypto: 0 },
+  VWO:  { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
+  BTC:  { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
+  IBIT: { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
+  SGOV: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
+}
+
 // Caps as written in the Governance Document (§4). Whole-number percent of NAV.
 export const LOOKTHROUGH_COMPANY_CAPS: Record<string, { soft: number; hard: number }> = {
   Nvidia:    { soft: 10, hard: 13 },

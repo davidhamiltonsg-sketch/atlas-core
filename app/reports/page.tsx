@@ -12,52 +12,23 @@ import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { ExportPdfButton } from "@/components/reports/export-pdf-button"
 import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
+import {
+  ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
+  LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS,
+} from "@/lib/look-through"
 
-// ─── Static Data (hardcoded fallbacks — overridden by DB when refreshed) ──────
+// ─── Single source of truth ──────────────────────────────────────────────────
+// Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
+// and feeds the engine). Reports reads from there — no separate, contradictory copy.
+const COMPANY_WEIGHTS = ETF_COMPANY_WEIGHTS
+const SECTOR_WEIGHTS  = ETF_SECTOR_WEIGHTS
+const GEO_WEIGHTS     = ETF_GEO_WEIGHTS
+const COMPANY_CAPS    = LOOKTHROUGH_COMPANY_CAPS
 
-const COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
-  VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
-  QQQM: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
-  SMH:  { Nvidia: 20.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 8.0, TSMC: 12.0 },
-  VWO:  { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
-  BTC:  { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 0.0 },
-}
-
-const SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital: number; us: number; ai: number }> = {
-  VT:   { semiconductor: 8,   digital: 35,  us: 62,  ai: 15 },
-  QQQM: { semiconductor: 13,  digital: 65,  us: 100, ai: 35 },
-  SMH:  { semiconductor: 100, digital: 90,  us: 75,  ai: 70 },
-  VWO:  { semiconductor: 12,  digital: 30,  us: 0,   ai: 10 },
-  BTC:  { semiconductor: 0,   digital: 0,   us: 0,   ai: 0  },
-}
-
-// Geographic exposure by ETF (US / Intl Developed / Emerging / Crypto)
-const GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emerging: number; crypto: number }> = {
-  VT:   { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
-  QQQM: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
-  SMH:  { us: 75,  intlDev: 13, emerging: 12,  crypto: 0 },
-  VWO:  { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
-  BTC:  { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
-}
-
-const COMPANY_CAPS: Record<string, { soft: number; hard: number }> = {
-  Nvidia:    { soft: 10, hard: 13 },
-  Microsoft: { soft: 10, hard: 13 },
-  Apple:     { soft: 8,  hard: 11 },
-  Amazon:    { soft: 7,  hard: 9  },
-  Meta:      { soft: 6,  hard: 8  },
-  Alphabet:  { soft: 6,  hard: 8  },
-  Broadcom:  { soft: 5,  hard: 7  },
-  TSMC:      { soft: 5,  hard: 7  },
-}
-
-// v5.8 cluster caps (Section 4.2) — "elevated" = soft cap, "excessive" = hard cap
-const SECTOR_CAPS = {
-  semiconductor: { label: "Semiconductor & Compute", elevated: 28, excessive: 35 },
-  digital:       { label: "Digital Economy",         elevated: 55, excessive: 65 },
-  us:            { label: "US Equity Dependency",    elevated: 70, excessive: 80 },
-  ai:            { label: "AI Infrastructure",       elevated: 20, excessive: 28 },
-}
+// Adapter: Reports refers to caps as elevated/excessive; map them to the shared soft/hard.
+const SECTOR_CAPS = Object.fromEntries(
+  Object.entries(LOOKTHROUGH_SECTOR_CAPS).map(([k, v]) => [k, { label: v.label, elevated: v.soft, excessive: v.hard }])
+) as Record<"semiconductor" | "digital" | "us" | "ai", { label: string; elevated: number; excessive: number }>
 
 // Date the ETF look-through weights (COMPANY_WEIGHTS, SECTOR_WEIGHTS, GEO_WEIGHTS) were last reviewed.
 // Update this whenever you re-check the ETF composition data against the fund fact sheets.
