@@ -27,31 +27,37 @@ import {
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
 
-const mainNav = [
-  { href: "/",                  label: "Dashboard",        icon: LayoutDashboard },
-  { href: "/command-centre",    label: "Command Centre",   icon: Zap },
-  { href: "/smart-money",       label: "Smart Money",      icon: Landmark },
-  { href: "/calendar",          label: "Calendar & Rules", icon: CalendarDays },
-  { href: "/portfolio",         label: "Portfolio",        icon: PieChart },
-  { href: "/governance",        label: "Governance",       icon: ShieldCheck },
-  { href: "/behaviour",         label: "Behaviour",        icon: Brain },
-  { href: "/reports",           label: "Reports",          icon: FileBarChart2 },
-  { href: "/forecast",          label: "Forecast",         icon: TrendingUp },
+// Home = the one-stop dashboard (action + rule-check + performance).
+const homeNav = [
+  { href: "/",              label: "Dashboard",        icon: LayoutDashboard },
 ]
 
-const trackingNav = [
-  { href: "/history",       label: "History",      icon: History },
-  { href: "/trades",        label: "Trades",       icon: ArrowLeftRight },
-  { href: "/contributions", label: "Contributions",icon: PiggyBank },
-  { href: "/dividends",     label: "Dividends",    icon: Coins },
-  { href: "/ytd",           label: "YTD / P&L",    icon: CalendarDays },
+// Plan = the rules and discipline layer.
+const planNav = [
+  { href: "/governance",    label: "Rules & Caps",     icon: ShieldCheck },
+  { href: "/calendar",      label: "Calendar & Rules", icon: CalendarDays },
+  { href: "/behaviour",     label: "Staying Calm",     icon: Brain },
 ]
 
-const toolsNav = [
-  { href: "/holdings",      label: "Holdings",     icon: PieChart },
-  { href: "/rebalance",     label: "Rebalance",    icon: GitCompare },
-  { href: "/risk",          label: "Risk",         icon: BarChart3 },
-  { href: "/watchlist",     label: "Watchlist",    icon: Star },
+// Portfolio = your money and its records.
+const portfolioNav = [
+  { href: "/portfolio",     label: "Portfolio",        icon: PieChart },
+  { href: "/holdings",      label: "Holdings",         icon: Star },
+  { href: "/rebalance",     label: "Rebalance",        icon: GitCompare },
+  { href: "/trades",        label: "Trades",           icon: ArrowLeftRight },
+  { href: "/contributions", label: "Contributions",    icon: PiggyBank },
+  { href: "/dividends",     label: "Dividends",        icon: Coins },
+]
+
+// Insights = the optional deep-dive surfaces (not part of the monthly 5-minute check).
+const insightsNav = [
+  { href: "/command-centre",label: "Command Centre",   icon: Zap },
+  { href: "/smart-money",   label: "Smart Money",      icon: Landmark },
+  { href: "/reports",       label: "What You Own",     icon: FileBarChart2 },
+  { href: "/forecast",      label: "Forecast",         icon: TrendingUp },
+  { href: "/risk",          label: "Risk",             icon: BarChart3 },
+  { href: "/ytd",           label: "YTD / P&L",        icon: CalendarDays },
+  { href: "/history",       label: "History",          icon: History },
 ]
 
 interface SidebarProps {
@@ -136,18 +142,21 @@ export function Sidebar({ open, onClose, isAdmin = false }: SidebarProps) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          <NavGroup label="Core">
-            {mainNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          <NavGroup label="Home">
+            {homeNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
           </NavGroup>
-          <NavGroup label="Tracking">
-            {trackingNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          <NavGroup label="Plan">
+            {planNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
           </NavGroup>
-          <NavGroup label="Tools">
-            {toolsNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          <NavGroup label="Portfolio">
+            {portfolioNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
           </NavGroup>
-          <NavGroup label="Account">
-            <NavLink href="/export" label="Export" icon={Download} onClick={onClose} />
+          <NavGroup label="Insights">
+            {insightsNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+          </NavGroup>
+          <NavGroup label="Settings">
             <NavLink href="/settings" label="Settings" icon={Settings} onClick={onClose} />
+            <NavLink href="/export" label="Export" icon={Download} onClick={onClose} />
             {isAdmin && <NavLink href="/admin/users" label="Users" icon={Users} onClick={onClose} />}
           </NavGroup>
         </nav>
