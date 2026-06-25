@@ -1,6 +1,6 @@
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
-import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
+import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle, FileText, Zap } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-group"
@@ -179,7 +179,7 @@ export default async function Governance() {
       <a href="/atlas-core-governance.html" target="_blank" rel="noopener noreferrer"
         className="rounded-xl border border-indigo-500/40 bg-gradient-to-r from-indigo-500/[0.08] to-violet-500/[0.06] p-4 mb-4 flex items-center gap-3 hover:from-indigo-500/[0.12] transition-colors group">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
-          <span className="text-sm">📄</span>
+          <FileText className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
           <p className="text-xs font-bold text-indigo-400">Full Governance Document (v6.4)</p>
@@ -191,7 +191,7 @@ export default async function Governance() {
       {/* Command Centre callout */}
       <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.05] p-4 mb-6 flex items-start gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
-          <span className="text-sm">⚡</span>
+          <Zap className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
           <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.4 — Bitcoin sleeve (BTC → IBIT), live data &amp; pre-commitments</p>

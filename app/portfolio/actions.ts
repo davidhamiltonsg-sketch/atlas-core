@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
+import { upsertSnapshotToday } from "@/lib/holdings-sync"
 import Anthropic from "@anthropic-ai/sdk"
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
@@ -177,9 +178,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
       continue
     }
 
-    await db.snapshot.create({
-      data: { holdingId: holding.id, units, price, value, currency: "SGD", date: new Date() },
-    })
+    await upsertSnapshotToday(holding.id, { units, price, value })
     updated++
   }
 
@@ -201,12 +200,9 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
           targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b",
         },
       })
-      await db.snapshot.create({
-        data: {
-          holdingId: created.id, units: p.units, price: p.markPrice,
-          value: p.positionValue > 0 ? p.positionValue : p.units * p.markPrice * usdSgdRate,
-          currency: "SGD", date: new Date(),
-        },
+      await upsertSnapshotToday(created.id, {
+        units: p.units, price: p.markPrice,
+        value: p.positionValue > 0 ? p.positionValue : p.units * p.markPrice * usdSgdRate,
       })
       added++
     }
@@ -216,9 +212,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
       if (posMap[holding.ticker.toUpperCase()]) continue
       const latest = holding.snapshots[0]
       if (!latest || latest.units === 0) continue // already closed / placeholder (e.g. SGOV, IBIT)
-      await db.snapshot.create({
-        data: { holdingId: holding.id, units: 0, price: latest.price, value: 0, currency: "SGD", date: new Date() },
-      })
+      await upsertSnapshotToday(holding.id, { units: 0, price: latest.price, value: 0 })
       removed++
     }
   }

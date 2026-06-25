@@ -20,6 +20,8 @@ import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
+import { getLastMonthlyCheck } from "@/lib/monthly-check-actions"
+import { MonthlyCheck } from "@/components/dashboard/monthly-check"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -246,12 +248,15 @@ async function getDashboardData(userId: string) {
   // Governance alignment — are we inside our own rules right now?
   const govAlignment = evaluateGovernance({ positions, bufferPct, lookThrough })
 
+  // Monthly 5-minute check cadence
+  const lastMonthlyCheck = await getLastMonthlyCheck(userId)
+
   return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf: marketSnapshot.asOf, marketStale: marketSnapshot.stale, marketNote: marketSnapshot.note,
     marketOverride: marketSnapshot.positions,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
     sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale,
-    govAlignment }
+    govAlignment, lastMonthlyCheck }
 }
 
 const sections = [
@@ -273,7 +278,7 @@ export default async function Dashboard() {
     contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf, marketStale, marketOverride,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
-    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment,
+    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment, lastMonthlyCheck,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
@@ -356,6 +361,9 @@ export default async function Dashboard() {
       {/* Main layout: left = content, right = health + donut */}
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-5 min-w-0">
+
+          {/* Monthly 5-minute check cadence */}
+          {hasBalance && <MonthlyCheck lastCheckIso={lastMonthlyCheck} />}
 
           {/* Next Best Move — the single clearest action, always present */}
           {hasBalance && <NextBestMove move={nextBestMove} dataAsOf={marketAsOf} stale={marketStale} />}
