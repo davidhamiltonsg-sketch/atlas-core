@@ -264,7 +264,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
               ? "bg-yellow-400/[0.08] text-yellow-700 dark:text-yellow-300 border border-yellow-400/20"
               : "bg-orange-500/[0.08] text-orange-700 dark:text-orange-300 border border-orange-500/20"
         }`}>
-          <span className="font-bold mr-1">{h.isHard ? "⚡ Action required:" : "↗ Recommended:"}</span>
+          <span className="font-bold mr-1">{h.isHard ? "Action required:" : "Suggested:"}</span>
           {h.isHard
             ? h.drift > 0
               ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Halt accumulation immediately. Assess selective trim at next dealing window.`

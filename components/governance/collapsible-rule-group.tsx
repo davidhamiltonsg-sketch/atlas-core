@@ -1,7 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ShieldCheck } from "lucide-react"
+import {
+  ChevronDown, ShieldCheck, Globe, Zap, Cpu, Earth, Bitcoin, Layers, Scale, CheckCircle2, Circle,
+  type LucideIcon,
+} from "lucide-react"
 
 interface Rule {
   id: string
@@ -17,16 +20,17 @@ interface CollapsibleRuleGroupProps {
   defaultOpen?: boolean
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "VT Governance":           "🌐",
-  "QQQM Governance":         "⚡",
-  "SMH Governance":          "🔬",
-  "VWO Governance":          "🌏",
-  "BTC Governance":          "◆",
-  "Overlap & Concentration": "🎯",
-  "Rebalancing":             "⚖️",
-  "Behavioural Guards":      "🛡️",
-  "Compliance":              "✓",
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  "VT Governance":           Globe,
+  "QQQM Governance":         Zap,
+  "SMH Governance":          Cpu,
+  "VWO Governance":          Earth,
+  "BTC Governance":          Bitcoin,
+  "Bitcoin Governance (BTC + IBIT)": Bitcoin,
+  "Overlap & Concentration": Layers,
+  "Rebalancing":             Scale,
+  "Behavioural Guards":      ShieldCheck,
+  "Compliance":              CheckCircle2,
 }
 
 export function CollapsibleRuleGroup({ category, rules, defaultOpen = false }: CollapsibleRuleGroupProps) {
@@ -41,9 +45,7 @@ export function CollapsibleRuleGroup({ category, rules, defaultOpen = false }: C
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-accent/30 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="text-base leading-none" aria-hidden>
-            {CATEGORY_ICONS[category] ?? "◉"}
-          </span>
+          {(() => { const Icon = CATEGORY_ICONS[category] ?? Circle; return <Icon className="h-4 w-4 text-indigo-400 shrink-0" aria-hidden /> })()}
           <div>
             <p className="text-sm font-semibold">{category}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">

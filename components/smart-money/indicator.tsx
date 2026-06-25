@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { Landmark } from 'lucide-react'
 import { SmartMoneyStats } from '@/lib/smart-money/types'
 
 export function SmartMoneyIndicator({ className = '' }: { className?: string }) {
@@ -26,7 +27,7 @@ export function SmartMoneyIndicator({ className = '' }: { className?: string }) 
   return (
     <div className={`flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-4 py-2.5 text-xs ${className}`}>
       <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300/90">
-        <span className="text-amber-500">◈</span>
+        <Landmark className="h-3.5 w-3.5 text-amber-500 shrink-0" />
         <span>
           <span className="font-semibold text-amber-700 dark:text-amber-300">Smart Money:</span>{' '}
           {stats.atlasOverlaps} overlap{stats.atlasOverlaps > 1 ? 's' : ''} with your holdings (30d)

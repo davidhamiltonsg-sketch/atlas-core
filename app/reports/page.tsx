@@ -550,7 +550,7 @@ export default async function Reports() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wide">
-              🔴 Over the limit — {excessiveCompanies.join(", ")}
+              Over the limit — {excessiveCompanies.join(", ")}
             </p>
             <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-0.5">
               Your combined exposure to {excessiveCompanies.join(" and ")} has crossed the hard limit. Stop buying the ETFs that hold these companies until the levels drop.
@@ -565,7 +565,7 @@ export default async function Reports() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
-              🟡 Theme limit reached — {excessiveSectors.map((k) => SECTOR_CAPS[k].label).join(", ")}
+              Theme limit reached — {excessiveSectors.map((k) => SECTOR_CAPS[k].label).join(", ")}
             </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
               Too much of your money is tied to one theme. Redirect your next contributions to {bestAlternatives(excessiveSectors, positions)} to spread the risk.
@@ -1001,7 +1001,7 @@ export default async function Reports() {
         <SectionHeader
           icon={BarChart3}
           title="How Much of Each Company Do You Own?"
-          sub="Your real exposure to individual companies through all ETFs combined — 🟡 approaching limit · 🔴 over limit"
+          sub="Your real exposure to individual companies through all ETFs combined — approaching limit · over limit"
           badge={
             companyAlerts > 0
               ? <span className="shrink-0 flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -1078,9 +1078,9 @@ export default async function Reports() {
             const pctOfElevated = (value / elevated) * 100
             const alt = bestAlternatives([key], positions)
             const responses: Record<string, string> = {
-              healthy:   "🟢 All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
-              elevated:  `🟡 Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
-              excessive: `🔴 Over the limit — stop buying the ETFs that drive this theme (QQQM and/or SMH) until this comes down. Redirect contributions to ${alt}.`,
+              healthy:   "All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
+              elevated:  `Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
+              excessive: `Over the limit — stop buying the ETFs that drive this theme (QQQM and/or SMH) until this comes down. Redirect contributions to ${alt}.`,
             }
             // Contribution by ETF for this sector
             const contribs = positions.map(p => {

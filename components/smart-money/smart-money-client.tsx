@@ -134,7 +134,7 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
               atlasOnly ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                         : "border-border text-muted-foreground hover:bg-accent/60"
             )}>
-            ◈ Atlas overlaps only
+            <Landmark className="h-3.5 w-3.5" /> Atlas overlaps only
           </button>
           <button onClick={refresh} disabled={loading}
             className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/60 disabled:opacity-50">
@@ -251,7 +251,7 @@ function TradeTable({ trades }: { trades: SmartMoneyTrade[] }) {
               <div className="text-[11px]">
                 {t.atlasOverlap ? (
                   <span className="text-amber-700 dark:text-amber-400">
-                    <span className="font-semibold">◈ {t.overlapTicker}</span> — {t.overlapReason}
+                    <span className="font-semibold">{t.overlapTicker}</span> — {t.overlapReason}
                   </span>
                 ) : (
                   <span className="text-muted-foreground/60">No direct overlap</span>
