@@ -333,7 +333,39 @@ export default async function YtdPage() {
           <div className="px-5 py-4 border-b border-border">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Holdings — Cost Basis &amp; Returns</h2>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Mobile: stacked cards (the table is too wide for small screens) */}
+          <div className="sm:hidden divide-y divide-border">
+            {data.holdingData.map(h => (
+              <div key={h.ticker} className="px-5 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-2 w-2 rounded-full shrink-0" style={{ background: h.color }} />
+                    <span className="font-bold text-sm">{h.ticker}</span>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums">{h.hasData ? formatCurrency(h.currentValue, "SGD") : "—"}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Cost</span><span className="tabular-nums">{h.costBasisTotal > 0 ? formatCurrency(h.costBasisTotal, "SGD") : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Avg cost</span><span className="tabular-nums">{h.avgCostPerUnit !== null ? `$${h.avgCostPerUnit.toFixed(2)} USD` : "—"}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Unreal. P&amp;L</span>
+                    <span className={`tabular-nums font-semibold ${h.unrealisedPnl === null ? "text-muted-foreground" : h.unrealisedPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {h.unrealisedPnl !== null ? (h.unrealisedPnl >= 0 ? "+" : "") + formatCurrency(h.unrealisedPnl, "SGD") : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">YTD return</span>
+                    <span className={`tabular-nums font-semibold ${h.ytdReturn === null ? "text-muted-foreground" : h.ytdReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {h.ytdReturn !== null ? (h.ytdReturn >= 0 ? "+" : "") + formatCurrency(h.ytdReturn, "SGD") : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto hidden sm:block">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
