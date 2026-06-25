@@ -465,11 +465,12 @@ export default async function Dashboard() {
                       : "bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-1 ring-orange-500/30"
                     : "bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30"
                   const badgeLabel = p.status === "healthy" ? "On track" : p.status === "soft" ? (under ? "A bit small" : "A bit big") : (under ? "Buy now" : "Stop buying")
-                  const rowCls = p.status === "hard"
+                  const notHeld = hasBalance && p.value === 0 // sold-out or not-yet-bought (e.g. SGOV/IBIT placeholder)
+                  const rowCls = (notHeld ? "opacity-55 " : "") + (p.status === "hard"
                     ? "border-l-4 border-red-500"
                     : p.status === "soft"
                     ? under ? "border-l-[3px] border-yellow-400" : "border-l-[3px] border-orange-500"
-                    : "border-l-4 border-transparent"
+                    : "border-l-4 border-transparent")
                   return (
                     <a key={p.ticker} href={`/portfolio#holding-${p.ticker}`}
                       className={`grid grid-cols-[32px_1fr] sm:grid-cols-[32px_1fr_90px_70px_70px_70px] items-center gap-x-2 gap-y-0.5 px-4 py-2.5 hover:bg-accent/30 transition-colors ${rowCls}`}>
@@ -486,13 +487,13 @@ export default async function Dashboard() {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs tabular-nums font-semibold hidden sm:block">{hasBalance ? `${p.actualPct.toFixed(1)}%` : "—"}</span>
+                      <span className="text-xs tabular-nums font-semibold hidden sm:block">{notHeld ? "—" : hasBalance ? `${p.actualPct.toFixed(1)}%` : "—"}</span>
                       <span className="text-xs tabular-nums text-muted-foreground hidden sm:block">{p.targetPct}%</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit hidden sm:block ${hasBalance ? badgeCls : "bg-muted text-muted-foreground"}`}>{hasBalance ? badgeLabel : "Target"}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit hidden sm:block ${notHeld ? "bg-muted text-muted-foreground" : hasBalance ? badgeCls : "bg-muted text-muted-foreground"}`}>{notHeld ? "Not held" : hasBalance ? badgeLabel : "Target"}</span>
                       {/* Mobile right side */}
                       <div className="col-span-1 flex items-center justify-end gap-2 sm:hidden">
-                        <span className="text-xs font-semibold">{p.actualPct.toFixed(1)}%</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeCls}`}>{badgeLabel}</span>
+                        <span className="text-xs font-semibold">{notHeld ? "—" : `${p.actualPct.toFixed(1)}%`}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${notHeld ? "bg-muted text-muted-foreground" : badgeCls}`}>{notHeld ? "Not held" : badgeLabel}</span>
                       </div>
                     </a>
                   )
