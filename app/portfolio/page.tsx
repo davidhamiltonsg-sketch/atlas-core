@@ -11,6 +11,7 @@ import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-butto
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
+import { applyBitcoinSleeve } from "@/lib/next-best-move"
 
 // Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
 export const maxDuration = 60
@@ -27,12 +28,22 @@ async function getPortfolioData(userId: string) {
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0
 
+  // Bitcoin sleeve effective targets: BTC runs off (hold-in-place), IBIT accumulates. Keeps
+  // the portfolio's drift/instructions consistent with the rest of the app (no "buy BTC").
+  const effTarget: Record<string, number> = {}
+  for (const p of applyBitcoinSleeve(holdings.map(h => ({
+    ticker: h.ticker,
+    actualPct: hasBalance ? ((h.snapshots[0]?.value ?? 0) / totalValue) * 100 : 0,
+    targetPct: h.targetPct,
+  })))) effTarget[p.ticker] = p.targetPct
+
   return {
     holdings: holdings.map((h) => {
       const latest = h.snapshots[0]
       const value = latest?.value ?? 0
       const actualPct = hasBalance ? (value / totalValue) * 100 : 0
-      const drift = hasBalance ? actualPct - h.targetPct : 0
+      const tgt = effTarget[h.ticker] ?? h.targetPct
+      const drift = hasBalance ? actualPct - tgt : 0
       const withinBand = !hasBalance || Math.abs(drift) <= h.toleranceBand
       const overCap = hasBalance && h.hardCapPct !== null && actualPct > h.hardCapPct
       // Use HARD_THRESHOLDS for consistent logic: only flag overweight if no low bound
@@ -42,7 +53,7 @@ async function getPortfolioData(userId: string) {
         (ht !== undefined && actualPct > ht.high))
       const isSoft = hasBalance && !isHard && !withinBand
       const sparklineValues = h.snapshots.map(s => s.value)
-      return { ...h, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues }
+      return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues }
     }),
     totalValue,
     hasBalance,

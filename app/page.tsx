@@ -12,7 +12,7 @@ import { ExecutionPlan } from "@/components/dashboard/execution-plan"
 import { CollapsibleSection } from "@/components/dashboard/collapsible-section"
 import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
-import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
+import { computeNextBestMove, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { ActionPlan } from "@/components/dashboard/action-plan"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
@@ -166,6 +166,37 @@ async function getDashboardData(userId: string) {
 
     return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd, costBasisSgd, unrealisedSgd, unrealisedPct, units: h.snapshots[0]?.units ?? 0 }
   })
+
+  // ── Bitcoin sleeve consolidation — BTC + IBIT are ONE sleeve (7% target) ──────
+  // BTC is in run-off (held, never bought/sold — a paper loss is not a sell signal); IBIT is
+  // the accumulation vehicle. Recompute effective targets/status so the app never says
+  // "buy more BTC" while you're transitioning into IBIT, and routes new Bitcoin money to IBIT.
+  {
+    const btcPos = positions.find(p => p.ticker === "BTC")
+    const ibitPos = positions.find(p => p.ticker === "IBIT")
+    if (btcPos && ibitPos && totalValue > 0) {
+      const sleevePct = btcPos.actualPct + ibitPos.actualPct
+      const sleeveCap = HARD_THRESHOLDS["IBIT"]?.high ?? 8
+      // BTC — held, transitioning out. No buy/sell pressure.
+      btcPos.targetPct = btcPos.actualPct
+      btcPos.driftPct = 0
+      btcPos.status = "healthy"
+      btcPos.instruction = `Held as part of your Bitcoin sleeve. BTC + IBIT is ${sleevePct.toFixed(1)}% of a ${BITCOIN_SLEEVE_TARGET_PCT}% target. You're transitioning into IBIT — hold BTC (don't buy or sell it); new Bitcoin money goes to IBIT.`
+      // IBIT — accumulation vehicle. Effective target fills the rest of the sleeve.
+      const ibitTarget = Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btcPos.actualPct)
+      const ibitBand = ibitPos.toleranceBand ?? 1
+      ibitPos.targetPct = ibitTarget
+      ibitPos.driftPct = ibitPos.actualPct - ibitTarget
+      ibitPos.status = sleevePct > sleeveCap ? "hard" : Math.abs(ibitPos.driftPct) > ibitBand ? "soft" : "healthy"
+      ibitPos.instruction = sleevePct > sleeveCap
+        ? `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}%, over its ${sleeveCap}% cap. Trim Bitcoin back toward ${BITCOIN_SLEEVE_TARGET_PCT}% at your next dealing window.`
+        : ibitPos.driftPct < -0.05
+        ? `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}%, below its ${BITCOIN_SLEEVE_TARGET_PCT}% target. Add to IBIT — the tax-effective vehicle you're transitioning into — to bring the sleeve toward ${BITCOIN_SLEEVE_TARGET_PCT}%.`
+        : ibitPos.driftPct > 0.05
+        ? `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}%, at/above its ${BITCOIN_SLEEVE_TARGET_PCT}% target. Hold IBIT — no new Bitcoin buys needed this month.`
+        : `Your Bitcoin sleeve (BTC + IBIT) is on target at ${sleevePct.toFixed(1)}%. Keep IBIT steady.`
+    }
+  }
 
   const hasAnyAlert = positions.some(p => p.status !== "healthy")
 

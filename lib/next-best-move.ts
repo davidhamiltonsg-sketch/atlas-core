@@ -116,6 +116,32 @@ export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC", "IBIT"] as const
 // They are governed as ONE sleeve: combined target 7%, combined cycle-aware cap (§4.1).
 export const BITCOIN_TICKERS = ["BTC", "IBIT"] as const
 
+// Combined sleeve target (§4.1). BTC is in RUN-OFF — held, never bought, never force-sold
+// (a paper loss is not a sell signal). IBIT is the ACCUMULATION vehicle: all new Bitcoin
+// money flows here as BTC transitions out like-for-like.
+export const BITCOIN_SLEEVE_TARGET_PCT = 7
+export const BITCOIN_RUNOFF_TICKER = "BTC"
+export const BITCOIN_ACCUMULATION_TICKER = "IBIT"
+
+/**
+ * Apply the Bitcoin-sleeve transition model, returning a NEW positions array with effective
+ * targets so the whole app treats BTC + IBIT as ONE sleeve:
+ *   • BTC (run-off): effective target = its current weight → zero buy/sell pressure.
+ *   • IBIT (accumulation): effective target = max(0, sleeveTarget − BTC weight) → it reads as
+ *     underweight while the sleeve is below 7%, so new money routes here, not to BTC.
+ * Only transforms when BOTH are present; otherwise returns the positions unchanged.
+ */
+export function applyBitcoinSleeve<T extends { ticker: string; actualPct: number; targetPct: number }>(positions: T[]): T[] {
+  const btc = positions.find((p) => p.ticker === BITCOIN_RUNOFF_TICKER)
+  const ibit = positions.find((p) => p.ticker === BITCOIN_ACCUMULATION_TICKER)
+  if (!btc || !ibit) return positions
+  return positions.map((p) => {
+    if (p.ticker === BITCOIN_RUNOFF_TICKER) return { ...p, targetPct: p.actualPct }
+    if (p.ticker === BITCOIN_ACCUMULATION_TICKER) return { ...p, targetPct: Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btc.actualPct) }
+    return p
+  })
+}
+
 // ─── LIVE MARKET OVERLAY (Finnhub, §F1) ──────────────────────────────────────
 // A live overlay can replace the hardcoded price / 52-week levels / volatility used
 // by the recommendation logic. When absent (no key, fetch failed), the engine falls
@@ -237,6 +263,8 @@ export function computeMarketAwareDca(
   opts: EngineOptions = {}
 ): DcaPlan {
   const market = resolveMarket(opts.market)
+  positions = applyBitcoinSleeve(positions) // BTC+IBIT as one sleeve (run-off vs accumulation)
+  const ibitPresent = positions.some((p) => p.ticker === BITCOIN_ACCUMULATION_TICKER)
   const result: Record<string, DcaAllocation> = {}
   const standard: Record<string, number> = {}
 
@@ -261,6 +289,7 @@ export function computeMarketAwareDca(
   // Eligible = under target AND not overbought. Underweight conviction holdings
   // (incl. BTC) ARE eligible — we accumulate on weakness toward target.
   const eligible = positions.filter((p) => {
+    if (ibitPresent && p.ticker === BITCOIN_RUNOFF_TICKER) return false  // BTC is in run-off — new Bitcoin money goes to IBIT
     if (isOverweight(p)) return false                 // never feed an overweight position
     if (isOverbought(p.ticker, market) && p.ticker !== "VT") return false  // never buy the top (VT exempt — it's the anchor)
     if (techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)) return false // §4.3 halt
@@ -332,7 +361,8 @@ export function computeMarketAwareDca(
     if (a.amount === 0) {
       a.tag = "zeroed"
       if (!a.reason) {
-        if (techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)) a.reason = `Paused — combined tech over the ${COMBINED_TECH_RULE.softCeiling}% ceiling (§4.3).`
+        if (ibitPresent && p.ticker === BITCOIN_RUNOFF_TICKER) a.reason = "Held — transitioning into IBIT; new Bitcoin money goes to IBIT."
+        else if (techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)) a.reason = `Paused — combined tech over the ${COMBINED_TECH_RULE.softCeiling}% ceiling (§4.3).`
         else if (isOverweight(p)) a.reason = "Above target — paused."
         else if (isOverbought(p.ticker, market)) a.reason = "At 52-week high — not buying the top."
         else a.reason = "Paused this month."
@@ -382,6 +412,7 @@ function distributeByWeight(
 
 export function computeNextBestMove(positions: PositionInput[], totalValue: number, opts: EngineOptions = {}): NextMove {
   const hasBalance = totalValue > 0
+  positions = applyBitcoinSleeve(positions) // BTC+IBIT as one sleeve (run-off vs accumulation)
   const market = resolveMarket(opts.market)
   const btcCap = getBtcModifier(undefined, opts.btcCyclePhase).hardHigh
 
@@ -535,6 +566,21 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
     if (convictionUnder.length > 0) {
       const p = convictionUnder[0]
+      // Bitcoin sleeve: when the underweight conviction asset is IBIT, frame it as the sleeve
+      // and make it explicit that new Bitcoin money goes to IBIT, not BTC (which is in run-off).
+      if (p.ticker === BITCOIN_ACCUMULATION_TICKER) {
+        const sleevePct = positions
+          .filter((q) => (BITCOIN_TICKERS as readonly string[]).includes(q.ticker))
+          .reduce((s, q) => s + q.actualPct, 0)
+        return {
+          severity: "medium", ticker: BITCOIN_ACCUMULATION_TICKER,
+          action: "Add to Bitcoin via IBIT",
+          what: `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}% versus its ${BITCOIN_SLEEVE_TARGET_PCT}% target. Direct this month's Bitcoin contribution into IBIT — the tax-effective vehicle you're transitioning into — not BTC.`,
+          why: `BTC and IBIT are one position (the same Bitcoin exposure). You're moving from BTC to IBIT like-for-like, so new money goes to IBIT while BTC runs off. A red number on BTC is a sunk cost — never a reason to sell.`,
+          when: `With this month's contribution, while the sleeve stays below ${BITCOIN_SLEEVE_TARGET_PCT}%.`,
+          color: p.color,
+        }
+      }
       const capLine = p.hardCapPct !== null ? ` Keep it under its ${p.hardCapPct}% cap.` : ""
       return {
         severity: "medium", ticker: p.ticker,

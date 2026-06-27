@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { GitCompare, ArrowUp, ArrowDown, Minus } from "lucide-react"
 import { HARD_THRESHOLDS } from "@/lib/constants"
+import { applyBitcoinSleeve } from "@/lib/next-best-move"
 
 async function getRebalanceData(userId: string) {
   const holdings = await db.holding.findMany({
@@ -15,10 +16,21 @@ async function getRebalanceData(userId: string) {
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
 
+  // Effective targets with the Bitcoin sleeve applied: BTC runs off (hold-in-place, no
+  // buy/sell), IBIT is the accumulation vehicle. So rebalance never says "buy BTC / sell IBIT".
+  const effTarget: Record<string, number> = {}
+  const sleeved = applyBitcoinSleeve(holdings.map(h => ({
+    ticker: h.ticker,
+    actualPct: totalValue > 0 ? ((h.snapshots[0]?.value ?? 0) / totalValue) * 100 : 0,
+    targetPct: h.targetPct,
+  })))
+  for (const p of sleeved) effTarget[p.ticker] = p.targetPct
+
   const positions = holdings.map(h => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
-    const driftPct = actualPct - h.targetPct
+    const tgt = effTarget[h.ticker] ?? h.targetPct
+    const driftPct = actualPct - tgt
     const absDrift = Math.abs(driftPct)
     const ht = HARD_THRESHOLDS[h.ticker]
     const isHard = totalValue > 0 && (
@@ -27,8 +39,8 @@ async function getRebalanceData(userId: string) {
     )
     const isSoft = totalValue > 0 && !isHard && absDrift > h.toleranceBand
 
-    // Target value = targetPct% of total
-    const targetValue = (h.targetPct / 100) * totalValue
+    // Target value = effective target% of total
+    const targetValue = (tgt / 100) * totalValue
     const deviation = value - targetValue // positive = overweight in SGD
 
     // Contribution-based: how many months to correct via contributions alone?
@@ -41,7 +53,7 @@ async function getRebalanceData(userId: string) {
       color: h.color,
       value,
       actualPct,
-      targetPct: h.targetPct,
+      targetPct: tgt,
       hardCapPct: h.hardCapPct,
       driftPct,
       isHard,

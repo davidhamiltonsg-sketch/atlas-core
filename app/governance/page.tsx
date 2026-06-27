@@ -158,7 +158,11 @@ export default async function Governance() {
 
   // Show a gauge for every holding: the curated core rows + any extra ticker you hold
   // (e.g. IBIT) with bands synthesised from its own target / cap, so new tickers populate here.
-  const coreTickers = new Set(thresholds.map((t) => t.ticker))
+  // Bitcoin sleeve: BTC and IBIT are ONE position (7% target / 8% cap). Show a single combined
+  // gauge (BTC + IBIT) and fold IBIT's weight into it — never two separate Bitcoin gauges.
+  allocMap["BTC + IBIT"] = (allocMap["BTC"] ?? 0) + (allocMap["IBIT"] ?? 0)
+
+  const coreTickers = new Set([...thresholds.map((t) => t.ticker), "IBIT"])
   const extraGauges = liveHoldings
     .filter((h) => !coreTickers.has(h.ticker) && (h.actualPct > 0 || h.units > 0 || h.targetPct > 0))
     .map((h) => {
@@ -171,7 +175,11 @@ export default async function Governance() {
         hardHigh, hardLow: 0, color: h.color,
       }
     })
-  const gaugeRows = [...thresholds, ...extraGauges]
+  const gaugeRows = [...thresholds, ...extraGauges].map((t) =>
+    t.ticker === "BTC"
+      ? { ...t, ticker: "BTC + IBIT", classification: "Bitcoin Sleeve — 7% target, 8% cap" }
+      : t
+  )
 
   return (
     <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.7" userName={session.name} isAdmin={session.role === "admin"}>
