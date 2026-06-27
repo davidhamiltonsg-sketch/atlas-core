@@ -24,6 +24,8 @@ import { isUsSited, isInScope } from "@/lib/approved-alternatives"
 import { getLastMonthlyCheck } from "@/lib/monthly-check-actions"
 import { MonthlyCheck } from "@/components/dashboard/monthly-check"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
+import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
+import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -339,7 +341,11 @@ async function getDashboardData(userId: string) {
     marketOverride: marketSnapshot.positions,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
     sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale,
-    govAlignment, lastMonthlyCheck, outOfScopeTickers }
+    govAlignment, lastMonthlyCheck, outOfScopeTickers,
+    updateHoldings: holdings.map((h) => ({
+      id: h.id, ticker: h.ticker, name: h.name,
+      latestUnits: h.snapshots[0]?.units ?? 0, latestPrice: h.snapshots[0]?.price ?? 0,
+    })) }
 }
 
 const sections = [
@@ -362,6 +368,7 @@ export default async function Dashboard() {
     marketAsOf, marketStale, marketOverride,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
     sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment, lastMonthlyCheck, outOfScopeTickers,
+    updateHoldings,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
@@ -369,6 +376,12 @@ export default async function Dashboard() {
 
   return (
     <Shell title="Dashboard" subtitle="Your investment operating system" userName={session.name} isAdmin={session.role === "admin"}>
+
+      {/* Refresh toolbar — live prices + live holdings, right from the dashboard */}
+      <div className="mb-5 flex flex-wrap items-start gap-2">
+        <RefreshPricesButton />
+        <PortfolioUpdateButton label="Update Holdings" holdings={updateHoldings} />
+      </div>
 
       {/* New user welcome — no balance yet */}
       {!hasBalance && (
