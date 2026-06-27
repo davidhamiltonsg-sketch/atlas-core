@@ -184,7 +184,7 @@ export const SGOV_YIELD = {
   lastVerified:  '2026-06',
 } as const
 
-export const GOVERNANCE_VERSION = '6.4' as const
+export const GOVERNANCE_VERSION = '6.7' as const
 export const GOVERNANCE_UPDATED = '2026-06' as const
 
 // ─── LEGACY (v6.0) — retained; no external importer, kept for reference ───────

@@ -173,7 +173,7 @@ export default async function Governance() {
   const gaugeRows = [...thresholds, ...extraGauges]
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.4" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — v6.7" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Full governance document */}
       <a href="/atlas-core-governance.html" target="_blank" rel="noopener noreferrer"
@@ -182,7 +182,7 @@ export default async function Governance() {
           <FileText className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400">Full Governance Document (v6.4)</p>
+          <p className="text-xs font-bold text-indigo-400">Full Governance Document (v6.7)</p>
           <p className="text-xs text-muted-foreground">The complete constitution — all caps, bands, the 38-rule register, pre-commitments, market &amp; risk register, and the horizon transition framework.</p>
         </div>
         <span className="text-xs font-semibold text-indigo-400 group-hover:text-indigo-300 shrink-0">Open ↗</span>
@@ -194,7 +194,7 @@ export default async function Governance() {
           <Zap className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.4 — Bitcoin sleeve (BTC → IBIT), live data &amp; pre-commitments</p>
+          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.7 — Bitcoin via IBIT, vehicle-switch protocol, live data &amp; pre-commitments</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Conviction holdings are accumulated on weakness toward target and sold only on a broken thesis — never because of an unrealised loss. BTC and IBIT are governed as one Bitcoin sleeve (combined 7% target / 8% cycle cap), with BTC transitioning into the tax-effective IBIT like-for-like. The SGOV shock buffer is built from new contributions, never by liquidating a position. Every screen ends in one clear instruction — what to do, why, and when.
           </p>
