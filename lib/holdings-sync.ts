@@ -1,4 +1,35 @@
 import { db } from "@/lib/db"
+import { CORE_TICKERS } from "@/lib/approved-alternatives"
+
+// Default metadata for the governed core tickers, used to create any that are missing so the
+// plan is always represented (e.g. IBIT and SGOV, added to the plan after the DB was seeded).
+const CORE_DEFAULTS: Record<string, { name: string; targetPct: number; hardCapPct: number | null; toleranceBand: number; color: string }> = {
+  VT:   { name: "Vanguard Total World Stock ETF",        targetPct: 52, hardCapPct: 62,   toleranceBand: 3,   color: "#818cf8" },
+  VWO:  { name: "Vanguard FTSE Emerging Markets ETF",    targetPct: 8,  hardCapPct: 13,   toleranceBand: 3,   color: "#c4b5fd" },
+  QQQM: { name: "Invesco NASDAQ 100 ETF",                targetPct: 23, hardCapPct: 31,   toleranceBand: 2.5, color: "#a78bfa" },
+  SMH:  { name: "VanEck Semiconductor ETF",              targetPct: 10, hardCapPct: 12,   toleranceBand: 2.5, color: "#f472b6" },
+  BTC:  { name: "Grayscale Bitcoin Mini ETF",            targetPct: 7,  hardCapPct: 8,    toleranceBand: 1,   color: "#f59e0b" },
+  IBIT: { name: "iShares Bitcoin Trust ETF",             targetPct: 0,  hardCapPct: 8,    toleranceBand: 1,   color: "#f59e0b" },
+  SGOV: { name: "iShares 0-3 Month Treasury Bond ETF",   targetPct: 0,  hardCapPct: null, toleranceBand: 2.5, color: "#10b981" },
+}
+
+/**
+ * Make sure every governed core ticker exists as a holding (creating any gaps at 0 units).
+ * Idempotent — only creates what is missing. Keeps the plan fully represented on the
+ * dashboard/governance pages even if the DB was seeded before a ticker was added to the plan.
+ */
+export async function ensureCoreHoldings(userId: string): Promise<number> {
+  let created = 0
+  for (const ticker of CORE_TICKERS) {
+    const existing = await db.holding.findFirst({ where: { userId, ticker } })
+    if (existing) continue
+    const d = CORE_DEFAULTS[ticker] ?? { name: ticker, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" }
+    const h = await db.holding.create({ data: { userId, ticker, ...d } })
+    await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0 })
+    created++
+  }
+  return created
+}
 
 const YF = "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d"
 

@@ -33,7 +33,7 @@ function projectPortfolio(
     for (let month = 0; month < 12; month++) {
       value = value * (1 + monthlyRate) + contribution
     }
-    if (year > 0) value += annualLumpSum
+    value += annualLumpSum // annual top-up applied every year (incl. the first)
   }
   return value
 }

@@ -45,7 +45,7 @@ function projectPortfolio(
     for (let month = 0; month < 12; month++) {
       value = value * (1 + monthlyRate) + contribution
     }
-    if (year > 0) value += annualLumpSum
+    value += annualLumpSum // annual top-up applied every year (incl. the first)
   }
   return value
 }
@@ -207,15 +207,23 @@ async function getDashboardData(userId: string) {
   const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, 0.10, yearsTo2045, contributionGrowthRate)
 
   // Goal tracking: where should the portfolio be right now if on the base-case trajectory?
-  // Start from portfolio value at start of this year, project to today
+  // Project the START-OF-YEAR value forward by the months elapsed (the old code passed a
+  // fractional year into an integer-year loop, so the loop never ran and on-track was always
+  // 100%). If there is no pre-Jan-1 snapshot (account opened this year) on-track is null.
   const startOfYear = new Date(new Date().getFullYear(), 0, 1)
   const dayOfYear = Math.floor((Date.now() - startOfYear.getTime()) / 86_400_000)
-  const fractionOfYear = dayOfYear / 365
-  // Approximate "on-track" value: extrapolate linearly within the current year
-  const yearsElapsed = 2045 - new Date().getFullYear() - yearsTo2045 // 0 for current year
-  const targetNow = totalValue > 0
-    ? projectPortfolio(totalValue, monthlyContribution, annualLumpSum, 0.10, Math.floor(fractionOfYear * 12) / 12, contributionGrowthRate)
-    : null
+  const monthsElapsed = Math.min(12, Math.max(0, Math.round(dayOfYear / 30.44)))
+  const soySnaps = await Promise.all(
+    holdings.map((h) => db.snapshot.findFirst({ where: { holdingId: h.id, date: { lt: startOfYear } }, orderBy: { date: "desc" } }))
+  )
+  const startOfYearValue = soySnaps.reduce((s, snap) => s + (snap?.value ?? 0), 0)
+  let targetNow: number | null = null
+  if (startOfYearValue > 0 && monthsElapsed > 0) {
+    let v = startOfYearValue
+    const mRate = 0.10 / 12
+    for (let m = 0; m < monthsElapsed; m++) v = v * (1 + mRate) + monthlyContribution
+    targetNow = v
+  }
   const onTrackPct = targetNow && targetNow > 0 ? (totalValue / targetNow) * 100 : null
 
   // Next contribution countdown (15th of each month)

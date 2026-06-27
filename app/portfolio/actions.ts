@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
-import { upsertSnapshotToday } from "@/lib/holdings-sync"
+import { upsertSnapshotToday, ensureCoreHoldings } from "@/lib/holdings-sync"
 import Anthropic from "@anthropic-ai/sdk"
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
@@ -105,6 +105,9 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const reconcile = opts.reconcile ?? withIbkr     // add/remove holdings only when we have brokerage truth
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
+
+  // Self-heal: make sure every governed core ticker (incl. IBIT, SGOV) exists before refreshing.
+  await ensureCoreHoldings(session.userId)
 
   const holdings = await db.holding.findMany({
     where: { userId: session.userId },
