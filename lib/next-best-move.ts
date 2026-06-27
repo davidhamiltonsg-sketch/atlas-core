@@ -130,6 +130,10 @@ export interface EngineOptions {
   btcCyclePhase?: BtcCyclePhase
   /** Worst live §4 look-through breach (company/sector effective exposure over hard cap). */
   lookThroughBreach?: { label: string; pct: number; hard: number; trimTicker: string | null }
+  /** Portfolio drawdown from its tracked peak (negative %, e.g. -22). For the slow-grind trigger (§1.2). */
+  portfolioDrawdownPct?: number
+  /** Days the drawdown has persisted (rules out a V-shaped bounce). */
+  drawdownDays?: number
 }
 
 /** Merge a live overlay over the hardcoded MARKET_STATE positions. */
@@ -468,6 +472,33 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       why: `You have ${bufferPct.toFixed(0)}% in defensive assets — below the ${RULES.shockBufferMinPct}% floor. With the Strait of Hormuz situation volatile and Fed rate-hike risk live, you need dry powder. SGOV yields about ${MARKET_STATE.sgovYieldPct}% (SEC ${MARKET_STATE.sgovSecYieldPct}%) with zero equity correlation. Build it from contributions — never by liquidating a holding.`,
       when: "Start this month; add a little each month until it reaches the 8–10% floor.",
       color: "#10b981",
+    }
+  }
+
+  // ── PRECEDENCE 2.5: Slow-grind drawdown → DEPLOY tranche 1 (§1.2 condition 2) ──
+  // A sustained fall (≥20% over ≥30 days) with no V-shaped bounce, when the buffer is
+  // already built (≥ floor), deploys ONE tranche of SGOV into the most beaten-down quality
+  // holding. Distinct from a sharp policy shock (A1) — this catches a grinding bear market.
+  if (hasBalance
+      && opts.portfolioDrawdownPct !== undefined && opts.portfolioDrawdownPct <= -20
+      && (opts.drawdownDays ?? 0) >= 30
+      && bufferPct >= RULES.shockBufferMinPct) {
+    let worst: { ticker: string; color: string; fromHigh: number } | null = null
+    for (const p of positions) {
+      if (["SGOV", "AGG", "CASH"].includes(p.ticker)) continue
+      const m = market[p.ticker]
+      if (!m || m.hi52 === 0) continue
+      const fromHigh = ((m.price - m.hi52) / m.hi52) * 100
+      if (!worst || fromHigh < worst.fromHigh) worst = { ticker: p.ticker, color: p.color, fromHigh }
+    }
+    const tk = worst?.ticker ?? "VT"
+    return {
+      severity: "high", ticker: tk,
+      action: "Deploy buffer — Tranche 1",
+      what: `The portfolio is down ${Math.abs(opts.portfolioDrawdownPct).toFixed(0)}% over ${opts.drawdownDays}+ days — a slow grind, not a sudden shock. Deploy Tranche 1 (30% of SGOV) into ${tk}, the most beaten-down quality holding. Hold the rest.`,
+      why: `A sustained decline with no V-shaped bounce is the second buffer-deployment trigger (§1.2). Averaging in over tranches beats waiting for a bottom you can't time — and the buffer is what it's for.`,
+      when: "At your next dealing window. Hold Tranches 2–3 for the recovery.",
+      color: worst?.color ?? "#10b981",
     }
   }
 

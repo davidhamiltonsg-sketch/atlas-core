@@ -154,6 +154,25 @@ const governanceRules = [
     category: "BTC Governance",
     active: true,
   },
+  // Vehicle Transitions (§6B) — switching the wrapper without changing the exposure
+  {
+    title: "Transition Qualifying Criteria",
+    description: "A vehicle switch is an approved governance action (not a discretionary D1 change) only if all three hold: (1) the new ETF tracks the same underlying exposure, verified by prospectus; (2) it is a genuine structural improvement — lower fee, better domicile (e.g. Irish UCITS), liquidity, or regulatory status — documented at the decision; (3) no net exposure change: proceeds go straight into the new vehicle.",
+    category: "Vehicle Transitions",
+    active: true,
+  },
+  {
+    title: "Transition Execution Rules",
+    description: "The 90-day hold applies to the position, not the instrument. Execute at the next dealing window. Sell the old vehicle, buy the new one the same or next business day. No partial transitions without a completion plan. Log: old vehicle, new vehicle, units, structural reason, and confirmation the three criteria were met.",
+    category: "Vehicle Transitions",
+    active: true,
+  },
+  {
+    title: "Governance Continuity on Transition",
+    description: "All drift bands, caps, thesis criteria, and behavioural rules transfer to the new vehicle automatically. Only the instrument name in §1 is updated — no other rule amendments are required.",
+    category: "Vehicle Transitions",
+    active: true,
+  },
   // Overlap & Concentration
   {
     title: "Semiconductor Dependency — Cap 16%/20%",

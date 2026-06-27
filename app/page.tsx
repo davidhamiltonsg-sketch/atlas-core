@@ -20,6 +20,7 @@ import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
+import { isUsSited } from "@/lib/approved-alternatives"
 import { getLastMonthlyCheck } from "@/lib/monthly-check-actions"
 import { MonthlyCheck } from "@/components/dashboard/monthly-check"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
@@ -254,7 +255,21 @@ async function getDashboardData(userId: string) {
       }
     : undefined
 
-  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions, lookThroughBreach })
+  // Slow-grind drawdown (§1.2 condition 2): peak → current over the tracked history.
+  let portfolioDrawdownPct: number | undefined
+  let drawdownDays: number | undefined
+  if (historyPoints.length >= 2) {
+    let peakIdx = 0
+    for (let i = 1; i < historyPoints.length; i++) if (historyPoints[i].value > historyPoints[peakIdx].value) peakIdx = i
+    const peak = historyPoints[peakIdx].value
+    const current = historyPoints[historyPoints.length - 1].value
+    if (peak > 0 && current < peak) {
+      portfolioDrawdownPct = ((current - peak) / peak) * 100
+      drawdownDays = Math.floor((Date.now() - new Date(completeDates[peakIdx]).getTime()) / 86_400_000)
+    }
+  }
+
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions, lookThroughBreach, portfolioDrawdownPct, drawdownDays })
 
   // F2 — buffer status: SGOV as % of NAV vs the 8–10% band.
   const sgovPos = positions.find(p => ["SGOV", "AGG", "CASH"].includes(p.ticker))

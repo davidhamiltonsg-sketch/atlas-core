@@ -6,6 +6,7 @@ import { redirect } from "next/navigation"
 import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-group"
 import { FloatingCapsSection } from "@/components/governance/floating-caps-section"
 import { PreCommitments } from "@/components/governance/pre-commitments"
+import { OperatingSafeguards } from "@/components/governance/operating-safeguards"
 
 // v5.8 thresholds (Section 2 hard caps + Section 3.1 drift bands)
 const thresholds = [
@@ -350,6 +351,9 @@ export default async function Governance() {
 
       {/* Behavioural pre-commitments (decided in advance) */}
       <PreCommitments />
+
+      {/* Operating safeguards (currency, emergency reserve, estate tax, platform, overrides) */}
+      <OperatingSafeguards />
 
       {/* Response protocol */}
       <div className="grid gap-3 sm:grid-cols-3 mb-6">
