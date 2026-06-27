@@ -184,6 +184,28 @@ export const SGOV_YIELD = {
   lastVerified:  '2026-06',
 } as const
 
+// ─── OPERATING ASSUMPTIONS & SAFEGUARDS (analyst review, v6.7) ────────────────
+// Hard, documented parameters for the blind spots a 20-year plan must pin down:
+// estate-tax trigger, emergency reserve, base/retirement currency, platform risk,
+// override policy, and the rule-conflict hierarchy.
+export const OPERATING_ASSUMPTIONS = {
+  baseCurrency: "USD",
+  trackingCurrency: "SGD",
+  retirementCurrency: "SGD",
+  // Emergency cash held OUTSIDE this portfolio (so SGOV stays available for deployment).
+  emergencyReserveMonths: 6,
+  // US estate tax bites on US-sited assets above ~USD 60k for non-US persons. When US-sited
+  // ETF value exceeds this, begin migrating to the Irish-UCITS alternatives (§6B).
+  usEstateTaxTriggerUsd: 60_000,
+  broker: "IBKR Singapore",
+  // Single-broker exposure is accepted; revisit a second custodian on a regulatory change,
+  // sanctions/capital-control risk, or once the balance is a material single-point risk.
+  platformPolicy: "single-broker (IBKR) accepted — review a second custodian on regulatory change or material single-point risk",
+  // Overrides are allowed ONLY at the scheduled January review or a documented emergency,
+  // and must be logged with a reason.
+  overridePolicy: "overrides only at the annual January review or a documented emergency — logged with reason",
+} as const
+
 export const GOVERNANCE_VERSION = '6.7' as const
 export const GOVERNANCE_UPDATED = '2026-06' as const
 

@@ -6,7 +6,7 @@
 // so the user sees in one place whether they are inside the rules.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { HARD_THRESHOLDS, COMBINED_TECH_RULE, getBtcModifier } from "@/lib/constants"
+import { HARD_THRESHOLDS, COMBINED_TECH_RULE, getBtcModifier, OPERATING_ASSUMPTIONS } from "@/lib/constants"
 import { BITCOIN_TICKERS } from "@/lib/next-best-move"
 import type { LookThroughResult } from "@/lib/look-through"
 
@@ -32,8 +32,9 @@ export function evaluateGovernance(input: {
   positions: Pos[]
   bufferPct: number
   lookThrough: LookThroughResult
+  usSitedValueUsd?: number
 }): GovAlignment {
-  const { positions, bufferPct, lookThrough } = input
+  const { positions, bufferPct, lookThrough, usSitedValueUsd } = input
   const checks: GovCheck[] = []
   const pos = (t: string) => positions.find((p) => p.ticker.toUpperCase() === t)
 
@@ -116,6 +117,19 @@ export function evaluateGovernance(input: {
       status: lookThrough.sectors.some((s) => s.status === "breach") ? "breach"
         : lookThrough.sectors.some((s) => s.status === "watch") ? "watch" : "ok",
       detail: `Biggest is ${worstSec.label} at ${worstSec.pct.toFixed(1)}% (limit ${worstSec.hard}%)`,
+    })
+  }
+
+  // 8 — US estate-tax exposure (US-sited ETFs above the ~$60k exemption → plan UCITS switch, §6B)
+  if (usSitedValueUsd !== undefined && usSitedValueUsd > 0) {
+    const trig = OPERATING_ASSUMPTIONS.usEstateTaxTriggerUsd
+    const over = usSitedValueUsd > trig
+    checks.push({
+      id: "estate", label: "US estate-tax exposure",
+      status: over ? "watch" : "ok",
+      detail: over
+        ? `~$${Math.round(usSitedValueUsd).toLocaleString()} USD in US-domiciled ETFs — above the ~$${trig.toLocaleString()} exemption. Plan a move to the Irish-UCITS alternatives (§6B).`
+        : `US-domiciled ETFs within the ~$${trig.toLocaleString()} exemption.`,
     })
   }
 

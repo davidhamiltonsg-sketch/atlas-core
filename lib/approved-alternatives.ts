@@ -23,6 +23,15 @@ export const APPROVED_ALTERNATIVES: Record<string, AltVehicle> = {
   IBIT: { tickers: [],                reason: "Switch to a lower-fee / UCITS Bitcoin ETF if one becomes available" },
 }
 
+// Irish-UCITS alternatives (NOT US-sited → outside US estate tax). IBIT is excluded:
+// it is a US-domiciled ETF, so it still counts toward US-sited estate-tax exposure.
+export const UCITS_TICKERS = ["VWRA", "VFEA", "EQQQ", "CNDX", "SEMI"] as const
+
+/** Is this ticker a US-sited asset (relevant to US estate-tax exposure)? */
+export function isUsSited(ticker: string): boolean {
+  return !(UCITS_TICKERS as readonly string[]).includes(ticker.toUpperCase())
+}
+
 // Reverse map: an alternative ticker → the core position it stands in for.
 export const ALTERNATIVE_TO_CORE: Record<string, string> = {
   VWRA: "VT",
