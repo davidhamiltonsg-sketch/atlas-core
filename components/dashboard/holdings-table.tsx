@@ -6,6 +6,7 @@ export interface HoldingRow {
   ticker: string
   name: string
   color: string
+  units: number
   value: number
   latestPrice: number
   priceChangePct: number | null
@@ -13,6 +14,11 @@ export interface HoldingRow {
   avgCostUsd: number | null
   unrealisedSgd: number | null
   unrealisedPct: number | null
+}
+
+// Share counts can be fractional (e.g. BTC) — show up to 4 dp but trim trailing zeros.
+function fmtUnits(u: number): string {
+  return u.toLocaleString("en-US", { maximumFractionDigits: 4 })
 }
 
 // Tiny inline price-trend sparkline.
@@ -30,21 +36,23 @@ function Sparkline({ data, up }: { data: number[]; up: boolean }) {
 }
 
 // Dashboard "Your Holdings" — the first-page table: holding (with approved alternative
-// labelled where held), price trend, live price, your cost, and unrealised gain.
+// labelled where held), price trend, shares held, live price, value, your cost, and unrealised gain.
 export function HoldingsTable({ positions, totalValue }: { positions: HoldingRow[]; totalValue: number }) {
   const totalUnreal = positions.reduce((s, p) => s + (p.unrealisedSgd ?? 0), 0)
   const hasAnyCost = positions.some(p => p.unrealisedSgd !== null)
 
   return (
     <Card>
-      <CardHeader title="Your Holdings" subtitle="Live price · your cost · unrealised gain — approved alternatives shown where held" />
+      <CardHeader title="Your Holdings" subtitle="Shares · live price · value · your cost · unrealised gain — approved alternatives shown where held" />
       <div className="overflow-x-auto">
-        <table className="w-full text-xs min-w-[620px]">
+        <table className="w-full text-xs min-w-[760px]">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30">
               <th className="px-5 py-2.5 font-semibold">Holding</th>
               <th className="px-3 py-2.5 font-semibold">Trend</th>
+              <th className="px-3 py-2.5 font-semibold text-right">Shares</th>
               <th className="px-3 py-2.5 font-semibold text-right">Price</th>
+              <th className="px-3 py-2.5 font-semibold text-right">Value</th>
               <th className="px-3 py-2.5 font-semibold text-right">Your cost</th>
               <th className="px-5 py-2.5 font-semibold text-right">Unrealised gain</th>
             </tr>
@@ -79,8 +87,14 @@ export function HoldingsTable({ positions, totalValue }: { positions: HoldingRow
                     </div>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
+                    {p.units > 0 ? fmtUnits(p.units) : <span className="text-muted-foreground">0</span>}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
                     {p.latestPrice > 0 ? `$${p.latestPrice.toFixed(2)}` : "—"}
                     <span className="ml-1 text-[10px] text-muted-foreground">USD</span>
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums font-medium">
+                    {p.value > 0 ? formatCurrency(p.value, "SGD") : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
                     {p.avgCostUsd !== null ? `$${p.avgCostUsd.toFixed(2)}` : "—"}
@@ -104,8 +118,9 @@ export function HoldingsTable({ positions, totalValue }: { positions: HoldingRow
           </tbody>
           <tfoot>
             <tr className="border-t border-border bg-muted/20 font-semibold">
-              <td className="px-5 py-3" colSpan={2}>Total · {formatCurrency(totalValue, "SGD")}</td>
-              <td colSpan={2} />
+              <td className="px-5 py-3" colSpan={4}>Total</td>
+              <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalValue, "SGD")}</td>
+              <td />
               <td className={`px-5 py-3 text-right tabular-nums ${!hasAnyCost ? "text-muted-foreground" : totalUnreal >= 0 ? "text-green-500" : "text-red-500"}`}>
                 {hasAnyCost ? `${totalUnreal >= 0 ? "+" : ""}${formatCurrency(totalUnreal, "SGD")}` : "—"}
               </td>
