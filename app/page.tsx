@@ -22,6 +22,7 @@ import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 import { getLastMonthlyCheck } from "@/lib/monthly-check-actions"
 import { MonthlyCheck } from "@/components/dashboard/monthly-check"
+import { HoldingsTable } from "@/components/dashboard/holdings-table"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -66,14 +67,24 @@ async function getUsdSgdRate(): Promise<number> {
 }
 
 async function getDashboardData(userId: string) {
-  const [user, holdings, usdSgdRate] = await Promise.all([
+  const [user, holdings, usdSgdRate, trades] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.holding.findMany({
       where: { userId },
       include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
     }),
     getUsdSgdRate(),
+    db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
   ])
+
+  // Weighted-average cost basis per ticker (SGD for P&L, USD for avg cost/unit) — from trades.
+  const avgCost: Record<string, { units: number; sgd: number; usd: number }> = {}
+  for (const t of trades) {
+    if (!avgCost[t.ticker]) avgCost[t.ticker] = { units: 0, sgd: 0, usd: 0 }
+    const a = avgCost[t.ticker]
+    if (t.type === "BUY") { a.units += t.units; a.sgd += t.amount; a.usd += t.units * t.price }
+    else { const su = a.units > 0 ? a.sgd / a.units : 0; const uu = a.units > 0 ? a.usd / a.units : 0; const rem = Math.max(0, a.units - t.units); a.units = rem; a.sgd = rem * su; a.usd = rem * uu }
+  }
 
   // Build portfolio value history — deduplicate by date, align across holdings
   // (index-based alignment breaks when holdings have different snapshot counts;
@@ -139,11 +150,20 @@ async function getDashboardData(userId: string) {
       instruction = `${h.ticker} is right on track at ${actualPct.toFixed(1)}% (target: ${h.targetPct}%). Keep investing your normal amount each month.`
     }
 
-    // Stock performance — price move since the previous snapshot
+    // Stock performance — price move since the previous snapshot + a price trend series
     const latestPrice = h.snapshots[0]?.price ?? 0
     const prevPrice = h.snapshots[1]?.price ?? 0
     const priceChangePct = prevPrice > 0 ? ((latestPrice - prevPrice) / prevPrice) * 100 : null
-    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct }
+    const priceHistory = [...h.snapshots].reverse().map(s => s.price).filter(p => p > 0)
+
+    // Cost basis & unrealised gain (from the trade log)
+    const cb = avgCost[h.ticker]
+    const costBasisSgd = cb ? cb.sgd : 0
+    const avgCostUsd = cb && cb.units > 0 ? cb.usd / cb.units : null
+    const unrealisedSgd = costBasisSgd > 0 ? value - costBasisSgd : null
+    const unrealisedPct = costBasisSgd > 0 ? (unrealisedSgd! / costBasisSgd) * 100 : null
+
+    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, instruction, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd, costBasisSgd, unrealisedSgd, unrealisedPct, units: h.snapshots[0]?.units ?? 0 }
   })
 
   const hasAnyAlert = positions.some(p => p.status !== "healthy")
@@ -430,81 +450,9 @@ export default async function Dashboard() {
           {/* Rule check — alignment with governance rules, plain English */}
           {hasBalance && govAlignment && <GovernanceAlignment data={govAlignment} />}
 
-          {/* Holdings Summary Table */}
-          <CollapsibleSection
-            title="Your Holdings"
-            defaultOpen={true}
-            badge={
-              hasBalance && (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  hardBreaches > 0 ? "bg-red-500/10 text-red-500" :
-                  softBreaches > 0 ? "bg-amber-400/10 text-amber-500" :
-                  "bg-green-500/10 text-green-500"
-                }`}>
-                  {hardBreaches > 0 ? `${hardBreaches} hard breach` :
-                   softBreaches > 0 ? `${softBreaches} soft alert` :
-                   "All on track"}
-                </span>
-              )
-            }
-          >
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="hidden sm:grid grid-cols-[32px_1fr_90px_70px_70px_70px] gap-2 px-4 py-2 bg-muted/30 border-b border-border">
-                {["", "Name", "Value", "Actual", "Target", "Status"].map((h, i) => (
-                  <span key={i} className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{h}</span>
-                ))}
-              </div>
-              <div className="divide-y divide-border">
-                {positions.map((p) => {
-                  const under = p.driftPct < 0
-                  const badgeCls = p.status === "healthy"
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20"
-                    : p.status === "soft"
-                    ? under
-                      ? "bg-yellow-400/15 text-yellow-700 dark:text-yellow-400 ring-1 ring-yellow-400/30"
-                      : "bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-1 ring-orange-500/30"
-                    : "bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30"
-                  const badgeLabel = p.status === "healthy" ? "On track" : p.status === "soft" ? (under ? "A bit small" : "A bit big") : (under ? "Buy now" : "Stop buying")
-                  const notHeld = hasBalance && p.value === 0 // sold-out or not-yet-bought (e.g. SGOV/IBIT placeholder)
-                  const rowCls = (notHeld ? "opacity-55 " : "") + (p.status === "hard"
-                    ? "border-l-4 border-red-500"
-                    : p.status === "soft"
-                    ? under ? "border-l-[3px] border-yellow-400" : "border-l-[3px] border-orange-500"
-                    : "border-l-4 border-transparent")
-                  return (
-                    <a key={p.ticker} href={`/portfolio#holding-${p.ticker}`}
-                      className={`grid grid-cols-[32px_1fr] sm:grid-cols-[32px_1fr_90px_70px_70px_70px] items-center gap-x-2 gap-y-0.5 px-4 py-2.5 hover:bg-accent/30 transition-colors ${rowCls}`}>
-                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.color, boxShadow: `0 0 6px ${p.color}80` }} />
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold">{p.ticker}</span>
-                        <span className="text-xs text-muted-foreground ml-2 truncate hidden sm:inline">{p.name}</span>
-                      </div>
-                      <div className="hidden sm:block" title={p.latestPrice ? `Last price $${p.latestPrice.toFixed(2)}` : undefined}>
-                        <span className="text-xs font-semibold">{formatCurrency(p.value, "SGD")}</span>
-                        {hasBalance && p.priceChangePct !== null && (
-                          <span className={`block text-[10px] tabular-nums ${p.priceChangePct >= 0 ? "text-green-500" : "text-red-500"}`}>
-                            {p.priceChangePct >= 0 ? "▲" : "▼"} {Math.abs(p.priceChangePct).toFixed(1)}%
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs tabular-nums font-semibold hidden sm:block">{notHeld ? "—" : hasBalance ? `${p.actualPct.toFixed(1)}%` : "—"}</span>
-                      <span className="text-xs tabular-nums text-muted-foreground hidden sm:block">{p.targetPct}%</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit hidden sm:block ${notHeld ? "bg-muted text-muted-foreground" : hasBalance ? badgeCls : "bg-muted text-muted-foreground"}`}>{notHeld ? "Not held" : hasBalance ? badgeLabel : "Target"}</span>
-                      {/* Mobile right side */}
-                      <div className="col-span-1 flex items-center justify-end gap-2 sm:hidden">
-                        <span className="text-xs font-semibold">{notHeld ? "—" : `${p.actualPct.toFixed(1)}%`}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${notHeld ? "bg-muted text-muted-foreground" : badgeCls}`}>{notHeld ? "Not held" : badgeLabel}</span>
-                      </div>
-                    </a>
-                  )
-                })}
-              </div>
-              <div className="px-4 py-2.5 border-t border-border bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{positions.length} positions{hasBalance ? ` · ${formatCurrency(totalValue, "SGD")} total` : " · no snapshot yet"}</span>
-                <a href="/portfolio" className="font-semibold text-primary hover:underline">Manage holdings →</a>
-              </div>
-            </div>
-          </CollapsibleSection>
+          {/* Your Holdings — first-page table: price trend · price · your cost · unrealised gain
+              (approved alternatives, e.g. VWRA for VT, are labelled where held) */}
+          {hasBalance && <HoldingsTable positions={positions} totalValue={totalValue} />}
 
           {/* Next Execution Instructions */}
           <div id="execution">
