@@ -265,8 +265,13 @@ async function getDashboardData(userId: string) {
   const bufferMonthsToBand = bufferNeeded > 0 && monthlyContribution > 0
     ? Math.ceil(bufferNeeded / monthlyContribution) : 0
 
+  // US estate-tax exposure: value of US-domiciled ETFs in USD (excludes Irish-UCITS alts).
+  const usSitedValueUsd = usdSgdRate > 0
+    ? positions.filter(p => isUsSited(p.ticker)).reduce((s, p) => s + p.value / usdSgdRate, 0)
+    : 0
+
   // Governance alignment — are we inside our own rules right now?
-  const govAlignment = evaluateGovernance({ positions, bufferPct, lookThrough })
+  const govAlignment = evaluateGovernance({ positions, bufferPct, lookThrough, usSitedValueUsd })
 
   // Monthly 5-minute check cadence
   const lastMonthlyCheck = await getLastMonthlyCheck(userId)
