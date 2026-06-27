@@ -84,8 +84,10 @@ export async function POST() {
     executions,
     dividends,
     accountId: result.accountId,
-    newTrades: executions.filter(e => !e.alreadyImported && e.holdingKnown).length,
-    newDividends: dividends.filter(d => !d.alreadyImported && d.holdingKnown).length,
+    // Count ALL not-yet-imported rows — new/out-of-scope tickers are imported too (they
+    // create the holding), so they must be counted, not silently excluded.
+    newTrades: executions.filter(e => !e.alreadyImported).length,
+    newDividends: dividends.filter(d => !d.alreadyImported).length,
   })
 }
 

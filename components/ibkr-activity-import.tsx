@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react"
 import { X, RefreshCw, Check, AlertCircle, ArrowUpCircle, Loader2, TrendingUp, Info, ShieldAlert } from "lucide-react"
+import { isInScope } from "@/lib/approved-alternatives"
 
 interface Execution {
   tradeID: string
@@ -257,6 +258,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                               <span className="text-xs font-semibold">{e.symbol}</span>
                               <span className="text-[11px] text-muted-foreground">{e.quantity} × ${e.price.toFixed(2)}</span>
                               {!e.holdingKnown && <span className="text-[10px] text-indigo-400 italic">new — will be added</span>}
+                              {!isInScope(e.symbol) && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -324,6 +326,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                               <span className="text-xs font-semibold">{d.symbol}</span>
                               <span className="text-[11px] text-muted-foreground truncate">{d.description}</span>
                               {!d.holdingKnown && <span className="text-[10px] text-indigo-400 italic">new — will be added</span>}
+                              {!isInScope(d.symbol) && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                             </div>
                           </div>
                           <div className="text-right shrink-0">

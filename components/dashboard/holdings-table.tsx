@@ -1,5 +1,5 @@
 import { Card, CardHeader } from "@/components/ui/primitives"
-import { altLabelFor } from "@/lib/approved-alternatives"
+import { altLabelFor, isInScope } from "@/lib/approved-alternatives"
 import { formatCurrency } from "@/lib/utils"
 
 export interface HoldingRow {
@@ -52,6 +52,7 @@ export function HoldingsTable({ positions, totalValue }: { positions: HoldingRow
           <tbody className="divide-y divide-border">
             {positions.map((p) => {
               const alt = altLabelFor(p.ticker)
+              const offScope = !isInScope(p.ticker)
               const up = p.priceHistory.length > 1
                 ? p.priceHistory[p.priceHistory.length - 1] >= p.priceHistory[0]
                 : (p.priceChangePct ?? 0) >= 0
@@ -63,6 +64,7 @@ export function HoldingsTable({ positions, totalValue }: { positions: HoldingRow
                       <span className="h-2 w-2 rounded-full shrink-0" style={{ background: p.color }} />
                       <span className="font-bold">{p.ticker}</span>
                       {alt && <span className="rounded-full bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20 px-1.5 py-0.5 text-[9px] font-semibold">{alt}</span>}
+                      {offScope && <span className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold">not in plan — review</span>}
                     </div>
                     <span className="text-[11px] text-muted-foreground">{p.name}</span>
                   </td>

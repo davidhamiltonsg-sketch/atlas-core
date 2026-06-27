@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useTransition } from "react"
-import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw } from "lucide-react"
-import { updateHoldingsManually, extractFromScreenshot } from "@/app/portfolio/actions"
+import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw, ArrowUpCircle } from "lucide-react"
+import { updateHoldingsManually, extractFromScreenshot, applyExtractedHoldings } from "@/app/portfolio/actions"
+import { isInScope } from "@/lib/approved-alternatives"
 
 interface Holding {
   id: string
@@ -102,15 +103,14 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   }
 
   function handleConfirmScreenshot() {
-    const updates = extractedRows
-      .map((row) => {
-        const holding = holdings.find((h) => h.ticker === row.ticker)
-        return holding ? { holdingId: holding.id, units: row.units, price: row.price } : null
-      })
-      .filter(Boolean) as Array<{ holdingId: string; units: number; price: number }>
+    // Import EVERY extracted row — existing tickers update, new ones (e.g. IBIT or an
+    // out-of-scope ETF) are created so nothing is silently dropped.
+    const rows = extractedRows
+      .filter((r) => r.units > 0 && r.price > 0)
+      .map((r) => ({ ticker: r.ticker, units: r.units, price: r.price }))
 
     startTransition(async () => {
-      await updateHoldingsManually(updates)
+      await applyExtractedHoldings(rows)
       setSaved(true)
       setTimeout(() => { setSaved(false); onClose() }, 1200)
     })
@@ -269,22 +269,25 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                     </div>
                   )}
                   <div className="space-y-2 mb-1">
-                    {ibkrPositions.map((pos) => (
+                    {ibkrPositions.map((pos) => {
+                      const offScope = !isInScope(pos.symbol)
+                      return (
                       <div
                         key={pos.symbol}
-                        className={`flex items-center justify-between rounded-lg px-3 py-2.5 ${
+                        className={`flex items-center justify-between rounded-lg px-3 py-2.5 border ${
                           pos.matched
-                            ? "bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20"
-                            : "bg-muted/50 border border-border opacity-50"
+                            ? "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20"
+                            : "bg-indigo-50 dark:bg-indigo-500/[0.08] border-indigo-200 dark:border-indigo-500/20"
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           {pos.matched
                             ? <Check className="h-3.5 w-3.5 text-green-500" />
-                            : <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                            : <ArrowUpCircle className="h-3.5 w-3.5 text-indigo-500" />
                           }
                           <span className="text-xs font-bold">{pos.symbol}</span>
-                          {!pos.matched && <span className="text-[10px] text-indigo-400">new — will be added</span>}
+                          {!pos.matched && <span className="text-[10px] text-indigo-500">new — will be added</span>}
+                          {offScope && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                         </div>
                         <div className="text-right">
                           <span className="text-xs font-semibold tabular-nums">
@@ -300,7 +303,8 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                           )}
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   {ibkrPositions.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-2">
@@ -391,16 +395,18 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
               {screenshotState === "preview" && (
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-3">Extracted holdings — review before confirming</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Extracted holdings — review before confirming. New tickers will be added automatically.</p>
                   <div className="space-y-2 mb-4">
                     {extractedRows.map((row) => {
                       const matched = holdings.find((h) => h.ticker === row.ticker)
+                      const offScope = !isInScope(row.ticker)
                       return (
-                        <div key={row.ticker} className={`flex items-center justify-between rounded-lg px-3 py-2 ${matched ? "bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20" : "bg-muted/50 border border-border opacity-60"}`}>
+                        <div key={row.ticker} className={`flex items-center justify-between rounded-lg px-3 py-2 border ${matched ? "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20" : "bg-indigo-50 dark:bg-indigo-500/[0.08] border-indigo-200 dark:border-indigo-500/20"}`}>
                           <div className="flex items-center gap-2">
-                            {matched ? <Check className="h-3.5 w-3.5 text-green-500" /> : <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                            {matched ? <Check className="h-3.5 w-3.5 text-green-500" /> : <ArrowUpCircle className="h-3.5 w-3.5 text-indigo-500" />}
                             <span className="text-xs font-bold">{row.ticker}</span>
-                            {!matched && <span className="text-[10px] text-muted-foreground">not in portfolio</span>}
+                            {!matched && <span className="text-[10px] text-indigo-500">new — will be added</span>}
+                            {offScope && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                           </div>
                           <div className="text-right">
                             <span className="text-xs font-semibold">${row.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -410,9 +416,6 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                       )
                     })}
                   </div>
-                  {extractedRows.filter((r) => holdings.find((h) => h.ticker === r.ticker)).length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center mb-4">No matching tickers found. Try manual input instead.</p>
-                  )}
                 </div>
               )}
             </div>
@@ -464,7 +467,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
             {mode === "screenshot" && screenshotState === "preview" && (
               <button
                 onClick={handleConfirmScreenshot}
-                disabled={isPending || saved || extractedRows.filter((r) => holdings.find((h) => h.ticker === r.ticker)).length === 0}
+                disabled={isPending || saved || extractedRows.filter((r) => r.units > 0 && r.price > 0).length === 0}
                 className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}

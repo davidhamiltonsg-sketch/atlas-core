@@ -8,6 +8,7 @@
 
 import { HARD_THRESHOLDS, COMBINED_TECH_RULE, getBtcModifier, OPERATING_ASSUMPTIONS } from "@/lib/constants"
 import { BITCOIN_TICKERS } from "@/lib/next-best-move"
+import { isInScope } from "@/lib/approved-alternatives"
 import type { LookThroughResult } from "@/lib/look-through"
 
 export type Align = "ok" | "watch" | "breach"
@@ -130,6 +131,16 @@ export function evaluateGovernance(input: {
       detail: over
         ? `~$${Math.round(usSitedValueUsd).toLocaleString()} USD in US-domiciled ETFs — above the ~$${trig.toLocaleString()} exemption. Plan a move to the Irish-UCITS alternatives (§6B).`
         : `US-domiciled ETFs within the ~$${trig.toLocaleString()} exemption.`,
+    })
+  }
+
+  // 9 — Every holding inside the plan (no un-governed tickers held)
+  const offScope = positions.filter((p) => p.actualPct > 0 && !isInScope(p.ticker)).map((p) => p.ticker.toUpperCase())
+  if (offScope.length > 0) {
+    checks.push({
+      id: "scope", label: "Every holding is part of your plan",
+      status: "watch",
+      detail: `${offScope.join(", ")} ${offScope.length > 1 ? "are" : "is"} held but not in your policy. Decide: keep and set a target, switch to an approved fund (§6B), or exit.`,
     })
   }
 

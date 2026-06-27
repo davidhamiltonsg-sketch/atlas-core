@@ -32,6 +32,24 @@ export function isUsSited(ticker: string): boolean {
   return !(UCITS_TICKERS as readonly string[]).includes(ticker.toUpperCase())
 }
 
+// ─── Governance universe ─────────────────────────────────────────────────────
+// Every ticker the policy knows about: the core positions, the cash buffer, and each
+// pre-approved alternative vehicle. Anything else held in the brokerage is "out of
+// scope" — it is still imported (so the portfolio stays accurate), but flagged as an
+// action so you can decide: keep & classify it, switch to an approved fund, or exit.
+export const CORE_TICKERS = ["VT", "VWO", "QQQM", "SMH", "BTC", "IBIT", "SGOV"] as const
+
+export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
+  ...CORE_TICKERS,
+  ...Object.keys(APPROVED_ALTERNATIVES),
+  ...Object.values(APPROVED_ALTERNATIVES).flatMap((a) => a.tickers),
+])
+
+/** Is this ticker part of the governed policy universe (core, buffer, or approved alternative)? */
+export function isInScope(ticker: string): boolean {
+  return GOVERNANCE_UNIVERSE.has(ticker.toUpperCase())
+}
+
 // Reverse map: an alternative ticker → the core position it stands in for.
 export const ALTERNATIVE_TO_CORE: Record<string, string> = {
   VWRA: "VT",

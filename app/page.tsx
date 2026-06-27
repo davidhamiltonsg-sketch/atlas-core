@@ -20,7 +20,7 @@ import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
-import { isUsSited } from "@/lib/approved-alternatives"
+import { isUsSited, isInScope } from "@/lib/approved-alternatives"
 import { getLastMonthlyCheck } from "@/lib/monthly-check-actions"
 import { MonthlyCheck } from "@/components/dashboard/monthly-check"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
@@ -285,6 +285,10 @@ async function getDashboardData(userId: string) {
     ? positions.filter(p => isUsSited(p.ticker)).reduce((s, p) => s + p.value / usdSgdRate, 0)
     : 0
 
+  // Out-of-scope holdings: tickers held but outside the policy universe (e.g. a stock or ETF
+  // bought in IBKR that the plan doesn't govern). Surfaced as an action + alert to triage.
+  const outOfScopeTickers = positions.filter((p) => p.value > 0 && !isInScope(p.ticker)).map((p) => p.ticker.toUpperCase())
+
   // Governance alignment — are we inside our own rules right now?
   const govAlignment = evaluateGovernance({ positions, bufferPct, lookThrough, usSitedValueUsd })
 
@@ -296,7 +300,7 @@ async function getDashboardData(userId: string) {
     marketOverride: marketSnapshot.positions,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
     sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale,
-    govAlignment, lastMonthlyCheck }
+    govAlignment, lastMonthlyCheck, outOfScopeTickers }
 }
 
 const sections = [
@@ -318,7 +322,7 @@ export default async function Dashboard() {
     contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf, marketStale, marketOverride,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
-    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment, lastMonthlyCheck,
+    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment, lastMonthlyCheck, outOfScopeTickers,
   } = await getDashboardData(session.userId)
 
   // Derive ticker order by target % descending (largest allocation first in footer summary)
@@ -375,6 +379,24 @@ export default async function Dashboard() {
             </p>
           </div>
           <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">View steps ↓</span>
+        </a>
+      )}
+
+      {/* Out-of-scope holding alert — a ticker is held but outside the plan */}
+      {hasBalance && outOfScopeTickers.length > 0 && (
+        <a href="/portfolio" className="mb-5 flex items-center gap-4 rounded-xl border border-amber-400/40 bg-amber-400/10 dark:bg-amber-400/[0.08] px-5 py-3.5 hover:bg-amber-400/[0.14] transition-colors group">
+          <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/20">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+              {outOfScopeTickers.join(", ")} {outOfScopeTickers.length > 1 ? "are" : "is"} held but not in your plan
+            </p>
+            <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+              Imported so your totals stay accurate. Decide what to do: keep it and set a target, switch to an approved alternative, or sell it.
+            </p>
+          </div>
+          <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">Review →</span>
         </a>
       )}
 

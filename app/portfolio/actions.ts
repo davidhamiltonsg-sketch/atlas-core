@@ -61,6 +61,38 @@ export async function updateHoldingsManually(
   revalidatePath("/forecast")
 }
 
+// Apply screenshot-extracted holdings: update existing tickers AND create any new ones
+// (e.g. IBIT, or an out-of-scope ETF). Every row that has units & price is brought in so
+// the portfolio stays accurate — out-of-scope tickers are then flagged on the dashboard.
+export async function applyExtractedHoldings(
+  rows: Array<{ ticker: string; units: number; price: number }>
+): Promise<{ updated: number; created: number }> {
+  const session = await getSession()
+  if (!session) throw new Error("Unauthenticated")
+
+  const usdSgdRate = await getUsdSgdRate()
+  let updated = 0
+  let created = 0
+
+  for (const r of rows) {
+    const sym = r.ticker?.trim().toUpperCase()
+    if (!sym || !(r.units > 0) || !(r.price > 0)) continue
+
+    let holding = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
+    if (!holding) {
+      holding = await db.holding.create({
+        data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
+      })
+      created++
+    }
+    await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: r.units * r.price * usdSgdRate })
+    updated++
+  }
+
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd"]) revalidatePath(p)
+  return { updated, created }
+}
+
 // Live refresh: update prices AND share counts.
 // Share counts (units) can only come from the brokerage, so when IBKR Flex is configured
 // we pull live positions (units + mark price + value) — the source of truth. Holdings IBKR
