@@ -20,7 +20,7 @@ const DIM_WEIGHTS = [
   { label: "Structural",     weight: 40, desc: "Allocation integrity — drift vs targets" },
   { label: "Behavioural",    weight: 25, desc: "Governance rule compliance rate" },
   { label: "Concentration",  weight: 25, desc: "Hard-cap breach exposure" },
-  { label: "Execution",      weight: 10, desc: "Snapshot data freshness" },
+  { label: "Freshness",      weight: 10, desc: "Snapshot data freshness" },
 ]
 
 export function HealthMethodology({
@@ -34,7 +34,7 @@ export function HealthMethodology({
     { label: "Structural",    score: structural,    weight: 40 },
     { label: "Behavioural",   score: behavioural,   weight: 25 },
     { label: "Concentration", score: concentration, weight: 25 },
-    { label: "Execution",     score: execution,     weight: 10 },
+    { label: "Freshness",     score: execution,     weight: 10 },
   ]
 
   const overall = Math.round(dims.reduce((s, d) => s + d.score * (d.weight / 100), 0))
@@ -104,9 +104,9 @@ export function HealthMethodology({
               </div>
             </div>
 
-            {/* Execution */}
+            {/* Freshness */}
             <div>
-              <p className="font-semibold text-foreground mb-1">Execution · 10%</p>
+              <p className="font-semibold text-foreground mb-1">Freshness · 10%</p>
               <p className="text-muted-foreground leading-relaxed mb-1.5">
                 Snapshot freshness tier: ≤3d = 100 · ≤7d = 95 · ≤14d = 85 · ≤30d = 70 · ≤60d = 45 · older = 20
               </p>

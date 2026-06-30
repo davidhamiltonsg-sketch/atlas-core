@@ -1,5 +1,6 @@
 import { ArrowRight, Zap, AlertTriangle, ShieldAlert, TrendingUp, CheckCircle2 } from "lucide-react"
 import type { NextMove } from "@/lib/next-best-move"
+import { MarkDoneButton } from "@/components/dashboard/mark-done-button"
 
 const SEVERITY_CONFIG = {
   critical: {
@@ -54,11 +55,14 @@ const SEVERITY_CONFIG = {
   },
 } as const
 
-export function NextBestMove({ move, dataAsOf, stale }: { move: NextMove; dataAsOf?: string; stale?: boolean }) {
+export function NextBestMove({ move, dataAsOf, stale, lastDone }: { move: NextMove; dataAsOf?: string; stale?: boolean; lastDone?: { note: string; date: string } | null }) {
   const cfg = SEVERITY_CONFIG[move.severity]
   const { Icon } = cfg
   const asOfLabel = dataAsOf
     ? new Date(dataAsOf).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : null
+  const lastDoneLabel = lastDone
+    ? new Date(lastDone.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
     : null
 
   return (
@@ -102,14 +106,17 @@ export function NextBestMove({ move, dataAsOf, stale }: { move: NextMove; dataAs
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <a
-            href="/command-centre"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-400 transition-colors"
-          >
-            See the full plan in Command Centre
-            <ArrowRight className="h-3.5 w-3.5" />
-          </a>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <MarkDoneButton action={move.action} />
+            <a
+              href="/command-centre"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-400 transition-colors"
+            >
+              Full plan
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
           {asOfLabel && (
             <span className="text-[10px] text-muted-foreground">
               {stale ? (
@@ -120,6 +127,13 @@ export function NextBestMove({ move, dataAsOf, stale }: { move: NextMove; dataAs
             </span>
           )}
         </div>
+
+        {lastDoneLabel && (
+          <p className="mt-2 text-[11px] text-muted-foreground border-t border-border/60 pt-2">
+            <CheckCircle2 className="inline h-3 w-3 text-green-500 mr-1 -mt-0.5" />
+            Last action you logged: <span className="font-medium text-foreground">{lastDone!.note}</span> · {lastDoneLabel}
+          </p>
+        )}
       </div>
     </div>
   )

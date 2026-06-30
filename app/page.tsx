@@ -12,7 +12,7 @@ import { ExecutionPlan } from "@/components/dashboard/execution-plan"
 import { CollapsibleSection } from "@/components/dashboard/collapsible-section"
 import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
-import { computeNextBestMove, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
+import { computeNextBestMove, computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { ActionPlan } from "@/components/dashboard/action-plan"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
@@ -22,6 +22,7 @@ import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 import { isUsSited, isInScope } from "@/lib/approved-alternatives"
 import { getLastMonthlyCheck } from "@/lib/monthly-check-actions"
+import { getRecentExecutions } from "@/lib/execution-actions"
 import { MonthlyCheck } from "@/components/dashboard/monthly-check"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
@@ -312,6 +313,19 @@ async function getDashboardData(userId: string) {
 
   const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: marketSnapshot.positions, lookThroughBreach, portfolioDrawdownPct, drawdownDays })
 
+  // Market-aware DCA split — computed once here so the unified holdings table can show each
+  // holding's "this month" action inline (the ExecutionPlan below renders the full version).
+  const dcaPlan = computeMarketAwareDca(moveInputs, monthlyContribution, { market: marketSnapshot.positions, lookThroughBreach })
+  const dcaByTicker = new Map(dcaPlan.allocations.map((a) => [a.ticker, { amount: a.amount, tag: a.tag, reason: a.reason }]))
+  const holdingsRows = positions.map((p) => ({
+    ticker: p.ticker, name: p.name, color: p.color, units: p.units, value: p.value,
+    latestPrice: p.latestPrice ?? 0, priceChangePct: p.priceChangePct, priceHistory: p.priceHistory,
+    avgCostUsd: p.avgCostUsd, unrealisedSgd: p.unrealisedSgd, unrealisedPct: p.unrealisedPct,
+    actualPct: p.actualPct, targetPct: p.targetPct, toleranceBand: p.toleranceBand ?? 2.5,
+    hardCapPct: p.hardCapPct ?? null, status: p.status,
+    thisMonth: dcaByTicker.get(p.ticker) ?? null,
+  }))
+
   // F2 — buffer status: SGOV as % of NAV vs the 8–10% band.
   const sgovPos = positions.find(p => ["SGOV", "AGG", "CASH"].includes(p.ticker))
   const bufferPct = sgovPos ? sgovPos.actualPct : 0
@@ -333,15 +347,19 @@ async function getDashboardData(userId: string) {
   // Governance alignment — are we inside our own rules right now?
   const govAlignment = evaluateGovernance({ positions, bufferPct, lookThrough, usSitedValueUsd })
 
-  // Monthly 5-minute check cadence
-  const lastMonthlyCheck = await getLastMonthlyCheck(userId)
+  // Monthly 5-minute check cadence + last logged execution (the confirmation loop)
+  const [lastMonthlyCheck, recentExecutions] = await Promise.all([
+    getLastMonthlyCheck(userId),
+    getRecentExecutions(userId, 1),
+  ])
+  const lastDone = recentExecutions[0] ?? null
 
-  return { totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
+  return { totalValue, hasBalance, positions, holdingsRows, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays, healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null, base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum, contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf: marketSnapshot.asOf, marketStale: marketSnapshot.stale, marketNote: marketSnapshot.note,
     marketOverride: marketSnapshot.positions,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
     sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale,
-    govAlignment, lastMonthlyCheck, outOfScopeTickers,
+    govAlignment, lastMonthlyCheck, lastDone, outOfScopeTickers,
     updateHoldings: holdings.map((h) => ({
       id: h.id, ticker: h.ticker, name: h.name,
       latestUnits: h.snapshots[0]?.units ?? 0, latestPrice: h.snapshots[0]?.price ?? 0,
@@ -360,14 +378,14 @@ export default async function Dashboard() {
   const session = await getSession()
   if (!session) redirect("/login")
   const {
-    totalValue, hasBalance, positions, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays,
+    totalValue, hasBalance, positions, holdingsRows, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays,
     healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData,
     daysSinceUpdate, latestSnapshotDate, base2045, yearsTo2045, daysToContribution,
     nextContributionLabel, historyPoints, valueChange, monthlyContribution, annualLumpSum,
     contributionGrowthRate, usdSgdRate, onTrackPct, nextBestMove,
     marketAsOf, marketStale, marketOverride,
     bufferPct, bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
-    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment, lastMonthlyCheck, outOfScopeTickers,
+    sgovYieldPct, sgovSecYieldPct, sgovStale, govAlignment, lastMonthlyCheck, lastDone, outOfScopeTickers,
     updateHoldings,
   } = await getDashboardData(session.userId)
 
@@ -480,7 +498,7 @@ export default async function Dashboard() {
           {hasBalance && <MonthlyCheck lastCheckIso={lastMonthlyCheck} />}
 
           {/* Next Best Move — the single clearest action, always present */}
-          {hasBalance && <NextBestMove move={nextBestMove} dataAsOf={marketAsOf} stale={marketStale} />}
+          {hasBalance && <NextBestMove move={nextBestMove} dataAsOf={marketAsOf} stale={marketStale} lastDone={lastDone} />}
 
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -490,9 +508,13 @@ export default async function Dashboard() {
                 <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               <p className="text-2xl font-black tabular-nums">{formatCurrency(totalValue, "SGD")}</p>
-              <p className="text-[11px] text-muted-foreground">
-                SGD · USD/SGD {usdSgdRate.toFixed(4)}
-              </p>
+              {valueChange !== null ? (
+                <p className={`text-[11px] tabular-nums font-medium ${valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(valueChange), "SGD")} since last update
+                </p>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">SGD · USD/SGD {usdSgdRate.toFixed(4)}</p>
+              )}
             </a>
 
             <a href="/governance" className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2 hover:border-primary/30 hover:bg-accent/40 transition-colors group">
@@ -546,7 +568,7 @@ export default async function Dashboard() {
 
           {/* Your Holdings — first-page table: price trend · price · your cost · unrealised gain
               (approved alternatives, e.g. VWRA for VT, are labelled where held) */}
-          {hasBalance && <HoldingsTable positions={positions} totalValue={totalValue} />}
+          {hasBalance && <HoldingsTable positions={holdingsRows} totalValue={totalValue} priceStale={marketStale} />}
 
           {/* Next Execution Instructions */}
           <div id="execution">
@@ -616,7 +638,7 @@ export default async function Dashboard() {
                 {
                   step: "4",
                   title: "Check the health score",
-                  body: "The health gauge in the sidebar scores your portfolio across four dimensions: Structural (drift integrity), Behavioural (governance rule compliance), Concentration (hard-cap exposure), and Execution (how fresh your data is). Aim to stay above 80.",
+                  body: "The health gauge in the sidebar scores your portfolio across four dimensions: Structural (drift integrity), Behavioural (governance rule compliance), Concentration (hard-cap exposure), and Freshness (how fresh your data is). Aim to stay above 80.",
                   href: null,
                   cta: null,
                 },

@@ -8,11 +8,15 @@ import { HARD_THRESHOLDS } from "@/lib/constants"
 import { applyBitcoinSleeve } from "@/lib/next-best-move"
 
 async function getRebalanceData(userId: string) {
-  const holdings = await db.holding.findMany({
-    where: { userId },
-    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
-    orderBy: { targetPct: "desc" },
-  })
+  const [holdings, user] = await Promise.all([
+    db.holding.findMany({
+      where: { userId },
+      include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+      orderBy: { targetPct: "desc" },
+    }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
+  ])
+  const monthlyContribution = user?.monthlyContribution ?? 3000
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
 
@@ -44,8 +48,8 @@ async function getRebalanceData(userId: string) {
     const deviation = value - targetValue // positive = overweight in SGD
 
     // Contribution-based: how many months to correct via contributions alone?
-    // Assume SGD 3,000/mo contribution; this is just an estimate
-    const correctionMonths = Math.abs(deviation) > 0 ? Math.ceil(Math.abs(deviation) / 3000) : 0
+    // Uses the user's actual monthly contribution (not a hardcoded figure).
+    const correctionMonths = Math.abs(deviation) > 0 ? Math.ceil(Math.abs(deviation) / monthlyContribution) : 0
 
     return {
       ticker: h.ticker,

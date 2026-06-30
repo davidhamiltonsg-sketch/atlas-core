@@ -1,4 +1,4 @@
-# Atlas Core — System Overview (v6.1)
+# Atlas Core — System Overview (v6.7)
 
 ## What it is
 
@@ -19,7 +19,7 @@ emotion never gets a vote.
 | Layer | Technology |
 |-------|-----------|
 | Framework | **Next.js (App Router)** — React Server Components, server actions |
-| Data | **Prisma ORM** over **SQLite** (`prisma/atlas.db`) |
+| Data | **Prisma ORM** (libSQL adapter) over **Turso** / libSQL — SQLite-compatible (`DATABASE_URL`) |
 | Auth | Session-based (`lib/session.ts`); every page redirects to `/login` if unauthenticated |
 | Market data | Live pulls from Yahoo Finance (FX, prices) + an **IBKR Flex** import path (`lib/ibkr-flex.ts`) |
 | Deploy | **Vercel**, auto-deploying on push to `main`; build runs `prisma generate && next build` |
@@ -30,7 +30,7 @@ emotion never gets a vote.
 - **Holding** — a position: ticker, name, `targetPct`, `hardCapPct`, `toleranceBand`, colour.
 - **Snapshot** — a point-in-time valuation of a holding (units, price, value, currency). The portfolio's history is the chain of snapshots.
 - **Trade / ContributionRecord / Dividend** — actual executed activity, including **DRIP** (dividend reinvestment) tracking.
-- **GovernanceRule** — the 34 enforced rules (title, description, category, active flag).
+- **GovernanceRule** — the 40 enforced rules (title, description, category, active flag).
 - **EtfLookThrough** — cached company/sector/geo weights per ETF, refreshed from the UI, powering §4 concentration.
 - **BehaviourLog / WatchlistItem / PasswordResetToken** — discipline journal, watchlist, auth.
 
@@ -63,7 +63,7 @@ emotion never gets a vote.
 
 - **Dashboard (`/`)** — the operating picture. Next Best Move hero → KPI strip (value, active rules, drift alerts, goal-track) → Your Holdings → **What To Do This Month** (market-aware DCA split) → **Your Action Plan — Step by Step** → health gauge, value history, 2045 forecast, allocation donut.
 - **Command Centre (`/command-centre`)** — the deep view. Same Next Best Move, then four tabs: **What to Do** (live scanner with BUY/HOLD/WATCH signals + entry zones), **Risks Ahead** (5 ranked risk scenarios with probability, portfolio impact, and what-to-do), **When to Act** (the action calendar — same `action-plan.ts` source as the dashboard), and **The Rules** (10 plain-English governance principles).
-- **Governance (`/governance`)** — the constitution made visible: live position gauges vs healthy/soft/hard bands, the allocation threshold table, the §5.4 Monthly Decision Engine, and the full 34-rule register by category.
+- **Governance (`/governance`)** — the constitution made visible: live position gauges vs healthy/soft/hard bands, the allocation threshold table, the Monthly Decision Engine, and the full 40-rule register by category.
 
 **Supporting surfaces:** Portfolio, Holdings, Reports (look-through), Forecast (compounding to 2045), Behaviour, Rebalance, Risk, YTD, History, Trades, Contributions, Dividends, Watchlist, Settings, Export (annual PDF), Admin.
 
@@ -71,7 +71,7 @@ emotion never gets a vote.
 
 ## How it's governed (in brief)
 
-The full constitution is in **`docs/GOVERNANCE-v6.1.md`**. In one screen:
+The full constitution is in **`docs/GOVERNANCE-v6.7.html`** (also served in-app at `/atlas-core-governance.html`). In one screen:
 
 - **Five core holdings**, each with a fixed target and an identity: VT 52% (anchor), QQQM 23% (growth), SMH 10% (AI tilt), VWO 8% (EM), BTC 7% (optionality, a held conviction asset) — plus **SGOV 8–10%** being added as the shock buffer, built from new contributions.
 - **Three kinds of limit:**
@@ -93,11 +93,19 @@ A 0–100 composite of four independent dimensions. **Governed concentration wit
 | **Structural** | 40% | Allocation drift and tolerance breaches |
 | **Behavioural** | 25% | Share of governance rules left active |
 | **Concentration** | 25% | Only *hard-cap* company/sector breaches |
-| **Execution** | 10% | Data freshness (how recently you snapshotted) |
+| **Freshness** | 10% | Data freshness (how recently you snapshotted) |
 
 Overall: **≥80 "Good standing" · ≥65 "Review recommended" · else "Action required."**
 
 ---
+
+## What changed in v6.7
+
+- **Vehicle-transition protocol (§6B)** — switching an ETF wrapper (e.g. to an Irish UCITS) is a governed action that keeps all rules; pre-approved alternatives are tracked (`lib/approved-alternatives.ts`).
+- **Bitcoin via IBIT** — BTC and IBIT are governed as one sleeve (combined 7% target / 8% cycle cap); BTC runs off into the tax-effective IBIT like-for-like, with new Bitcoin money routed to IBIT.
+- **Operating safeguards** — currency (USD base / SGD tracking), 6-month emergency reserve outside the portfolio, US estate-tax trigger (~$60k US-sited), single-broker policy, override policy (`OPERATING_ASSUMPTIONS`).
+- **Live data + STALE fallback (§14)** — Finnhub prices / 52-week levels / SGOV yield with graceful fallback to last-verified figures, plus a read-only scheduled-events calendar.
+- **40-rule register** — VWO Identity/Response rules, Dealing Window Definition, and the 3 Vehicle-Transition rules added; SMH §2 cap corrected to 12% everywhere.
 
 ## What changed in v6.1
 

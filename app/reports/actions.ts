@@ -66,7 +66,7 @@ async function getYFCrumb(): Promise<{ crumb: string; cookie: string } | null> {
 
     // getSetCookie() available in Node 18+; fallback to raw header string
     const rawCookies: string[] =
-      typeof (pageRes.headers as Record<string, unknown>).getSetCookie === "function"
+      typeof (pageRes.headers as unknown as Record<string, unknown>).getSetCookie === "function"
         ? ((pageRes.headers as unknown as { getSetCookie(): string[] }).getSetCookie())
         : (pageRes.headers.get("set-cookie") ?? "").split(/,(?=[^;]+=[^;]+)/)
 

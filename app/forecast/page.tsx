@@ -5,10 +5,13 @@ import { TrendingUp, Landmark, Zap } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
+import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 
-const SINGAPORE_SAVINGS_RATE = 0.030
-const VT_HISTORICAL_RATE = 0.095  // VT (Total World) 9.5% p.a. long-run historical CAGR
-const CONE_VOL = 0.15  // annual return volatility for P10/P90 band
+// Reference rates — verified Jun 2026 (update the date when you refresh these).
+const BENCHMARKS_AS_OF = "Jun 2026"
+const SINGAPORE_SAVINGS_RATE = 0.030  // SG high-yield savings / T-bill proxy, as of BENCHMARKS_AS_OF
+const VT_HISTORICAL_RATE = 0.095      // VT (Total World) long-run CAGR proxy, as of BENCHMARKS_AS_OF
+const CONE_VOL_DEFAULT = 0.15         // fallback annual vol for the P10/P90 band when history is thin
 
 const returnScenarios = [
   { label: "Conservative", rate: 0.05, rateLabel: "5% p.a.", color: "#a78bfa" },
@@ -45,27 +48,34 @@ function toReal(nominal: number, years: number, cpi = 0.025): number {
 // Log-normal P10/P90 cone around the base projection.
 // Approximation: scale base value by exp(±1.28 × σ × √n).
 // This is conservative since contributions reduce variance vs. lump-sum.
-function coneProjection(base: number, yr: number, z: number): number {
+function coneProjection(base: number, yr: number, z: number, vol: number): number {
   if (yr === 0) return base
-  return base * Math.exp(z * CONE_VOL * Math.sqrt(yr))
+  return base * Math.exp(z * vol * Math.sqrt(yr))
 }
 
 async function getForecastData(userId: string) {
   const holdings = await db.holding.findMany({
     where: { userId },
-    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+    include: { snapshots: { orderBy: { date: "asc" } } },
   })
-  return holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
+  // Current value = sum of each holding's latest snapshot (matches the rest of the app).
+  const currentValue = holdings.reduce((sum, h) => sum + (h.snapshots[h.snapshots.length - 1]?.value ?? 0), 0)
+  // Cone vol = the portfolio's REAL annualised volatility (same method as the Risk page),
+  // clamped to a sane band; fall back to the long-run equity default when history is thin.
+  const realVol = annualisedVolatility(buildPortfolioTimeline(holdings))
+  const coneVol = realVol === null ? CONE_VOL_DEFAULT : Math.min(0.30, Math.max(0.08, realVol))
+  return { currentValue, coneVol, volIsReal: realVol !== null }
 }
 
 export default async function Forecast() {
   const session = await getSession()
   if (!session) redirect("/login")
 
-  const [currentValue, user] = await Promise.all([
+  const [forecast, user] = await Promise.all([
     getForecastData(session.userId),
     db.user.findUnique({ where: { id: session.userId } }),
   ])
+  const { currentValue, coneVol, volIsReal } = forecast
 
   const MONTHLY_CONTRIBUTION = user?.monthlyContribution ?? 3000
   const ANNUAL_LUMP_SUM = user?.annualLumpSum ?? 20000
@@ -82,8 +92,8 @@ export default async function Forecast() {
     const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.15, yr, CONTRIBUTION_GROWTH_RATE)
     const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, SINGAPORE_SAVINGS_RATE, yr, CONTRIBUTION_GROWTH_RATE)
     const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, VT_HISTORICAL_RATE, yr, CONTRIBUTION_GROWTH_RATE)
-    const coneP10      = coneProjection(base, yr, -1.28)
-    const coneP90      = coneProjection(base, yr,  1.28)
+    const coneP10      = coneProjection(base, yr, -1.28, coneVol)
+    const coneP90      = coneProjection(base, yr,  1.28, coneVol)
     const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
     const contribHigh  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 1.2, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
     chartData.push({
@@ -256,7 +266,8 @@ export default async function Forecast() {
           <span className="text-xs text-muted-foreground ml-auto">{(SINGAPORE_SAVINGS_RATE * 100).toFixed(1)}% p.a.</span>
         </div>
         <p className="text-[11px] text-muted-foreground mb-5">
-          Singapore high-yield savings / fixed deposit rate (approximate) · same contributions · USD-denominated
+          Singapore high-yield savings / fixed deposit rate (approximate, as of {BENCHMARKS_AS_OF}) · same contributions · USD-denominated.
+          {" "}P10/P90 cone uses {(coneVol * 100).toFixed(0)}% annual volatility ({volIsReal ? "your portfolio's actual history" : `default — too little history yet`}).
         </p>
         <div className="space-y-4">
           {savingsValues.map(({ years, projected }) => (

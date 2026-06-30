@@ -49,6 +49,50 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
   IBIT: { high: 8 }, // tax-effective Bitcoin vehicle — same sleeve as BTC
 }
 
+// ─── GOVERNANCE BAND ROWS (single source of truth for the §2/§3 gauge table) ──
+// The governance page's "Where Each Holding Stands" gauges are DERIVED from
+// TICKER_TARGETS + HARD_THRESHOLDS + this profile — never hand-maintained — so the
+// displayed bands can never disagree with the numbers the engine enforces.
+export const POSITION_PROFILE: Record<string, { band: number; classification: string; color: string }> = {
+  VT:   { band: 6, classification: "Global Core",              color: "#6366f1" },
+  QQQM: { band: 5, classification: "Digital Economy Engine",   color: "#8b5cf6" },
+  SMH:  { band: 3, classification: "AI Infrastructure Tilt",   color: "#a78bfa" },
+  VWO:  { band: 3, classification: "Geographic Diversifier",   color: "#c4b5fd" },
+  BTC:  { band: 1, classification: "Bitcoin — Volatility Cap", color: "#f59e0b" },
+}
+
+export interface GovernanceBandRow {
+  ticker: string
+  target: number
+  classification: string
+  color: string
+  healthyLow: number; healthyHigh: number   // soft-drift band (target ± tolerance, clamped to hard)
+  softLow: number;    softHigh: number       // outside healthy but inside hard (= hard bounds)
+  hardLow: number;    hardHigh: number       // §3 hard-drift triggers
+}
+
+/** Build the governance gauge row for a ticker straight from the canonical constants. */
+export function getGovernanceBandRow(ticker: string): GovernanceBandRow | null {
+  const target  = TICKER_TARGETS[ticker]
+  const hard    = HARD_THRESHOLDS[ticker]
+  const profile = POSITION_PROFILE[ticker]
+  if (target === undefined || !hard || !profile) return null
+  const hardLow  = hard.low ?? 0
+  const hardHigh = hard.high
+  return {
+    ticker, target, classification: profile.classification, color: profile.color,
+    healthyLow:  Math.max(hardLow, target - profile.band),
+    healthyHigh: Math.min(hardHigh, target + profile.band),
+    softLow: hardLow, softHigh: hardHigh,
+    hardLow, hardHigh,
+  }
+}
+
+export const GOVERNANCE_BAND_ROWS: GovernanceBandRow[] =
+  (["VT", "QQQM", "SMH", "VWO", "BTC"] as const)
+    .map(getGovernanceBandRow)
+    .filter((r): r is GovernanceBandRow => r !== null)
+
 // ─── §4.1 — BTC HALVING CYCLE MODIFIER ───────────────────────────────────────
 export type BtcCyclePhase = 'post_halving_bull' | 'normal' | 'bear'
 

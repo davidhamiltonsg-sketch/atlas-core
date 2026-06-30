@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
+import { fetchFlexPositions } from "@/lib/ibkr-flex"
 
 // Default metadata for the governed core tickers, used to create any that are missing so the
 // plan is always represented (e.g. IBIT and SGOV, added to the plan after the DB was seeded).
@@ -58,6 +59,37 @@ export async function upsertSnapshotToday(
       data: { holdingId, ...data, currency: "SGD", date: new Date() },
     })
   }
+}
+
+export interface IbkrSyncResult { ok: boolean; reason?: string; users: number; snapshots: number }
+
+/**
+ * Automated snapshot refresh from IBKR Flex — for the scheduled cron, so the portfolio
+ * never silently ages when the owner forgets to update it manually. Writes at most one
+ * snapshot per holding per day (upsert). No-op (ok:false) when IBKR isn't configured.
+ * Only matched tickers are updated; it never creates or removes holdings.
+ */
+export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
+  const token = process.env.IBKR_FLEX_TOKEN
+  const queryId = process.env.IBKR_FLEX_QUERY_ID
+  if (!token || !queryId) return { ok: false, reason: "IBKR not configured", users: 0, snapshots: 0 }
+
+  const result = await fetchFlexPositions(token, queryId)
+  if (!result.success) return { ok: false, reason: result.error, users: 0, snapshots: 0 }
+
+  const bySymbol = new Map(result.positions.map((p) => [p.symbol.toUpperCase(), p]))
+  const users = await db.user.findMany({ select: { id: true } })
+  let snapshots = 0
+  for (const u of users) {
+    const holdings = await db.holding.findMany({ where: { userId: u.id } })
+    for (const h of holdings) {
+      const pos = bySymbol.get(h.ticker.toUpperCase())
+      if (!pos) continue
+      await upsertSnapshotToday(h.id, { units: pos.units, price: pos.markPrice, value: pos.positionValue })
+      snapshots++
+    }
+  }
+  return { ok: true, users: users.length, snapshots }
 }
 
 export async function getUsdSgdRate(): Promise<number> {

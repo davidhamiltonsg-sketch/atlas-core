@@ -381,7 +381,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                 <div className="flex items-start gap-1.5">
                   <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                    <span className="font-semibold">Governance gate:</span> I confirm this sale was reviewed against the investment policy (v5.8 §2–3), justified by the Behaviour Log, and does not constitute panic selling or speculation.
+                    <span className="font-semibold">Governance gate:</span> I confirm this sale was reviewed against the investment policy (v6.7 §2–3), justified by the Behaviour Log, and does not constitute panic selling or speculation.
                   </p>
                 </div>
               </label>

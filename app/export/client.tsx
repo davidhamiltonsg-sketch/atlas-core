@@ -1,6 +1,8 @@
 "use client"
 
-import { Download, PieChart, Camera, ArrowLeftRight, PiggyBank, Coins } from "lucide-react"
+import { useRef, useState, useTransition } from "react"
+import { Download, PieChart, Camera, ArrowLeftRight, PiggyBank, Coins, Archive, Upload, AlertTriangle } from "lucide-react"
+import { restoreBackup } from "@/lib/backup-actions"
 
 const EXPORTS = [
   {
@@ -40,7 +42,7 @@ const EXPORTS = [
   },
 ]
 
-export function ExportButtons() {
+export function ExportButtons({ isAdmin = false }: { isAdmin?: boolean }) {
   function download(type: string) {
     window.location.href = `/api/export?type=${type}`
   }
@@ -49,8 +51,9 @@ export function ExportButtons() {
     <div className="space-y-5">
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          All exports are in <span className="font-semibold text-foreground">CSV format</span> — compatible with Excel, Google Sheets, and any data analysis tool.
-          Files are generated on-demand from your current data. No data leaves your local server.
+          CSV exports are compatible with Excel, Google Sheets, and any analysis tool. The
+          <span className="font-semibold text-foreground"> full backup</span> is a single JSON file
+          with everything — keep it somewhere safe for your 2045 horizon. Files are generated on demand.
         </p>
       </div>
 
@@ -74,6 +77,77 @@ export function ExportButtons() {
           </div>
         ))}
       </div>
+
+      {/* Full backup (JSON) */}
+      <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.04] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <Archive className="h-5 w-5 shrink-0 mt-0.5 text-indigo-400" />
+          <div>
+            <p className="text-sm font-semibold">Full Backup (JSON)</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Everything in one file — holdings, all snapshots, trades, contributions, dividends, behaviour log, watchlist, and the rule register.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => download("backup")}
+          className="shrink-0 flex items-center justify-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs font-semibold px-4 py-2 transition-colors"
+        >
+          <Download className="h-3.5 w-3.5" /> Download backup
+        </button>
+      </div>
+
+      {isAdmin && <RestorePanel />}
+    </div>
+  )
+}
+
+// Admin-only restore — destructive: replaces this account's data with a backup file.
+function RestorePanel() {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [pending, startTransition] = useTransition()
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  function onPick(file: File) {
+    setMsg(null)
+    if (!confirm("Restore will REPLACE all current data for this account with the backup file. This cannot be undone. Continue?")) {
+      if (fileRef.current) fileRef.current.value = ""
+      return
+    }
+    startTransition(async () => {
+      const text = await file.text()
+      const r = await restoreBackup(text)
+      if ("success" in r) setMsg({ ok: true, text: `Restored ${r.holdings} holdings, ${r.snapshots} snapshots, ${r.trades} trades.` })
+      else setMsg({ ok: false, text: r.error ?? "Restore failed." })
+      if (fileRef.current) fileRef.current.value = ""
+    })
+  }
+
+  return (
+    <div className="rounded-xl border border-red-500/30 bg-red-500/[0.04] p-5">
+      <div className="flex items-start gap-3 mb-3">
+        <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-red-500" />
+        <div>
+          <p className="text-sm font-semibold">Restore from backup <span className="text-[10px] font-bold uppercase tracking-wide text-red-500 ml-1">admin · destructive</span></p>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Replaces this account&apos;s holdings, snapshots, trades, contributions, dividends, behaviour log, and watchlist with the uploaded backup. Export a fresh backup first.</p>
+        </div>
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        disabled={pending}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f) }}
+        className="hidden"
+      />
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={pending}
+        className="flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 text-xs font-semibold px-4 py-2 transition-colors disabled:opacity-50"
+      >
+        <Upload className="h-3.5 w-3.5" /> {pending ? "Restoring…" : "Choose backup file to restore"}
+      </button>
+      {msg && (
+        <p className={`mt-3 text-xs font-medium ${msg.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{msg.text}</p>
+      )}
     </div>
   )
 }

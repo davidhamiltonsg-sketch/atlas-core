@@ -16,6 +16,7 @@ import {
   ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS,
 } from "@/lib/look-through"
+import { HARD_THRESHOLDS } from "@/lib/constants"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -182,14 +183,8 @@ async function getReportData(userId: string) {
   // Largest position dominance
   const topPosition = [...positions].sort((a, b) => b.actualPct - a.actualPct)[0]
 
-  // Metrics — same hard threshold logic as dashboard
-  const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-    VT:   { low: 40, high: 62 },
-    QQQM: { low: 16, high: 31 },
-    SMH:  { high: 15 },
-    VWO:  { low: 4,  high: 12 },
-    BTC:  { high: 8  },
-  }
+  // Metrics — drift uses the canonical §3 hard-drift triggers from lib/constants
+  // (single source of truth; do not redefine a local copy — it drifts out of date).
   const driftAlerts    = positions.filter((p) => p.outsideBand || p.overCap).length
   const maxDrift       = positions.reduce((max, p) => Math.max(max, p.drift), 0)
   const companyBreaches = companies.filter((c) => companyExposure[c] > COMPANY_CAPS[c].soft).length
@@ -420,13 +415,13 @@ export default async function Reports() {
   }
 
   return (
-    <Shell title="Reports" subtitle="Overlap & concentration engine — v5.8" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Reports" subtitle="Overlap & concentration engine — v6.7" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* ── Print-only cover page ── hidden on screen, rendered in PDF ── */}
       <div className="print-header hidden">
 
         {/* Eyebrow + title */}
-        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v5.8</p>
+        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v6.7</p>
         <h1>Annual Portfolio Report</h1>
         <p className="ph-sub">{reportDate} &nbsp;·&nbsp; Personal &amp; Confidential</p>
 

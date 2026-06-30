@@ -32,7 +32,7 @@ export function Topbar({ onMenuClick, title, subtitle, userName }: TopbarProps) 
       <div className="shrink-0 flex items-center gap-2">
         <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-400">
           <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-          v5.2
+          v6.7
         </span>
 
         {userName && (

@@ -28,6 +28,27 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get("type") ?? "portfolio"
 
+  // ── Full JSON backup — everything this user owns, for offline keeping / restore ──
+  if (type === "backup") {
+    const [user, holdings, trades, contributions, dividends, behaviourLogs, watchlist, governanceRules] = await Promise.all([
+      db.user.findUnique({ where: { id: session.userId }, select: { email: true, name: true, role: true, monthlyContribution: true, annualLumpSum: true, contributionGrowthRate: true, riskFreeRate: true } }),
+      db.holding.findMany({ where: { userId: session.userId }, include: { snapshots: true } }),
+      db.trade.findMany({ where: { userId: session.userId } }),
+      db.contributionRecord.findMany({ where: { userId: session.userId } }),
+      db.dividend.findMany({ where: { userId: session.userId } }),
+      db.behaviourLog.findMany({ where: { userId: session.userId } }),
+      db.watchlistItem.findMany({ where: { userId: session.userId } }),
+      db.governanceRule.findMany(),
+    ])
+    const backup = { format: "atlas-core-backup", version: "6.7", exportedAt: new Date().toISOString(), user, holdings, trades, contributions, dividends, behaviourLogs, watchlist, governanceRules }
+    return new NextResponse(JSON.stringify(backup, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": `attachment; filename="atlas-backup-${today()}.json"`,
+      },
+    })
+  }
+
   let csv = ""
   let filename = ""
 

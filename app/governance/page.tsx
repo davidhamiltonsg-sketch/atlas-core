@@ -7,55 +7,11 @@ import { CollapsibleRuleGroup } from "@/components/governance/collapsible-rule-g
 import { FloatingCapsSection } from "@/components/governance/floating-caps-section"
 import { PreCommitments } from "@/components/governance/pre-commitments"
 import { OperatingSafeguards } from "@/components/governance/operating-safeguards"
+import { GOVERNANCE_BAND_ROWS } from "@/lib/constants"
 
-// v5.8 thresholds (Section 2 hard caps + Section 3.1 drift bands)
-const thresholds = [
-  {
-    ticker: "VT",
-    target: 52,
-    classification: "Global Core",
-    healthyLow: 46, healthyHigh: 58,
-    softLow: 42, softHigh: 62,  // soft = outside healthy but inside hard trigger
-    hardHigh: 62, hardLow: 42,
-    color: "#6366f1",
-  },
-  {
-    ticker: "QQQM",
-    target: 23,
-    classification: "Digital Economy Engine",
-    healthyLow: 18, healthyHigh: 28,
-    softLow: 15, softHigh: 31,
-    hardHigh: 31, hardLow: 15,
-    color: "#8b5cf6",
-  },
-  {
-    ticker: "SMH",
-    target: 10,
-    classification: "AI Infrastructure Tilt",
-    healthyLow: 7, healthyHigh: 12,
-    softLow: 5, softHigh: 12,
-    hardHigh: 12, hardLow: 5,  // v6.0: hard cap tightened 15% → 12% (Principle 04)
-    color: "#a78bfa",
-  },
-  {
-    ticker: "VWO",
-    target: 8,
-    classification: "Geographic Diversifier",
-    healthyLow: 5, healthyHigh: 11,
-    softLow: 3, softHigh: 13,
-    hardHigh: 13, hardLow: 3,
-    color: "#c4b5fd",
-  },
-  {
-    ticker: "BTC",
-    target: 7,
-    classification: "Bitcoin — Volatility Cap",
-    healthyLow: 6, healthyHigh: 8,
-    softLow: 0, softHigh: 8,  // no soft overweight band — hard cap immediately at 8%
-    hardHigh: 8, hardLow: 0,  // no lower hard trigger (underweight is soft alert only)
-    color: "#f59e0b",
-  },
-]
+// §2/§3 gauge rows are DERIVED from lib/constants (TICKER_TARGETS + HARD_THRESHOLDS +
+// POSITION_PROFILE) — the single source of truth, so they can never drift from the engine.
+const thresholds = GOVERNANCE_BAND_ROWS
 
 const monthlySteps = [
   {
@@ -81,9 +37,9 @@ const monthlySteps = [
   },
   {
     step: 4,
-    question: "Is any structural review trigger active?",
-    detail: "§4.4: QQQM underperforms VT >5% annualised over 5 years, or semiconductor cluster underperforms VT >8% annualised.",
-    yes: "Schedule formal review within 30 days. Continue normal contributions. Do not alter allocations during review. Then go to Step 6.",
+    question: "Has a concentration review been triggered?",
+    detail: "§4: a company or sector look-through exposure has moved into its warning band (e.g. semiconductor >16%, Nvidia >10%).",
+    yes: "Schedule a review within 30 days. Continue normal contributions in the meantime. Do not alter allocations during the review. Then go to Step 6.",
     no: "Proceed to Step 5.",
   },
   {
@@ -192,7 +148,7 @@ export default async function Governance() {
         </div>
         <div className="flex-1">
           <p className="text-xs font-bold text-indigo-400">Full Governance Document (v6.7)</p>
-          <p className="text-xs text-muted-foreground">The complete constitution — all caps, bands, the 38-rule register, pre-commitments, market &amp; risk register, and the horizon transition framework.</p>
+          <p className="text-xs text-muted-foreground">The complete constitution — all caps, bands, the 40-rule register, pre-commitments, market &amp; risk register, and the horizon transition framework.</p>
         </div>
         <span className="text-xs font-semibold text-indigo-400 group-hover:text-indigo-300 shrink-0">Open ↗</span>
       </a>

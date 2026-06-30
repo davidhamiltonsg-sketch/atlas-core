@@ -7,7 +7,10 @@
     "build": "prisma generate && next build",
     "start": "node scripts/init-db.mjs && next start",
     "lint": "eslint",
-    "seed": "npx tsx prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts",
+    "check:governance": "npx tsx scripts/check-governance.ts",
+    "check:engine": "npx tsx scripts/check-engine.ts",
+    "check": "npm run check:governance && npm run check:engine"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

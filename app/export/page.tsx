@@ -9,7 +9,7 @@ export default async function ExportPage() {
 
   return (
     <Shell title="Export Data" subtitle="Download your portfolio data as CSV" userName={session.name} isAdmin={session.role === "admin"}>
-      <ExportButtons />
+      <ExportButtons isAdmin={session.role === "admin"} />
     </Shell>
   )
 }

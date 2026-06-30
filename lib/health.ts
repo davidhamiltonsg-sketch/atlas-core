@@ -112,8 +112,8 @@ export function computePortfolioHealth({
     },
     execution: {
       score: execution,
-      label: "Execution",
-      description: "Data discipline",
+      label: "Freshness",
+      description: "Snapshot freshness",
       status: dimStatus(execution),
     },
   }
