@@ -1,6 +1,7 @@
 import { Shell } from "@/components/shell"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { CommandCentreClient } from "@/components/command-centre/command-centre-client"
 import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
@@ -42,6 +43,8 @@ async function getLivePortfolioData(userId: string) {
 export default async function CommandCentrePage() {
   const session = await getSession()
   if (!session) redirect("/login")
+  // Atlas-Core-specific engine — Silicon Brick Road users are routed to their own dashboard.
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
 
   const { positions, totalValue, nextBestMove } = await getLivePortfolioData(session.userId)
 

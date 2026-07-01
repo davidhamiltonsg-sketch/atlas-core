@@ -6,8 +6,9 @@ import { redirect } from "next/navigation"
 import { GitCompare, ArrowUp, ArrowDown, Minus } from "lucide-react"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { applyBitcoinSleeve } from "@/lib/next-best-move"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 
-async function getRebalanceData(userId: string) {
+async function getRebalanceData(userId: string, isSbr: boolean) {
   const [holdings, user] = await Promise.all([
     db.holding.findMany({
       where: { userId },
@@ -36,10 +37,13 @@ async function getRebalanceData(userId: string) {
     const tgt = effTarget[h.ticker] ?? h.targetPct
     const driftPct = actualPct - tgt
     const absDrift = Math.abs(driftPct)
+    // Hard-breach test: Atlas Core uses its §3 drift triggers; other constitutions (Silicon
+    // Brick Road) use the holding's own §2 cap and comfortable band, which are stored per-user.
     const ht = HARD_THRESHOLDS[h.ticker]
     const isHard = totalValue > 0 && (
-      (ht?.low !== undefined && actualPct < ht.low) ||
-      (ht !== undefined && actualPct > ht.high)
+      isSbr
+        ? ((h.hardCapPct !== null && actualPct > h.hardCapPct) || actualPct < Math.max(0, tgt - h.toleranceBand * 2))
+        : ((ht?.low !== undefined && actualPct < ht.low) || (ht !== undefined && actualPct > ht.high))
     )
     const isSoft = totalValue > 0 && !isHard && absDrift > h.toleranceBand
 
@@ -75,7 +79,8 @@ export default async function RebalancePage() {
   const session = await getSession()
   if (!session) redirect("/login")
 
-  const { positions, totalValue } = await getRebalanceData(session.userId)
+  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const { positions, totalValue } = await getRebalanceData(session.userId, isSbr)
   const hasBalance = totalValue > 0
 
   const hardBreaches = positions.filter(p => p.isHard).length

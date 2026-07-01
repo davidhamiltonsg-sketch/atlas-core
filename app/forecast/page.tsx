@@ -6,6 +6,7 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // Reference rates — verified Jun 2026 (update the date when you refresh these).
 const BENCHMARKS_AS_OF = "Jun 2026"
@@ -70,6 +71,9 @@ async function getForecastData(userId: string) {
 export default async function Forecast() {
   const session = await getSession()
   if (!session) redirect("/login")
+  // The 2045 retirement projection is Atlas-Core-specific. Silicon Brick Road (a ~3-year
+  // property goal) uses its own dashboard until a dedicated SBR forecast is built.
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
 
   const [forecast, user] = await Promise.all([
     getForecastData(session.userId),

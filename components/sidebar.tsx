@@ -79,7 +79,6 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/dividends", label: "Dividends", icon: Coins },
     ] },
     { label: "Insights", items: [
-      { href: "/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/risk", label: "Risk", icon: BarChart3 },
       { href: "/ytd", label: "YTD / P&L", icon: CalendarDays },
       { href: "/history", label: "History", icon: History },
@@ -153,13 +152,13 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-[hsl(var(--sidebar-border))]">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-md shadow-indigo-500/30">
-              <span className="text-[11px] font-black text-white tracking-tight">AC</span>
+            <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-md shadow-indigo-500/30", brand.gradient)}>
+              <span className="text-[11px] font-black text-white tracking-tight">{brand.short}</span>
               <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
             </div>
             <div>
-              <p className="text-sm font-bold tracking-tight leading-none">Atlas Core</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">v6.7 · GDEA</p>
+              <p className="text-sm font-bold tracking-tight leading-none">{brand.name}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">{brand.version}</p>
             </div>
           </div>
           <button
@@ -172,18 +171,11 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          <NavGroup label="Home">
-            {homeNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
-          </NavGroup>
-          <NavGroup label="Plan">
-            {planNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
-          </NavGroup>
-          <NavGroup label="Portfolio">
-            {portfolioNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
-          </NavGroup>
-          <NavGroup label="Insights">
-            {insightsNav.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
-          </NavGroup>
+          {groups.map(group => (
+            <NavGroup key={group.label} label={group.label}>
+              {group.items.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+            </NavGroup>
+          ))}
           <NavGroup label="Settings">
             <NavLink href="/settings" label="Settings" icon={Settings} onClick={onClose} />
             <NavLink href="/export" label="Export" icon={Download} onClick={onClose} />

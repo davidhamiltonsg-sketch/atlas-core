@@ -17,6 +17,7 @@ import {
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS,
 } from "@/lib/look-through"
 import { HARD_THRESHOLDS } from "@/lib/constants"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -319,6 +320,8 @@ function SectionHeader({ icon: Icon, title, sub, badge }: {
 export default async function Reports() {
   const session = await getSession()
   if (!session) redirect("/login")
+  // Look-through here is defined for the Atlas Core ETFs; SBR users use their own surfaces.
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
 
   const {
     totalValue, positions, companyExposure, sectorExposure, geoExposure,

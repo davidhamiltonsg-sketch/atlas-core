@@ -1,6 +1,7 @@
 import { Shell } from "@/components/shell"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
 import { getLiveMarketPositions, getScheduledEvents } from "@/lib/finnhub"
@@ -38,6 +39,7 @@ async function getRulesNowData(userId: string) {
 export default async function CalendarPage() {
   const session = await getSession()
   if (!session) redirect("/login")
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
   const { nextBestMove, market, calendar, hasBalance } = await getRulesNowData(session.userId)
 
   return (
