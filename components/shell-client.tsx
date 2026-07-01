@@ -18,7 +18,7 @@ export function ShellClient({ title, subtitle, userName, isAdmin = false, consti
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
+    <div data-theme={constitutionId === "silicon-brick-road" ? "sbr" : "atlas-core"} className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isAdmin={isAdmin} constitutionId={constitutionId} />
       <div className="flex flex-1 flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
         <Topbar

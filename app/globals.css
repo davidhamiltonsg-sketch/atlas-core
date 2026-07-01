@@ -48,6 +48,64 @@
   --sidebar-border:     240 16% 14%;
 }
 
+/* ─── Silicon Brick Road Theme — teal-emerald, distinct from Atlas Core ─────── */
+/* Applied via data-theme="sbr" on the shell root div.
+   Atlas Core = obsidian + electric indigo. SBR = deep teal + warm emerald.     */
+
+/* SBR light mode */
+[data-theme="sbr"] {
+  --background:         178 35% 96%;   /* teal-tinted off-white #f0f8f7 */
+  --foreground:         180 42%  8%;   /* deep teal-navy #0c1d1d */
+  --card:               0   0%  100%;
+  --card-foreground:    180 42%  8%;
+  --muted:              175 26% 92%;   /* light teal-grey */
+  --muted-foreground:   175 16% 40%;
+  --border:             175 30% 84%;   /* teal-tinted border */
+  --accent:             174 60% 94%;   /* faint teal wash */
+  --accent-foreground:  180 42%  8%;
+  --primary:            174 72% 36%;   /* teal #16a69a */
+  --primary-foreground: 0   0%  100%;
+  --sidebar-bg:         178 40% 97%;
+  --sidebar-border:     175 32% 88%;
+}
+
+/* SBR dark mode */
+.dark [data-theme="sbr"] {
+  --background:         180 36%  4%;   /* deep teal-black #050e0e */
+  --foreground:         175 18% 93%;   /* warm off-white */
+  --card:               180 30%  7%;   /* elevated teal-dark #0a1717 */
+  --card-foreground:    175 18% 93%;
+  --muted:              180 25% 11%;   /* recessed surface */
+  --muted-foreground:   175 10% 54%;
+  --border:             180 22% 15%;   /* teal border */
+  --accent:             175 22% 10%;
+  --accent-foreground:  175 18% 93%;
+  --primary:            174 76% 44%;   /* bright teal #1ac4b7 */
+  --primary-foreground: 0   0%  100%;
+  --sidebar-bg:         180 34%  5%;
+  --sidebar-border:     180 25% 12%;
+}
+
+/* SBR gradient text (teal → emerald instead of indigo → violet) */
+[data-theme="sbr"] .gradient-text {
+  background: linear-gradient(135deg, hsl(174 72% 36%), hsl(160 68% 40%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.dark [data-theme="sbr"] .gradient-text {
+  background: linear-gradient(135deg, hsl(174 76% 55%), hsl(160 62% 62%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* SBR glow utility */
+[data-theme="sbr"] .glow-primary {
+  box-shadow: 0 0 20px 4px rgb(20 184 166 / 0.18),
+              0 0 40px 8px rgb(20 184 166 / 0.08);
+}
+
 /* ─── Tailwind theme tokens ───────────────────────────────────────────────── */
 @theme inline {
   --color-background:        hsl(var(--background));

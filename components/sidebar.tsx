@@ -93,9 +93,10 @@ interface SidebarProps {
   constitutionId?: ConstitutionId
 }
 
-function NavLink({ href, label, icon: Icon, onClick }: { href: string; label: string; icon: React.ElementType; onClick: () => void }) {
+function NavLink({ href, label, icon: Icon, onClick, constitutionId = "atlas-core" }: { href: string; label: string; icon: React.ElementType; onClick: () => void; constitutionId?: ConstitutionId }) {
   const pathname = usePathname()
   const active = pathname === href
+  const sbr = constitutionId === "silicon-brick-road"
   return (
     <Link
       href={href}
@@ -103,16 +104,18 @@ function NavLink({ href, label, icon: Icon, onClick }: { href: string; label: st
       className={cn(
         "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
         active
-          ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+          ? sbr
+            ? "bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300"
+            : "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
           : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
       )}
     >
       {active && (
-        <span className="absolute left-0 inset-y-1.5 w-0.5 rounded-full bg-indigo-500" />
+        <span className={cn("absolute left-0 inset-y-1.5 w-0.5 rounded-full", sbr ? "bg-teal-500" : "bg-indigo-500")} />
       )}
       <Icon className={cn(
         "h-4 w-4 shrink-0 transition-colors",
-        active ? "text-indigo-600 dark:text-indigo-400" : ""
+        active ? (sbr ? "text-teal-600 dark:text-teal-400" : "text-indigo-600 dark:text-indigo-400") : ""
       )} />
       {label}
     </Link>
@@ -152,7 +155,7 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-[hsl(var(--sidebar-border))]">
           <div className="flex items-center gap-3">
-            <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-md shadow-indigo-500/30", brand.gradient)}>
+            <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-md", constitutionId === "silicon-brick-road" ? "shadow-teal-500/30" : "shadow-indigo-500/30", brand.gradient)}>
               <span className="text-[11px] font-black text-white tracking-tight">{brand.short}</span>
               <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
             </div>
@@ -173,13 +176,13 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {groups.map(group => (
             <NavGroup key={group.label} label={group.label}>
-              {group.items.map(item => <NavLink key={item.href} {...item} onClick={onClose} />)}
+              {group.items.map(item => <NavLink key={item.href} {...item} onClick={onClose} constitutionId={constitutionId} />)}
             </NavGroup>
           ))}
           <NavGroup label="Settings">
-            <NavLink href="/settings" label="Settings" icon={Settings} onClick={onClose} />
-            <NavLink href="/export" label="Export" icon={Download} onClick={onClose} />
-            {isAdmin && <NavLink href="/admin/users" label="Users" icon={Users} onClick={onClose} />}
+            <NavLink href="/settings" label="Settings" icon={Settings} onClick={onClose} constitutionId={constitutionId} />
+            <NavLink href="/export" label="Export" icon={Download} onClick={onClose} constitutionId={constitutionId} />
+            {isAdmin && <NavLink href="/admin/users" label="Users" icon={Users} onClick={onClose} constitutionId={constitutionId} />}
           </NavGroup>
         </nav>
 
