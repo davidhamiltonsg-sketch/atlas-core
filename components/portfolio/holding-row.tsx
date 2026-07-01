@@ -22,6 +22,9 @@ interface HoldingRowProps {
     isSoft: boolean
     latestSnapshot: { units: number; price: number } | null
     sparklineValues?: number[]
+    avgCostUsd?: number | null
+    unrealisedSgd?: number | null
+    unrealisedPct?: number | null
   }
 }
 
@@ -102,9 +105,22 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
           </span>
         </div>
       ) : (
-        <span className="text-xs font-semibold text-right hidden md:block">
-          S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
+        <div className="hidden md:flex flex-col items-end gap-0.5">
+          <span className="text-xs font-semibold tabular-nums">
+            S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          {h.unrealisedSgd !== null && h.unrealisedSgd !== undefined && (
+            <span className={`text-[10px] font-semibold tabular-nums ${h.unrealisedSgd >= 0 ? "text-green-500" : "text-red-500"}`}>
+              {h.unrealisedSgd >= 0 ? "+" : ""}S${Math.abs(h.unrealisedSgd).toLocaleString("en-SG", { maximumFractionDigits: 0 })}
+              {h.unrealisedPct !== null && h.unrealisedPct !== undefined && ` (${h.unrealisedPct >= 0 ? "+" : ""}${h.unrealisedPct.toFixed(1)}%)`}
+            </span>
+          )}
+          {h.avgCostUsd !== null && h.avgCostUsd !== undefined && h.latestSnapshot?.price && (
+            <span className="text-[9px] text-muted-foreground tabular-nums">
+              avg ${h.avgCostUsd.toFixed(2)} · now ${h.latestSnapshot.price.toFixed(2)}
+            </span>
+          )}
+        </div>
       )}
 
       {/* Actual % */}
@@ -267,7 +283,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
           <span className="font-bold mr-1">{h.isHard ? "Action required:" : "Suggested:"}</span>
           {h.isHard
             ? h.drift > 0
-              ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Halt accumulation immediately. Assess selective trim at next dealing window.`
+              ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Stop buying this fund and consider selling a small amount to bring it back to ${h.targetPct}%.`
               : `Underweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Redirect all contributions to ${h.ticker} until restored above ${h.targetPct - 2}%.`
             : h.drift > 0
               ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Pause accumulation for 1–3 months and redirect freed capital to underweight positions.`

@@ -39,10 +39,14 @@ export function isUsSited(ticker: string): boolean {
 // action so you can decide: keep & classify it, switch to an approved fund, or exit.
 export const CORE_TICKERS = ["VT", "VWO", "QQQM", "SMH", "BTC", "IBIT", "SGOV"] as const
 
+// SBR-specific tickers: VWRA is already in APPROVED_ALTERNATIVES; A35 is SBR-only.
+export const SBR_TICKERS = ["VWRA", "QQQM", "SMH", "A35"] as const
+
 export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
   ...CORE_TICKERS,
   ...Object.keys(APPROVED_ALTERNATIVES),
   ...Object.values(APPROVED_ALTERNATIVES).flatMap((a) => a.tickers),
+  "A35", // ABF Singapore Bond Index Fund — SBR safety floor
 ])
 
 /** Is this ticker part of the governed policy universe (core, buffer, or approved alternative)? */

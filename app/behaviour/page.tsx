@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { BehaviourLogForm } from "@/components/behaviour/behaviour-log-form"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 
 const principles = [
   {
@@ -66,6 +67,8 @@ export default async function Behaviour() {
   const session = await getSession()
   if (!session) redirect("/login")
 
+  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+
   const logs = await db.behaviourLog.findMany({
     where: { userId: session.userId },
     orderBy: { date: "desc" },
@@ -80,11 +83,23 @@ export default async function Behaviour() {
     date: l.date.toISOString(),
   }))
 
+  const activeProhibitedActions = isSbr
+    ? [
+        { action: "Panic selling on a dip", rationale: "Selling locks in a loss that would have recovered if you waited." },
+        { action: "Adding new funds", rationale: "Four funds only — VWRA, QQQM, SMH, A35. More funds = more complexity, less focus." },
+        { action: "Chasing last month's winner", rationale: "Buying after a big run means buying at a high price. Wait for your regular contribution day." },
+        { action: "Skipping contributions during a downturn", rationale: "When prices are down, your money buys more. This is the best time to invest, not the time to stop." },
+        { action: "Rebalancing based on gut feeling", rationale: "Only rebalance when a fund is outside its allowed range — not because it feels off." },
+        { action: "Using leveraged or speculative products", rationale: "These can wipe out your savings in a bad week. They have no place here." },
+      ]
+    : prohibitedActions
+
   return (
     <Shell
       title="Behavioural System"
       subtitle="Discipline, stability, and long-term consistency"
       userName={session.name}
+      isAdmin={session.role === "admin"}
     >
       {/* Manifesto hero */}
       <div className="mb-6 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-primary/[0.02] p-6">
@@ -98,8 +113,10 @@ export default async function Behaviour() {
               "The market rewards patience. It punishes reactivity. Your edge is staying the course when others cannot."
             </blockquote>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
-              Atlas Core is a 2045 system. Every rule, threshold, and alert exists to protect you from yourself during volatile periods.
-              Before taking any action outside your monthly contribution schedule, run the decision checklist below.
+              {isSbr
+                ? "This plan is built for a 2–3 year home deposit goal. Every rule exists to stop short-term noise from derailing a strategy that works when you stick to it. Before doing anything outside your monthly contribution, run the checklist below."
+                : "Atlas Core is a 2045 system. Every rule, threshold, and alert exists to protect you from yourself during volatile periods. Before taking any action outside your monthly contribution schedule, run the decision checklist below."
+              }
             </p>
           </div>
         </div>
@@ -171,21 +188,23 @@ export default async function Behaviour() {
         </div>
       </div>
 
-      {/* Prohibited Actions — §6.1 */}
+      {/* Prohibited Actions */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-4">
         <div className="px-5 py-4 border-b border-border">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Prohibited Actions §6.1</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            {isSbr ? "Things Never to Do" : "Prohibited Actions §6.1"}
+          </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">These are never permitted under any market condition.</p>
         </div>
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/30">
               <th className="px-4 py-2 text-left font-medium text-muted-foreground">Action</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Rationale</th>
+              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Why not</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {prohibitedActions.map(({ action, rationale }) => (
+            {activeProhibitedActions.map(({ action, rationale }) => (
               <tr key={action} className="hover:bg-accent/20">
                 <td className="px-4 py-2.5 font-semibold text-red-400">{action}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{rationale}</td>
@@ -195,11 +214,18 @@ export default async function Behaviour() {
         </table>
       </div>
 
-      {/* Crash Protocol — §6.2 */}
+      {/* Crash Protocol */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Crash Protocol §6.2</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Mandated response by drawdown tier. DCA continues at all tiers unless income is impaired.</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            {isSbr ? "When Markets Fall" : "Crash Protocol §6.2"}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {isSbr
+              ? "What to do when markets drop. Keep investing at every level unless your income stops."
+              : "Mandated response by drawdown tier. Monthly contributions continue at all tiers unless income is impaired."
+            }
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">

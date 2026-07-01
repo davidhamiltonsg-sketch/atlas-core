@@ -17,13 +17,23 @@ import { applyBitcoinSleeve } from "@/lib/next-best-move"
 export const maxDuration = 60
 
 async function getPortfolioData(userId: string) {
-  const holdings = await db.holding.findMany({
-    where: { userId },
-    include: {
-      snapshots: { orderBy: { date: "desc" }, take: 8 },
-    },
-    orderBy: { targetPct: "desc" },
-  })
+  const [holdings, trades] = await Promise.all([
+    db.holding.findMany({
+      where: { userId },
+      include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
+      orderBy: { targetPct: "desc" },
+    }),
+    db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+  ])
+
+  // Weighted-average cost basis per ticker (SGD total, USD per unit)
+  const avgCostMap: Record<string, { units: number; sgd: number; usd: number }> = {}
+  for (const t of trades) {
+    if (!avgCostMap[t.ticker]) avgCostMap[t.ticker] = { units: 0, sgd: 0, usd: 0 }
+    const a = avgCostMap[t.ticker]
+    if (t.type === "BUY") { a.units += t.units; a.sgd += t.amount; a.usd += t.units * t.price }
+    else { const su = a.units > 0 ? a.sgd / a.units : 0; const uu = a.units > 0 ? a.usd / a.units : 0; const rem = Math.max(0, a.units - t.units); a.units = rem; a.sgd = rem * su; a.usd = rem * uu }
+  }
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0
@@ -46,14 +56,20 @@ async function getPortfolioData(userId: string) {
       const drift = hasBalance ? actualPct - tgt : 0
       const withinBand = !hasBalance || Math.abs(drift) <= h.toleranceBand
       const overCap = hasBalance && h.hardCapPct !== null && actualPct > h.hardCapPct
-      // Use HARD_THRESHOLDS for consistent logic: only flag overweight if no low bound
       const ht = HARD_THRESHOLDS[h.ticker]
       const isHard = hasBalance && (overCap ||
         (ht?.low !== undefined && actualPct < ht.low) ||
         (ht !== undefined && actualPct > ht.high))
       const isSoft = hasBalance && !isHard && !withinBand
       const sparklineValues = h.snapshots.map(s => s.value)
-      return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues }
+
+      const cb = avgCostMap[h.ticker]
+      const costBasisSgd = cb ? cb.sgd : 0
+      const avgCostUsd = cb && cb.units > 0 ? cb.usd / cb.units : null
+      const unrealisedSgd = costBasisSgd > 0 ? value - costBasisSgd : null
+      const unrealisedPct = costBasisSgd > 0 && unrealisedSgd !== null ? (unrealisedSgd / costBasisSgd) * 100 : null
+
+      return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues, avgCostUsd, unrealisedSgd, unrealisedPct }
     }),
     totalValue,
     hasBalance,
@@ -292,7 +308,7 @@ export default async function Portfolio() {
 
             {/* Column headers */}
             <div className="hidden md:grid grid-cols-[44px_1fr_80px_110px_90px_90px_90px_44px] gap-3 px-5 py-2.5 border-b border-border bg-muted/30">
-              {["", "Name", "Trend", "Value", "Actual", "Target", "Drift", ""].map((h, i) => (
+              {["", "Name", "Trend", "Value / P&L", "Actual", "Target", "Drift", ""].map((h, i) => (
                 <span key={i} className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{h}</span>
               ))}
             </div>
@@ -317,6 +333,9 @@ export default async function Portfolio() {
                     isSoft: h.isSoft,
                     latestSnapshot: h.latestSnapshot ? { units: h.latestSnapshot.units, price: h.latestSnapshot.price } : null,
                     sparklineValues: h.sparklineValues,
+                    avgCostUsd: h.avgCostUsd,
+                    unrealisedSgd: h.unrealisedSgd,
+                    unrealisedPct: h.unrealisedPct,
                   }}
                 />
               ))}

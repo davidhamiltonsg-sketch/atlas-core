@@ -216,7 +216,7 @@ export function ExecutionPlan({
             ? `${p.ticker} is within its target range of ${p.targetPct}% (±${Math.abs(p.driftPct).toFixed(1)}%). No action needed.`
             : isSoft
             ? `${p.ticker} has drifted ${Math.abs(p.driftPct).toFixed(1)}% ${p.driftPct > 0 ? "above" : "below"} its ${p.targetPct}% target — outside the tolerance band. Redirect contributions over the next 2–3 months to correct this.`
-            : `${p.ticker} has drifted ${Math.abs(p.driftPct).toFixed(1)}% ${p.driftPct > 0 ? "above" : "below"} its ${p.targetPct}% target — a hard breach. Immediate rebalancing action is required at your next dealing window.`
+            : `${p.ticker} has drifted ${Math.abs(p.driftPct).toFixed(1)}% ${p.driftPct > 0 ? "above" : "below"} its ${p.targetPct}% target — a hard breach. You need to act: ${p.driftPct > 0 ? `sell some ${p.ticker} to bring it back down` : `put all new money into ${p.ticker} until it recovers`} before this month's contribution.`
 
           const amountStr = p.suggestedAmount === 0 ? "$0" : `$${p.suggestedAmount.toLocaleString()}`
           const amountCls = p.allocationTag === "zeroed"

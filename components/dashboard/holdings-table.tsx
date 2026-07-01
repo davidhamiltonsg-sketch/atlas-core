@@ -110,7 +110,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false }: { p
             <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30">
               <th className="px-5 py-2.5 font-semibold">Holding</th>
               <th className="px-3 py-2.5 font-semibold text-right">Shares</th>
-              <th className="px-3 py-2.5 font-semibold text-right">Price</th>
+              <th className="px-3 py-2.5 font-semibold text-right">Price / Avg cost</th>
               <th className="px-3 py-2.5 font-semibold text-right">Value</th>
               <th className="px-3 py-2.5 font-semibold text-right">Unrealised</th>
               <th className="px-3 py-2.5 font-semibold">Position in band</th>
@@ -139,7 +139,12 @@ export function HoldingsTable({ positions, totalValue, priceStale = false }: { p
                     {p.units > 0 ? fmtUnits(p.units) : <span className="text-muted-foreground">0</span>}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
-                    {p.latestPrice > 0 ? `$${p.latestPrice.toFixed(2)}` : "—"}
+                    {p.latestPrice > 0 ? <div className="font-medium">${p.latestPrice.toFixed(2)}</div> : <span className="text-muted-foreground">—</span>}
+                    {p.avgCostUsd != null && (
+                      <div className={`text-[10px] tabular-nums ${p.avgCostUsd > 0 && p.latestPrice > 0 ? (p.latestPrice >= p.avgCostUsd ? "text-green-500" : "text-red-500") : "text-muted-foreground"}`}>
+                        avg ${p.avgCostUsd.toFixed(2)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums font-medium">
                     {p.value > 0 ? formatCurrency(p.value, "SGD") : <span className="text-muted-foreground">—</span>}

@@ -5,7 +5,15 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
 import { upsertSnapshotToday, ensureCoreHoldings } from "@/lib/holdings-sync"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 import Anthropic from "@anthropic-ai/sdk"
+
+// Yahoo Finance ticker overrides for non-US instruments held by SBR users.
+// VWRA trades on the London Stock Exchange (price in USD); A35 trades on SGX (price in SGD).
+const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", A35: "A35.SI" }
+const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k, v]) => [v, k]))
+// Tickers whose Yahoo Finance price is already in SGD (no USD→SGD conversion needed).
+const YF_SGD_PRICED = new Set(["A35.SI"])
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
@@ -27,9 +35,10 @@ async function getUsdSgdRate(): Promise<number> {
   return 1.35 // hardcoded fallback when both hosts unavailable
 }
 
-// Manual update: create new snapshots for one or more holdings
+// Manual update: create new snapshots for one or more holdings.
+// Pass currency: "SGD" for SGD-priced instruments (e.g. A35) to skip USD→SGD conversion.
 export async function updateHoldingsManually(
-  updates: Array<{ holdingId: string; units: number; price: number }>
+  updates: Array<{ holdingId: string; units: number; price: number; currency?: "USD" | "SGD" }>
 ) {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
@@ -43,12 +52,13 @@ export async function updateHoldingsManually(
     })
     if (!holding) continue
 
+    const fxMultiplier = u.currency === "SGD" ? 1 : usdSgdRate
     await db.snapshot.create({
       data: {
         holdingId: u.holdingId,
         units: u.units,
         price: u.price,
-        value: u.units * u.price * usdSgdRate,
+        value: u.units * u.price * fxMultiplier,
         currency: "SGD",
         date: new Date(),
       },
@@ -106,8 +116,13 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
 
-  // Self-heal: make sure every governed core ticker (incl. IBIT, SGOV) exists before refreshing.
-  await ensureCoreHoldings(session.userId)
+  // Resolve constitution — only Atlas Core users get ensureCoreHoldings (which creates VT/VWO/BTC
+  // placeholders). Running it for SBR users would contaminate Dami's account with Atlas Core tickers.
+  const user = await db.user.findUnique({ where: { id: session.userId }, select: { email: true } })
+  const constitutionId = constitutionIdForEmail(user?.email)
+  if (constitutionId === "atlas-core") {
+    await ensureCoreHoldings(session.userId)
+  }
 
   const holdings = await db.holding.findMany({
     where: { userId: session.userId },
@@ -116,8 +131,9 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
 
   if (holdings.length === 0) return { success: false, error: "No holdings found" }
 
-  // Yahoo Finance API — try batch quote on query1, then query2 as fallback
-  const symbols = holdings.map(h => h.ticker).join(",")
+  // Yahoo Finance API — map non-standard tickers (VWRA→VWRA.L, A35→A35.SI) before the fetch.
+  const yfSymbols = holdings.map(h => YF_TICKER_MAP[h.ticker] ?? h.ticker)
+  const symbols = yfSymbols.join(",")
 
   let priceMap: Record<string, number> = {}
   let batchSuccess = false
@@ -132,7 +148,9 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
         const data = await res.json()
         const quotes: Array<{ symbol: string; regularMarketPrice: number }> = data?.quoteResponse?.result ?? []
         for (const q of quotes) {
-          if (q.regularMarketPrice) priceMap[q.symbol] = q.regularMarketPrice
+          // Reverse-map Yahoo tickers back to DB tickers (e.g. VWRA.L → VWRA, A35.SI → A35)
+          const dbTicker = YF_REVERSE_MAP[q.symbol] ?? q.symbol
+          if (q.regularMarketPrice) priceMap[dbTicker] = q.regularMarketPrice
         }
         if (Object.keys(priceMap).length > 0) { batchSuccess = true; break }
       }
@@ -143,10 +161,11 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   if (!batchSuccess || Object.keys(priceMap).length < holdings.length) {
     const missing = holdings.filter(h => !priceMap[h.ticker])
     for (const h of missing) {
+      const yfTicker = YF_TICKER_MAP[h.ticker] ?? h.ticker
       for (const host of YF_HOSTS) {
         try {
           const r = await fetch(
-            `https://${host}/v8/finance/chart/${h.ticker}?interval=1d&range=1d`,
+            `https://${host}/v8/finance/chart/${yfTicker}?interval=1d&range=1d`,
             { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
           )
           if (r.ok) {
@@ -160,8 +179,14 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   }
 
   // ── IBKR positions — brokerage truth for SHARE COUNTS (units + mark price + value) ──
-  const ibkrToken = process.env.IBKR_FLEX_TOKEN
-  const ibkrQuery = process.env.IBKR_FLEX_QUERY_ID
+  // SBR users get their own Flex tokens (IBKR_SBR_FLEX_TOKEN / IBKR_SBR_FLEX_QUERY_ID).
+  // Falls back to the main tokens if SBR-specific ones are not yet set (unfunded account).
+  const ibkrToken = constitutionId === "silicon-brick-road"
+    ? (process.env.IBKR_SBR_FLEX_TOKEN || process.env.IBKR_FLEX_TOKEN)
+    : process.env.IBKR_FLEX_TOKEN
+  const ibkrQuery = constitutionId === "silicon-brick-road"
+    ? (process.env.IBKR_SBR_FLEX_QUERY_ID || process.env.IBKR_FLEX_QUERY_ID)
+    : process.env.IBKR_FLEX_QUERY_ID
   const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
   let ibkrError: string | null = null
   if (withIbkr && ibkrToken && ibkrQuery) {
@@ -206,9 +231,12 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
       if (!latest || Math.abs((latest.units ?? 0) - units) > 1e-6) unitsUpdated++
     } else if (yh && latest) {
       // Yahoo price-only — carry units forward (no brokerage data for this holding).
+      // SGD-priced tickers (A35.SI) must not be multiplied by the USD→SGD rate.
+      const yfSym = YF_TICKER_MAP[holding.ticker]
+      const isSgdPriced = yfSym ? YF_SGD_PRICED.has(yfSym) : false
       units = latest.units
       price = yh
-      value = latest.units * yh * usdSgdRate
+      value = latest.units * yh * (isSgdPriced ? 1 : usdSgdRate)
     } else {
       continue
     }

@@ -459,7 +459,7 @@ export default async function Reports() {
             <p className={`ph-metric-value ${geoExposure.us > 80 ? "crit" : geoExposure.us > 70 ? "warn" : "good"}`}>
               {geoExposure.us.toFixed(0)}%
             </p>
-            <p className="ph-metric-sub">hard limit 80%</p>
+            <p className="ph-metric-sub">hard limit {LOOKTHROUGH_SECTOR_CAPS.us.hard}%</p>
           </div>
           <div className="ph-metric">
             <p className="ph-metric-label">Company Alerts</p>
@@ -533,7 +533,7 @@ export default async function Reports() {
               Company and sector exposure weights (COMPANY_WEIGHTS, SECTOR_WEIGHTS) were last reviewed on{" "}
               {LOOK_THROUGH_LAST_REVIEWED.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
               ETF compositions drift as funds rebalance. Update the weights in{" "}
-              <code className="font-mono text-[10px]">app/reports/page.tsx</code> and refresh{" "}
+              <code className="font-mono text-[10px]">lib/look-through.ts</code> and refresh{" "}
               <code className="font-mono text-[10px]">LOOK_THROUGH_LAST_REVIEWED</code> after reviewing the current fund fact sheets.
             </p>
           </div>
@@ -766,11 +766,11 @@ export default async function Reports() {
             },
             {
               label: "Hard Drift Positions",
-              value: String(positions.filter(p => p.outsideBand && Math.abs(p.driftPct) > p.toleranceBand * 2).length),
+              value: String(positions.filter(p => { const ht = HARD_THRESHOLDS[p.ticker]; return p.overCap || (ht && (p.actualPct > ht.high || (ht.low !== undefined && p.actualPct < ht.low))) }).length),
               unit: `/ ${positions.length}`,
               sub: "Positions in hard drift territory",
-              note: positions.filter(p => p.outsideBand && Math.abs(p.driftPct) > p.toleranceBand * 2).length === 0 ? "None — good" : "Review required",
-              cls: positions.filter(p => p.outsideBand && Math.abs(p.driftPct) > p.toleranceBand * 2).length > 0 ? "text-red-500" : "text-green-500",
+              note: positions.filter(p => { const ht = HARD_THRESHOLDS[p.ticker]; return p.overCap || (ht && (p.actualPct > ht.high || (ht.low !== undefined && p.actualPct < ht.low))) }).length === 0 ? "None — good" : "Review required",
+              cls: positions.filter(p => { const ht = HARD_THRESHOLDS[p.ticker]; return p.overCap || (ht && (p.actualPct > ht.high || (ht.low !== undefined && p.actualPct < ht.low))) }).length > 0 ? "text-red-500" : "text-green-500",
             },
           ].map(({ label, value, unit, sub, note, cls }) => (
             <div key={label} className="px-5 py-4">
@@ -1187,10 +1187,9 @@ export default async function Reports() {
               </tr>
               <tr className="border-t border-border bg-muted/10 text-muted-foreground text-[10px]">
                 <td colSpan={3} className="px-5 py-2">Governance ceiling</td>
-                <td className="px-5 py-2 text-right">Soft 20% / Hard 26%</td>
-                <td className="px-5 py-2 text-right">Soft 48% / Hard 54%</td>
-                <td className="px-5 py-2 text-right">Soft 70% / Hard 78%</td>
-                <td className="px-5 py-2 text-right">Soft 38% / Hard 46%</td>
+                {(["semiconductor","digital","us","ai"] as const).map(k => (
+                  <td key={k} className="px-5 py-2 text-right">Soft {SECTOR_CAPS[k].elevated}% / Hard {SECTOR_CAPS[k].excessive}%</td>
+                ))}
               </tr>
             </tbody>
           </table>

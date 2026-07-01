@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
+import { constitutionIdForEmail, CONSTITUTIONS } from "@/lib/constitutions"
+import { ensureCoreHoldings } from "@/lib/holdings-sync"
 
 export async function createUserAction(formData: FormData) {
   const session = await getSession()
@@ -34,34 +36,31 @@ export async function createUserAction(formData: FormData) {
     data: { email, name, passwordHash, role },
   })
 
-  // Create default holdings (zero position) for the new user
-  const adminHoldings = await db.holding.findMany({
-    where: { userId: session.userId },
-  })
-
-  for (const h of adminHoldings) {
-    const newHolding = await db.holding.create({
-      data: {
-        userId: user.id,
-        ticker: h.ticker,
-        name: h.name,
-        targetPct: h.targetPct,
-        hardCapPct: h.hardCapPct,
-        toleranceBand: h.toleranceBand,
-        color: h.color,
-      },
-    })
-    // Create a zero snapshot so the holding is queryable
-    await db.snapshot.create({
-      data: {
-        holdingId: newHolding.id,
-        units: 0,
-        price: 0,
-        value: 0,
-        currency: "USD",
-        date: new Date(),
-      },
-    })
+  // Create zero-position holdings from the NEW USER's own constitution.
+  // We never copy from the admin — that would give SBR users Atlas Core tickers and vice versa.
+  const constId = constitutionIdForEmail(email)
+  if (constId === "atlas-core") {
+    // Atlas Core: ensureCoreHoldings handles the full set (VT, QQQM, SMH, VWO, BTC, IBIT, SGOV)
+    await ensureCoreHoldings(user.id)
+  } else {
+    // SBR or any other constitution: seed from the constitution's own fund list
+    const constitution = CONSTITUTIONS[constId]
+    for (const fund of constitution.funds) {
+      const newHolding = await db.holding.create({
+        data: {
+          userId: user.id,
+          ticker: fund.ticker,
+          name: fund.name,
+          targetPct: fund.target,
+          hardCapPct: fund.hardCap ?? null,
+          toleranceBand: 2.5,
+          color: fund.color,
+        },
+      })
+      await db.snapshot.create({
+        data: { holdingId: newHolding.id, units: 0, price: 0, value: 0, currency: "SGD", date: new Date() },
+      })
+    }
   }
 
   revalidatePath("/admin/users")

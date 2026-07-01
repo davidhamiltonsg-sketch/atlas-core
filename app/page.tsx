@@ -194,7 +194,7 @@ async function getDashboardData(userId: string) {
       ibitPos.driftPct = ibitPos.actualPct - ibitTarget
       ibitPos.status = sleevePct > sleeveCap ? "hard" : Math.abs(ibitPos.driftPct) > ibitBand ? "soft" : "healthy"
       ibitPos.instruction = sleevePct > sleeveCap
-        ? `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}%, over its ${sleeveCap}% cap. Trim Bitcoin back toward ${BITCOIN_SLEEVE_TARGET_PCT}% at your next dealing window.`
+        ? `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}%, over its ${sleeveCap}% cap. Sell some Bitcoin to bring it back toward ${BITCOIN_SLEEVE_TARGET_PCT}% before your next monthly contribution.`
         : ibitPos.driftPct < -0.05
         ? `Your Bitcoin sleeve (BTC + IBIT) is ${sleevePct.toFixed(1)}%, below its ${BITCOIN_SLEEVE_TARGET_PCT}% target. Add to IBIT — the tax-effective vehicle you're transitioning into — to bring the sleeve toward ${BITCOIN_SLEEVE_TARGET_PCT}%.`
         : ibitPos.driftPct > 0.05
@@ -255,7 +255,7 @@ async function getDashboardData(userId: string) {
   const startOfYearValue = soySnaps.reduce((s, snap) => s + (snap?.value ?? 0), 0)
   let targetNow: number | null = null
   if (startOfYearValue > 0 && monthsElapsed > 0) {
-    let v = startOfYearValue
+    let v = startOfYearValue + annualLumpSum // lump sum arrives at start of year
     const mRate = 0.10 / 12
     for (let m = 0; m < monthsElapsed; m++) v = v * (1 + mRate) + monthlyContribution
     targetNow = v
@@ -295,7 +295,7 @@ async function getDashboardData(userId: string) {
   const lookThroughBreach = ltBreach
     ? {
         label: ltBreach.label, pct: ltBreach.pct, hard: ltBreach.hard,
-        trimTicker: largestContributor(ltBreach.key, lookThrough.companies.includes(ltBreach) ? "company" : "sector", positions),
+        trimTicker: largestContributor(ltBreach.key, lookThrough.companies.some(c => c.key === ltBreach.key) ? "company" : "sector", positions),
       }
     : undefined
 
@@ -436,7 +436,7 @@ export default async function Dashboard() {
               Hard Drift Alert — {hardBreaches} position{hardBreaches > 1 ? "s" : ""} breached
             </p>
             <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-0.5">
-              Hard thresholds exceeded. Review next execution instructions below and take action at your next dealing window.
+              A hard limit has been crossed. See the execution plan below and act before your next monthly contribution.
             </p>
           </div>
           <span className="shrink-0 text-xs font-semibold text-red-500/70 group-hover:text-red-500 transition-colors">View steps ↓</span>
@@ -572,12 +572,12 @@ export default async function Dashboard() {
             </a>
           </div>
 
-          {/* Rule check — alignment with governance rules, plain English */}
-          {hasBalance && govAlignment && <GovernanceAlignment data={govAlignment} />}
-
           {/* Your Holdings — first-page table: price trend · price · your cost · unrealised gain
               (approved alternatives, e.g. VWRA for VT, are labelled where held) */}
           {hasBalance && <HoldingsTable positions={holdingsRows} totalValue={totalValue} priceStale={marketStale} />}
+
+          {/* Rule check — alignment with governance rules, plain English */}
+          {hasBalance && govAlignment && <GovernanceAlignment data={govAlignment} />}
 
           {/* Next Execution Instructions */}
           <div id="execution">
@@ -640,7 +640,7 @@ export default async function Dashboard() {
                 {
                   step: "3",
                   title: "Follow the monthly plan",
-                  body: "The \"What To Do This Month\" section tells you exactly how to split your $3,000 monthly contribution. Follow the suggested amounts — they are calculated to reduce drift and move your portfolio toward targets. Never deviate based on short-term market noise.",
+                  body: `The "What To Do This Month" section tells you exactly how to split your ${formatCurrency(monthlyContribution, "SGD")} monthly contribution. Follow the suggested amounts — they are calculated to reduce drift and move your portfolio toward targets. Never deviate based on short-term market noise.`,
                   href: "#execution",
                   cta: "See this month's plan ↓",
                 },
@@ -787,8 +787,8 @@ export default async function Dashboard() {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">2045 Base Case</p>
               <p className="text-lg font-black tabular-nums gradient-text leading-tight">
                 {base2045 >= 1_000_000
-                  ? `$${(base2045 / 1_000_000).toFixed(1)}M`
-                  : `$${(base2045 / 1_000).toFixed(0)}K`}
+                  ? `S$${(base2045 / 1_000_000).toFixed(1)}M`
+                  : `S$${(base2045 / 1_000).toFixed(0)}K`}
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">10% p.a. · {yearsTo2045} yr</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
@@ -804,7 +804,7 @@ export default async function Dashboard() {
               <p className="text-lg font-black tabular-nums leading-tight">
                 {daysToContribution === 0 ? "Today" : `${daysToContribution}d`}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">{nextContributionLabel} · $3,000</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{nextContributionLabel} · {formatCurrency(monthlyContribution, "SGD")}</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary/60"

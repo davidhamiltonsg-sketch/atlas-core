@@ -214,8 +214,8 @@ export default async function Forecast() {
       {/* Assumptions */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Monthly Contribution", value: `$${MONTHLY_CONTRIBUTION.toLocaleString()}`, sub: "USD/month" },
-          { label: "Annual Lump Sum",       value: `$${ANNUAL_LUMP_SUM.toLocaleString()}`, sub: "USD/year" },
+          { label: "Monthly Contribution", value: `S$${MONTHLY_CONTRIBUTION.toLocaleString()}`, sub: "SGD/month" },
+          { label: "Annual Lump Sum",       value: `S$${ANNUAL_LUMP_SUM.toLocaleString()}`, sub: "SGD/year" },
           { label: "Contribution Growth",   value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`, sub: "Annual increase" },
           { label: "Horizon",               value: "2045", sub: "19 years remaining" },
         ].map(({ label, value, sub }) => (
@@ -270,7 +270,7 @@ export default async function Forecast() {
           <span className="text-xs text-muted-foreground ml-auto">{(SINGAPORE_SAVINGS_RATE * 100).toFixed(1)}% p.a.</span>
         </div>
         <p className="text-[11px] text-muted-foreground mb-5">
-          Singapore high-yield savings / fixed deposit rate (approximate, as of {BENCHMARKS_AS_OF}) · same contributions · USD-denominated.
+          Singapore high-yield savings / fixed deposit rate (approximate, as of {BENCHMARKS_AS_OF}) · same contributions · SGD-denominated.
           {" "}P10/P90 cone uses {(coneVol * 100).toFixed(0)}% annual volatility ({volIsReal ? "your portfolio's actual history" : `default — too little history yet`}).
         </p>
         <div className="space-y-4">
@@ -296,7 +296,7 @@ export default async function Forecast() {
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold">Projection Summary</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Starting {fmtM(currentValue)} · ${MONTHLY_CONTRIBUTION.toLocaleString()} USD/mo + ${ANNUAL_LUMP_SUM.toLocaleString()} USD/yr · contributions +{(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.
+            Starting {fmtM(currentValue)} · S${MONTHLY_CONTRIBUTION.toLocaleString()} SGD/mo + S${ANNUAL_LUMP_SUM.toLocaleString()} SGD/yr · contributions +{(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -349,6 +349,52 @@ export default async function Forecast() {
           <p className="text-[11px] text-muted-foreground">
             Bank savings rate approximates Singapore DBS/OCBC/UOB high-yield savings and fixed deposit rates as of 2025.
             "Base vs Savings" shows how many times larger the base case portfolio becomes versus the savings reference.
+          </p>
+        </div>
+      </div>
+
+      {/* 2040–2045 Glide Path */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-4">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">2040–2045 Transition Plan</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Five years before the target, the portfolio gradually shifts from growth to stability.
+            Each year has a maximum stock exposure and a specific action to take.
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Year</th>
+                <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground whitespace-nowrap">Max Stocks</th>
+                <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">What to do</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {[
+                { year: "2040", maxEquity: "90%", action: "Complete the 2040 portfolio review. Write a Distribution Plan — a document that says how you will draw money down from the portfolio in retirement." },
+                { year: "2041", maxEquity: "85%", action: "Reduce Bitcoin toward 4% of the portfolio. Rebuild your safety buffer (SGOV / cash) to at least 15%." },
+                { year: "2042", maxEquity: "80%", action: "Reduce semiconductors (SMH) toward 6%. Start moving some money into bonds — target 5–8% in bonds by end of year." },
+                { year: "2043", maxEquity: "75%", action: "Bring QQQM down toward 18% and emerging markets toward 5%. Move bonds and cash combined to 15–20%." },
+                { year: "2044", maxEquity: "70%", action: "Final year of building the portfolio. Shift the focus from growth to keeping what you have safe and generating income." },
+                { year: "2045", maxEquity: "Per 2040 Review", action: "Retirement drawdown begins. Follow the Distribution Plan written in 2040." },
+              ].map(({ year, maxEquity, action }) => (
+                <tr key={year} className="hover:bg-accent/30 transition-colors">
+                  <td className="px-5 py-3 font-black tabular-nums">{year}</td>
+                  <td className="px-5 py-3 font-semibold text-primary tabular-nums whitespace-nowrap">{maxEquity}</td>
+                  <td className="px-5 py-3 text-muted-foreground leading-relaxed">{action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-5 py-3 border-t border-border bg-muted/20">
+          <p className="text-[11px] text-muted-foreground">
+            <span className="font-semibold text-foreground">Sell-down order when drawing down:</span>{" "}
+            SGOV first → BTC → SMH → VWO → QQQM → VT last.
+            This sells the highest-concentration and highest-volatility positions first,
+            keeping the broadest and cheapest holdings longest.
           </p>
         </div>
       </div>

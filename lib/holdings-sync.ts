@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // Default metadata for the governed core tickers, used to create any that are missing so the
 // plan is always represented (e.g. IBIT and SGOV, added to the plan after the DB was seeded).
@@ -15,11 +16,14 @@ const CORE_DEFAULTS: Record<string, { name: string; targetPct: number; hardCapPc
 }
 
 /**
- * Make sure every governed core ticker exists as a holding (creating any gaps at 0 units).
- * Idempotent — only creates what is missing. Keeps the plan fully represented on the
- * dashboard/governance pages even if the DB was seeded before a ticker was added to the plan.
+ * Make sure every Atlas Core governed ticker exists as a holding for a user (creating any gaps
+ * at 0 units). Atlas Core ONLY — silently returns 0 for SBR users to prevent cross-contamination.
+ * Idempotent — only creates what is missing.
  */
 export async function ensureCoreHoldings(userId: string): Promise<number> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
+  if (!user || constitutionIdForEmail(user.email) !== "atlas-core") return 0
+
   let created = 0
   for (const ticker of CORE_TICKERS) {
     const existing = await db.holding.findFirst({ where: { userId, ticker } })

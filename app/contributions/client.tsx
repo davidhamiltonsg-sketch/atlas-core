@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Plus, Trash2, PiggyBank, Loader2, Check, AlertCircle, X, Calendar } from "lucide-react"
 import { addContributionAction, deleteContributionAction } from "./actions"
+import { formatCurrency } from "@/lib/utils"
 
 type Contribution = {
   id: string
@@ -84,20 +85,20 @@ export function ContributionsClient({ contributions: initialContributions, month
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Total Contributed</p>
-          <p className="text-2xl font-black mt-1 tabular-nums">${total.toLocaleString()}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">USD across {monthCount} months</p>
+          <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(total, "SGD")}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">SGD across {monthCount} months</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Monthly Average</p>
-          <p className="text-2xl font-black mt-1 tabular-nums">${avgMonthly.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">vs target ${monthlyTarget.toLocaleString()}</p>
+          <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(Math.round(avgMonthly), "SGD")}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">vs target {formatCurrency(monthlyTarget, "SGD")}</p>
         </div>
         <div className={`rounded-xl border bg-card p-4 card-elevated ${avgMonthly >= monthlyTarget ? "border-green-500/30" : "border-yellow-400/30"}`}>
           <p className="text-xs text-muted-foreground">Target Achievement</p>
           <p className={`text-2xl font-black mt-1 tabular-nums ${avgMonthly >= monthlyTarget ? "text-green-500" : "text-yellow-400"}`}>
             {monthlyTarget > 0 ? `${((avgMonthly / monthlyTarget) * 100).toFixed(0)}%` : "—"}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">of ${monthlyTarget.toLocaleString()} target</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">of {formatCurrency(monthlyTarget, "SGD")} target</p>
         </div>
       </div>
 
@@ -106,7 +107,7 @@ export function ContributionsClient({ contributions: initialContributions, month
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Contribution History</h2>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-3 py-1.5 transition-colors"
         >
           {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
           {showForm ? "Cancel" : "Record Contribution"}
@@ -132,22 +133,22 @@ export function ContributionsClient({ contributions: initialContributions, month
           <form onSubmit={handleAdd} className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Amount (USD)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Amount (SGD)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                  <input name="amount" type="number" step="any" min="1" required defaultValue={monthlyTarget} className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S$</span>
+                  <input name="amount" type="number" step="any" min="1" required defaultValue={monthlyTarget} className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Date</label>
-                <input name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Note (optional)</label>
-              <input name="note" placeholder="Monthly DCA…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+              <input name="note" placeholder="Monthly DCA…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
             </div>
-            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
+            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground text-xs font-semibold px-4 py-2 transition-colors">
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Record
             </button>
@@ -174,19 +175,19 @@ export function ContributionsClient({ contributions: initialContributions, month
                   <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                   <h3 className="text-sm font-semibold flex-1">{label}</h3>
                   <span className={`text-sm font-black tabular-nums ${monthTotal >= monthlyTarget ? "text-green-500" : "text-yellow-400"}`}>
-                    ${monthTotal.toLocaleString()}
+                    {formatCurrency(monthTotal, "SGD")}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">/ ${monthlyTarget.toLocaleString()}</span>
+                  <span className="text-[11px] text-muted-foreground">/ {formatCurrency(monthlyTarget, "SGD")}</span>
                 </div>
                 <div className="h-1 bg-muted">
-                  <div className="h-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 <div className="divide-y divide-border">
                   {items.map(c => (
                     <div key={c.id} className="flex items-center justify-between px-5 py-2.5">
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                        <span className="text-xs font-semibold">${c.amount.toLocaleString()}</span>
+                        <span className="text-xs font-semibold">{formatCurrency(c.amount, "SGD")}</span>
                         {c.note && <span className="text-xs text-muted-foreground">{c.note}</span>}
                       </div>
                       <button onClick={() => handleDelete(c.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
@@ -211,17 +212,17 @@ export function ContributionsClient({ contributions: initialContributions, month
               const done = actual.length > 0
               const actualAmount = actual.reduce((s, c) => s + c.amount, 0)
               return (
-                <div key={m.key} className={`flex items-center justify-between px-5 py-3 ${i === 0 ? "bg-indigo-500/[0.04]" : ""}`}>
+                <div key={m.key} className={`flex items-center justify-between px-5 py-3 ${i === 0 ? "bg-primary/[0.04]" : ""}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`h-2 w-2 rounded-full ${done ? "bg-green-500" : i === 0 ? "bg-indigo-500 animate-pulse" : "bg-border"}`} />
+                    <div className={`h-2 w-2 rounded-full ${done ? "bg-green-500" : i === 0 ? "bg-primary animate-pulse" : "bg-border"}`} />
                     <span className="text-xs font-medium">{m.label}</span>
-                    {i === 0 && !done && <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-500/10 px-2 py-0.5 rounded-full">Next contribution</span>}
+                    {i === 0 && !done && <span className="text-[10px] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">Next contribution</span>}
                   </div>
                   <div className="text-right">
                     {done ? (
-                      <span className="text-xs font-bold text-green-500">${actualAmount.toLocaleString()} ✓</span>
+                      <span className="text-xs font-bold text-green-500">{formatCurrency(actualAmount, "SGD")} ✓</span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">${m.target.toLocaleString()} target</span>
+                      <span className="text-xs text-muted-foreground">{formatCurrency(m.target, "SGD")} target</span>
                     )}
                   </div>
                 </div>

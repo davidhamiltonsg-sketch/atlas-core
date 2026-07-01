@@ -18,62 +18,62 @@ const thresholds = GOVERNANCE_BAND_ROWS
 const monthlySteps = [
   {
     step: 1,
-    question: "Has any hard cap been breached?",
-    detail: "Check ticker allocations and look-through concentration (§4).",
-    yes: "Execute mandated response immediately: BTC >8% → trim to target; QQQM >30% → halt + trim; SMH >12% → trim to 10%; Nvidia >13% → reduce cluster exposure. Then go to Step 6.",
-    no: "Proceed to Step 2.",
+    question: "Is anything over its safety limit?",
+    detail: "Look at each holding's percentage in the dashboard. Has anything crossed into the red zone?",
+    yes: "Act before investing new money. SMH over 12% → sell some back to 10%. BTC+IBIT over 8% → stop buying. QQQM over 30% → sell some back. Nvidia over 13% of total portfolio → reduce chip exposure. Then go to Step 6.",
+    no: "Nothing is over its limit. Move to Step 2.",
   },
   {
     step: 2,
-    question: "Is any asset below target?",
-    detail: "Review all portfolio weights against target allocation.",
-    yes: "Direct 100% of monthly contribution to the most underweight asset. No splitting. No optimisation. Then go to Step 6.",
-    no: "Proceed to Step 3.",
+    question: "Is anything too small?",
+    detail: "Has any holding fallen below where it should be?",
+    yes: "Put 100% of this month's money into the holding that is furthest below its target. Don't split it between multiple funds — one fund gets it all. Then go to Step 6.",
+    no: "Everything is at or above target. Move to Step 3.",
   },
   {
     step: 3,
-    question: "Is any asset above its soft alert band?",
-    detail: "Soft alert = outside healthy range but below hard trigger.",
-    yes: "Pause contributions to that asset. Redirect to underweight positions. Do not trim. Exception: if any §4 concentration limit is breached, §4 overrides. Then go to Step 6.",
-    no: "Proceed to Step 4.",
+    question: "Is anything drifting too high — but not yet at the hard limit?",
+    detail: "This is the amber zone: above the comfortable range but not yet requiring a forced sale.",
+    yes: "Stop buying that holding for now. Send new money to the underweights instead. Don't sell anything yet — just redirect. Then go to Step 6.",
+    no: "Nothing is drifting. Move to Step 4.",
   },
   {
     step: 4,
-    question: "Has a concentration review been triggered?",
-    detail: "§4: a company or sector look-through exposure has moved into its warning band (e.g. semiconductor >16%, Nvidia >10%).",
-    yes: "Schedule a review within 30 days. Continue normal contributions in the meantime. Do not alter allocations during the review. Then go to Step 6.",
-    no: "Proceed to Step 5.",
+    question: "Is there a hidden exposure warning?",
+    detail: "Your funds overlap — you can hold too much of one company or sector without realising it. Check the Floating Caps section below. Has any hidden exposure crossed its warning level? (e.g. semiconductors above 16%, Nvidia above 10%)",
+    yes: "Schedule a review within 30 days. Keep investing normally while you wait. Don't change your holdings during the review. Then go to Step 6.",
+    no: "No hidden exposure warnings. Move to Step 5.",
   },
   {
     step: 5,
-    question: "Normal contribution deployment.",
-    detail: "No hard triggers, concentration breaches, underweight priorities, or structural reviews active.",
+    question: "Everything looks fine — invest as normal.",
+    detail: "No limits breached, nothing too small or too large, no hidden exposure warnings active.",
     yes: null,
     no: null,
-    action: "Deploy monthly contribution at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · BTC 7%. Then go to Step 6.",
+    action: "Split this month's contribution at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · Bitcoin sleeve 7% (via IBIT). Then go to Step 6.",
   },
   {
     step: 6,
-    question: "Market regime: is the portfolio drawdown greater than 25%?",
-    detail: "Measure from all-time high.",
-    yes: "Activate Crash Protocol (§6.2). Continue DCA unchanged. Do not redesign the portfolio. Do not initiate discretionary sales.",
-    no: "Continue normal operation. No further action required.",
+    question: "Is the whole portfolio down more than 25% from its highest ever value?",
+    detail: "Compare the current total to the all-time high shown in the portfolio history chart.",
+    yes: "Markets are crashing. Keep investing the same amount every month — don't panic, don't stop, don't sell. Don't change the portfolio while it's down. This is normal and temporary.",
+    no: "All good. You're done for this month.",
   },
   {
     step: 7,
-    question: "Compliance confirmation.",
+    question: "Quick final checklist.",
     detail: null,
     yes: null,
     no: null,
-    action: "Confirm: pre-clearance obtained · within dealing window · no compliance restrictions · contribution executed · governance log updated · drift reviewed · concentration reviewed.",
+    action: "Tick off: no work trading restrictions apply · bought after the 15th of the month · normal monthly amount invested · checked all the holdings above.",
   },
   {
     step: 8,
-    question: "System closure.",
+    question: "Close and step away.",
     detail: null,
     yes: null,
     no: null,
-    action: "Close. Do not monitor daily. Do not seek confirmation from market commentators. Do not alter allocations outside governance rules. Reopen only at the next scheduled review date.",
+    action: "Done. Don't check prices every day. Don't listen to market commentators or financial news. Don't change anything until next month's check. Come back here on the 15th next month.",
   },
 ]
 
@@ -167,13 +167,71 @@ export default async function Governance() {
           <Zap className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.7 — Bitcoin via IBIT, vehicle-switch protocol, live data &amp; pre-commitments</p>
+          <p className="text-xs font-bold text-indigo-400 mb-0.5">v6.7 — Bitcoin via IBIT · monthly check-in system · live data</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Conviction holdings are accumulated on weakness toward target and sold only on a broken thesis — never because of an unrealised loss. BTC and IBIT are governed as one Bitcoin sleeve (combined 7% target / 8% cycle cap), with BTC transitioning into the tax-effective IBIT like-for-like. The SGOV shock buffer is built from new contributions, never by liquidating a position. Every screen ends in one clear instruction — what to do, why, and when.
+            Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they're down. BTC and IBIT count as one Bitcoin position (7% target, 8% max), with older BTC units gradually swapping into IBIT. The SGOV cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you're doing it, and when.
           </p>
           <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
             Go to Command Centre →
           </a>
+        </div>
+      </div>
+
+      {/* What this is */}
+      <div className="rounded-xl border border-border bg-card p-5 mb-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">What this is</p>
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl mb-4">
+          This is a retirement portfolio running from 2026 to 2045. Its job is to grow wealth by following a fixed set of rules — not feelings, not headlines, and not random ideas from the internet.
+          The rules were written when things were calm. They exist so they can be followed when things are not calm. That is the whole point of having a governance document.
+        </p>
+        <div className="border-t border-border pt-4">
+          <p className="text-[11px] font-semibold text-muted-foreground mb-2">The big rule</p>
+          <p className="text-xs text-foreground/80 font-medium">
+            Feelings do not get a vote. Fear does not get a vote. Excitement does not get a vote. Headlines do not get a vote.
+          </p>
+        </div>
+      </div>
+
+      {/* What you own and why */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-4">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">What the portfolio owns</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Six positions. Each one has a specific job.</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Fund</th>
+              <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Target</th>
+              <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Job</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {[
+              { ticker: "VT",   target: "52%", job: "The big foundation — owns stocks from all over the world.", color: "#6366f1" },
+              { ticker: "QQQM", target: "23%", job: "The growth engine — the 100 biggest US tech companies.", color: "#8b5cf6" },
+              { ticker: "SMH",  target: "10%", job: "The chip bet — semiconductor companies tied to AI and computing.", color: "#a78bfa" },
+              { ticker: "VWO",  target: "8%",  job: "The geography balancer — extra exposure to emerging market economies.", color: "#c4b5fd" },
+              { ticker: "BTC",  target: "7%",  job: "The wild card — high upside, but kept deliberately small to limit damage if it falls.", color: "#f59e0b" },
+              { ticker: "SGOV", target: "buffer", job: "The safety buffer — short-term US government bonds, used as dry powder and a hedge.", color: "#6b7280" },
+            ].map(({ ticker, target, job, color }) => (
+              <tr key={ticker} className="hover:bg-accent/20">
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    <span className="font-bold">{ticker}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-3 font-semibold tabular-nums text-muted-foreground">{target}</td>
+                <td className="px-5 py-3 text-muted-foreground leading-relaxed">{job}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-5 py-3 border-t border-border bg-muted/20">
+          <p className="text-[11px] text-muted-foreground">
+            Plain English: VT is the chassis, QQQM and SMH are the turbochargers, VWO adds geographic balance, BTC is the small optional rocket, and SGOV is the spare fuel can. Strong belief in each one is allowed — an oversized bet in any one is not.
+          </p>
         </div>
       </div>
 
@@ -208,9 +266,9 @@ export default async function Governance() {
       {/* Live position gauges */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Where Each Holding Stands</h2>
+          <h2 className="text-sm font-semibold">Where Each Fund Stands Right Now</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            How much you hold now vs the safe range, the early-warning band, and the hard limit
+            Your current percentage vs the comfortable range (green), the warning zone (amber), and the hard limit (red)
           </p>
         </div>
         <div className="divide-y divide-border">
@@ -353,7 +411,7 @@ export default async function Governance() {
           {
             label: "Over the limit",
             sub: "Time to act",
-            text: "A holding has passed its hard limit. Stop buying it, and trim a little back to target at your next dealing window.",
+            text: "A holding has passed its hard limit. Stop buying it and sell a little to bring it back to the target. Do this before your next monthly contribution.",
             icon: XCircle,
             color: "text-red-500",
             border: "border-red-500/20",
@@ -411,8 +469,59 @@ export default async function Governance() {
         </div>
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground italic">
-            Precedence: §4 Look-Through Concentration → §3 Drift Governance → §5 Contribution Engine → all other sections.
-            Concentration always overrides conviction. Hard triggers always override soft alerts.
+            Priority order: hidden exposure checks come first → then drift checks → then the contribution plan.
+            If anything is over its hard limit, that always overrides everything else. A safety limit breach is never ignored.
+          </p>
+        </div>
+      </div>
+
+      {/* When can the rules change? */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">When are the rules allowed to change?</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            The rules can only change for serious reasons. The bar is deliberately high.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          <div className="px-5 py-4">
+            <p className="text-[11px] font-bold text-green-500 uppercase tracking-wider mb-3">Valid reasons</p>
+            <ul className="space-y-2">
+              {[
+                "A major life change (marriage, dependants, health)",
+                "A meaningful change to the retirement timeline",
+                "A large, lasting income change",
+                "A legal or compliance reason (work restrictions, tax law)",
+                "Strong new evidence that the current approach is structurally wrong",
+              ].map((r) => (
+                <li key={r} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0 h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="px-5 py-4">
+            <p className="text-[11px] font-bold text-red-500 uppercase tracking-wider mb-3">Not valid reasons</p>
+            <ul className="space-y-2">
+              {[
+                "A market crash (that is precisely when you should not change)",
+                "Boredom or wanting something new",
+                "A persuasive chart or post on social media",
+                "A shiny new idea that hasn't been tested against the rules",
+                "Someone else's portfolio doing better right now",
+              ].map((r) => (
+                <li key={r} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0 h-1.5 w-1.5 rounded-full bg-red-500 mt-1.5" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t border-border bg-muted/20">
+          <p className="text-[11px] text-muted-foreground">
+            Any proposed change must be written down and waited on for at least 7 days. No changes during a market downturn. <span className="font-medium text-foreground">"I saw a cool chart online" is not a constitutional event.</span>
           </p>
         </div>
       </div>
