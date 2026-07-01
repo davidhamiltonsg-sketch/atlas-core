@@ -26,44 +26,72 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
+import type { ConstitutionId } from "@/lib/constitutions"
 
-// Home = the one-stop dashboard (action + rule-check + performance).
-const homeNav = [
-  { href: "/",              label: "Dashboard",        icon: LayoutDashboard },
-]
+type NavItem = { href: string; label: string; icon: React.ElementType }
+type NavGroupDef = { label: string; items: NavItem[] }
 
-// Plan = the rules and discipline layer.
-const planNav = [
-  { href: "/governance",    label: "Rules & Caps",     icon: ShieldCheck },
-  { href: "/calendar",      label: "Calendar & Rules", icon: CalendarDays },
-  { href: "/behaviour",     label: "Staying Calm",     icon: Brain },
-]
+// Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
+// Brick Road (Dami) shows only the surfaces its constitution actually uses.
+const BRAND: Record<ConstitutionId, { short: string; name: string; version: string; gradient: string }> = {
+  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v6.7 · GDEA", gradient: "from-indigo-500 to-violet-600" },
+  "silicon-brick-road": { short: "SBR", name: "Silicon Brick Road", version: "v2.1 · SBR",  gradient: "from-teal-500 to-emerald-600" },
+}
 
-// Portfolio = your money and its records.
-const portfolioNav = [
-  { href: "/portfolio",     label: "Portfolio",        icon: PieChart },
-  { href: "/holdings",      label: "Holdings",         icon: Star },
-  { href: "/rebalance",     label: "Rebalance",        icon: GitCompare },
-  { href: "/trades",        label: "Trades",           icon: ArrowLeftRight },
-  { href: "/contributions", label: "Contributions",    icon: PiggyBank },
-  { href: "/dividends",     label: "Dividends",        icon: Coins },
-]
-
-// Insights = the optional deep-dive surfaces (not part of the monthly 5-minute check).
-const insightsNav = [
-  { href: "/command-centre",label: "Command Centre",   icon: Zap },
-  { href: "/smart-money",   label: "Smart Money",      icon: Landmark },
-  { href: "/reports",       label: "What You Own",     icon: FileBarChart2 },
-  { href: "/forecast",      label: "Forecast",         icon: TrendingUp },
-  { href: "/risk",          label: "Risk",             icon: BarChart3 },
-  { href: "/ytd",           label: "YTD / P&L",        icon: CalendarDays },
-  { href: "/history",       label: "History",          icon: History },
-]
+const NAV: Record<ConstitutionId, NavGroupDef[]> = {
+  "atlas-core": [
+    { label: "Home", items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] },
+    { label: "Plan", items: [
+      { href: "/governance", label: "Rules & Caps", icon: ShieldCheck },
+      { href: "/calendar", label: "Calendar & Rules", icon: CalendarDays },
+      { href: "/behaviour", label: "Staying Calm", icon: Brain },
+    ] },
+    { label: "Portfolio", items: [
+      { href: "/portfolio", label: "Portfolio", icon: PieChart },
+      { href: "/holdings", label: "Holdings", icon: Star },
+      { href: "/rebalance", label: "Rebalance", icon: GitCompare },
+      { href: "/trades", label: "Trades", icon: ArrowLeftRight },
+      { href: "/contributions", label: "Contributions", icon: PiggyBank },
+      { href: "/dividends", label: "Dividends", icon: Coins },
+    ] },
+    { label: "Insights", items: [
+      { href: "/command-centre", label: "Command Centre", icon: Zap },
+      { href: "/smart-money", label: "Smart Money", icon: Landmark },
+      { href: "/reports", label: "What You Own", icon: FileBarChart2 },
+      { href: "/forecast", label: "Forecast", icon: TrendingUp },
+      { href: "/risk", label: "Risk", icon: BarChart3 },
+      { href: "/ytd", label: "YTD / P&L", icon: CalendarDays },
+      { href: "/history", label: "History", icon: History },
+    ] },
+  ],
+  "silicon-brick-road": [
+    { label: "Home", items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] },
+    { label: "Constitution", items: [
+      { href: "/governance", label: "The Constitution", icon: ShieldCheck },
+      { href: "/behaviour", label: "Staying Calm", icon: Brain },
+    ] },
+    { label: "Portfolio", items: [
+      { href: "/portfolio", label: "Portfolio", icon: PieChart },
+      { href: "/holdings", label: "Holdings", icon: Star },
+      { href: "/rebalance", label: "Rebalance", icon: GitCompare },
+      { href: "/trades", label: "Trades", icon: ArrowLeftRight },
+      { href: "/contributions", label: "Contributions", icon: PiggyBank },
+      { href: "/dividends", label: "Dividends", icon: Coins },
+    ] },
+    { label: "Insights", items: [
+      { href: "/forecast", label: "Forecast", icon: TrendingUp },
+      { href: "/risk", label: "Risk", icon: BarChart3 },
+      { href: "/ytd", label: "YTD / P&L", icon: CalendarDays },
+      { href: "/history", label: "History", icon: History },
+    ] },
+  ],
+}
 
 interface SidebarProps {
   open: boolean
   onClose: () => void
   isAdmin?: boolean
+  constitutionId?: ConstitutionId
 }
 
 function NavLink({ href, label, icon: Icon, onClick }: { href: string; label: string; icon: React.ElementType; onClick: () => void }) {
@@ -101,7 +129,9 @@ function NavGroup({ label, children }: { label: string; children: React.ReactNod
   )
 }
 
-export function Sidebar({ open, onClose, isAdmin = false }: SidebarProps) {
+export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atlas-core" }: SidebarProps) {
+  const brand = BRAND[constitutionId]
+  const groups = NAV[constitutionId]
   return (
     <>
       {/* Mobile overlay */}
