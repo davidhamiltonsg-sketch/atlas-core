@@ -1,0 +1,221 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Silicon Brick Road — Decision Engine (Constitution v2.1, Article VI).
+//
+// Implements the exact 7-step ladder + phase framework as a computable engine, so
+// Dami's dashboard produces the same single instruction the Constitution prescribes.
+// Returns the shared NextMove / DcaPlan shapes so the existing dashboard components render it.
+//
+// Priority (highest wins): SMH cap → combined ceiling → A35 floor → phase (III/IV) →
+// drawdown → skip-at-high → underweight → standard split.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
+import { SILICON_BRICK_ROAD, type Constitution, type ConstitutionPhase } from "@/lib/constitutions"
+
+export interface SbrPosition {
+  ticker: string
+  name: string
+  color: string
+  value: number
+  actualPct: number
+  targetPct: number
+  rangeLow: number
+  rangeHigh: number
+  hardCap: number | null
+  floor?: number
+  latestPrice: number
+  hi52: number // 52-week high (0 if unknown, e.g. A35 on SGX)
+}
+
+export interface SbrEngineOpts {
+  /** Portfolio drawdown from its month-end peak (negative %, e.g. -18). */
+  drawdownPct?: number
+}
+
+const A35_FLOOR = 7
+
+export function sbrPhase(totalValue: number, c: Constitution = SILICON_BRICK_ROAD): ConstitutionPhase {
+  const phases = c.phases ?? []
+  for (const p of phases) {
+    if (totalValue >= p.min && (p.max === null || totalValue < p.max)) return p
+  }
+  return phases[0]
+}
+
+function pctFromHigh(p: SbrPosition): number | null {
+  if (p.hi52 <= 0 || p.latestPrice <= 0) return null
+  return ((p.latestPrice - p.hi52) / p.hi52) * 100
+}
+function nearHigh(p: SbrPosition, skipPct: number): boolean {
+  const f = pctFromHigh(p)
+  return f !== null && f >= -skipPct
+}
+
+// ─── The single Next Best Move ───────────────────────────────────────────────
+export function computeSbrNextMove(
+  positions: SbrPosition[],
+  totalValue: number,
+  opts: SbrEngineOpts = {},
+  c: Constitution = SILICON_BRICK_ROAD,
+): NextMove {
+  const get = (t: string) => positions.find((p) => p.ticker === t)
+  const smh = get("SMH"), qqqm = get("QQQM"), a35 = get("A35")
+  const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
+  const comb = c.combined!
+
+  if (totalValue <= 0) {
+    return { severity: "none", ticker: "VWRA", action: "Make your first contribution",
+      what: `Invest this month's SGD ${c.monthlyContribution.toLocaleString()} at target weights: VWRA 50% · QQQM 25% · SMH 15% · A35 10%.`,
+      why: "The portfolio is empty. Start the monthly schedule — contributions are the primary driver of success.",
+      when: "In the monthly dealing window.", color: "#2dd4bf" }
+  }
+
+  // 1 — SMH > 20% → mandatory sell to 15%
+  if (smh && smh.actualPct > 20) {
+    return { severity: "critical", ticker: "SMH", action: "Sell SMH back to 15%",
+      what: `SMH is ${smh.actualPct.toFixed(1)}% of the portfolio, over its 20% hard cap. Sell enough to bring it back to the 15% target this window.`,
+      why: "The only mandatory sell in the Constitution (Article IX). Semiconductors can fall 30–40% in a bad year; the cap limits that damage.",
+      when: "Within the current dealing window.", color: "#f87171" }
+  }
+
+  // 2 — combined QQQM + SMH > 45% → halt both
+  if (combined > comb.hard) {
+    return { severity: "critical", ticker: "QQQM", action: "Halt QQQM + SMH — over 45%",
+      what: `Combined QQQM + SMH is ${combined.toFixed(1)}%, over the ${comb.hard}% hard ceiling. Direct all contributions to VWRA until combined falls below ${comb.resume}%.`,
+      why: "The binding tech-concentration constraint (Article VII). Overlapping tech risk this high must be brought down before adding more.",
+      when: "This month, and each month until combined is under 42%.", color: "#60a5fa" }
+  }
+
+  // 3 — A35 below its 7% floor → build the safety floor
+  if (a35 && a35.actualPct < A35_FLOOR) {
+    return { severity: "high", ticker: "A35", action: "Rebuild the A35 safety floor",
+      what: `A35 is ${a35.actualPct.toFixed(1)}% — below its 7% floor. Direct all contributions to A35 until it is back above 8%.`,
+      why: "A35 is the SGD safety floor and dry powder for deployment (Article VII). The floor is the priority before any other contribution routing.",
+      when: "This month, until A35 is above 8%.", color: "#34d399" }
+  }
+
+  // 4 — phase instructions (III sells, IV halts equity)
+  const phase = sbrPhase(totalValue, c)
+  if (phase.key === "III") {
+    return { severity: "high", ticker: "A35", action: "Phase III — de-risk into A35",
+      what: "On the first monthly window of this quarter, sell enough QQQM and VWRA to cut their weights by 3% and 2% (on current value); move proceeds to A35. Do not touch SMH. Keep monthly contributions flowing to A35.",
+      why: `The portfolio is in Phase III (${phase.range}). Progressive preservation begins — you are within ~SGD ${(120000 - totalValue).toLocaleString()} of target.`,
+      when: "First dealing window of the quarter.", color: "#34d399" }
+  }
+  if (phase.key === "IV") {
+    return { severity: "high", ticker: "A35", action: "Phase IV — stop buying stocks",
+      what: "Stop all equity purchases. Every contribution goes to A35. Concentrating in SGD reduces FX dependence in the final weeks. Begin planning the purchase timeline.",
+      why: `The portfolio is in Phase IV (${phase.range}) — property readiness. Within 60 days of a confirmed purchase, follow the Exit Sequence.`,
+      when: "Now, every contribution.", color: "#34d399" }
+  }
+
+  // 5 — drawdown > 15% from peak → all to VWRA
+  if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) {
+    return { severity: "high", ticker: "VWRA", action: "Drawdown — all to VWRA",
+      what: `The portfolio is down ${Math.abs(opts.drawdownPct).toFixed(0)}% from its month-end peak. Direct the full contribution to VWRA only. Sell nothing.`,
+      why: "In a falling market, always accumulate the diversified core (Article XI). A falling portfolio is a buying opportunity, not a sell signal.",
+      when: "This month.", color: "#2dd4bf" }
+  }
+
+  // 6 — QQQM or SMH within 3% of 52-week high → skip, redirect to VWRA
+  const over = [qqqm, smh].filter((p): p is SbrPosition => !!p && nearHigh(p, c.skipAtHighPct)).map((p) => p.ticker)
+  if (over.length > 0) {
+    return { severity: "low", ticker: over[0], action: `Skip ${over.join(" & ")} — near 52-week high`,
+      what: `Invest normally, but skip ${over.join(" and ")} this month (within 3% of the 52-week high) and redirect that money to VWRA.`,
+      why: "A behavioural guard against regret-buying the peak (Article XI). VWRA is exempt — you accumulate it regardless of price.",
+      when: "This month.", color: "#2dd4bf" }
+  }
+
+  // 7 — any fund below its comfortable range → fill the most underweight
+  const under = positions.filter((p) => p.actualPct < p.rangeLow).sort((a, b) => (a.actualPct - a.rangeLow) - (b.actualPct - b.rangeLow))
+  if (under.length > 0) {
+    const p = under[0]
+    return { severity: "medium", ticker: p.ticker, action: `Fill up ${p.ticker}`,
+      what: `${p.ticker} is ${p.actualPct.toFixed(1)}% — below its ${p.rangeLow}% comfortable range. Direct the full contribution to ${p.ticker} until it is back in range.`,
+      why: `Contribution-based rebalancing (Article VII): the fund furthest below its range is filled first, with new money — no selling.`,
+      when: "This month.", color: p.color }
+  }
+
+  // 8 — standard DCA
+  return { severity: "none", ticker: "ALL", action: "Standard monthly DCA",
+    what: "Split this month's contribution at target weights: VWRA 50% · QQQM 25% · SMH 15% · A35 10%. Nothing needs adjusting.",
+    why: "Every fund is within its comfortable range and none are at their limits. Discipline beats tinkering.",
+    when: "On the 15th, in your dealing window.", color: "#34d399" }
+}
+
+// ─── Market-aware monthly split ──────────────────────────────────────────────
+export function computeSbrDca(
+  positions: SbrPosition[],
+  monthly: number,
+  opts: SbrEngineOpts = {},
+  c: Constitution = SILICON_BRICK_ROAD,
+): DcaPlan {
+  const alloc: Record<string, DcaAllocation> = {}
+  const phase = sbrPhase(Math.max(0, positions.reduce((s, p) => s + p.value, 0)), c)
+  const targets = phase.targets ?? Object.fromEntries(c.funds.map((f) => [f.ticker, f.target]))
+  for (const p of positions) {
+    alloc[p.ticker] = { ticker: p.ticker, name: p.name, color: p.color, amount: 0,
+      standardAmount: Math.round(((targets[p.ticker] ?? p.targetPct) / 100 * monthly) / 10) * 10, tag: "zeroed", reason: "" }
+  }
+  const total = positions.reduce((s, p) => s + p.value, 0)
+  if (monthly <= 0 || positions.length === 0) {
+    return { allocations: Object.values(alloc), headline: "No contribution to deploy.", marketOverlayActive: false, overlayNote: null }
+  }
+
+  const round10 = (n: number) => Math.round(n / 10) * 10
+  const get = (t: string) => positions.find((p) => p.ticker === t)
+  const smh = get("SMH"), qqqm = get("QQQM"), a35 = get("A35")
+  const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
+  const comb = c.combined!
+
+  function allToOne(ticker: string, reason: string, note: string): DcaPlan {
+    // Defensive: if the target fund isn't held yet, fall back to VWRA, else the first position.
+    const target = alloc[ticker] ? ticker : (alloc["VWRA"] ? "VWRA" : positions[0]?.ticker)
+    if (!target || !alloc[target]) {
+      return { allocations: Object.values(alloc), headline: "No eligible fund to route to.", marketOverlayActive: false, overlayNote: note }
+    }
+    alloc[target].amount = monthly
+    alloc[target].tag = "boosted"
+    alloc[target].reason = reason
+    for (const p of positions) if (p.ticker !== target && !alloc[p.ticker].reason) alloc[p.ticker].reason = "Paused this month."
+    return { allocations: Object.values(alloc), headline: "Directed plan — one fund this month", marketOverlayActive: true, overlayNote: note }
+  }
+
+  // Route by the ladder priority.
+  if (a35 && a35.actualPct < A35_FLOOR) return allToOne("A35", "Rebuilding the SGD safety floor.", "A35 is below its 7% floor — all contributions go there until above 8%.")
+  if (phase.key === "IV") return allToOne("A35", "Phase IV — no equity purchases.", "Phase IV: all contributions to A35 to reduce FX dependence before purchase.")
+  if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) return allToOne("VWRA", "Drawdown — accumulate the core.", "Portfolio is >15% off its peak — the full contribution goes to VWRA.")
+
+  // Otherwise: proportional split at (phase) targets among eligible funds.
+  const techHalt = combined >= comb.warning
+  const under = [...positions].sort((a, b) => (a.actualPct - a.rangeLow) - (b.actualPct - b.rangeLow))
+  const mostUnder = under[0]
+  // If a fund is below its range, fill it entirely.
+  if (mostUnder && mostUnder.actualPct < mostUnder.rangeLow && !(techHalt && ["QQQM", "SMH"].includes(mostUnder.ticker))) {
+    return allToOne(mostUnder.ticker, `Below its ${mostUnder.rangeLow}% range — filling with new money.`, `${mostUnder.ticker} is under its comfortable range; the full contribution fills it.`)
+  }
+
+  const eligible = positions.filter((p) => {
+    if (techHalt && ["QQQM", "SMH"].includes(p.ticker)) return false
+    if (["QQQM", "SMH"].includes(p.ticker)) { const f = p.hi52 > 0 && p.latestPrice > 0 ? ((p.latestPrice - p.hi52) / p.hi52) * 100 : null; if (f !== null && f >= -c.skipAtHighPct) return false }
+    return true
+  })
+  const pool = eligible.length ? eligible : positions.filter((p) => p.ticker === "VWRA")
+  const totalTgt = pool.reduce((s, p) => s + (targets[p.ticker] ?? p.targetPct), 0) || 1
+  let assigned = 0
+  for (const p of pool) { const amt = round10((targets[p.ticker] ?? p.targetPct) / totalTgt * monthly); alloc[p.ticker].amount = amt; assigned += amt }
+  const diff = monthly - assigned
+  if (diff !== 0 && pool.length) { const big = pool.reduce((mi, p) => (alloc[p.ticker].amount > alloc[mi].amount ? p.ticker : mi), pool[0].ticker); alloc[big].amount += diff }
+
+  let note: string | null = null
+  const skipped = positions.filter((p) => !pool.includes(p) && !(alloc[p.ticker].amount > 0))
+  for (const p of positions) {
+    const a = alloc[p.ticker]
+    if (a.amount > 0) { a.tag = a.amount > a.standardAmount ? "boosted" : "standard"; if (!a.reason) a.reason = a.tag === "boosted" ? "Receiving redirected money." : "Standard target-weight contribution." }
+    else { a.tag = "zeroed"; if (!a.reason) a.reason = techHalt && ["QQQM", "SMH"].includes(p.ticker) ? "Paused — combined tech over 40%." : "At/near 52-week high — skipped." }
+  }
+  if (techHalt) note = `Combined QQQM + SMH is ${combined.toFixed(1)}% — at/over the ${comb.warning}% warning. New QQQM and SMH buys paused; redirected to VWRA.`
+  else if (skipped.length) note = `Skipping ${skipped.map((p) => p.ticker).join(" & ")} this month — near a 52-week high. Redirected to VWRA.`
+
+  return { allocations: Object.values(alloc), headline: note ? "Market-aware plan — adjusted for current conditions" : "Standard plan — all funds in range", marketOverlayActive: !!note, overlayNote: note }
+}

@@ -1,8 +1,6 @@
-"use client"
-
-import { useState } from "react"
-import { Sidebar } from "./sidebar"
-import { Topbar } from "./topbar"
+import { getSession } from "@/lib/session"
+import { constitutionIdForEmail } from "@/lib/constitutions"
+import { ShellClient } from "./shell-client"
 
 interface ShellProps {
   title: string
@@ -12,21 +10,15 @@ interface ShellProps {
   children: React.ReactNode
 }
 
-export function Shell({ title, subtitle, userName, isAdmin = false, children }: ShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
+// Server wrapper: resolves which constitution the logged-in user owns (Atlas Core vs Silicon
+// Brick Road) and hands the branding/nav down to the client shell — so every page picks up the
+// right identity and navigation without each page having to know the constitution.
+export async function Shell({ title, subtitle, userName, isAdmin = false, children }: ShellProps) {
+  const session = await getSession()
+  const constitutionId = constitutionIdForEmail(session?.email)
   return (
-    <div className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} isAdmin={isAdmin} />
-      <div className="flex flex-1 flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
-        <Topbar
-          onMenuClick={() => setSidebarOpen(true)}
-          title={title}
-          subtitle={subtitle}
-          userName={userName}
-        />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:block print:h-auto print:overflow-visible print:p-0">{children}</main>
-      </div>
-    </div>
+    <ShellClient title={title} subtitle={subtitle} userName={userName} isAdmin={isAdmin} constitutionId={constitutionId}>
+      {children}
+    </ShellClient>
   )
 }

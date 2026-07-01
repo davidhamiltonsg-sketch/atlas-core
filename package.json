@@ -8,6 +8,7 @@
     "start": "node scripts/init-db.mjs && next start",
     "lint": "eslint",
     "seed": "npx tsx prisma/seed.ts",
+    "seed:sbr": "npx tsx prisma/seed-sbr.ts",
     "check:governance": "npx tsx scripts/check-governance.ts",
     "check:engine": "npx tsx scripts/check-engine.ts",
     "check": "npm run check:governance && npm run check:engine"

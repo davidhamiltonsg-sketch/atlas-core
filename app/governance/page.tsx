@@ -8,6 +8,8 @@ import { FloatingCapsSection } from "@/components/governance/floating-caps-secti
 import { PreCommitments } from "@/components/governance/pre-commitments"
 import { OperatingSafeguards } from "@/components/governance/operating-safeguards"
 import { GOVERNANCE_BAND_ROWS } from "@/lib/constants"
+import { constitutionIdForEmail } from "@/lib/constitutions"
+import { SbrConstitution } from "@/components/sbr/sbr-constitution"
 
 // §2/§3 gauge rows are DERIVED from lib/constants (TICKER_TARGETS + HARD_THRESHOLDS +
 // POSITION_PROFILE) — the single source of truth, so they can never drift from the engine.
@@ -108,6 +110,12 @@ async function getLiveAllocations(userId: string) {
 export default async function Governance() {
   const session = await getSession()
   if (!session) redirect("/login")
+
+  // Dami sees the Silicon Brick Road constitution instead of the Atlas Core governance engine.
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
+    return <SbrConstitution name={session.name} isAdmin={session.role === "admin"} />
+  }
+
   const [grouped, { allocMap, liveHoldings }] = await Promise.all([getRules(), getLiveAllocations(session.userId)])
   const totalRules = Object.values(grouped).flat().length
   const activeRules = Object.values(grouped).flat().filter((r) => r.active).length

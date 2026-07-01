@@ -27,6 +27,8 @@ import { MonthlyCheck } from "@/components/dashboard/monthly-check"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
 import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
+import { constitutionIdForEmail } from "@/lib/constitutions"
+import { SbrDashboard } from "@/components/sbr/sbr-dashboard"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -377,6 +379,13 @@ const sections = [
 export default async function Dashboard() {
   const session = await getSession()
   if (!session) redirect("/login")
+
+  // Per-user constitution: Dami (Silicon Brick Road) gets his own dashboard + engine;
+  // everyone else gets Atlas Core, unchanged.
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
+    return <SbrDashboard userId={session.userId} name={session.name} isAdmin={session.role === "admin"} />
+  }
+
   const {
     totalValue, hasBalance, positions, holdingsRows, driftAlerts, maxDrift, activeRules, totalRules, snapshotAgeDays,
     healthScore, healthLabel, health, hasAnyAlert, hardBreaches, softBreaches, donutData,
