@@ -12,6 +12,7 @@
  */
 import { SILICON_BRICK_ROAD as SBR } from "../lib/constitutions"
 import { computeSbrNextMove, computeSbrDca, type SbrPosition } from "../lib/sbr-engine"
+import { computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_SINGLE_COMPANY_LIMIT } from "../lib/sbr-look-through"
 
 let failures = 0
 let passes = 0
@@ -94,6 +95,33 @@ agree("A35 below floor", [sp("VWRA", 61), sp("QQQM", 22), sp("SMH", 12), sp("A35
 // combined QQQM+SMH = 34% (under the 40% warning), A35 ≥ 7% floor, every fund in range —
 // so nothing higher on the ladder pre-empts the drawdown routing this scenario is testing.
 agree("drawdown > 15%", [sp("VWRA", 55), sp("QQQM", 22), sp("SMH", 12), sp("A35", 11)], { drawdownPct: -20 }, "VWRA")
+
+// SMH over its 20% cap: the headline instruction is to SELL SMH (a sell is not something the
+// contribution planner represents), and the money-split must never add MORE SMH. A sell and a
+// buy are different flows, but they must not conflict on the same screen.
+{
+  const positions = [sp("VWRA", 51), sp("QQQM", 15), sp("SMH", 22), sp("A35", 12)]
+  const nm = computeSbrNextMove(positions, TOTAL, {})
+  const dc = computeSbrDca(positions, SBR.monthlyContribution, {})
+  eq("SMH>20% — headline sells SMH", nm.ticker, "SMH")
+  eq("SMH>20% — split never buys more SMH", dcaPrimary(dc) !== "SMH", true)
+}
+
+// ── Hidden-exposure look-through (Article XVII) ───────────────────────────────
+console.log("\nArt. XVII — Hidden-exposure look-through")
+eq("technology limit", SBR_TECHNOLOGY_LIMIT, 45)
+eq("single-company limit", SBR_SINGLE_COMPANY_LIMIT, 10)
+// A heavy tech tilt (lots of QQQM + SMH) must be flagged over both limits; the on-target mix
+// must be clear. Positions carry only ticker + actualPct for the look-through.
+const heavy = computeSbrLookThrough([{ ticker: "VWRA", actualPct: 30 }, { ticker: "QQQM", actualPct: 35 }, { ticker: "SMH", actualPct: 25 }, { ticker: "A35", actualPct: 10 }])
+eq("heavy tilt → over technology limit", heavy.technologyOver, true)
+eq("heavy tilt → biggest single company is Nvidia", heavy.topCompany.name, "Nvidia")
+// The single-company 10% limit stays satisfied even on a heavy tilt — the SMH 20% fund cap
+// bounds the largest holding (Nvidia) below 10%, which is exactly what the limit guards.
+eq("heavy tilt → single-company still within limit", heavy.singleCompanyOver, false)
+const onTarget = computeSbrLookThrough([{ ticker: "VWRA", actualPct: 50 }, { ticker: "QQQM", actualPct: 25 }, { ticker: "SMH", actualPct: 15 }, { ticker: "A35", actualPct: 10 }])
+eq("on-target → within technology limit", onTarget.technologyOver, false)
+eq("on-target → within single-company limit", onTarget.singleCompanyOver, false)
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)

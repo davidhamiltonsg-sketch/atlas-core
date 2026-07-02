@@ -236,8 +236,24 @@ export default async function YtdPage() {
   const deployed    = isSbr ? data.ytdContribTotalSgd : data.ytdContribTotal
   const deployedCcy = isSbr ? "SGD" : "USD"
 
+  // Plain-English labels for Silicon Brick Road (Dami is a non-expert) vs the institutional
+  // wording Atlas Core uses. Currency is already handled above; this swaps the vocabulary.
+  const L = isSbr ? {
+    subtitle: `How your money has grown this year — ${data.year}`,
+    marketReturn: "Growth this year", unrealised: "Paper gain / loss",
+    realised: `Gains you locked in (${data.year})`, deployed: "Money invested this year",
+    dividends: "Dividends received", tableTitle: "Your funds — what you paid & how they've grown",
+    colCost: "What you paid", colAvg: "Avg price paid", colUnreal: "Paper gain / loss", colReturn: "Growth this year",
+  } : {
+    subtitle: `Year-to-date returns and cost basis — ${data.year}`,
+    marketReturn: "YTD Market Return", unrealised: "Unrealised P&L",
+    realised: `${data.year} Realised P&L (from sell transactions)`, deployed: "YTD Capital Deployed",
+    dividends: "YTD Dividends", tableTitle: "Holdings — Cost Basis & Returns",
+    colCost: "Cost Basis", colAvg: "Avg Cost / Unit", colUnreal: "Unrealised P&L", colReturn: "YTD Market Return",
+  }
+
   return (
-    <Shell title="YTD Performance" subtitle={`Year-to-date returns and cost basis — ${data.year}`} userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title={isSbr ? "Your Growth" : "YTD Performance"} subtitle={L.subtitle} userName={session.name} isAdmin={session.role === "admin"}>
       <div className="space-y-5">
 
         {/* Cost basis notice */}
@@ -273,7 +289,7 @@ export default async function YtdPage() {
         {/* Summary KPIs */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-            <p className="text-xs text-muted-foreground mb-1">YTD Market Return</p>
+            <p className="text-xs text-muted-foreground mb-1">{L.marketReturn}</p>
             {data.totalYtdReturn !== null ? (
               <>
                 <p className={`text-2xl font-black tabular-nums ${data.totalYtdReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
@@ -289,7 +305,7 @@ export default async function YtdPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-            <p className="text-xs text-muted-foreground mb-1">Unrealised P&L</p>
+            <p className="text-xs text-muted-foreground mb-1">{L.unrealised}</p>
             {data.totalUnrealisedPnl !== null ? (
               <>
                 <p className={`text-2xl font-black tabular-nums ${data.totalUnrealisedPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
@@ -311,7 +327,7 @@ export default async function YtdPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-            <p className="text-xs text-muted-foreground mb-1">YTD Dividends</p>
+            <p className="text-xs text-muted-foreground mb-1">{L.dividends}</p>
             <p className={`text-2xl font-black tabular-nums ${data.ytdDividendTotal > 0 ? "text-green-500" : "text-muted-foreground"}`}>
               {data.ytdDividendTotal > 0 ? formatCurrency(data.ytdDividendTotal, "SGD") : "—"}
             </p>
@@ -319,11 +335,11 @@ export default async function YtdPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-            <p className="text-xs text-muted-foreground mb-1">YTD Capital Deployed</p>
+            <p className="text-xs text-muted-foreground mb-1">{L.deployed}</p>
             <p className={`text-2xl font-black tabular-nums ${deployed > 0 ? "text-indigo-400" : "text-muted-foreground"}`}>
               {deployed > 0 ? formatCurrency(deployed, deployedCcy) : "—"}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">From BUY trades {data.year}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{isSbr ? `From your top-ups ${data.year}` : `From BUY trades ${data.year}`}</p>
           </div>
         </div>
 
@@ -332,7 +348,7 @@ export default async function YtdPage() {
           <div className={`rounded-xl border p-4 flex items-center gap-4 ${data.realisedPnl >= 0 ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"}`}>
             <DollarSign className={`h-5 w-5 shrink-0 ${data.realisedPnl >= 0 ? "text-green-500" : "text-red-500"}`} />
             <div>
-              <p className="text-xs text-muted-foreground">{data.year} Realised P&L (from sell transactions)</p>
+              <p className="text-xs text-muted-foreground">{L.realised}</p>
               <p className={`text-xl font-black tabular-nums ${data.realisedPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
                 {data.realisedPnl >= 0 ? "+" : ""}{formatCurrency(data.realisedPnl, "SGD")}
               </p>
@@ -343,7 +359,7 @@ export default async function YtdPage() {
         {/* Per-holding table */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Holdings — Cost Basis &amp; Returns</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{L.tableTitle}</h2>
           </div>
 
           {/* Mobile: stacked cards (the table is too wide for small screens) */}
@@ -358,16 +374,16 @@ export default async function YtdPage() {
                   <span className="text-sm font-semibold tabular-nums">{h.hasData ? formatCurrency(h.currentValue, "SGD") : "—"}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Cost</span><span className="tabular-nums">{h.costBasisTotal > 0 ? formatCurrency(h.costBasisTotal, "SGD") : "—"}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Avg cost</span><span className="tabular-nums">{isSbr ? (h.avgCostPerUnitSgd !== null ? `${formatCurrency(h.avgCostPerUnitSgd, "SGD")}/unit` : "—") : (h.avgCostPerUnit !== null ? `$${h.avgCostPerUnit.toFixed(2)} USD` : "—")}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{L.colCost}</span><span className="tabular-nums">{h.costBasisTotal > 0 ? formatCurrency(h.costBasisTotal, "SGD") : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{L.colAvg}</span><span className="tabular-nums">{isSbr ? (h.avgCostPerUnitSgd !== null ? `${formatCurrency(h.avgCostPerUnitSgd, "SGD")}/unit` : "—") : (h.avgCostPerUnit !== null ? `$${h.avgCostPerUnit.toFixed(2)} USD` : "—")}</span></div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Unreal. P&amp;L</span>
+                    <span className="text-muted-foreground">{L.colUnreal}</span>
                     <span className={`tabular-nums font-semibold ${h.unrealisedPnl === null ? "text-muted-foreground" : h.unrealisedPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {h.unrealisedPnl !== null ? (h.unrealisedPnl >= 0 ? "+" : "") + formatCurrency(h.unrealisedPnl, "SGD") : "—"}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">YTD return</span>
+                    <span className="text-muted-foreground">{L.colReturn}</span>
                     <span className={`tabular-nums font-semibold ${h.ytdReturn === null ? "text-muted-foreground" : h.ytdReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {h.ytdReturn !== null ? (h.ytdReturn >= 0 ? "+" : "") + formatCurrency(h.ytdReturn, "SGD") : "—"}
                     </span>
@@ -383,10 +399,10 @@ export default async function YtdPage() {
                 <tr className="border-b border-border bg-muted/30">
                   <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Holding</th>
                   <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Current Value</th>
-                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Cost Basis</th>
-                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Avg Cost / Unit</th>
-                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">Unrealised P&L</th>
-                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">YTD Market Return</th>
+                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">{L.colCost}</th>
+                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">{L.colAvg}</th>
+                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">{L.colUnreal}</th>
+                  <th className="px-5 py-2.5 text-right font-semibold text-muted-foreground">{L.colReturn}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -475,12 +491,21 @@ export default async function YtdPage() {
         {/* Notes */}
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Notes</h2>
+          {isSbr ? (
           <div className="space-y-1.5 text-xs text-muted-foreground">
-            <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. Everything here is shown in {isSbr ? "SGD" : <>SGD; avg cost/unit is the USD price paid per share</>}.</p>
+            <p><span className="font-semibold text-foreground">What you paid</span> is the average price you paid across all your buys of each fund, in SGD.</p>
+            <p><span className="font-semibold text-foreground">Growth this year</span> is how much your funds have grown in value since 1 January — it strips out the new money you added, so your monthly contributions are not counted as growth.</p>
+            <p><span className="font-semibold text-foreground">Paper gain / loss</span> is what you would gain or lose if you sold everything today. It only becomes real when you sell.</p>
+            <p><span className="font-semibold text-foreground">Money invested this year</span> is the total you have put in from your monthly contributions since 1 January.</p>
+          </div>
+          ) : (
+          <div className="space-y-1.5 text-xs text-muted-foreground">
+            <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. Everything here is shown in SGD; avg cost/unit is the USD price paid per share.</p>
             <p><span className="font-semibold text-foreground">YTD Market Return</span> uses the <span className="font-semibold text-foreground">Modified Dietz method</span>: market gain = EMV − BMV − net capital deployed. The % denominator accounts for the timing of each BUY/SELL so contributions are not mistaken for returns.</p>
             <p>Unrealised P&L = current SGD market value minus SGD cost basis. This reflects the gain/loss if you sold your entire position today.</p>
             <p>YTD Capital Deployed = sum of BUY trade amounts in {deployedCcy} this year. BUY trades automatically create a linked contribution record for monthly tracking.</p>
           </div>
+          )}
         </div>
 
       </div>

@@ -175,9 +175,9 @@ export interface SbrHealth {
   risk: number           // 20% — SMH cap, combined ceiling, no breaches
   allocation: number     // 15% — all funds within comfortable ranges
   contribution: number   // 15% — monthly investing discipline (proxy: snapshot freshness)
-  behavioural: number    // 10% — no impulse trades, 72-hour rule applied (proxy: 100 until journal tracking added)
+  behavioural: number    // 10% — discipline proxy: penalised by uncorrected breaches + lapsed contributions
   liquidity: number      // 10% — A35 above 7% floor, emergency fund maintained
-  documentation: number  // 5%  — trade log current, decision journal up to date (proxy: 100 until tracking added)
+  documentation: number  // 5%  — data-currency proxy for a kept-up-to-date trade log / journal
 }
 
 export function computeSbrHealth(
@@ -217,11 +217,16 @@ export function computeSbrHealth(
   // Contribution (15%): proxy via snapshot freshness — monthly investing discipline
   const contribution = snapshotAgeDays <= 35 ? 100 : snapshotAgeDays <= 65 ? 70 : 40
 
-  // Behavioural (10%): no impulse trades, 72-hour rule applied — defaults to 100 until decision journal is tracked
-  const behavioural = 100
+  // Behavioural (10%): discipline proxy from real state — an uncorrected hard breach or a
+  // fund left outside its range signals rules not being followed; lapsed contributions (stale
+  // data) signal the monthly habit slipping. No longer a flat 100 that inflates the score.
+  const behavioural = Math.max(0, 100
+    - (hardBreaches ? 25 : 0)
+    - (softBreaches ? 10 : 0)
+    - (snapshotAgeDays > 65 ? 20 : snapshotAgeDays > 35 ? 8 : 0))
 
-  // Documentation (5%): trade log current, decision journal up to date — defaults to 100 until tracking is added
-  const documentation = 100
+  // Documentation (5%): proxy from data currency — a portfolio kept up to date is documented.
+  const documentation = snapshotAgeDays <= 35 ? 100 : snapshotAgeDays <= 65 ? 80 : 50
 
   // Weighted composite — constitution scorecard (Article XIX):
   // governance 25%, risk 20%, allocation 15%, contribution 15%, behavioural 10%, liquidity 10%, documentation 5%
