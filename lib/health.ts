@@ -11,6 +11,7 @@ export interface DimensionScore {
   score: number
   label: string
   description: string
+  citation: string    // Art. XXII: cite the governing article for each dimension
   status: "excellent" | "good" | "caution" | "critical"
 }
 
@@ -39,6 +40,7 @@ export function computePortfolioHealth({
   activeRules,
   totalRules,
   snapshotAgeDays,
+  uncorrectedViolations,
 }: {
   hardBreaches: number
   softBreaches: number
@@ -48,27 +50,33 @@ export function computePortfolioHealth({
   activeRules: number
   totalRules: number
   snapshotAgeDays: number
+  // Art. XXII: count of GovernanceLog EXCEPTION_LOGGED entries without a
+  // subsequent corrective action for the same ruleId. When provided, this
+  // replaces the activeRules/totalRules fallback for the behavioural score.
+  uncorrectedViolations?: number
 }): PortfolioHealth {
 
-  // ── Structural: allocation drift and tolerance breaches ──────────────────
+  // ── Structural (Art. VI–IX): allocation drift and tolerance breaches ─────
   const structural = Math.max(0, Math.round(
     100 - hardBreaches * 20 - softBreaches * 8 - maxDrift * 1.2
   ))
 
-  // ── Behavioural: governance rules compliance ─────────────────────────────
-  // 100% if all rules active. Deactivated rules reduce score proportionally.
-  const behavioural = totalRules > 0
-    ? Math.min(100, Math.round((activeRules / totalRules) * 100))
-    : 100
+  // ── Behavioural (Art. XII–XIV): only uncorrected violations score ────────
+  // When uncorrectedViolations is provided (from GovernanceLog), each open
+  // exception deducts 20 points. Falls back to activeRules ratio otherwise.
+  const behavioural = uncorrectedViolations !== undefined
+    ? Math.max(0, Math.round(100 - uncorrectedViolations * 20))
+    : totalRules > 0
+      ? Math.min(100, Math.round((activeRules / totalRules) * 100))
+      : 100
 
-  // ── Concentration: ONLY hard-cap breaches penalised ──────────────────────
+  // ── Concentration (Art. IX): ONLY hard-cap breaches penalised ────────────
   // Governed concentration (within hard caps) is intentional — not a risk.
-  // Soft-cap exposure at position level is already captured in structural.
   const concentration = Math.max(0, Math.round(
     100 - companyHardBreaches * 15 - sectorHardBreaches * 12 - hardBreaches * 5
   ))
 
-  // ── Execution: data freshness / snapshot discipline ──────────────────────
+  // ── Execution (Art. XIII): data freshness / snapshot discipline ──────────
   const execution =
     snapshotAgeDays <= 3  ? 100 :
     snapshotAgeDays <= 7  ? 95  :
@@ -76,7 +84,7 @@ export function computePortfolioHealth({
     snapshotAgeDays <= 30 ? 70  :
     snapshotAgeDays <= 60 ? 45  : 20
 
-  // ── Overall: weighted composite ──────────────────────────────────────────
+  // ── Overall: weighted composite (weights per Art. XXII) ──────────────────
   const overall = Math.round(
     structural    * 0.40 +
     behavioural   * 0.25 +
@@ -96,24 +104,28 @@ export function computePortfolioHealth({
       score: structural,
       label: "Structural",
       description: "Allocation integrity",
+      citation: "Art. VI–IX",
       status: dimStatus(structural),
     },
     behavioural: {
       score: behavioural,
       label: "Behavioural",
       description: "Governance compliance",
+      citation: "Art. XII–XIV",
       status: dimStatus(behavioural),
     },
     concentration: {
       score: concentration,
       label: "Concentration",
       description: "Dependency risk",
+      citation: "Art. IX",
       status: dimStatus(concentration),
     },
     execution: {
       score: execution,
-      label: "Freshness",
+      label: "Execution",
       description: "Snapshot freshness",
+      citation: "Art. XIII",
       status: dimStatus(execution),
     },
   }

@@ -25,6 +25,8 @@ model User {
   contributions        ContributionRecord[]
   dividends            Dividend[]
   watchlistItems       WatchlistItem[]
+  governanceLogs       GovernanceLog[]
+  throttleState        ThrottleState?
 }
 
 model PasswordResetToken {
@@ -153,4 +155,48 @@ model BehaviourLog {
   note      String
   date      DateTime @default(now())
   createdAt DateTime @default(now())
+}
+
+// ── Art. XX–XXI — Risk Register ──────────────────────────────────────────────
+// Pre-seeded, globally shared risk items. No userId — risk register is portfolio-level.
+// sourceLinks is a JSON string (SQLite/libSQL has no array type).
+model RiskRegisterItem {
+  id                     String    @id @default(cuid())
+  key                    String    @unique  // stable slug, e.g. "ucits-migration"
+  title                  String
+  description            String
+  level                  String    // "high" | "medium" | "low"
+  countdownDate          DateTime?
+  preCommittedResponseId String?   // e.g. "A1", "B1" — Art. XXI pre-committed response code
+  sourceLinks            String    @default("[]") // JSON: string[]
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+// ── Art. XXII — Governance Log ───────────────────────────────────────────────
+// Append-only event ledger. Never update or delete — this is the audit trail.
+// event types: TRADE_EXECUTED | EXCEPTION_LOGGED | PARAMETER_AMENDED |
+//              REVIEW_SCHEDULED | CONSTITUTION_CITED | LADDER_STEP_FIRED
+model GovernanceLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  event     String
+  ruleId    String?  // ladder step reference (e.g. "step-1") or GovernanceRule id
+  details   String   // plain-text description of the event
+  createdAt DateTime @default(now())
+}
+
+// ── Art. XIII — Throttle State ───────────────────────────────────────────────
+// One row per user. Tracks: 72-hr cooling-off, 90-day moratorium, quarterly budget.
+model ThrottleState {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timer72hExpiresAt      DateTime?  // null = no active cooling-off period
+  moratorium90dStartedAt DateTime?  // null = no active parameter-change moratorium
+  discretionaryChangesQ  Int        @default(0)   // discretionary changes this quarter
+  quarter                String     @default("2026-Q3")  // "YYYY-QN"
+  updatedAt              DateTime   @updatedAt
 }

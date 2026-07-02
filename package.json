@@ -12,7 +12,8 @@
     "check:governance": "npx tsx scripts/check-governance.ts",
     "check:engine": "npx tsx scripts/check-engine.ts",
     "check:constitution": "npx tsx scripts/check-constitution.ts",
-    "check": "npm run check:governance && npm run check:engine && npm run check:constitution"
+    "check:ladder": "npx tsx scripts/check-ladder.ts",
+    "check": "npm run check:governance && npm run check:engine && npm run check:constitution && npm run check:ladder"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

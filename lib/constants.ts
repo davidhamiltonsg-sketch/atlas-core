@@ -208,6 +208,34 @@ export const COMBINED_TECH_RULE = {
   },
 } as const
 
+// ─── Bitcoin sleeve constants (Art. VIII) ────────────────────────────────────
+// BTC and IBIT are ONE economic exposure (Bitcoin). BTC is in run-off (held, not bought);
+// IBIT is the accumulation vehicle. New Bitcoin money always flows to IBIT.
+// Combined sleeve target 7%; cycle-aware hard cap lives in BTC_CYCLE_MODIFIERS.
+export const BITCOIN_TICKERS = ["BTC", "IBIT"] as const
+export const BITCOIN_SLEEVE_TARGET_PCT = 7
+export const BITCOIN_RUNOFF_TICKER     = "BTC"   // transitioning out like-for-like
+export const BITCOIN_ACCUMULATION_TICKER = "IBIT" // accumulation vehicle
+
+/**
+ * Apply the Bitcoin-sleeve transition model: BTC's effective target = its current
+ * weight (zero buy/sell pressure); IBIT's effective target = max(0, sleevePct − BTC).
+ * This routes new Bitcoin money to IBIT while BTC naturally runs off.
+ * Only transforms when both are present; otherwise returns positions unchanged.
+ */
+export function applyBitcoinSleeve<T extends { ticker: string; actualPct: number; targetPct: number }>(
+  positions: T[]
+): T[] {
+  const btc  = positions.find((p) => p.ticker === BITCOIN_RUNOFF_TICKER)
+  const ibit = positions.find((p) => p.ticker === BITCOIN_ACCUMULATION_TICKER)
+  if (!btc || !ibit) return positions
+  return positions.map((p) => {
+    if (p.ticker === BITCOIN_RUNOFF_TICKER)     return { ...p, targetPct: p.actualPct }
+    if (p.ticker === BITCOIN_ACCUMULATION_TICKER) return { ...p, targetPct: Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btc.actualPct) }
+    return p
+  })
+}
+
 export const BEHAVIORAL_RULES = {
   holdPeriodDays:        90,
   contributionLagMonths: 3,
