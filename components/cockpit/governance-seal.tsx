@@ -77,6 +77,11 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
             </span>
           ))}
         </div>
+        {overall < 65 && (
+          <p className="font-data mt-2 text-[10px] font-bold text-red-600 dark:text-red-400 leading-snug">
+            ⛔ No new discretionary trade until breach resolved and logged · Art. XXII
+          </p>
+        )}
       </div>
     </div>
   )

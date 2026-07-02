@@ -21,7 +21,7 @@ export interface PortfolioHealth {
   structural: DimensionScore
   behavioural: DimensionScore
   concentration: DimensionScore
-  execution: DimensionScore
+  freshness: DimensionScore
 }
 
 function dimStatus(score: number): "excellent" | "good" | "caution" | "critical" {
@@ -121,11 +121,11 @@ export function computePortfolioHealth({
       citation: "Art. IX",
       status: dimStatus(concentration),
     },
-    execution: {
+    freshness: {
       score: execution,
-      label: "Execution",
-      description: "Snapshot freshness",
-      citation: "Art. XIII",
+      label: "Freshness",
+      description: "Data freshness",
+      citation: "Art. XXII",
       status: dimStatus(execution),
     },
   }

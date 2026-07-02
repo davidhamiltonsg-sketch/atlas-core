@@ -469,7 +469,7 @@ export default async function Dashboard() {
     { label: "Structural",    score: weighted(d.health.structural.score, 40),    maxScore: 40, status: d.health.structural.status,    citation: d.health.structural.citation },
     { label: "Behavioural",   score: weighted(d.health.behavioural.score, 25),   maxScore: 25, status: d.health.behavioural.status,   citation: d.health.behavioural.citation },
     { label: "Concentration", score: weighted(d.health.concentration.score, 25), maxScore: 25, status: d.health.concentration.status, citation: d.health.concentration.citation },
-    { label: "Execution",     score: weighted(d.health.execution.score, 10),     maxScore: 10, status: d.health.execution.status,     citation: d.health.execution.citation },
+    { label: "Freshness",     score: weighted(d.health.freshness.score, 10),     maxScore: 10, status: d.health.freshness.status,     citation: d.health.freshness.citation },
   ]
 
   return (
@@ -685,7 +685,7 @@ export default async function Dashboard() {
               structural={d.health.structural.score}
               behavioural={d.health.behavioural.score}
               concentration={d.health.concentration.score}
-              execution={d.health.execution.score}
+              execution={d.health.freshness.score}
               hardBreaches={d.hardBreaches}
               softBreaches={d.softBreaches}
               maxDrift={d.maxDrift}

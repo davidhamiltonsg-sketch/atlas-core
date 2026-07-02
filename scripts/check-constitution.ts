@@ -140,7 +140,7 @@ const totalWeight = Object.values(GOVERNANCE_SCORE).reduce((s, d) => s + d.weigh
 eq("structural weight",    GOVERNANCE_SCORE.structural.weight,    40)
 eq("behavioural weight",   GOVERNANCE_SCORE.behavioural.weight,   25)
 eq("concentration weight", GOVERNANCE_SCORE.concentration.weight, 25)
-eq("execution weight",     GOVERNANCE_SCORE.execution.weight,     10)
+eq("freshness weight",     GOVERNANCE_SCORE.freshness.weight,     10)
 eq("weights sum to 100",   totalWeight,                           100)
 
 // ─── Art. XXIII — Currency policy ─────────────────────────────────────────────

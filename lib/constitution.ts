@@ -9,6 +9,7 @@
  * v1.1 → v1.4 was an editorial / structural / doctrinal release only: per Appendix F,
  * no rule, threshold, cap, or position changed. The numeric contract below is therefore
  * identical to v1.1; only the version pin, citations, and documentation move to v1.4.
+ * The 4th governance dimension was renamed Execution → Freshness (Art. XXII).
  *
  * Source document:
  *   AtlasCoreConstitutionv1_4.html  (public/atlas-core-constitution.html)
@@ -97,12 +98,13 @@ export const RISK_REGISTER_SEEDS = [
 ] as const
 
 // ─── Art. XXII — GOVERNANCE SCORE DIMENSIONS ─────────────────────────────────
-// Weights (must sum to 100). Matches lib/health.ts HEALTH_DIMENSIONS.
+// Weights (must sum to 100). Matches lib/health.ts PortfolioHealth.
+// v1.4: 4th dimension renamed Execution → Freshness.
 export const GOVERNANCE_SCORE = {
-  structural:    { weight: 40, citation: 'Art. VI–IX'    },
-  behavioural:   { weight: 25, citation: 'Art. XIV'      },
-  concentration: { weight: 25, citation: 'Art. IX'       },
-  execution:     { weight: 10, citation: 'Art. XIII'     },
+  structural:    { weight: 40, citation: 'Art. VI–IX'   },
+  behavioural:   { weight: 25, citation: 'Art. XII–XIV' },
+  concentration: { weight: 25, citation: 'Art. IX'      },
+  freshness:     { weight: 10, citation: 'Art. XXII'    },
 } as const satisfies Record<string, { weight: number; citation: string }>
 
 // ─── Art. XXIII — CURRENCY POLICY ────────────────────────────────────────────

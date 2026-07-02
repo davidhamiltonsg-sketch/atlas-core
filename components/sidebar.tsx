@@ -33,7 +33,7 @@ type NavGroupDef = { label: string; items: NavItem[] }
 // Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
 const BRAND: Record<ConstitutionId, { short: string; name: string; version: string; gradient: string }> = {
-  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v1.1 · GDEA", gradient: "from-indigo-500 to-violet-600" },
+  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v1.4 · GDEA", gradient: "from-indigo-500 to-violet-600" },
   "silicon-brick-road": { short: "SBR", name: "Silicon Brick Road", version: "v2.1 · SBR",  gradient: "from-teal-500 to-emerald-600" },
 }
 
