@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { formatCurrency, formatPercent } from "@/lib/utils"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, Info } from "lucide-react"
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
@@ -63,8 +64,10 @@ async function getYtdData(userId: string) {
   for (const t of ytdBuys)  ytdNetBuysSgd[t.ticker]  = (ytdNetBuysSgd[t.ticker]  ?? 0) + t.amount
   for (const t of ytdSells) ytdNetSellsSgd[t.ticker] = (ytdNetSellsSgd[t.ticker] ?? 0) + t.amount
 
-  // Total YTD contributions in USD (BUY trades only; price is USD/unit)
-  const ytdContribTotal = ytdBuys.reduce((s, t) => s + t.units * t.price, 0)
+  // Total YTD contributions. USD (units × USD price) for USD-reporting portfolios;
+  // SGD (the settled trade amount) for SGD-reporting portfolios like Silicon Brick Road.
+  const ytdContribTotal    = ytdBuys.reduce((s, t) => s + t.units * t.price, 0)
+  const ytdContribTotalSgd = ytdBuys.reduce((s, t) => s + t.amount, 0)
 
   // ── Realised P&L (SELL trades this year vs weighted-avg cost at time of sale) ─
   let realisedPnl = 0
@@ -102,8 +105,10 @@ async function getYtdData(userId: string) {
 
     const cb = avgCost[h.ticker]
     const costBasisTotal  = cb ? cb.totalCostSgd : 0
-    // avgCostPerUnit = USD weighted-average purchase price (what you paid per share in USD)
-    const avgCostPerUnit  = cb && cb.units > 0 ? cb.totalCostUsd / cb.units : null
+    // avgCostPerUnit = USD weighted-average purchase price (what you paid per share in USD).
+    // avgCostPerUnitSgd = the same in SGD, for SGD-reporting portfolios (Silicon Brick Road).
+    const avgCostPerUnit    = cb && cb.units > 0 ? cb.totalCostUsd / cb.units : null
+    const avgCostPerUnitSgd = cb && cb.units > 0 ? cb.totalCostSgd / cb.units : null
 
     // Unrealised P&L: current SGD market value vs SGD cost basis
     const unrealisedPnl = costBasisTotal > 0 ? currentValue - costBasisTotal : null
@@ -135,7 +140,7 @@ async function getYtdData(userId: string) {
     return {
       ticker: h.ticker, name: h.name, color: h.color, targetPct: h.targetPct,
       units, currentPrice, currentValue,
-      costBasisTotal, avgCostPerUnit,
+      costBasisTotal, avgCostPerUnit, avgCostPerUnitSgd,
       unrealisedPnl, unrealisedPct,
       ytdReturn, ytdReturnPct,
       hasData: latestSnap !== undefined,
@@ -209,7 +214,8 @@ async function getYtdData(userId: string) {
     totalYtdPct,
     realisedPnl: ytdSells.length > 0 ? realisedPnl : null,
     ytdDividendTotal,
-    ytdContribTotal, // USD (from BUY trades this year)
+    ytdContribTotal,    // USD (from BUY trades this year)
+    ytdContribTotalSgd, // SGD equivalent (settled trade amount)
     hasCostBasis,
     year: now.getFullYear(),
     tradeCount: trades.length,
@@ -223,6 +229,12 @@ export default async function YtdPage() {
   if (!session) redirect("/login")
 
   const data = await getYtdData(session.userId)
+
+  // Silicon Brick Road reports in SGD and is plain-English — never surface the USD-base
+  // "capital deployed" or USD per-unit prices that belong to the Atlas Core (USD) portfolio.
+  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const deployed    = isSbr ? data.ytdContribTotalSgd : data.ytdContribTotal
+  const deployedCcy = isSbr ? "SGD" : "USD"
 
   return (
     <Shell title="YTD Performance" subtitle={`Year-to-date returns and cost basis — ${data.year}`} userName={session.name} isAdmin={session.role === "admin"}>
@@ -308,8 +320,8 @@ export default async function YtdPage() {
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
             <p className="text-xs text-muted-foreground mb-1">YTD Capital Deployed</p>
-            <p className={`text-2xl font-black tabular-nums ${data.ytdContribTotal > 0 ? "text-indigo-400" : "text-muted-foreground"}`}>
-              {data.ytdContribTotal > 0 ? formatCurrency(data.ytdContribTotal, "USD") : "—"}
+            <p className={`text-2xl font-black tabular-nums ${deployed > 0 ? "text-indigo-400" : "text-muted-foreground"}`}>
+              {deployed > 0 ? formatCurrency(deployed, deployedCcy) : "—"}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">From BUY trades {data.year}</p>
           </div>
@@ -347,7 +359,7 @@ export default async function YtdPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
                   <div className="flex justify-between"><span className="text-muted-foreground">Cost</span><span className="tabular-nums">{h.costBasisTotal > 0 ? formatCurrency(h.costBasisTotal, "SGD") : "—"}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Avg cost</span><span className="tabular-nums">{h.avgCostPerUnit !== null ? `$${h.avgCostPerUnit.toFixed(2)} USD` : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Avg cost</span><span className="tabular-nums">{isSbr ? (h.avgCostPerUnitSgd !== null ? `${formatCurrency(h.avgCostPerUnitSgd, "SGD")}/unit` : "—") : (h.avgCostPerUnit !== null ? `$${h.avgCostPerUnit.toFixed(2)} USD` : "—")}</span></div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Unreal. P&amp;L</span>
                     <span className={`tabular-nums font-semibold ${h.unrealisedPnl === null ? "text-muted-foreground" : h.unrealisedPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
@@ -394,9 +406,9 @@ export default async function YtdPage() {
                       {h.costBasisTotal > 0 ? formatCurrency(h.costBasisTotal, "SGD") : "—"}
                     </td>
                     <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
-                      {h.avgCostPerUnit !== null
-                        ? `$${h.avgCostPerUnit.toFixed(4)} USD`
-                        : "—"}
+                      {isSbr
+                        ? (h.avgCostPerUnitSgd !== null ? `${formatCurrency(h.avgCostPerUnitSgd, "SGD")}/unit` : "—")
+                        : (h.avgCostPerUnit !== null ? `$${h.avgCostPerUnit.toFixed(4)} USD` : "—")}
                     </td>
                     <td className={`px-5 py-3 text-right tabular-nums font-semibold ${
                       h.unrealisedPnl === null ? "text-muted-foreground"
@@ -464,10 +476,10 @@ export default async function YtdPage() {
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Notes</h2>
           <div className="space-y-1.5 text-xs text-muted-foreground">
-            <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. Cost basis is in SGD; avg cost/unit is the USD price paid per share.</p>
+            <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. Everything here is shown in {isSbr ? "SGD" : <>SGD; avg cost/unit is the USD price paid per share</>}.</p>
             <p><span className="font-semibold text-foreground">YTD Market Return</span> uses the <span className="font-semibold text-foreground">Modified Dietz method</span>: market gain = EMV − BMV − net capital deployed. The % denominator accounts for the timing of each BUY/SELL so contributions are not mistaken for returns.</p>
             <p>Unrealised P&L = current SGD market value minus SGD cost basis. This reflects the gain/loss if you sold your entire position today.</p>
-            <p>YTD Capital Deployed = sum of BUY trade amounts in USD this year. BUY trades automatically create a linked contribution record for monthly tracking.</p>
+            <p>YTD Capital Deployed = sum of BUY trade amounts in {deployedCcy} this year. BUY trades automatically create a linked contribution record for monthly tracking.</p>
           </div>
         </div>
 
