@@ -155,14 +155,14 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
   ]
 
   return (
-    <Shell title="Cockpit" subtitle="Silicon Brick Road — Constitution v2.1 · toward an HDB deposit" userName={name} isAdmin={isAdmin}>
+    <Shell title="Cockpit" subtitle="Silicon Brick Road — Constitution v2.2 · toward an HDB deposit" userName={name} isAdmin={isAdmin}>
 
       {/* Constitution banner */}
       <a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer"
         className="rounded-xl border border-teal-500/40 bg-gradient-to-r from-teal-500/[0.08] to-emerald-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-teal-500/[0.12] transition-colors group">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/20 shrink-0"><FileText className="h-4 w-4 text-teal-400" /></div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-teal-400">Silicon Brick Road — Investment Constitution (v2.1)</p>
+          <p className="text-xs font-bold text-teal-400">Silicon Brick Road — Investment Constitution (v2.2)</p>
           <p className="text-xs text-muted-foreground">The complete written plan — four funds, monthly decision steps, phase rules, and how to buy the property when you&apos;re ready.</p>
         </div>
         <span className="text-xs font-semibold text-teal-400 group-hover:text-teal-300 shrink-0">Open ↗</span>
@@ -232,7 +232,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             overall={d.health.overall}
             overallLabel={d.health.overallLabel}
             dimensions={sealDimensions}
-            constitutionLabel="SBR Constitution v2.1 · Governance Score"
+            constitutionLabel="SBR Constitution v2.2 · Governance Score"
             narrative={
               hasBalance
                 ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " governance breach" + (d.govAlignment.breaches > 1 ? "es" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " item" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "All rules satisfied." : ""}`

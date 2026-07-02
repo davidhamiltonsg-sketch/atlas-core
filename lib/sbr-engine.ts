@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Silicon Brick Road — Decision Engine (Constitution v2.1, Article VI).
+// Silicon Brick Road — Decision Engine (Constitution v2.2, Article VI).
 //
-// Implements the exact 7-step ladder + phase framework as a computable engine, so
+// Implements the exact ladder + phase framework as a computable engine, so
 // Dami's dashboard produces the same single instruction the Constitution prescribes.
 // Returns the shared NextMove / DcaPlan shapes so the existing dashboard components render it.
 //
 // Priority (highest wins): SMH cap → combined ceiling → A35 floor → phase (III/IV) →
-// drawdown → skip-at-high → underweight → standard split.
+// drawdown → underweight (drift correction) → skip-at-high → standard split.
+// v2.2: underweight now outranks skip-at-high — a below-range fund is bought even near its high.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
@@ -117,31 +118,35 @@ export function computeSbrNextMove(
       when: "Now, and every month until you buy.", color: "#34d399" }
   }
 
-  // 5 — drawdown > 15% from recent high → all new money to VWRA (constitution step 5)
+  // 5 — drawdown > 15% from recent high → deploy the cash reserve, then all new money to VWRA
   if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) {
-    return { severity: "high", ticker: "VWRA", action: "Markets are down — put everything into VWRA",
-      what: `The portfolio is down ${Math.abs(opts.drawdownPct).toFixed(0)}% from its recent high. Put the full monthly contribution into VWRA. Do not sell anything.`,
-      why: "A falling market is a buying opportunity early in the journey. VWRA is the most diversified fund — buying it when prices are down is one of the best things you can do.",
+    return { severity: "high", ticker: "VWRA", action: "Markets are down — deploy your reserve into VWRA",
+      what: `The portfolio is down ${Math.abs(opts.drawdownPct).toFixed(0)}% from its recent high. First deploy your small cash reserve into VWRA, then put the full monthly contribution into VWRA too. Do not sell anything.`,
+      why: "A falling market is a buying opportunity early in the journey. The cash reserve is spare cash kept for exactly this — deploying it (plus contributions) into the most diversified fund is one of the best things you can do.",
       when: "This month.", color: "#2dd4bf" }
   }
 
-  // 6 — QQQM or SMH within 3% of 52-week high → skip, redirect to VWRA
-  const over = [qqqm, smh].filter((p): p is SbrPosition => !!p && nearHigh(p, c.skipAtHighPct)).map((p) => p.ticker)
-  if (over.length > 0) {
-    return { severity: "low", ticker: over[0], action: `Skip ${over.join(" & ")} this month — near its yearly high`,
-      what: `Invest normally, but skip ${over.join(" and ")} this month (it is within 3% of its highest price this year). Put that money into VWRA instead.`,
-      why: "Buying something at almost its highest-ever price is a fast way to feel instant regret if it dips next week. VWRA has no such restriction — you buy it no matter what.",
-      when: "This month.", color: "#2dd4bf" }
-  }
-
-  // 7 — any fund below its comfortable range → fill the most underweight
+  // 6 — any fund below its comfortable range → fill the most underweight FIRST.
+  // v2.2: fixing a fund that has drifted below its range beats the skip-at-high rule — so a
+  // below-range fund is bought even if it is near its yearly high (drift correction wins). This
+  // also matches computeSbrDca, which already fills a below-range fund before applying the skip.
   const under = positions.filter((p) => p.actualPct < p.rangeLow).sort((a, b) => (a.actualPct - a.rangeLow) - (b.actualPct - b.rangeLow))
   if (under.length > 0) {
     const p = under[0]
+    const nearItsHigh = nearHigh(p, c.skipAtHighPct)
     return { severity: "medium", ticker: p.ticker, action: `${p.ticker} is below its range — fill it up`,
-      what: `${p.ticker} is ${p.actualPct.toFixed(1)}% — below its ${p.rangeLow}% target range. Put the full monthly contribution into ${p.ticker} until it is back in range.`,
-      why: "When something drifts low, new money fixes it — no selling needed. The fund that is furthest below its range gets all the money that month.",
+      what: `${p.ticker} is ${p.actualPct.toFixed(1)}% — below its ${p.rangeLow}% target range. Put the full monthly contribution into ${p.ticker} until it is back in range${nearItsHigh ? ", even though it is near its yearly high" : ""}.`,
+      why: "When something drifts low, new money fixes it — no selling needed. Getting a fund back into its range matters more than waiting for a better price, so this comes before the skip-the-highs rule.",
       when: "This month.", color: p.color }
+  }
+
+  // 7 — QQQM or SMH in range but within 3% of its 52-week high → skip, redirect to VWRA
+  const over = [qqqm, smh].filter((p): p is SbrPosition => !!p && nearHigh(p, c.skipAtHighPct)).map((p) => p.ticker)
+  if (over.length > 0) {
+    return { severity: "low", ticker: over[0], action: `Skip ${over.join(" & ")} this month — near its yearly high`,
+      what: `Invest normally, but skip ${over.join(" and ")} this month (it is within 3% of its highest price this year, and already in range). Put that money into VWRA instead.`,
+      why: "Buying something at almost its highest-ever price is a fast way to feel instant regret if it dips next week. VWRA has no such restriction — you buy it no matter what.",
+      when: "This month.", color: "#2dd4bf" }
   }
 
   // 8 — standard DCA
@@ -270,7 +275,7 @@ export function computeSbrDca(
   if (a35 && a35.actualPct < A35_FLOOR) return allToOne("A35", "A35 is below its minimum — topping it up first.", "A35 is below its 7% floor — all contributions go there until it is back above 8%.")
   if (phase.key === "IV") return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (above SGD 114,000 — close to the goal). All new money goes into A35 to build up your SGD cash for the property purchase.")
   if (phase.key === "III") return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
-  if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) return allToOne("VWRA", "Markets are down — buying more VWRA.", "The portfolio is more than 15% below its recent high. All contributions go to VWRA — a falling market is a buying opportunity early in the journey.")
+  if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) return allToOne("VWRA", "Markets are down — deploy the reserve, then buy VWRA.", "The portfolio is more than 15% below its recent high. Deploy your small cash reserve into VWRA, then send all contributions to VWRA too — a falling market is a buying opportunity early in the journey.")
 
   // Otherwise: proportional split at (phase) targets among eligible funds.
   const techHalt = combined >= comb.warning
