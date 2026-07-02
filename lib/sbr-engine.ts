@@ -149,9 +149,12 @@ export function computeSbrNextMove(
       when: "This month.", color: "#2dd4bf" }
   }
 
-  // 8 — standard DCA
+  // 8 — standard DCA at the ACTIVE phase's target weights (Phase II shifts to 55/20/10/15;
+  // reading them from the phase avoids the headline text disagreeing with the money-split).
+  const splitTargets = phase.targets ?? Object.fromEntries(c.funds.map((f) => [f.ticker, f.target]))
+  const splitStr = c.funds.map((f) => `${f.ticker} ${splitTargets[f.ticker] ?? f.target}%`).join(" · ")
   return { severity: "none", ticker: "ALL", action: "All good — invest at the standard split",
-    what: "Split this month's contribution at the target weights: VWRA 50% · QQQM 25% · SMH 15% · A35 10%. Everything is in range.",
+    what: `Split this month's contribution at the target weights: ${splitStr}. Everything is in range.`,
     why: "Every fund is within its comfortable range and none are at their limits. Nothing to fix — just keep the habit going.",
     when: "Anytime this month.", color: "#34d399" }
 }
@@ -271,7 +274,12 @@ export function computeSbrDca(
     return { allocations: Object.values(alloc), headline: "Directed plan — one fund this month", marketOverlayActive: true, overlayNote: note }
   }
 
-  // Route by the ladder priority.
+  // Route by the ladder priority — MUST match computeSbrNextMove and Article VI:
+  // combined tech ceiling (step 2) outranks the A35 floor (step 3). Previously the floor
+  // was checked first here, so for e.g. combined 46% + A35 5% the headline said "buy VWRA"
+  // while this split routed everything to A35 — a contradiction on the same screen.
+  if (combined > comb.hard) return allToOne("VWRA", "Combined QQQM+SMH over 45% — halt both, buy VWRA.", `QQQM + SMH combined is ${combined.toFixed(1)}% — over the 45% hard limit. All new money goes to VWRA until they drop below ${comb.resume}% combined.`)
+  if (combined >= comb.warning) return allToOne("VWRA", "Tech funds over 40% combined — buy VWRA only.", `QQQM + SMH are ${combined.toFixed(1)}% together — past the ${comb.warning}% warning level. Skip both this month; all new money goes to VWRA.`)
   if (a35 && a35.actualPct < A35_FLOOR) return allToOne("A35", "A35 is below its minimum — topping it up first.", "A35 is below its 7% floor — all contributions go there until it is back above 8%.")
   if (phase.key === "IV") return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (above SGD 114,000 — close to the goal). All new money goes into A35 to build up your SGD cash for the property purchase.")
   if (phase.key === "III") return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")

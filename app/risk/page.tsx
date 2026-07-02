@@ -1,6 +1,7 @@
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency, formatPercent } from "@/lib/utils"
+import { applyBitcoinSleeve } from "@/lib/constants"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
@@ -153,6 +154,16 @@ async function getRiskData(userId: string) {
   const totalValue = holdingStats.reduce((s, h) => s + h.latestValue, 0)
   const weights = holdingStats.map(h => totalValue > 0 ? h.latestValue / totalValue : 0)
   const hhiScore = hhi(weights)
+
+  // Bitcoin sleeve: BTC + IBIT are ONE 7% position (BTC run-off, IBIT accumulation). Show the
+  // effective sleeve target so the weight bars/table don't read BTC as "underweight vs 7%" while
+  // IBIT reads "overweight vs 0%" — consistent with the cockpit, reports, and governance surfaces.
+  const sleeveTargets = new Map(
+    applyBitcoinSleeve(
+      holdingStats.map(h => ({ ticker: h.ticker, actualPct: totalValue > 0 ? (h.latestValue / totalValue) * 100 : 0, targetPct: h.targetPct }))
+    ).map(p => [p.ticker, p.targetPct])
+  )
+  for (const h of holdingStats) h.targetPct = sleeveTargets.get(h.ticker) ?? h.targetPct
 
   return {
     timeline,

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { computeNextBestMove, type PositionInput } from "@/lib/next-best-move"
+import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
+import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { getLiveMarketPositions, getScheduledEvents } from "@/lib/finnhub"
 import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { ScheduledEvents } from "@/components/calendar/scheduled-events"
@@ -21,7 +23,7 @@ const RULES_IN_FORCE = [
 async function getRulesNowData(userId: string) {
   const holdings = await db.holding.findMany({
     where: { userId },
-    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+    include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
   })
   const totalValue = holdings.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
   const moveInputs: PositionInput[] = holdings.map((h) => ({
@@ -31,8 +33,25 @@ async function getRulesNowData(userId: string) {
     toleranceBand: h.toleranceBand ?? 2.5, latestPrice: h.snapshots[0]?.price ?? 0,
   }))
 
+  // Feed the engine the SAME overlay context the cockpit uses, so the calendar can never show a
+  // lower-priority move while the cockpit shows a critical trim for the identical portfolio.
+  const lookThrough = computeLookThrough(moveInputs)
+  const ltBreach = worstLookThroughBreach(lookThrough)
+  const lookThroughBreach = ltBreach
+    ? { label: ltBreach.label, pct: ltBreach.pct, hard: ltBreach.hard,
+        trimTicker: largestContributor(ltBreach.key, lookThrough.companies.some((c) => c.key === ltBreach.key) ? "company" : "sector", moveInputs) }
+    : undefined
+
+  const timeline = buildPortfolioTimeline(holdings.map((h) => ({ id: h.id, snapshots: h.snapshots.map((s) => ({ date: s.date, value: s.value })) })))
+  let portfolioDrawdownPct: number | undefined
+  if (timeline.length >= 2) {
+    const peak = Math.max(...timeline.map((t) => t.value))
+    const current = timeline[timeline.length - 1].value
+    if (peak > 0 && current < peak) portfolioDrawdownPct = ((current - peak) / peak) * 100
+  }
+
   const [market, calendar] = await Promise.all([getLiveMarketPositions(), getScheduledEvents(90)])
-  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: market.positions })
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: market.positions, lookThroughBreach, portfolioDrawdownPct })
   return { nextBestMove, market, calendar, hasBalance: totalValue > 0 }
 }
 

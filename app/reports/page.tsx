@@ -420,7 +420,7 @@ export default async function Reports() {
   if (hardBreaches > 0) summaryPoints.push({ text: `${hardBreaches} holding${hardBreaches > 1 ? "s have" : " has"} drifted far outside its target range — you need to act before your next investment date. See the action plan below.`, severity: "critical" })
   if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to QQQM and SMH until this resolves.`, severity: "warn" })
   if (sectorAlerts > 0) summaryPoints.push({ text: `Your portfolio is overexposed to ${sectorAlerts} theme${sectorAlerts > 1 ? "s" : ""} (e.g. semiconductors or tech). Put your next contributions into ${bestAlternatives(elevatedSectors, positions)} instead.`, severity: "warn" })
-  if (geoExposure.us > 70) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward VT and VWO to re-balance.`, severity: "warn" })
+  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward VT and VWO to re-balance.`, severity: "warn" })
   if (hhiPct > 15) summaryPoints.push({ text: `Your portfolio is more concentrated than it looks — it behaves like you own only ${effectiveN.toFixed(1)} equally-sized positions. Consider spreading contributions more evenly.`, severity: "warn" })
   if (summaryPoints.length === 0) summaryPoints.push({ text: "Everything looks good — all holdings are within their target ranges and no limits have been breached. Keep following your standard monthly plan.", severity: "ok" })
   summaryPoints.push({ text: `Overall health score: ${healthScore}/100 (${healthLabel}). Last prices recorded: ${snapshotDate}.`, severity: healthScore >= 80 ? "ok" : healthScore >= 60 ? "warn" : "critical" })
@@ -439,7 +439,7 @@ export default async function Reports() {
   if (excessiveCompanies.length > 0) {
     actions.push({ priority: 4, action: `You have too much tied to ${excessiveCompanies.join(", ")} through your ETFs. Stop buying QQQM and SMH for now — these are the ETFs that hold the most of those companies.`, urgency: "high" })
   }
-  if (geoExposure.us > 70) {
+  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) {
     actions.push({ priority: 5, action: `${geoExposure.us.toFixed(0)}% of your portfolio is in US companies. Your plan allows up to 70%. Buy more VT (which includes international) and VWO (emerging markets) to rebalance.`, urgency: "medium" })
   }
   if (actions.length === 0) {
@@ -485,7 +485,7 @@ export default async function Reports() {
           </div>
           <div className="ph-metric">
             <p className="ph-metric-label">US Exposure</p>
-            <p className={`ph-metric-value ${geoExposure.us > 80 ? "crit" : geoExposure.us > 70 ? "warn" : "good"}`}>
+            <p className={`ph-metric-value ${geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.hard ? "crit" : geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft ? "warn" : "good"}`}>
               {geoExposure.us.toFixed(0)}%
             </p>
             <p className="ph-metric-sub">hard limit {LOOKTHROUGH_SECTOR_CAPS.us.hard}%</p>
@@ -860,7 +860,7 @@ export default async function Reports() {
           title="Where in the World Is Your Money?"
           sub="How much of your portfolio is in each region — across all your ETFs combined"
           badge={
-            geoExposure.us > 70
+            geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft
               ? <span className="shrink-0 flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="h-3 w-3" /> US elevated
                 </span>
@@ -872,7 +872,7 @@ export default async function Reports() {
         <div className="grid lg:grid-cols-[1fr_280px] divide-y lg:divide-y-0 lg:divide-x divide-border">
           <div className="p-5 space-y-4">
             {[
-              { key: "us",       label: "United States",     color: geoColors.us,       cap: 70, capLabel: "soft 70% · hard 78%", value: geoExposure.us },
+              { key: "us",       label: "United States",     color: geoColors.us,       cap: LOOKTHROUGH_SECTOR_CAPS.us.soft, capLabel: `soft ${LOOKTHROUGH_SECTOR_CAPS.us.soft}% · hard ${LOOKTHROUGH_SECTOR_CAPS.us.hard}%`, value: geoExposure.us },
               { key: "intlDev",  label: "Intl Developed",    color: geoColors.intlDev,  cap: null, capLabel: "no cap", value: geoExposure.intlDev },
               { key: "emerging", label: "Emerging Markets",  color: geoColors.emerging, cap: null, capLabel: "no cap", value: geoExposure.emerging },
               { key: "crypto",   label: "Crypto (BTC)",      color: geoColors.crypto,   cap: 8,  capLabel: "hard 8% (via BTC cap)", value: geoExposure.crypto },
