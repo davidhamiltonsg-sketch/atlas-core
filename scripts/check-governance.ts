@@ -22,7 +22,7 @@ function eq(label: string, actual: unknown, expected: unknown) {
   if (a !== e) { console.error(`  ✗ ${label}: expected ${e}, got ${a}`); failures++ }
 }
 
-console.log(`Atlas Core — governance contract check (Constitution v1.1)\n`)
+console.log(`Atlas Core — governance contract check (Constitution v1.4)\n`)
 
 // ── Version ──────────────────────────────────────────────────────────────────
 eq("GOVERNANCE_VERSION", GOVERNANCE_VERSION, "6.7")  // legacy version string retained

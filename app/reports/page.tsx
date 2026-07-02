@@ -16,7 +16,7 @@ import {
   ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS,
 } from "@/lib/look-through"
-import { HARD_THRESHOLDS } from "@/lib/constants"
+import { HARD_THRESHOLDS, applyBitcoinSleeve } from "@/lib/constants"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
@@ -105,12 +105,25 @@ async function getReportData(userId: string) {
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0
 
+  // Treat BTC + IBIT as ONE Bitcoin sleeve (run-off vs accumulation) so drift and the
+  // action plan match the engine — otherwise BTC reads "underweight vs 7%" while IBIT
+  // reads "overweight vs 0%", two contradictory actions for a single 7% position.
+  const actualByTicker = new Map(
+    holdings.map((h) => [h.ticker, totalValue > 0 ? ((h.snapshots[0]?.value ?? 0) / totalValue) * 100 : 0])
+  )
+  const sleeveTargets = new Map(
+    applyBitcoinSleeve(
+      holdings.map((h) => ({ ticker: h.ticker, actualPct: actualByTicker.get(h.ticker) ?? 0, targetPct: h.targetPct }))
+    ).map((p) => [p.ticker, p.targetPct])
+  )
+
   const positions = holdings.map((h) => {
     const latest = h.snapshots[0]
     const value = latest?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
-    const drift = Math.abs(actualPct - h.targetPct)
-    const driftPct = actualPct - h.targetPct
+    const targetPct = sleeveTargets.get(h.ticker) ?? h.targetPct
+    const drift = Math.abs(actualPct - targetPct)
+    const driftPct = actualPct - targetPct
     // Suppress drift/cap alerts when portfolio has no balance (prevents false alarms)
     const outsideBand = hasBalance && drift > h.toleranceBand
     const overCap = hasBalance && h.hardCapPct !== null && actualPct > h.hardCapPct
@@ -127,7 +140,7 @@ async function getReportData(userId: string) {
       color: h.color,
       value,
       actualPct,
-      targetPct: h.targetPct,
+      targetPct,
       hardCapPct: h.hardCapPct,
       toleranceBand: h.toleranceBand,
       drift,
@@ -434,13 +447,13 @@ export default async function Reports() {
   }
 
   return (
-    <Shell title="Reports" subtitle="Overlap & concentration engine — v6.7" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Reports" subtitle="Overlap & concentration engine — v1.4" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* ── Print-only cover page ── hidden on screen, rendered in PDF ── */}
       <div className="print-header hidden">
 
         {/* Eyebrow + title */}
-        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v6.7</p>
+        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v1.4</p>
         <h1>Annual Portfolio Report</h1>
         <p className="ph-sub">{reportDate} &nbsp;·&nbsp; Personal &amp; Confidential</p>
 

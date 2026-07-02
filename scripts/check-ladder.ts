@@ -1,7 +1,7 @@
 /**
- * Atlas Core — Art. XIII Ladder engine scenario checks (Constitution v1.1).
+ * Atlas Core — Art. XIII Ladder engine scenario checks (Constitution v1.4).
  *
- * Validates the 8-step ladder's precedence order and v1.1 skip-rule placement.
+ * Validates the 8-step ladder's precedence order and skip-rule placement.
  * Key test: skip rule fires at step 7 ONLY — not at step 2.
  *
  * Run:  npx tsx scripts/check-ladder.ts   (or: npm run check:ladder)
@@ -56,7 +56,7 @@ const BASE = [
 ]
 const TOTAL = 100_000
 
-console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.1)\n")
+console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.4)\n")
 
 // ─── 1. Healthy portfolio → Step 7, standard DCA ─────────────────────────────
 {
@@ -239,7 +239,7 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.1)\n")
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)
 if (failures === 0) {
-  console.log(`  All ${passes} checks passed. Art. XIII Ladder v1.1 ✓`)
+  console.log(`  All ${passes} checks passed. Art. XIII Ladder v1.4 ✓`)
   process.exit(0)
 } else {
   console.error(`  ${failures} check(s) failed, ${passes} passed.`)

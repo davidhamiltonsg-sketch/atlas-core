@@ -1,7 +1,7 @@
 /**
- * Atlas Core — Constitution v1.1 contract check.
+ * Atlas Core — Constitution v1.4 contract check.
  *
- * Verifies that code constants match the Constitution v1.1 document:
+ * Verifies that code constants match the Constitution v1.4 document:
  *   drift classifier, cycle-phase resolver, dealing-window calculator,
  *   UCITS thresholds, contribution currency, throttle limits.
  *
@@ -50,11 +50,11 @@ function ok(label: string, condition: boolean) {
   }
 }
 
-console.log(`Atlas Core — Constitution v1.1 contract check\n`)
+console.log(`Atlas Core — Constitution v1.4 contract check\n`)
 
 // ─── Version pin ──────────────────────────────────────────────────────────────
 console.log("Version")
-eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.1")
+eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.4")
 
 // ─── Art. VII — Hard thresholds ───────────────────────────────────────────────
 console.log("\nArt. VII — Thresholds")
@@ -63,14 +63,14 @@ eq("VT hard low (Art. VII)",    HARD_THRESHOLDS.VT?.low,          42)
 eq("SMH hard cap (Art. VII)",   HARD_THRESHOLDS.SMH?.high,        12)
 eq("SMH amber trigger (Art. VII)", HARD_THRESHOLDS.SMH?.amberHigh, 11)
 eq("SMH hard low (Art. VII)",   HARD_THRESHOLDS.SMH?.low,          5)
-eq("QQQM hard cap (Art. VII)",  HARD_THRESHOLDS.QQQM?.high,       31)
-eq("QQQM hard low (Art. VII)",  HARD_THRESHOLDS.QQQM?.low,        15)
+eq("QQQM hard drift trigger (Art. VIII)", HARD_THRESHOLDS.QQQM?.high, 31)  // Art. VII cap is 30; >31 is the drift trigger
+eq("QQQM hard low (Art. VIII)", HARD_THRESHOLDS.QQQM?.low,        15)
 eq("VWO hard cap (Art. VII)",   HARD_THRESHOLDS.VWO?.high,        13)
-eq("VWO hard low (Art. VII)",   HARD_THRESHOLDS.VWO?.low,          3)
-eq("BTC hard cap base (Art. VIII)", HARD_THRESHOLDS.BTC?.high,     8)
+eq("VWO hard low (Art. VIII)",  HARD_THRESHOLDS.VWO?.low,          3)
+eq("BTC hard cap base (Art. X)", HARD_THRESHOLDS.BTC?.high,        8)
 
-// ─── Art. VIII — BTC cycle-phase resolver ─────────────────────────────────────
-console.log("\nArt. VIII — BTC cycle-phase resolver")
+// ─── Art. X — BTC cycle-phase resolver ────────────────────────────────────────
+console.log("\nArt. X — BTC cycle-phase resolver")
 
 // Bear: price < 50% of cycle high
 eq("phase: bear (price 40% of high)",     getBtcCyclePhase(0.40),         "bear")
@@ -94,7 +94,7 @@ eq("phase: override normal",getBtcCyclePhase(undefined, "normal"),            "n
 
 // ─── Art. XIII — Contribution params ──────────────────────────────────────────
 console.log("\nArt. XIII — DCA params")
-eq("DCA currency (Art. XIII)", DCA_PARAMS.currency,            "SGD")
+eq("DCA currency (Art. XIII)", DCA_PARAMS.currency,            "USD")
 eq("DCA monthly (Art. XIII)",  DCA_PARAMS.monthlyContribution, 3000)
 eq("DCA annual boost",         DCA_PARAMS.annualJanuaryBoost,  20000)
 
@@ -145,14 +145,14 @@ eq("weights sum to 100",   totalWeight,                           100)
 
 // ─── Art. XXIII — Currency policy ─────────────────────────────────────────────
 console.log("\nArt. XXIII — Currency policy")
-eq("base currency",       CURRENCY_POLICY.base,       "SGD")
+eq("base currency",       CURRENCY_POLICY.base,       "USD")
 eq("reporting currency",  CURRENCY_POLICY.reporting,  "SGD")
 eq("price store currency",CURRENCY_POLICY.priceStore, "USD")
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)
 if (failures === 0) {
-  console.log(`  All ${passes} checks passed. Constitution v1.1 ✓`)
+  console.log(`  All ${passes} checks passed. Constitution v1.4 ✓`)
   process.exit(0)
 } else {
   console.error(`  ${failures} check(s) failed, ${passes} passed.`)

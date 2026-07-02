@@ -32,7 +32,8 @@ export const TICKER_TARGETS: Record<string, number> = {
   IBIT: 0,   // target Bitcoin vehicle — rises as BTC falls; sleeve total stays 7%
 }
 
-// v1.1 hard drift thresholds (Art. VII) — whole-number percent
+// Hard drift thresholds — whole-number percent. Position hard caps live in Art. VII
+// (VT 60%); the drift bands (soft/hard triggers, SMH amber zone) live in Art. VIII.
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
 // conviction asset: accumulate on weakness toward target, never sold at a loss).
 // SMH cap tightened 15% → 12% (Principle 04). SMH amberHigh=11 adds a soft amber
@@ -247,7 +248,7 @@ export const BEHAVIORAL_RULES = {
 export const DCA_PARAMS = {
   monthlyContribution:  3000,
   annualJanuaryBoost:  20000,
-  currency:            'SGD', // Art. XIII: contributions in SGD
+  currency:            'USD', // Art. XIII: "USD 3,000 per month" + "USD 20,000" January lump sum (reporting is SGD — Art. XXIII)
   brokerageAccount:    'IBKR Singapore',
   horizonYear:         2045,
 } as const

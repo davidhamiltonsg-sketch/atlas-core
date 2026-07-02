@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       db.watchlistItem.findMany({ where: { userId: session.userId } }),
       db.governanceRule.findMany(),
     ])
-    const backup = { format: "atlas-core-backup", version: "6.7", exportedAt: new Date().toISOString(), user, holdings, trades, contributions, dividends, behaviourLogs, watchlist, governanceRules }
+    const backup = { format: "atlas-core-backup", version: "1.4", exportedAt: new Date().toISOString(), user, holdings, trades, contributions, dividends, behaviourLogs, watchlist, governanceRules }
     return new NextResponse(JSON.stringify(backup, null, 2), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",

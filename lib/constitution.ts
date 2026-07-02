@@ -1,27 +1,31 @@
 /**
- * Atlas Core — Constitution v1.1 (July 2026)
+ * Atlas Core — Constitution v1.4 (July 2026)
  *
  * Single version-pinned governance module. All Phase 2+ code imports from HERE.
  * lib/constants.ts remains the raw source of record; this file re-exports everything
- * and adds v1.1 additions (dealing window, throttle, risk register seeds, currency
- * policy, succession, governance-score dimensions).
+ * and adds the dealing window, throttle, risk register seeds, currency policy,
+ * succession, and governance-score dimensions.
  *
- * Source documents:
- *   Atlas-Core-Constitution-v1_1_1.html
- *   atlas-core-cockpit-mockup.html
+ * v1.1 → v1.4 was an editorial / structural / doctrinal release only: per Appendix F,
+ * no rule, threshold, cap, or position changed. The numeric contract below is therefore
+ * identical to v1.1; only the version pin, citations, and documentation move to v1.4.
+ *
+ * Source document:
+ *   AtlasCoreConstitutionv1_4.html  (public/atlas-core-constitution.html)
  */
 
-export const CONSTITUTION_VERSION = '1.1' as const
+export const CONSTITUTION_VERSION = '1.4' as const
 export const CONSTITUTION_UPDATED = '2026-07' as const
 
 // ─── Re-export all constants from lib/constants.ts ────────────────────────────
-// Art. VI  — allocation targets
-// Art. VII — hard drift thresholds (VT=60%, SMH amberHigh=11%)
-// Art. VIII — BTC halving cycle (bull = months 12–24 post-halving)
-// Art. IX  — combined tech ceiling, SMH soft bands
-// Art. XII — behavioural rules
-// Art. XIII — DCA params (contribution SGD 3,000/mo)
-// Art. XV  — UCITS mandate (warn 60k, require 100k)
+// Art. VI   — allocation targets
+// Art. VII  — position hard caps (VT=60%); Art. VIII drift bands (SMH amberHigh=11%)
+// Art. X    — BTC halving cycle (bull = months 12–24 post-halving)
+// Art. XI   — SMH dynamic buy zone / soft bands
+// Art. XII  — combined tech ceiling (QQQM+SMH)
+// Art. XIV  — behavioural rules
+// Art. XIII — DCA params (contribution USD 3,000/mo)
+// Art. XV   — UCITS mandate (warn 60k, require 100k)
 export * from '@/lib/constants'
 
 // ─── Art. XIII — DEALING WINDOW ─────────────────────────────────────────────
@@ -96,15 +100,18 @@ export const RISK_REGISTER_SEEDS = [
 // Weights (must sum to 100). Matches lib/health.ts HEALTH_DIMENSIONS.
 export const GOVERNANCE_SCORE = {
   structural:    { weight: 40, citation: 'Art. VI–IX'    },
-  behavioural:   { weight: 25, citation: 'Art. XII–XIV'  },
+  behavioural:   { weight: 25, citation: 'Art. XIV'      },
   concentration: { weight: 25, citation: 'Art. IX'       },
   execution:     { weight: 10, citation: 'Art. XIII'     },
 } as const satisfies Record<string, { weight: number; citation: string }>
 
 // ─── Art. XXIII — CURRENCY POLICY ────────────────────────────────────────────
+// The portfolio accumulates in USD (masthead "Base Currency USD"; Art. XIII contributions
+// are "USD 3,000 per month"). Progress is JUDGED in SGD — the 2045 target is an SGD number
+// (Art. XXIII) — so all app outputs report in SGD. ETF prices are stored in USD.
 export const CURRENCY_POLICY = {
-  base:       'SGD',   // portfolio base currency
-  reporting:  'SGD',   // all outputs in SGD unless dual-display toggled
+  base:       'USD',   // accumulation / base currency (Art. XXIII; masthead "Base Currency USD")
+  reporting:  'SGD',   // all outputs in SGD — progress judged in SGD (Art. XXIII)
   priceStore: 'USD',   // ETF prices stored as USD in Snapshot.price
   fxFallback: 1.35,    // USDSGD fallback when Yahoo Finance unavailable
 } as const
