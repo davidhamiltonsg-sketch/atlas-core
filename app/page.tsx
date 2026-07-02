@@ -384,11 +384,11 @@ export default async function Dashboard() {
     { label: "Structural",    score: d.health.structural.score,    maxScore: 40, status: d.health.structural.status,    citation: d.health.structural.citation },
     { label: "Behavioural",   score: d.health.behavioural.score,   maxScore: 25, status: d.health.behavioural.status,   citation: d.health.behavioural.citation },
     { label: "Concentration", score: d.health.concentration.score, maxScore: 25, status: d.health.concentration.status, citation: d.health.concentration.citation },
-    { label: "Execution",     score: d.health.execution.score,     maxScore: 10, status: d.health.execution.status,     citation: d.health.execution.citation },
+    { label: "Freshness",     score: d.health.freshness.score,     maxScore: 10, status: d.health.freshness.status,     citation: d.health.freshness.citation },
   ]
 
   return (
-    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v1.1" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v1.4" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-start gap-2">
@@ -600,7 +600,7 @@ export default async function Dashboard() {
               structural={d.health.structural.score}
               behavioural={d.health.behavioural.score}
               concentration={d.health.concentration.score}
-              execution={d.health.execution.score}
+              execution={d.health.freshness.score}
               hardBreaches={d.hardBreaches}
               softBreaches={d.softBreaches}
               maxDrift={d.maxDrift}

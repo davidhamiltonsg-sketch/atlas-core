@@ -13,7 +13,7 @@ interface TopbarProps {
 }
 
 const VERSION_PILL: Record<ConstitutionId, { label: string; cls: string; dot: string }> = {
-  "atlas-core":         { label: "v1.1", cls: "border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400", dot: "bg-indigo-500" },
+  "atlas-core":         { label: "v1.4", cls: "border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400", dot: "bg-indigo-500" },
   "silicon-brick-road": { label: "v2.1", cls: "border-teal-200 dark:border-teal-500/30 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400", dot: "bg-teal-500" },
 }
 

@@ -1,17 +1,19 @@
 /**
- * Atlas Core — Constitution v1.1 (July 2026)
+ * Atlas Core — Constitution v1.4 (July 2026)
  *
  * Single version-pinned governance module. All Phase 2+ code imports from HERE.
  * lib/constants.ts remains the raw source of record; this file re-exports everything
- * and adds v1.1 additions (dealing window, throttle, risk register seeds, currency
+ * and adds v1.1+ additions (dealing window, throttle, risk register seeds, currency
  * policy, succession, governance-score dimensions).
  *
+ * v1.4 changes: precision/completeness release — no rule, threshold, cap, or position changed.
+ * 4th governance dimension renamed Execution → Freshness (Art. XXII).
+ *
  * Source documents:
- *   Atlas-Core-Constitution-v1_1_1.html
- *   atlas-core-cockpit-mockup.html
+ *   Atlas-Core-Constitution-v1_4.html
  */
 
-export const CONSTITUTION_VERSION = '1.1' as const
+export const CONSTITUTION_VERSION = '1.4' as const
 export const CONSTITUTION_UPDATED = '2026-07' as const
 
 // ─── Re-export all constants from lib/constants.ts ────────────────────────────
@@ -93,12 +95,13 @@ export const RISK_REGISTER_SEEDS = [
 ] as const
 
 // ─── Art. XXII — GOVERNANCE SCORE DIMENSIONS ─────────────────────────────────
-// Weights (must sum to 100). Matches lib/health.ts HEALTH_DIMENSIONS.
+// Weights (must sum to 100). Matches lib/health.ts PortfolioHealth.
+// v1.4: 4th dimension renamed Execution → Freshness.
 export const GOVERNANCE_SCORE = {
-  structural:    { weight: 40, citation: 'Art. VI–IX'    },
-  behavioural:   { weight: 25, citation: 'Art. XII–XIV'  },
-  concentration: { weight: 25, citation: 'Art. IX'       },
-  execution:     { weight: 10, citation: 'Art. XIII'     },
+  structural:    { weight: 40, citation: 'Art. VI–IX'   },
+  behavioural:   { weight: 25, citation: 'Art. XII–XIV' },
+  concentration: { weight: 25, citation: 'Art. IX'      },
+  freshness:     { weight: 10, citation: 'Art. XXII'    },
 } as const satisfies Record<string, { weight: number; citation: string }>
 
 // ─── Art. XXIII — CURRENCY POLICY ────────────────────────────────────────────

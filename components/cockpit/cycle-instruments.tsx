@@ -65,7 +65,7 @@ export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
         <InstrumentTile
           title="BTC Phase"
-          citation="Art. VIII"
+          citation="Art. X"
           badge={btc.label}
           badgeColor={btcBadgeColor}
           stat={`${btc.target}%`}
@@ -75,7 +75,7 @@ export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
         />
         <InstrumentTile
           title="SMH Buy Zone"
-          citation="Art. XIV / B1"
+          citation="Art. XI · B1"
           badge={smh.isSkipRule ? "SKIP RULE" : smh.isBuyWindow ? "BUY ZONE" : "NEAR TOP"}
           badgeColor={smhBadgeColor}
           stat={`${(smh.pctFromHigh * 100).toFixed(1)}%`}
@@ -85,7 +85,7 @@ export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
         />
         <InstrumentTile
           title="Combined Tech"
-          citation="Art. IX"
+          citation="Art. XII"
           badge={tech.status === "clear" ? "CLEAR" : tech.status === "soft_breach" ? "SOFT ⚠" : "HARD ⛔"}
           badgeColor={techBadgeColor}
           stat={`${tech.combinedPct.toFixed(1)}%`}
@@ -95,7 +95,7 @@ export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
         />
         <InstrumentTile
           title="SGOV Buffer"
-          citation="Art. XI"
+          citation="Art. XIII"
           badge={sgov.isAtFloor ? "AT FLOOR" : `${sgov.monthsToFloor ?? "?"}mo`}
           badgeColor={sgovBadgeColor}
           stat={`${sgov.currentPct.toFixed(1)}%`}

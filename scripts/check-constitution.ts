@@ -1,7 +1,7 @@
 /**
- * Atlas Core — Constitution v1.1 contract check.
+ * Atlas Core — Constitution v1.4 contract check.
  *
- * Verifies that code constants match the Constitution v1.1 document:
+ * Verifies that code constants match the Constitution v1.4 document:
  *   drift classifier, cycle-phase resolver, dealing-window calculator,
  *   UCITS thresholds, contribution currency, throttle limits.
  *
@@ -50,11 +50,11 @@ function ok(label: string, condition: boolean) {
   }
 }
 
-console.log(`Atlas Core — Constitution v1.1 contract check\n`)
+console.log(`Atlas Core — Constitution v1.4 contract check\n`)
 
 // ─── Version pin ──────────────────────────────────────────────────────────────
 console.log("Version")
-eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.1")
+eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.4")
 
 // ─── Art. VII — Hard thresholds ───────────────────────────────────────────────
 console.log("\nArt. VII — Thresholds")
@@ -140,7 +140,7 @@ const totalWeight = Object.values(GOVERNANCE_SCORE).reduce((s, d) => s + d.weigh
 eq("structural weight",    GOVERNANCE_SCORE.structural.weight,    40)
 eq("behavioural weight",   GOVERNANCE_SCORE.behavioural.weight,   25)
 eq("concentration weight", GOVERNANCE_SCORE.concentration.weight, 25)
-eq("execution weight",     GOVERNANCE_SCORE.execution.weight,     10)
+eq("freshness weight",     GOVERNANCE_SCORE.freshness.weight,     10)
 eq("weights sum to 100",   totalWeight,                           100)
 
 // ─── Art. XXIII — Currency policy ─────────────────────────────────────────────
@@ -152,7 +152,7 @@ eq("price store currency",CURRENCY_POLICY.priceStore, "USD")
 // ─── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)
 if (failures === 0) {
-  console.log(`  All ${passes} checks passed. Constitution v1.1 ✓`)
+  console.log(`  All ${passes} checks passed. Constitution v1.4 ✓`)
   process.exit(0)
 } else {
   console.error(`  ${failures} check(s) failed, ${passes} passed.`)
