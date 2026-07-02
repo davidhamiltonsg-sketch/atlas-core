@@ -8,6 +8,8 @@
 // Effective exposure for X = Σ over holdings of  (holding's % of NAV) × (ETF's % in X)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { ATLAS_SPEC } from "@/lib/portfolio-spec"
+
 // As-of date for the hand-entered ETF weight tables below. These are fact-sheet
 // approximations that drift as funds rebalance; they feed the §4 look-through caps (the
 // "highest law"), so a staleness signal matters. Update this date whenever the weights are
@@ -67,12 +69,16 @@ export const LOOKTHROUGH_COMPANY_CAPS: Record<string, { soft: number; hard: numb
   TSMC:      { soft: 5,  hard: 7 },
 }
 
-export const LOOKTHROUGH_SECTOR_CAPS: Record<string, { label: string; soft: number; hard: number }> = {
-  semiconductor: { label: "Semiconductor", soft: 16, hard: 20 },
-  digital:       { label: "Digital Economy", soft: 48, hard: 54 },
-  us:            { label: "US Market", soft: 66, hard: 70 },   // Art. IX US look-through caps
-  ai:            { label: "AI Infrastructure", soft: 38, hard: 46 },
+// soft/hard derived from the single source (lib/portfolio-spec.ts); labels are presentation.
+const SECTOR_LABELS: Record<string, string> = {
+  semiconductor: "Semiconductor", digital: "Digital Economy", us: "US Market", ai: "AI Infrastructure",
 }
+export const LOOKTHROUGH_SECTOR_CAPS: Record<string, { label: string; soft: number; hard: number }> =
+  Object.fromEntries(
+    Object.entries(ATLAS_SPEC.lookThroughSectors).map(([k, v]) => [
+      k, { label: SECTOR_LABELS[k] ?? k, soft: v.soft, hard: v.hard },
+    ]),
+  )
 
 export type CapStatus = "ok" | "watch" | "breach"
 

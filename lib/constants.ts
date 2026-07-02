@@ -1,3 +1,5 @@
+import { ATLAS_SPEC } from "@/lib/portfolio-spec"
+
 /**
  * Atlas Core — Governance Constants
  *
@@ -20,14 +22,10 @@
 // Bitcoin sleeve = BTC + IBIT combined = 7% (see §4.1). BTC is being transitioned into
 // IBIT (the more tax-effective vehicle) like-for-like: as the transition proceeds the BTC
 // target steps down and IBIT steps up by the same amount, keeping the sleeve at 7%.
-export const TICKER_TARGETS: Record<string, number> = {
-  VT:   52,
-  QQQM: 23,
-  SMH:  10,
-  VWO:  8,
-  BTC:  7,   // legacy Bitcoin vehicle — transitioning out
-  IBIT: 0,   // target Bitcoin vehicle — rises as BTC falls; sleeve total stays 7%
-}
+// Derived from the single source (lib/portfolio-spec.ts) — SGOV is a buffer, not a target row.
+export const TICKER_TARGETS: Record<string, number> = Object.fromEntries(
+  ATLAS_SPEC.funds.filter((f) => f.ticker !== "SGOV").map((f) => [f.ticker, f.target]),
+)
 
 // Hard drift thresholds — whole-number percent. Position hard caps live in Art. VII
 // (VT 60%); the drift bands (soft/hard triggers, SMH amber zone) live in Art. VIII.
@@ -38,16 +36,19 @@ export const TICKER_TARGETS: Record<string, number> = {
 // BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
 // floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
 // amberHigh?: if set, the amber/soft zone is (amberHigh, high]; healthy zone is (hardLow, amberHigh].
-export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amberHigh?: number }> = {
-  VT:   { low: 42, high: 60 },                    // Art. VII: hard cap 60%
-  QQQM: { low: 15, high: 30 },                    // Art. VII: hard cap 30% (matches the engines + DB seed)
-  SMH:  { low: 5,  high: 12, amberHigh: 11 },     // Art. VII: amber zone 11–12%
-  VWO:  { low: 3,  high: 13 },
-  // Bitcoin sleeve (BTC + IBIT) — no lower hard trigger; hard cap 8% applies to the
-  // COMBINED sleeve (the engine sums BTC + IBIT). Per-ticker values mirror the sleeve cap.
-  BTC:  { high: 8 }, // base = Normal phase; see BTC cycle modifier (§4.1)
-  IBIT: { high: 8 }, // tax-effective Bitcoin vehicle — same sleeve as BTC
-}
+// Derived from the single source (lib/portfolio-spec.ts). Key order (low, high, amberHigh) is
+// preserved so the JSON-compare contract checks stay byte-identical. SGOV (cap null) is excluded.
+export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amberHigh?: number }> =
+  Object.fromEntries(
+    ATLAS_SPEC.funds.filter((f) => f.ticker !== "SGOV").map((f) => [
+      f.ticker,
+      {
+        ...(f.driftLow !== undefined ? { low: f.driftLow } : {}),
+        high: f.hardCap as number,
+        ...(f.amberHigh !== undefined ? { amberHigh: f.amberHigh } : {}),
+      },
+    ]),
+  )
 
 // ─── GOVERNANCE BAND ROWS (single source of truth for the §2/§3 gauge table) ──
 // The governance page's "Where Each Holding Stands" gauges are DERIVED from
@@ -204,8 +205,8 @@ export function getSmhSoftBand(pctFromHigh: number): SmhSoftBand {
 // Display/governance rule. QQQM+SMH combined exposure as a whole-number percent.
 export const COMBINED_TECH_RULE = {
   tickers:     ['QQQM', 'SMH'] as const,
-  softCeiling: 38,
-  hardCeiling: 42,
+  softCeiling: ATLAS_SPEC.combinedTech.soft,  // derived from lib/portfolio-spec.ts
+  hardCeiling: ATLAS_SPEC.combinedTech.hard,
   label:       'Combined Tech Concentration',
   rationale:   'QQQM+SMH combined exposure. Semis overlap means individual caps understate concentration risk.',
   action: {
