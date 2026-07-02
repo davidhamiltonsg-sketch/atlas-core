@@ -14,6 +14,9 @@ interface Props {
   dimensions: SealDimension[]
   constitutionLabel?: string
   narrative?: string
+  // Shown when the score is below 65. Defaults to the Atlas Core wording; Silicon Brick Road
+  // passes a plain-English version so no Article citation / "discretionary" jargon leaks in.
+  lowScoreWarning?: string
 }
 
 const dimBadgeColor = (status: SealDimension["status"]) => ({
@@ -24,7 +27,8 @@ const dimBadgeColor = (status: SealDimension["status"]) => ({
 }[status])
 
 /** Circular governance score ring with dimension breakdown. Works for Atlas Core and SBR. */
-export function GovernanceSeal({ overall, overallLabel, dimensions, constitutionLabel, narrative }: Props) {
+export function GovernanceSeal({ overall, overallLabel, dimensions, constitutionLabel, narrative,
+  lowScoreWarning = "⛔ No new discretionary trade until breach resolved and logged · Art. XXII" }: Props) {
   const r = 45
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - overall / 100)
@@ -79,7 +83,7 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
         </div>
         {overall < 65 && (
           <p className="font-data mt-2 text-[10px] font-bold text-red-600 dark:text-red-400 leading-snug">
-            ⛔ No new discretionary trade until breach resolved and logged · Art. XXII
+            {lowScoreWarning}
           </p>
         )}
       </div>

@@ -538,7 +538,15 @@ export default async function Dashboard() {
         <div className="space-y-5 min-w-0">
 
           {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
-          {/* 1. Governance Seal — constitution health, always first */}
+          {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
+          <DecisionLadderCard
+            ladder={d.ladder}
+            monthlyContribution={d.monthlyContribution}
+            daysToWindow={d.dealingWindow.daysUntilOpen}
+            windowClosesLabel={d.dealingWindow.windowClosesLabel}
+          />
+
+          {/* 2. Governance Seal — constitution health */}
           <GovernanceSeal
             overall={d.health.overall}
             overallLabel={d.health.overallLabel}
@@ -549,14 +557,6 @@ export default async function Dashboard() {
                 ? `${d.hardBreaches > 0 ? d.hardBreaches + " hard breach" + (d.hardBreaches > 1 ? "es" : "") + " require immediate action. " : ""}${d.softBreaches > 0 ? d.softBreaches + " position" + (d.softBreaches > 1 ? "s" : "") + " outside tolerance. " : ""}${d.hardBreaches === 0 && d.softBreaches === 0 ? "All positions within bands. " : ""}Snapshot age: ${d.snapshotAgeDays <= 1 ? "current" : d.snapshotAgeDays + " days old"}.`
                 : "No portfolio balance yet. Enter your holdings to begin tracking."
             }
-          />
-
-          {/* 2. Decision Ladder — the single instruction (Art. XIII) */}
-          <DecisionLadderCard
-            ladder={d.ladder}
-            monthlyContribution={d.monthlyContribution}
-            daysToWindow={d.dealingWindow.daysUntilOpen}
-            windowClosesLabel={d.dealingWindow.windowClosesLabel}
           />
 
           {/* 3. Compliance Board — position bands */}

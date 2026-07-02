@@ -54,7 +54,7 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
           <button
             type="submit"
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            title="Sign out"
+            title="Sign out" aria-label="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>

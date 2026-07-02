@@ -169,7 +169,7 @@ export default async function Governance() {
         <div className="flex-1">
           <p className="text-xs font-bold text-indigo-400 mb-0.5">v1.5 — Bitcoin via IBIT · monthly check-in system · live data</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they're down. BTC and IBIT count as one Bitcoin position (7% target, 8% max), with older BTC units gradually swapping into IBIT. The SGOV cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you're doing it, and when.
+            Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they&apos;re down. BTC and IBIT count as one Bitcoin position (7% target, 8% max), with older BTC units gradually swapping into IBIT. The SGOV cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you&apos;re doing it, and when.
           </p>
           <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
             Go to Command Centre →
@@ -198,7 +198,8 @@ export default async function Governance() {
           <h2 className="text-sm font-semibold">What the portfolio owns</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Six positions. Each one has a specific job.</p>
         </div>
-        <table className="w-full text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full text-xs min-w-[440px]">
           <thead>
             <tr className="border-b border-border bg-muted/30">
               <th className="px-5 py-2.5 text-left font-semibold text-muted-foreground">Fund</th>
@@ -228,6 +229,7 @@ export default async function Governance() {
             ))}
           </tbody>
         </table>
+        </div>
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
             Plain English: VT is the chassis, QQQM and SMH are the turbochargers, VWO adds geographic balance, BTC is the small optional rocket, and SGOV is the spare fuel can. Strong belief in each one is allowed — an oversized bet in any one is not.
@@ -521,7 +523,7 @@ export default async function Governance() {
         </div>
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
-            Any proposed change must be written down and waited on for at least 7 days. No changes during a market downturn. <span className="font-medium text-foreground">"I saw a cool chart online" is not a constitutional event.</span>
+            Any proposed change must be written down and waited on for at least 7 days. No changes during a market downturn. <span className="font-medium text-foreground">&ldquo;I saw a cool chart online&rdquo; is not a constitutional event.</span>
           </p>
         </div>
       </div>

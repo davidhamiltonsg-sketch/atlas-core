@@ -75,36 +75,40 @@ const STATUS_CHIP: Record<HoldingStatus, { label: string; cls: string }> = {
 }
 
 // A concise plain-English "this month" cell from the DCA allocation.
-function ThisMonth({ tm }: { tm: HoldingRow["thisMonth"] }) {
+function ThisMonth({ tm, currency }: { tm: HoldingRow["thisMonth"]; currency: string }) {
   if (!tm) return <span className="text-muted-foreground">—</span>
   if (tm.amount > 0) {
     return (
       <div>
-        <div className="font-bold tabular-nums text-green-600 dark:text-green-400">+{formatCurrency(tm.amount, "USD")}</div>
+        <div className="font-bold tabular-nums text-green-600 dark:text-green-400">+{formatCurrency(tm.amount, currency)}</div>
         <div className="text-[10px] text-muted-foreground capitalize">{tm.tag === "dip-buy" ? "buy the dip" : tm.tag}</div>
       </div>
     )
   }
-  // $0 this month — say why, briefly.
+  // Nothing this month — say why, briefly. Use the plan's currency, not a bare "$".
   const reason = /high/i.test(tm.reason) ? "at high — skip"
     : /IBIT/i.test(tm.reason) ? "hold — → IBIT"
     : /ceiling|paused|over/i.test(tm.reason) ? "paused"
     : "hold"
-  return <span className="text-muted-foreground">$0 · {reason}</span>
+  return <span className="text-muted-foreground">{formatCurrency(0, currency)} · {reason}</span>
 }
 
 // Dashboard "Your Holdings" — the command-deck unified row: holding (with approved
 // alternative labelled where held), price trend, shares, live price, value, unrealised
 // gain, position within its band, governance status, and this month's action.
-export function HoldingsTable({ positions, totalValue, priceStale = false }: { positions: HoldingRow[]; totalValue: number; priceStale?: boolean }) {
+export function HoldingsTable({ positions, totalValue, priceStale = false, contributionCurrency = "USD", plainEnglish = false }: { positions: HoldingRow[]; totalValue: number; priceStale?: boolean; contributionCurrency?: string; plainEnglish?: boolean }) {
   const totalUnreal = positions.reduce((s, p) => s + (p.unrealisedSgd ?? 0), 0)
   const hasAnyCost = positions.some(p => p.unrealisedSgd !== null)
+  // Plain-English column wording for Silicon Brick Road; institutional wording for Atlas Core.
+  const L = plainEnglish
+    ? { title: "Your Funds", subtitle: "What you hold, how it's doing, and what to buy this month", unreal: "Paper gain/loss", band: "Where it sits", footer: "and this month's plan" }
+    : { title: "Your Holdings", subtitle: "Shares · price · value · unrealised gain · position in its band · status · what to do this month", unreal: "Unrealised", band: "Position in band", footer: "band & action from the live plan" }
 
   return (
     <Card>
       <CardHeader
-        title="Your Holdings"
-        subtitle="Shares · price · value · unrealised gain · position in its band · status · what to do this month"
+        title={L.title}
+        subtitle={L.subtitle}
         right={priceStale ? <StaleBadge title="Live prices unavailable — values use the last verified prices." /> : undefined}
       />
       <div className="overflow-x-auto">
@@ -115,8 +119,8 @@ export function HoldingsTable({ positions, totalValue, priceStale = false }: { p
               <th className="px-3 py-2.5 font-semibold text-right">Shares</th>
               <th className="px-3 py-2.5 font-semibold text-right">Price / Avg cost</th>
               <th className="px-3 py-2.5 font-semibold text-right">Value</th>
-              <th className="px-3 py-2.5 font-semibold text-right">Unrealised</th>
-              <th className="px-3 py-2.5 font-semibold">Position in band</th>
+              <th className="px-3 py-2.5 font-semibold text-right">{L.unreal}</th>
+              <th className="px-3 py-2.5 font-semibold">{L.band}</th>
               <th className="px-3 py-2.5 font-semibold">Status</th>
               <th className="px-5 py-2.5 font-semibold text-right">This month</th>
             </tr>
@@ -176,7 +180,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false }: { p
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${chip.cls}`}>{chip.label}</span>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <ThisMonth tm={p.thisMonth} />
+                    <ThisMonth tm={p.thisMonth} currency={contributionCurrency} />
                   </td>
                 </tr>
               )
@@ -197,8 +201,8 @@ export function HoldingsTable({ positions, totalValue, priceStale = false }: { p
         </table>
       </div>
       <div className="px-5 py-2.5 border-t border-border bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{positions.length} holding{positions.length !== 1 ? "s" : ""} · gain from your trade log · band &amp; action from the live plan</span>
-        <a href="/portfolio" className="font-semibold text-primary hover:underline">Manage holdings →</a>
+        <span>{positions.length} {plainEnglish ? "fund" : "holding"}{positions.length !== 1 ? "s" : ""} · gain from your trade log · {L.footer}</span>
+        <a href="/portfolio" className="font-semibold text-primary hover:underline">{plainEnglish ? "Manage funds →" : "Manage holdings →"}</a>
       </div>
     </Card>
   )

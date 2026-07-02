@@ -16,10 +16,11 @@ import {
   ArrowLeftRight,
   PiggyBank,
   GitCompare,
-  Star,
+  Wallet,
   BarChart3,
   Coins,
   CalendarDays,
+  LineChart,
   Download,
   Landmark,
 } from "lucide-react"
@@ -47,7 +48,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     ] },
     { label: "Portfolio", items: [
       { href: "/portfolio", label: "Portfolio", icon: PieChart },
-      { href: "/holdings", label: "Holdings", icon: Star },
+      { href: "/holdings", label: "Holdings", icon: Wallet },
       { href: "/rebalance", label: "Rebalance", icon: GitCompare },
       { href: "/trades", label: "Trades", icon: ArrowLeftRight },
       { href: "/contributions", label: "Contributions", icon: PiggyBank },
@@ -58,7 +59,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/smart-money", label: "Research", icon: Landmark },
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/risk", label: "Risk", icon: BarChart3 },
-      { href: "/ytd", label: "YTD / P&L", icon: CalendarDays },
+      { href: "/ytd", label: "YTD / P&L", icon: LineChart },
       { href: "/history", label: "History", icon: History },
     ] },
   ],
@@ -70,7 +71,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     ] },
     { label: "Portfolio", items: [
       { href: "/portfolio", label: "Portfolio", icon: PieChart },
-      { href: "/holdings", label: "Holdings", icon: Star },
+      { href: "/holdings", label: "Holdings", icon: Wallet },
       { href: "/rebalance", label: "Rebalance", icon: GitCompare },
       { href: "/trades", label: "Trades", icon: ArrowLeftRight },
       { href: "/contributions", label: "Contributions", icon: PiggyBank },
@@ -78,7 +79,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     ] },
     { label: "Insights", items: [
       { href: "/risk", label: "Risk", icon: BarChart3 },
-      { href: "/ytd", label: "YTD / P&L", icon: CalendarDays },
+      { href: "/ytd", label: "YTD / P&L", icon: LineChart },
       { href: "/history", label: "History", icon: History },
     ] },
   ],
@@ -164,6 +165,7 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
           </div>
           <button
             onClick={onClose}
+            aria-label="Close menu"
             className="lg:hidden flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors"
           >
             <X className="h-3.5 w-3.5" />
@@ -186,10 +188,7 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
 
         {/* Footer */}
         <div className="border-t border-[hsl(var(--sidebar-border))] p-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[11px] text-muted-foreground">All systems operational</span>
-          </div>
+          <span className="text-[11px] text-muted-foreground/70">{brand.name} · {brand.version}</span>
           <ThemeToggle />
         </div>
       </aside>

@@ -19,6 +19,7 @@ type Holding = {
 interface HoldingsClientProps {
   holdings: Holding[]
   totalTargetPct: number
+  isSbr?: boolean
 }
 
 const PRESET_COLORS = [
@@ -26,7 +27,13 @@ const PRESET_COLORS = [
   "#f59e0b", "#ef4444", "#f97316", "#ec4899", "#84cc16",
 ]
 
-export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal }: HoldingsClientProps) {
+export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal, isSbr = false }: HoldingsClientProps) {
+  // Brand the shared page to the active portfolio: teal for Silicon Brick Road, indigo for
+  // Atlas Core. Full class-name literals so Tailwind compiles them (no dynamic string building).
+  const accentBtn   = isSbr ? "bg-teal-600 hover:bg-teal-700" : "bg-indigo-600 hover:bg-indigo-700"
+  const accentRing  = isSbr ? "focus:ring-teal-500/30 focus:border-teal-500" : "focus:ring-indigo-500/30 focus:border-indigo-500"
+  const accentHover = isSbr ? "hover:text-teal-500" : "hover:text-indigo-500"
+  const accentBadge = isSbr ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" : "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400"
   const [holdings, setHoldings] = useState(initial)
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -75,7 +82,7 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
   }
 
   function handleDelete(id: string) {
-    if (!confirm("Delete this holding and all its snapshots? This cannot be undone.")) return
+    if (!confirm(isSbr ? "Remove this fund and all its recorded values? This cannot be undone." : "Delete this holding and all its snapshots? This cannot be undone.")) return
     startTransition(async () => {
       const result = await deleteHoldingAction(id)
       if (result.success) {
@@ -124,13 +131,13 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Holdings ({holdings.length})</h2>
+        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{isSbr ? "Your Funds" : "Holdings"} ({holdings.length})</h2>
         <button
           onClick={() => { setShowForm(!showForm); setEditId(null); setMsg(null) }}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+          className={`flex items-center gap-1.5 rounded-lg ${accentBtn} text-white text-xs font-semibold px-3 py-1.5 transition-colors`}
         >
           {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-          {showForm ? "Cancel" : "Add Holding"}
+          {showForm ? "Cancel" : (isSbr ? "Add a fund" : "Add Holding")}
         </button>
       </div>
 
@@ -149,31 +156,31 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
       {showForm && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold">Add New Holding</h3>
+            <h3 className="text-sm font-semibold">{isSbr ? "Add a fund" : "Add New Holding"}</h3>
           </div>
           <form onSubmit={handleAdd} className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticker</label>
-                <input name="ticker" required placeholder="e.g. VT" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all uppercase" />
+                <input name="ticker" required placeholder={isSbr ? "e.g. VWRA" : "e.g. VT"} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all uppercase`} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Name</label>
-                <input name="name" required placeholder="Vanguard Total World Stock ETF" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="name" required placeholder={isSbr ? "Vanguard FTSE All-World (VWRA)" : "Vanguard Total World Stock ETF"} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Target % <span className="text-indigo-400">({remaining.toFixed(1)}% remaining)</span></label>
-                <input name="targetPct" type="number" required step="0.5" min="0" max="100" placeholder="52" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Target % <span className={isSbr ? "text-teal-400" : "text-indigo-400"}>({remaining.toFixed(1)}% remaining)</span></label>
+                <input name="targetPct" type="number" required step="0.5" min="0" max="100" placeholder="52" className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Hard Cap % (optional)</label>
-                <input name="hardCapPct" type="number" step="0.5" min="0" max="100" placeholder="62" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">{isSbr ? "Max % (optional)" : "Hard Cap % (optional)"}</label>
+                <input name="hardCapPct" type="number" step="0.5" min="0" max="100" placeholder="62" className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Tolerance Band %</label>
-                <input name="toleranceBand" type="number" step="0.5" min="0" max="20" placeholder="2.5" defaultValue="2.5" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">{isSbr ? "Drift allowance %" : "Tolerance Band %"}</label>
+                <input name="toleranceBand" type="number" step="0.5" min="0" max="20" placeholder="2.5" defaultValue="2.5" className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
               </div>
             </div>
             <div>
@@ -190,9 +197,9 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
                 ))}
               </div>
             </div>
-            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
+            <button type="submit" disabled={isPending} className={`flex items-center gap-1.5 rounded-lg ${accentBtn} disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors`}>
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              Add Holding
+              {isSbr ? "Add fund" : "Add Holding"}
             </button>
           </form>
         </div>
@@ -217,27 +224,28 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-black">{h.ticker}</span>
                         <span className="text-xs text-muted-foreground truncate">{h.name}</span>
-                        <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                        <span className={`text-[10px] font-semibold ${accentBadge} px-2 py-0.5 rounded-full`}>
                           {h.targetPct}% target
                         </span>
                         {h.hardCapPct && (
-                          <span className="text-[10px] font-semibold bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full">
-                            {h.hardCapPct}% cap
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isSbr ? "bg-muted text-muted-foreground" : "bg-red-500/10 text-red-500"}`}>
+                            {isSbr ? `max ${h.hardCapPct}%` : `${h.hardCapPct}% cap`}
                           </span>
                         )}
-                        <span className="text-[10px] text-muted-foreground">±{h.toleranceBand}% band</span>
+                        <span className="text-[10px] text-muted-foreground">{isSbr ? `ok within ±${h.toleranceBand}%` : `±${h.toleranceBand}% band`}</span>
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {h.snapshotCount} snapshot{h.snapshotCount !== 1 ? "s" : ""}
-                        {h.latestValue !== null ? ` · Latest: S$${h.latestValue.toLocaleString("en-SG", { maximumFractionDigits: 2 })}` : ""}
+                        {h.latestValue
+                          ? `Now worth S$${h.latestValue.toLocaleString("en-SG", { maximumFractionDigits: 2 })}`
+                          : (isSbr ? "No value yet — add what you hold on Portfolio" : `${h.snapshotCount} snapshot${h.snapshotCount !== 1 ? "s" : ""} · no value yet`)}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-4">
                     <button
                       onClick={() => startEdit(editId === h.id ? null as unknown as Holding : h)}
-                      className="text-muted-foreground hover:text-indigo-500 transition-colors"
-                      title="Edit"
+                      className={`text-muted-foreground ${accentHover} transition-colors`}
+                      title="Edit" aria-label={`Edit ${h.ticker}`}
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -245,7 +253,7 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
                       onClick={() => handleDelete(h.id)}
                       disabled={isPending}
                       className="text-muted-foreground hover:text-red-500 transition-colors"
-                      title="Delete"
+                      title="Delete" aria-label={`Delete ${h.ticker}`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -260,19 +268,19 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
-                          <input name="name" required defaultValue={h.name} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                          <input name="name" required defaultValue={h.name} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-muted-foreground mb-1">Target %</label>
-                          <input name="targetPct" type="number" required step="0.5" min="0" max="100" defaultValue={h.targetPct} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                          <input name="targetPct" type="number" required step="0.5" min="0" max="100" defaultValue={h.targetPct} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-muted-foreground mb-1">Hard Cap %</label>
-                          <input name="hardCapPct" type="number" step="0.5" min="0" max="100" defaultValue={h.hardCapPct ?? ""} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                          <label className="block text-xs font-medium text-muted-foreground mb-1">{isSbr ? "Max %" : "Hard Cap %"}</label>
+                          <input name="hardCapPct" type="number" step="0.5" min="0" max="100" defaultValue={h.hardCapPct ?? ""} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-muted-foreground mb-1">Tolerance Band %</label>
-                          <input name="toleranceBand" type="number" step="0.5" min="0" max="20" defaultValue={h.toleranceBand} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                          <label className="block text-xs font-medium text-muted-foreground mb-1">{isSbr ? "Drift allowance %" : "Tolerance Band %"}</label>
+                          <input name="toleranceBand" type="number" step="0.5" min="0" max="20" defaultValue={h.toleranceBand} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
                         </div>
                       </div>
                       <div>
@@ -290,7 +298,7 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-3 py-1.5 transition-colors">
+                        <button type="submit" disabled={isPending} className={`flex items-center gap-1.5 rounded-lg ${accentBtn} disabled:opacity-60 text-white text-xs font-semibold px-3 py-1.5 transition-colors`}>
                           {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                           Save
                         </button>
@@ -311,9 +319,11 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
       {/* Warning */}
       {holdings.some(h => h.snapshotCount === 0) && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <p className="text-xs font-semibold text-amber-500 mb-0.5">Holdings without snapshots</p>
+          <p className="text-xs font-semibold text-amber-500 mb-0.5">{isSbr ? "Some funds have no value yet" : "Holdings without snapshots"}</p>
           <p className="text-xs text-muted-foreground">
-            Some holdings have no price data. Go to <a href="/portfolio" className="underline hover:text-foreground">Portfolio</a> and use "Update Values" to enter the first snapshot.
+            {isSbr
+              ? <>Go to <a href="/portfolio" className="underline hover:text-foreground">Portfolio</a> and use &quot;Update Values&quot; to enter how much you currently hold.</>
+              : <>Some holdings have no price data. Go to <a href="/portfolio" className="underline hover:text-foreground">Portfolio</a> and use &quot;Update Values&quot; to enter the first snapshot.</>}
           </p>
         </div>
       )}

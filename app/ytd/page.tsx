@@ -261,11 +261,11 @@ export default async function YtdPage() {
           <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 flex gap-3">
             <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-blue-400">No trades recorded yet</p>
+              <p className="text-xs font-semibold text-blue-400">No buys or sells recorded yet</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Log your buy/sell transactions in the{" "}
-                <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a>{" "}
-                to see cost basis and unrealised P&L. YTD snapshot returns are shown where available.
+                {isSbr
+                  ? <>Add your buys and sells in the <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a> to see what you paid and your paper gain or loss. Growth so far is shown where available.</>
+                  : <>Log your buy/sell transactions in the <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a> to see cost basis and unrealised P&L. YTD snapshot returns are shown where available.</>}
               </p>
             </div>
           </div>
@@ -276,11 +276,11 @@ export default async function YtdPage() {
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
             <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-amber-500">Partial cost basis — {data.holdingsWithBasisCount} of {data.holdingsTotalCount} holdings have trade records</p>
+              <p className="text-xs font-semibold text-amber-500">{isSbr ? `Only ${data.holdingsWithBasisCount} of ${data.holdingsTotalCount} funds have buys recorded` : `Partial cost basis — ${data.holdingsWithBasisCount} of ${data.holdingsTotalCount} holdings have trade records`}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Unrealised P&L % is suppressed at the portfolio level until all holdings have logged trades — a partial basis
-                makes the portfolio % meaningless. Individual holding rows show accurate figures where trades exist.
-                Add remaining trades in the <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a>.
+                {isSbr
+                  ? <>The overall paper-gain % is hidden until every fund has its buys recorded — with only some entered it would be misleading. The per-fund rows below are still accurate. Add the rest in the <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a>.</>
+                  : <>Unrealised P&L % is suppressed at the portfolio level until all holdings have logged trades — a partial basis makes the portfolio % meaningless. Individual holding rows show accurate figures where trades exist. Add remaining trades in the <a href="/trades" className="underline hover:text-foreground transition-colors">Trade Log</a>.</>}
               </p>
             </div>
           </div>
@@ -336,7 +336,7 @@ export default async function YtdPage() {
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
             <p className="text-xs text-muted-foreground mb-1">{L.deployed}</p>
-            <p className={`text-2xl font-black tabular-nums ${deployed > 0 ? "text-indigo-400" : "text-muted-foreground"}`}>
+            <p className={`text-2xl font-black tabular-nums ${deployed > 0 ? (isSbr ? "text-teal-400" : "text-indigo-400") : "text-muted-foreground"}`}>
               {deployed > 0 ? formatCurrency(deployed, deployedCcy) : "—"}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{isSbr ? `From your top-ups ${data.year}` : `From BUY trades ${data.year}`}</p>

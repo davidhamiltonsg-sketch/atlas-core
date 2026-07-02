@@ -2,11 +2,13 @@ import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 import { HoldingsClient } from "./client"
 
 export default async function HoldingsPage() {
   const session = await getSession()
   if (!session) redirect("/login")
+  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
 
   const holdings = await db.holding.findMany({
     where: { userId: session.userId },
@@ -35,8 +37,8 @@ export default async function HoldingsPage() {
   const totalTargetPct = serialized.reduce((s, h) => s + h.targetPct, 0)
 
   return (
-    <Shell title="Holdings" subtitle="Add, edit, or remove assets from your portfolio" userName={session.name} isAdmin={session.role === "admin"}>
-      <HoldingsClient holdings={serialized} totalTargetPct={totalTargetPct} />
+    <Shell title={isSbr ? "Your Funds" : "Holdings"} subtitle={isSbr ? "Add or update the four funds you hold" : "Add, edit, or remove assets from your portfolio"} userName={session.name} isAdmin={session.role === "admin"}>
+      <HoldingsClient holdings={serialized} totalTargetPct={totalTargetPct} isSbr={isSbr} />
     </Shell>
   )
 }

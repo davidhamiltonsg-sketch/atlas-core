@@ -689,3 +689,17 @@ body {
   .text-amber-500, .text-yellow-400 { color: #92400e !important; }
   .text-indigo-500 { color: #3730a3 !important; }
 }
+
+/* Global keyboard-focus visibility — every interactive element gets a clear ring when
+   focused via keyboard (mouse clicks stay ring-free via :focus-visible). Previously only
+   the browser default showed, and clickable <div>s/<a>s got nothing. */
+@layer base {
+  :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring, 238 84% 67%));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus:not(:focus-visible) {
+    outline: none;
+  }
+}

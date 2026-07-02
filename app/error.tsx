@@ -19,24 +19,24 @@ export default function Error({
     error.message?.includes("prisma")
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f13] p-6">
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
       <div className="max-w-md w-full space-y-4">
         <div className="border border-red-500/30 bg-red-500/10 rounded-xl p-6">
-          <h2 className="text-red-400 font-semibold text-lg mb-2">Something went wrong</h2>
+          <h2 className="text-red-600 dark:text-red-400 font-semibold text-lg mb-2">Something went wrong</h2>
           {isDbError ? (
-            <div className="space-y-3 text-sm text-zinc-300">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <p>The database connection failed. This usually means the environment variables are not set on Vercel.</p>
-              <div className="bg-zinc-900 rounded-lg p-3 font-mono text-xs text-zinc-400 space-y-1">
+              <div className="bg-muted rounded-lg p-3 font-mono text-xs text-muted-foreground space-y-1">
                 <p>DATABASE_URL=libsql://your-db.turso.io</p>
                 <p>DATABASE_AUTH_TOKEN=your-token</p>
               </div>
-              <p>Set these in your Vercel project settings under <span className="text-zinc-100">Settings → Environment Variables</span>, then redeploy.</p>
+              <p>Set these in your Vercel project settings under <span className="text-foreground font-medium">Settings → Environment Variables</span>, then redeploy.</p>
             </div>
           ) : (
-            <p className="text-sm text-zinc-300">
+            <p className="text-sm text-muted-foreground">
               {error.message || "An unexpected error occurred."}
               {error.digest && (
-                <span className="block mt-1 text-xs text-zinc-500">Digest: {error.digest}</span>
+                <span className="block mt-1 text-xs text-muted-foreground/70">Digest: {error.digest}</span>
               )}
             </p>
           )}

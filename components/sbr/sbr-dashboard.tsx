@@ -171,7 +171,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
   ]
 
   return (
-    <Shell title="Cockpit" subtitle="Silicon Brick Road — Constitution v2.2 · toward an HDB deposit" userName={name} isAdmin={isAdmin}>
+    <Shell title="Your Plan" subtitle="Silicon Brick Road — saving toward your HDB deposit" userName={name} isAdmin={isAdmin}>
 
       {/* Constitution banner */}
       <a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer"
@@ -231,49 +231,37 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         </div>
       </div>
 
-      {/* Empty-state welcome */}
+      {/* Empty-state welcome — covers both "nothing entered yet" and "funds set but showing S$0" */}
       {!hasBalance && (
         <div className="mb-5 rounded-xl border border-teal-500/30 bg-teal-500/[0.06] px-5 py-4">
-          <p className="text-sm font-bold text-teal-400">Portfolio ready — add your first snapshot</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Targets are set (VWRA 50 · QQQM 25 · SMH 15 · A35 10). Enter your holdings on <a href="/portfolio" className="underline font-semibold">Portfolio</a> to start tracking.</p>
+          <p className="text-sm font-bold text-teal-400">Your four funds are set up — let&apos;s add what you hold</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Your plan is ready (VWRA 50 · QQQM 25 · SMH 15 · A35 10), but the portfolio is still showing S$0. Add what you currently own on the <a href="/portfolio" className="underline font-semibold">Portfolio</a> page, and this page will tell you what to buy each month.</p>
         </div>
       )}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-5 min-w-0">
 
-          {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
-          {/* 1. Governance Seal — SBR constitution health */}
-          <GovernanceSeal
-            overall={d.health.overall}
-            overallLabel={d.health.overallLabel}
-            dimensions={sealDimensions}
-            constitutionLabel="SBR Constitution v2.2 · Governance Score"
-            narrative={
-              hasBalance
-                ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " governance breach" + (d.govAlignment.breaches > 1 ? "es" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " item" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "All rules satisfied." : ""}`
-                : "No portfolio balance yet. Enter your holdings to begin tracking."
-            }
-          />
-
-          {/* 2. This Month's Action — the SBR decision */}
+          {/* 1. This month — the single decision Dami needs, first on the page */}
           {hasBalance && (
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="rounded-xl border border-teal-500/40 bg-card overflow-hidden">
               <div className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">SBR Decision Engine · This Month</p>
-                  <p className="text-sm font-semibold mt-0.5">{d.nextMove.action}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400">This month</p>
+                  <p className="text-base font-semibold mt-0.5">{d.nextMove.action}</p>
                 </div>
                 <span className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
                   d.nextMove.severity === "critical" || d.nextMove.severity === "high" ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400" :
                   d.nextMove.severity === "medium" ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400" :
                   "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400"
                 }`}>
-                  {d.nextMove.severity === "none" ? "STEADY" : d.nextMove.severity.toUpperCase()}
+                  {d.nextMove.severity === "none" ? "On track" :
+                   d.nextMove.severity === "medium" ? "Heads up" :
+                   d.nextMove.severity === "high" ? "Important" : "Act now"}
                 </span>
               </div>
 
-              {/* DCA allocation rows */}
+              {/* Where the money goes this month */}
               {d.dca.overlayNote && (
                 <p className="px-5 pt-3 text-[11px] text-amber-500 leading-relaxed">{d.dca.overlayNote}</p>
               )}
@@ -284,13 +272,13 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                     <span className="font-bold text-sm w-14">{a.ticker}</span>
                     <span className="flex-1 text-xs text-muted-foreground">{a.reason}</span>
                     <span className={`text-sm font-bold tabular-nums ${a.amount > 0 ? "text-green-500" : "text-muted-foreground"}`}>
-                      {a.amount > 0 ? `+${formatCurrency(a.amount, "SGD")}` : "$0"}
+                      {a.amount > 0 ? `+${formatCurrency(a.amount, "SGD")}` : formatCurrency(0, "SGD")}
                     </span>
                   </div>
                 ))}
               </div>
 
-              {/* Instruction block */}
+              {/* Why, in plain English */}
               <div className="m-4 rounded-lg border border-border bg-muted/30 p-4">
                 <p className="text-xs leading-relaxed mb-1.5">{d.nextMove.what}</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">{d.nextMove.why}</p>
@@ -300,6 +288,20 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
               </div>
             </div>
           )}
+
+          {/* 2. Health score — the constitution's own scorecard, plain-English warning */}
+          <GovernanceSeal
+            overall={d.health.overall}
+            overallLabel={d.health.overallLabel}
+            dimensions={sealDimensions}
+            constitutionLabel="Your plan — health score"
+            lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
+            narrative={
+              hasBalance
+                ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
+                : "No portfolio balance yet. Enter your holdings to begin tracking."
+            }
+          />
 
           {/* 3. Compliance Board — position bands */}
           {hasBalance && (
@@ -335,7 +337,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           </div>
 
           {/* ── WHAT IS HELD ─────────────────────────────────────────── */}
-          {hasBalance && <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} />}
+          {hasBalance && <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} contributionCurrency="SGD" plainEnglish />}
 
           {/* ── GOVERNANCE RULES ─────────────────────────────────────── */}
           {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
