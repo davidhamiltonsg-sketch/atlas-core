@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
-import { syncHoldingFromTrades, getUsdSgdRate } from "@/lib/holdings-sync"
+import { importIbkrActivityForUser } from "@/lib/holdings-sync"
 import { db } from "@/lib/db"
 
 export const maxDuration = 30
@@ -109,106 +109,16 @@ export async function PUT(req: Request) {
     }>
   }
 
-  const holdings = await db.holding.findMany({
-    where: { userId: session.userId },
-    select: { id: true, ticker: true },
-  })
-  const holdingMap = new Map(holdings.map(h => [h.ticker.toUpperCase(), h.id]))
+  // Reuse the shared importer (same dedupe-by-id + holding-sync the cron uses), so the manual
+  // and automated paths can never diverge. Forex rows are filtered inside the importer.
+  const { trades: tradesImported, dividends: dividendsImported, tickers } =
+    await importIbkrActivityForUser(session.userId, body.executions ?? [], body.dividends ?? [])
 
-  let tradesImported = 0
-  let dividendsImported = 0
-  const affectedTickers = new Set<string>()
-
-  // Import executions
-  for (const e of body.executions ?? []) {
-    // Never import forex / cash conversions as trades or contributions (see isForexRow).
-    if (isForexRow(e.symbol)) continue
-    // Skip if already imported
-    const exists = await db.trade.findFirst({
-      where: { userId: session.userId, note: { contains: `[ibkr:${e.tradeID}]` } },
-    })
-    if (exists) continue
-
-    affectedTickers.add(e.symbol.toUpperCase())
-    const amountSgd = e.quantity * e.price * e.fxRate
-    const trade = await db.trade.create({
-      data: {
-        userId: session.userId,
-        ticker: e.symbol.toUpperCase(),
-        type: e.buySell,
-        units: e.quantity,
-        price: e.price,
-        amount: amountSgd,
-        fxRate: e.fxRate,
-        date: parseFlexDate(e.tradeDate),
-        note: `[ibkr:${e.tradeID}]`,
-      },
-    })
-
-    // Auto-link BUY to ContributionRecord
-    if (e.buySell === "BUY") {
-      await db.contributionRecord.create({
-        data: {
-          userId: session.userId,
-          amount: e.quantity * e.price, // USD
-          date: parseFlexDate(e.tradeDate),
-          note: `[trade:${trade.id}] [ibkr:${e.tradeID}] BUY ${e.quantity} ${e.symbol} @ $${e.price}`,
-        },
-      })
-    }
-    tradesImported++
-  }
-
-  // Import dividends
-  for (const d of body.dividends ?? []) {
-    const exists = await db.dividend.findFirst({
-      where: { userId: session.userId, note: { contains: `[ibkr:${d.transactionID}]` } },
-    })
-    if (exists) continue
-
-    const holdingId = d.holdingId ?? holdingMap.get(d.symbol.toUpperCase()) ?? null
-
-    // Get units from latest snapshot for context
-    let units = 0
-    if (holdingId) {
-      const snap = await db.snapshot.findFirst({
-        where: { holdingId },
-        orderBy: { date: "desc" },
-      })
-      units = snap?.units ?? 0
-    }
-
-    await db.dividend.create({
-      data: {
-        userId: session.userId,
-        holdingId,
-        ticker: d.symbol.toUpperCase(),
-        amount: d.amount,
-        units,
-        paymentDate: parseFlexDate(d.payDate),
-        note: `[ibkr:${d.transactionID}] ${d.description}`,
-      },
-    })
-    dividendsImported++
-  }
-
-  // Apply imported executions to holdings so units/value flow through the app (creates new
-  // tickers like IBIT, updates units for sells/buys) — every page stays in sync.
-  if (affectedTickers.size > 0) {
-    const fx = await getUsdSgdRate()
-    for (const t of affectedTickers) await syncHoldingFromTrades(session.userId, t, fx)
+  if (tickers.length > 0) {
     for (const p of ["/", "/trades", "/contributions", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
       revalidatePath(p)
     }
   }
 
   return NextResponse.json({ tradesImported, dividendsImported })
-}
-
-// Parse IBKR date YYYYMMDD → Date
-function parseFlexDate(s: string): Date {
-  if (s.length === 8) {
-    return new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`)
-  }
-  return new Date(s)
 }

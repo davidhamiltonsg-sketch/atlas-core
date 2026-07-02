@@ -1,19 +1,11 @@
 import { db } from "@/lib/db"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
-import { fetchFlexPositions } from "@/lib/ibkr-flex"
+import { fetchFlexPositions, fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { CORE_DEFAULTS } from "@/lib/core-holdings"
 
-// Default metadata for the governed core tickers, used to create any that are missing so the
-// plan is always represented (e.g. IBIT and SGOV, added to the plan after the DB was seeded).
-const CORE_DEFAULTS: Record<string, { name: string; targetPct: number; hardCapPct: number | null; toleranceBand: number; color: string }> = {
-  VT:   { name: "Vanguard Total World Stock ETF",        targetPct: 52, hardCapPct: 60,   toleranceBand: 6,   color: "#818cf8" },
-  VWO:  { name: "Vanguard FTSE Emerging Markets ETF",    targetPct: 8,  hardCapPct: 13,   toleranceBand: 3,   color: "#c4b5fd" },
-  QQQM: { name: "Invesco NASDAQ 100 ETF",                targetPct: 23, hardCapPct: 30,   toleranceBand: 5,   color: "#a78bfa" },
-  SMH:  { name: "VanEck Semiconductor ETF",              targetPct: 10, hardCapPct: 12,   toleranceBand: 3,   color: "#f472b6" },
-  BTC:  { name: "Grayscale Bitcoin Mini ETF",            targetPct: 7,  hardCapPct: 8,    toleranceBand: 1,   color: "#f59e0b" },
-  IBIT: { name: "iShares Bitcoin Trust ETF",             targetPct: 0,  hardCapPct: 8,    toleranceBand: 1,   color: "#f59e0b" },
-  SGOV: { name: "iShares 0-3 Month Treasury Bond ETF",   targetPct: 0,  hardCapPct: null, toleranceBand: 2.5, color: "#10b981" },
-}
+// CORE_DEFAULTS (the governed-ticker seed metadata) lives in lib/core-holdings.ts so the
+// contract checks can import it db-free and assert it matches the constitution's caps.
 
 /**
  * Make sure every Atlas Core governed ticker exists as a holding for a user (creating any gaps
@@ -136,4 +128,129 @@ export async function syncHoldingFromTrades(userId: string, ticker: string, fxRa
   const markPrice = latest?.price && latest.price > 0 ? latest.price : lastTradePrice
 
   await upsertSnapshotToday(holding.id, { units: netUnits, price: markPrice, value: netUnits * markPrice * fx })
+}
+
+// ─── IBKR activity (trades + dividends) import ────────────────────────────────
+// Parse IBKR date YYYYMMDD → Date.
+export function parseFlexDate(s: string): Date {
+  if (s.length === 8) return new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`)
+  return new Date(s)
+}
+
+export interface FlexExecution {
+  tradeID: string; symbol: string; buySell: "BUY" | "SELL"
+  quantity: number; price: number; fxRate: number; tradeDate: string
+}
+export interface FlexDividend {
+  transactionID: string; symbol: string; amount: number
+  payDate: string; description: string; holdingId?: string | null
+}
+export interface ActivityImportResult { trades: number; dividends: number; tickers: string[] }
+
+/**
+ * Write a set of IBKR executions + dividends to ONE user's trade/contribution/dividend log,
+ * then reflect the affected tickers into holdings. Idempotent — dedupes on the IBKR id
+ * embedded in each note ([ibkr:<id>]), so re-running never double-imports. Shared by the
+ * manual "Import Activity" modal (PUT) and the scheduled cron, so a monthly contribution is
+ * captured automatically instead of only when the owner remembers to click Import.
+ */
+export async function importIbkrActivityForUser(
+  userId: string,
+  executions: FlexExecution[],
+  dividends: FlexDividend[] = [],
+): Promise<ActivityImportResult> {
+  const holdings = await db.holding.findMany({ where: { userId }, select: { id: true, ticker: true } })
+  const holdingMap = new Map(holdings.map((h) => [h.ticker.toUpperCase(), h.id]))
+
+  let trades = 0
+  let divs = 0
+  const affected = new Set<string>()
+
+  for (const e of executions) {
+    if (isForexRow(e.symbol)) continue // forex/cash conversions are never trades
+    const exists = await db.trade.findFirst({
+      where: { userId, note: { contains: `[ibkr:${e.tradeID}]` } },
+    })
+    if (exists) continue
+
+    affected.add(e.symbol.toUpperCase())
+    const amountSgd = e.quantity * e.price * e.fxRate
+    const trade = await db.trade.create({
+      data: {
+        userId, ticker: e.symbol.toUpperCase(), type: e.buySell,
+        units: e.quantity, price: e.price, amount: amountSgd, fxRate: e.fxRate,
+        date: parseFlexDate(e.tradeDate), note: `[ibkr:${e.tradeID}]`,
+      },
+    })
+    if (e.buySell === "BUY") {
+      await db.contributionRecord.create({
+        data: {
+          userId,
+          // SGD — the contributions view and the monthly target are SGD, so the linked
+          // contribution is stored in SGD (settled amount), not the USD trade notional.
+          amount: amountSgd,
+          date: parseFlexDate(e.tradeDate),
+          note: `[trade:${trade.id}] [ibkr:${e.tradeID}] BUY ${e.quantity} ${e.symbol} @ $${e.price}`,
+        },
+      })
+    }
+    trades++
+  }
+
+  for (const d of dividends) {
+    const exists = await db.dividend.findFirst({
+      where: { userId, note: { contains: `[ibkr:${d.transactionID}]` } },
+    })
+    if (exists) continue
+    const holdingId = d.holdingId ?? holdingMap.get(d.symbol.toUpperCase()) ?? null
+    let units = 0
+    if (holdingId) {
+      const snap = await db.snapshot.findFirst({ where: { holdingId }, orderBy: { date: "desc" } })
+      units = snap?.units ?? 0
+    }
+    await db.dividend.create({
+      data: {
+        userId, holdingId, ticker: d.symbol.toUpperCase(), amount: d.amount, units,
+        paymentDate: parseFlexDate(d.payDate), note: `[ibkr:${d.transactionID}] ${d.description}`,
+      },
+    })
+    divs++
+  }
+
+  if (affected.size > 0) {
+    const fx = await getUsdSgdRate()
+    for (const t of affected) await syncHoldingFromTrades(userId, t, fx)
+  }
+  return { trades, dividends: divs, tickers: [...affected] }
+}
+
+export interface IbkrActivitySyncResult { ok: boolean; reason?: string; users: number; trades: number; dividends: number }
+
+/**
+ * Automated activity refresh from IBKR Flex — for the scheduled cron, so monthly trades and
+ * contributions are captured without anyone opening the manual import modal. ATLAS CORE ONLY:
+ * the IBKR account is Atlas Core's, so equity executions are never written to Silicon Brick
+ * Road users (isolation). Dedupe-by-id makes it safe to run on every cron tick. No-op when the
+ * activity query isn't configured.
+ */
+export async function syncIbkrActivityAllUsers(): Promise<IbkrActivitySyncResult> {
+  const token = process.env.IBKR_FLEX_TOKEN
+  const activityId = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_FLEX_QUERY_ID
+  if (!token || !activityId) return { ok: false, reason: "IBKR activity not configured", users: 0, trades: 0, dividends: 0 }
+
+  const result = await fetchFlexActivity(token, activityId)
+  if (!result.success) return { ok: false, reason: result.error, users: 0, trades: 0, dividends: 0 }
+
+  const users = await db.user.findMany({ select: { id: true, email: true } })
+  let trades = 0
+  let dividends = 0
+  let touched = 0
+  for (const u of users) {
+    if (constitutionIdForEmail(u.email) !== "atlas-core") continue // never write IBKR equity to SBR
+    const r = await importIbkrActivityForUser(u.id, result.executions, result.dividends)
+    trades += r.trades
+    dividends += r.dividends
+    touched++
+  }
+  return { ok: true, users: touched, trades, dividends }
 }

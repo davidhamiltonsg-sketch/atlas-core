@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
-import { syncIbkrSnapshotsAllUsers } from "@/lib/holdings-sync"
+import { syncIbkrSnapshotsAllUsers, syncIbkrActivityAllUsers } from "@/lib/holdings-sync"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -18,9 +18,12 @@ export async function GET(req: Request) {
     console.warn("[cron/sync-holdings] CRON_SECRET not set — endpoint is unauthenticated. Set CRON_SECRET in your env.")
   }
 
+  // 1) Refresh position snapshots (units/value). 2) Import any new trades + contributions +
+  // dividends so monthly activity is captured automatically instead of only on a manual import.
   const result = await syncIbkrSnapshotsAllUsers()
-  if (result.ok && result.snapshots > 0) {
-    for (const p of ["/", "/portfolio", "/ytd", "/governance", "/reports", "/forecast", "/holdings"]) revalidatePath(p)
+  const activity = await syncIbkrActivityAllUsers()
+  if ((result.ok && result.snapshots > 0) || (activity.ok && (activity.trades > 0 || activity.dividends > 0))) {
+    for (const p of ["/", "/portfolio", "/ytd", "/contributions", "/trades", "/governance", "/reports", "/forecast", "/holdings"]) revalidatePath(p)
   }
-  return NextResponse.json({ ran: true, at: new Date().toISOString(), ...result })
+  return NextResponse.json({ ran: true, at: new Date().toISOString(), snapshots: result, activity })
 }
