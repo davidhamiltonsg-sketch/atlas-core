@@ -251,11 +251,17 @@ async function getReportData(userId: string) {
   // Governance compliance — map each rule category to a status
   const ruleCategories = [...new Set(rules.map(r => r.category as string))]
 
+  // Look-through staleness — computed here (server data function) so the current-time read
+  // stays out of the component render body.
+  const lookThroughRef = lookThroughUpdatedAt ?? LOOK_THROUGH_LAST_REVIEWED
+  const lookThroughAgeDays = Math.floor((Date.now() - lookThroughRef.getTime()) / 86_400_000)
+  const lookThroughStale = lookThroughAgeDays > LOOK_THROUGH_STALE_DAYS
+
   return {
     totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, softBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
-    rules, ruleCategories, lookThroughUpdatedAt,
+    rules, ruleCategories, lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
   }
 }
 
@@ -342,7 +348,7 @@ export default async function Reports() {
     totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
-    rules, ruleCategories, lookThroughUpdatedAt,
+    rules, ruleCategories, lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
   } = await getReportData(session.userId)
 
   if (!hasBalance) {
@@ -360,10 +366,7 @@ export default async function Reports() {
   }
 
   const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-  // Staleness: prefer DB updatedAt; fall back to hardcoded review date
-  const lookThroughRef = lookThroughUpdatedAt ?? LOOK_THROUGH_LAST_REVIEWED
-  const lookThroughAgeDays = Math.floor((Date.now() - lookThroughRef.getTime()) / 86_400_000)
-  const lookThroughStale = lookThroughAgeDays > LOOK_THROUGH_STALE_DAYS
+  // Staleness (lookThroughAgeDays / lookThroughStale) is computed in getReportData.
   const snapshotDate = positions[0]?.snapshotDate
     ? new Date(positions[0].snapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "—"
@@ -991,7 +994,6 @@ export default async function Reports() {
                   {positions.map((col) => {
                     const overlap = OVERLAP_MATRIX[row.ticker]?.[col.ticker] ?? 0
                     const isSelf  = row.ticker === col.ticker
-                    const intensity = overlap / 100
                     const bg = isSelf
                       ? "bg-muted/60"
                       : overlap >= 20 ? "bg-red-500/15" : overlap >= 10 ? "bg-amber-500/10" : "bg-transparent"
@@ -1102,7 +1104,6 @@ export default async function Reports() {
             const { label, elevated, excessive } = SECTOR_CAPS[key]
             const value = sectorExposure[key]
             const status = statusFor(value, elevated, excessive)
-            const pctOfElevated = (value / elevated) * 100
             const alt = bestAlternatives([key], positions)
             const responses: Record<string, string> = {
               healthy:   "All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
