@@ -162,12 +162,19 @@ export async function importIbkrActivityForUser(
   const holdings = await db.holding.findMany({ where: { userId }, select: { id: true, ticker: true } })
   const holdingMap = new Map(holdings.map((h) => [h.ticker.toUpperCase(), h.id]))
 
+  // Only ingest the Atlas Core governed universe. The IBKR account can also hold currency
+  // conversions (e.g. SGD.HKD) and other instruments that are not part of the plan; importing
+  // those pollutes the trade log, invents bogus contributions, and adds ghost holdings.
+  const CORE = new Set<string>(CORE_TICKERS)
+  const inScope = (sym: string) => CORE.has(sym.trim().toUpperCase())
+
   let trades = 0
   let divs = 0
   const affected = new Set<string>()
 
   for (const e of executions) {
     if (isForexRow(e.symbol)) continue // forex/cash conversions are never trades
+    if (!inScope(e.symbol)) continue   // skip anything outside the Atlas Core plan
     const exists = await db.trade.findFirst({
       where: { userId, note: { contains: `[ibkr:${e.tradeID}]` } },
     })
@@ -198,6 +205,7 @@ export async function importIbkrActivityForUser(
   }
 
   for (const d of dividends) {
+    if (!inScope(d.symbol)) continue // dividends only for Atlas Core governed holdings
     const exists = await db.dividend.findFirst({
       where: { userId, note: { contains: `[ibkr:${d.transactionID}]` } },
     })
@@ -221,7 +229,64 @@ export async function importIbkrActivityForUser(
     const fx = await getUsdSgdRate()
     for (const t of affected) await syncHoldingFromTrades(userId, t, fx)
   }
+  // Permanently remove any currency-conversion rows imported before the forex filter existed,
+  // then heal any BUY trades that never got a linked contribution — so the trade log and the
+  // Contributions page are both correct after an import, not just going forward.
+  await cleanupForexTrades(userId)
+  await backfillContributionsFromTrades(userId)
   return { trades, dividends: divs, tickers: [...affected] }
+}
+
+/**
+ * Delete currency-conversion rows (e.g. SGD.HKD) and their auto-linked contributions from a
+ * user's log. Safe: isForexRow only matches CCC.CCC symbols / CASH category, never a real ETF
+ * ticker. Returns how many trades were removed.
+ */
+export async function cleanupForexTrades(userId: string): Promise<number> {
+  const all = await db.trade.findMany({ where: { userId }, select: { id: true, ticker: true } })
+  const forexIds = all.filter((t) => isForexRow(t.ticker)).map((t) => t.id)
+  if (forexIds.length === 0) return 0
+  for (const id of forexIds) {
+    await db.contributionRecord.deleteMany({ where: { userId, note: { contains: `[trade:${id}]` } } })
+  }
+  await db.trade.deleteMany({ where: { id: { in: forexIds } } })
+  const divs = await db.dividend.findMany({ where: { userId }, select: { id: true, ticker: true } })
+  const forexDivIds = divs.filter((d) => isForexRow(d.ticker)).map((d) => d.id)
+  if (forexDivIds.length) await db.dividend.deleteMany({ where: { id: { in: forexDivIds } } })
+  return forexIds.length
+}
+
+/**
+ * Ensure every governed BUY trade has a linked ContributionRecord. Idempotent: a contribution
+ * is keyed to its trade by a [trade:<id>] note, so this only creates the ones that are missing.
+ * Fixes the "contributions only show in the trade log" case for trades imported before the
+ * auto-link, and skips forex / non-core rows so buffer-currency noise never becomes a
+ * contribution. Returns the number of contributions created.
+ */
+export async function backfillContributionsFromTrades(userId: string): Promise<number> {
+  const CORE = new Set<string>(CORE_TICKERS)
+  const buys = await db.trade.findMany({ where: { userId, type: "BUY" }, select: { id: true, ticker: true, units: true, price: true, amount: true, date: true } })
+  const existing = await db.contributionRecord.findMany({ where: { userId, note: { contains: "[trade:" } }, select: { note: true } })
+  const linked = new Set(
+    existing.map((c) => c.note?.match(/\[trade:([^\]]+)\]/)?.[1]).filter(Boolean) as string[],
+  )
+
+  let created = 0
+  for (const t of buys) {
+    const sym = t.ticker.toUpperCase()
+    if (isForexRow(sym) || !CORE.has(sym)) continue // never turn forex / non-core into a contribution
+    if (linked.has(t.id)) continue
+    await db.contributionRecord.create({
+      data: {
+        userId,
+        amount: t.amount, // SGD settled amount — matches how the Contributions view renders (S$)
+        date: t.date,
+        note: `[trade:${t.id}] BUY ${t.units} ${sym} @ $${t.price}`,
+      },
+    })
+    created++
+  }
+  return created
 }
 
 export interface IbkrActivitySyncResult { ok: boolean; reason?: string; users: number; trades: number; dividends: number }

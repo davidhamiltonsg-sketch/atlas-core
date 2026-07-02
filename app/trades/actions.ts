@@ -49,7 +49,7 @@ export async function addTradeAction(formData: FormData) {
     await db.contributionRecord.create({
       data: {
         userId: session.userId,
-        amount: units * price, // USD (price is USD/unit)
+        amount, // SGD settled amount — the Contributions view renders in SGD (S$)
         date,
         note: `[trade:${trade.id}] BUY ${units} ${ticker} @ $${price}`,
       },

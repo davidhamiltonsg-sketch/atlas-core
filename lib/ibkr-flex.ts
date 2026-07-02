@@ -154,34 +154,46 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
   try {
     const sendUrl = `${FLEX_BASE}.SendRequest?v=3&t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&p=3`
 
-    // Step 1: single SendRequest — no retry (IBKR rate limits on repeated calls)
-    const sendRes = await fetch(sendUrl, { cache: "no-store" })
-    if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
+    // Step 1: SendRequest. IBKR's report engine is sometimes momentarily busy and returns
+    // error 1001 ("Statement could not be generated at this time. Please try again shortly.")
+    // with NO reference code — a transient condition, not the same as a rate-limit (1018/1019).
+    // Retry ONCE after a short wait for that transient case; never hammer it (rapid repeats
+    // extend IBKR's rate-limit window), so a second transient failure gives up with guidance.
+    let referenceCode: string | undefined
+    let getUrl = `${FLEX_BASE}.GetStatement`
+    let lastSendXml = ""
+    for (let sendAttempt = 0; sendAttempt < 2; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(6000)
+      const sendRes = await fetch(sendUrl, { cache: "no-store" })
+      if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
+      lastSendXml = await sendRes.text()
 
-    const sendXml = await sendRes.text()
+      // IBKR v3 returns ReferenceCode as an XML element: <ReferenceCode>12345</ReferenceCode>
+      // (older integrations may have used attribute form; we check both)
+      referenceCode =
+        lastSendXml.match(/referenceCode="([^"]+)"/)?.[1] ??
+        lastSendXml.match(/<ReferenceCode>([^<]+)<\/ReferenceCode>/i)?.[1]
+      getUrl =
+        lastSendXml.match(/url="([^"]+)"/)?.[1] ??
+        lastSendXml.match(/<Url>([^<]+)<\/Url>/i)?.[1] ??
+        `${FLEX_BASE}.GetStatement`
 
-    // IBKR v3 returns ReferenceCode as an XML element: <ReferenceCode>12345</ReferenceCode>
-    // (older integrations may have used attribute form; we check both)
-    const referenceCode =
-      sendXml.match(/referenceCode="([^"]+)"/)?.[1] ??
-      sendXml.match(/<ReferenceCode>([^<]+)<\/ReferenceCode>/i)?.[1]
-
-    // URL can also be element or attribute
-    const getUrl =
-      sendXml.match(/url="([^"]+)"/)?.[1] ??
-      sendXml.match(/<Url>([^<]+)<\/Url>/i)?.[1] ??
-      `${FLEX_BASE}.GetStatement`
+      if (referenceCode) break
+      // Only retry the transient "could not be generated / try again shortly" case.
+      if (!RETRYABLE.some(s => lastSendXml.includes(s))) break
+    }
 
     if (!referenceCode) {
+      const sendXml = lastSendXml
       const ibkrError = extractError(sendXml)
       // Log first 600 chars of raw response to help diagnose unexpected formats
-      console.error("[ibkr-flex] SendRequest no referenceCode. Raw XML (600):", sendXml.slice(0, 600))
-      // Rate limit / temporary unavailability — tell user to wait
+      console.error("[ibkr-flex] SendRequest no referenceCode after retry. Raw XML (600):", sendXml.slice(0, 600))
+      // Transient / rate limit — tell the user to wait rather than keep tapping
       if (RETRYABLE.some(s => sendXml.includes(s))) {
         const errorCode = sendXml.match(/<ErrorCode>([^<]+)<\/ErrorCode>/)?.[1] ?? ""
         return {
           success: false,
-          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError}. Wait 15–20 minutes before retrying — repeated requests extend the rate limit window.`,
+          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError} This is usually temporary on IBKR's side — wait a few minutes before trying again (tapping repeatedly extends the wait).`,
         }
       }
       return { success: false, error: `IBKR: ${ibkrError}` }

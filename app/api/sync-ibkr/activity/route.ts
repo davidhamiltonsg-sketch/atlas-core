@@ -3,7 +3,11 @@ import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { importIbkrActivityForUser } from "@/lib/holdings-sync"
+import { CORE_TICKERS } from "@/lib/approved-alternatives"
 import { db } from "@/lib/db"
+
+const CORE = new Set<string>(CORE_TICKERS)
+const inScope = (sym: string) => CORE.has(sym.trim().toUpperCase())
 
 export const maxDuration = 30
 
@@ -67,27 +71,29 @@ export async function POST() {
   })
   const holdingMap = new Map(holdings.map(h => [h.ticker.toUpperCase(), h.id]))
 
+  // Show ONLY the Atlas Core governed universe. Forex conversions (SGD.HKD …) and any other
+  // instrument held in the same IBKR account are excluded from both the preview and the write.
   const executions = result.executions
-    .filter(e => !isForexRow(e.symbol))   // forex/cash conversions are not trades
+    .filter(e => !isForexRow(e.symbol) && inScope(e.symbol))
     .map(e => ({
       ...e,
       alreadyImported: importedTradeIds.has(e.tradeID),
       holdingKnown: holdingMap.has(e.symbol.toUpperCase()),
     }))
 
-  const dividends = result.dividends.map(d => ({
-    ...d,
-    alreadyImported: importedDivIds.has(d.transactionID),
-    holdingId: holdingMap.get(d.symbol.toUpperCase()) ?? null,
-    holdingKnown: holdingMap.has(d.symbol.toUpperCase()),
-  }))
+  const dividends = result.dividends
+    .filter(d => inScope(d.symbol))
+    .map(d => ({
+      ...d,
+      alreadyImported: importedDivIds.has(d.transactionID),
+      holdingId: holdingMap.get(d.symbol.toUpperCase()) ?? null,
+      holdingKnown: holdingMap.has(d.symbol.toUpperCase()),
+    }))
 
   return NextResponse.json({
     executions,
     dividends,
     accountId: result.accountId,
-    // Count ALL not-yet-imported rows — new/out-of-scope tickers are imported too (they
-    // create the holding), so they must be counted, not silently excluded.
     newTrades: executions.filter(e => !e.alreadyImported).length,
     newDividends: dividends.filter(d => !d.alreadyImported).length,
   })
