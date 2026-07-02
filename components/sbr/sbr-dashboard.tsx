@@ -1,32 +1,37 @@
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
-import { TrendingUp, Target, Layers, ShieldCheck, FileText, ChevronRight } from "lucide-react"
+import { FileText, ChevronRight } from "lucide-react"
 import { getSbrMarketData } from "@/lib/sbr-market"
 import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { computeSbrNextMove, computeSbrDca, computeSbrHealth, sbrPhase, type SbrPosition } from "@/lib/sbr-engine"
-import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { HoldingsTable, type HoldingRow } from "@/components/dashboard/holdings-table"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
-import { HealthGauge } from "@/components/charts/health-gauge"
 import { getRecentExecutions } from "@/lib/execution-actions"
 import type { GovAlignment, Align } from "@/lib/governance-status"
+import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
+import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
+import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
+import { AllocationDonut } from "@/components/charts/allocation-donut"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
-// Phase thresholds as fractions of the 120k target — used for the progress bar.
+// Phase thresholds as fractions of the 120k target
 const PHASE_MARKS = [
-  { label: "I",   endFrac: 72000  / 120000 }, // 60%
-  { label: "II",  endFrac: 102000 / 120000 }, // 85%
-  { label: "III", endFrac: 114000 / 120000 }, // 95%
-  { label: "IV",  endFrac: 1.0               }, // 100%
+  { label: "I",   endFrac: 72000  / 120000 },
+  { label: "II",  endFrac: 102000 / 120000 },
+  { label: "III", endFrac: 114000 / 120000 },
+  { label: "IV",  endFrac: 1.0              },
 ]
+
+function dimStatus(score: number): SealDimension["status"] {
+  return score >= 90 ? "excellent" : score >= 75 ? "good" : score >= 55 ? "caution" : "critical"
+}
 
 async function getSbrData(userId: string) {
   const [holdings, market, recentExec] = await Promise.all([
     // Filter to SBR tickers only — prevents Atlas Core holdings from bleeding into SBR views
-    // if ensureCoreHoldings() was accidentally called for this user.
     db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
     getRecentExecutions(userId, 1),
@@ -49,7 +54,6 @@ async function getSbrData(userId: string) {
     }
   })
 
-  // Portfolio drawdown from month-end peak
   const timeline = buildPortfolioTimeline(holdings)
   let drawdownPct: number | undefined
   if (timeline.length >= 2) {
@@ -57,6 +61,10 @@ async function getSbrData(userId: string) {
     const current = timeline[timeline.length - 1].value
     if (peak > 0 && current < peak) drawdownPct = ((current - peak) / peak) * 100
   }
+  const historyPoints = timeline.map(t => ({
+    label: new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    value: t.value,
+  }))
   const valueChange = timeline.length >= 2 ? timeline[timeline.length - 1].value - timeline[timeline.length - 2].value : null
 
   const phase = sbrPhase(totalValue)
@@ -101,12 +109,31 @@ async function getSbrData(userId: string) {
     }
   })
 
+  // Compliance Board bands
+  const complianceBands: ComplianceBandPosition[] = positions.map((p) => ({
+    ticker: p.ticker, name: p.name, color: p.color, value: p.value,
+    actualPct: p.actualPct, targetPct: p.targetPct,
+    softLow: p.rangeLow, softHigh: p.rangeHigh,
+    hardHigh: p.hardCap ?? p.rangeHigh + 5,
+    status: statusOf(p),
+  }))
+
+  // Donut data
+  const donutData = holdingsSorted.map((h) => {
+    const value = h.snapshots[0]?.value ?? 0
+    const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
+    return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
+  })
+
   const latest = holdings.reduce<Date | null>((d, h) => { const s = h.snapshots[0]?.date; return s && (!d || s > d) ? s : d }, null)
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
   const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
 
-  return { totalValue, valueChange, phase, nextMove, dca, holdingsRows, govAlignment, health,
-    marketStale: market.stale, marketAsOf: market.asOf, lastDone: recentExec[0] ?? null }
+  return {
+    totalValue, valueChange, phase, nextMove, dca, holdingsRows, govAlignment, health,
+    marketStale: market.stale, marketAsOf: market.asOf, lastDone: recentExec[0] ?? null,
+    historyPoints, complianceBands, donutData,
+  }
 }
 
 export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; name: string; isAdmin: boolean }) {
@@ -116,8 +143,19 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
   const progress = Math.round(valueFrac * 100)
   const hasBalance = d.totalValue > 0
 
+  // Convert SBR health dimensions to SealDimension format (weighted points)
+  const sealDimensions: SealDimension[] = [
+    { label: "Governance",   score: Math.round(d.health.governance    * 0.25), maxScore: 25, status: dimStatus(d.health.governance) },
+    { label: "Risk",         score: Math.round(d.health.risk          * 0.20), maxScore: 20, status: dimStatus(d.health.risk) },
+    { label: "Allocation",   score: Math.round(d.health.allocation    * 0.15), maxScore: 15, status: dimStatus(d.health.allocation) },
+    { label: "Contribution", score: Math.round(d.health.contribution  * 0.15), maxScore: 15, status: dimStatus(d.health.contribution) },
+    { label: "Behaviour",    score: Math.round(d.health.behavioural   * 0.10), maxScore: 10, status: dimStatus(d.health.behavioural) },
+    { label: "Liquidity",    score: Math.round(d.health.liquidity     * 0.10), maxScore: 10, status: dimStatus(d.health.liquidity) },
+    { label: "Docs",         score: Math.round(d.health.documentation * 0.05), maxScore: 5,  status: dimStatus(d.health.documentation) },
+  ]
+
   return (
-    <Shell title="Silicon Brick Road" subtitle="Investment Constitution v2.1 · toward an HDB deposit" userName={name} isAdmin={isAdmin}>
+    <Shell title="Cockpit" subtitle="Silicon Brick Road — Constitution v2.1 · toward an HDB deposit" userName={name} isAdmin={isAdmin}>
 
       {/* Constitution banner */}
       <a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer"
@@ -130,7 +168,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         <span className="text-xs font-semibold text-teal-400 group-hover:text-teal-300 shrink-0">Open ↗</span>
       </a>
 
-      {/* Progress bar to SGD 120k target — most prominent KPI */}
+      {/* Progress bar — the primary SBR KPI */}
       <div className="rounded-xl border border-border bg-card p-5 mb-5">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -145,29 +183,21 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             <p className="text-xs text-muted-foreground">{d.phase.label.split("—")[0].trim()}</p>
           </div>
         </div>
-
-        {/* Multi-phase progress bar */}
         <div className="relative h-4 rounded-full bg-muted overflow-hidden">
-          {/* Phase segment backgrounds */}
           {PHASE_MARKS.map((pm, i) => {
             const start = i === 0 ? 0 : PHASE_MARKS[i - 1].endFrac * 100
             const width = pm.endFrac * 100 - start
             const isCurrent = pm.label === d.phase.key
             return (
-              <div key={pm.label}
-                className={`absolute top-0 h-full border-r border-background/40 ${isCurrent ? "bg-teal-500/20" : "bg-transparent"}`}
-                style={{ left: `${start}%`, width: `${width}%` }}
-              />
+              <div key={pm.label} className={`absolute top-0 h-full border-r border-background/40 ${isCurrent ? "bg-teal-500/20" : "bg-transparent"}`}
+                style={{ left: `${start}%`, width: `${width}%` }} />
             )
           })}
-          {/* Fill */}
           {hasBalance && (
             <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-700"
               style={{ width: `${Math.min(100, valueFrac * 100)}%` }} />
           )}
         </div>
-
-        {/* Phase labels */}
         <div className="flex mt-1.5">
           {PHASE_MARKS.map((pm, i) => {
             const start = i === 0 ? 0 : PHASE_MARKS[i - 1].endFrac * 100
@@ -175,19 +205,13 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             const isCurrent = pm.label === d.phase.key
             return (
               <div key={pm.label} className="text-center" style={{ width: `${width}%` }}>
-                <span className={`text-[10px] font-bold ${isCurrent ? "text-teal-400" : "text-muted-foreground/50"}`}>
-                  {pm.label}
-                </span>
+                <span className={`text-[10px] font-bold ${isCurrent ? "text-teal-400" : "text-muted-foreground/50"}`}>{pm.label}</span>
               </div>
             )
           })}
         </div>
         <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-0.5 -mx-0.5">
-          <span>SGD 0</span>
-          <span>72k</span>
-          <span>102k</span>
-          <span>114k</span>
-          <span>120k</span>
+          <span>SGD 0</span><span>72k</span><span>102k</span><span>114k</span><span>120k</span>
         </div>
       </div>
 
@@ -202,21 +226,42 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-5 min-w-0">
 
-          {/* Next Best Move */}
-          {hasBalance && <NextBestMove move={d.nextMove} dataAsOf={d.marketAsOf} stale={d.marketStale} lastDone={d.lastDone} />}
+          {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
+          {/* 1. Governance Seal — SBR constitution health */}
+          <GovernanceSeal
+            overall={d.health.overall}
+            overallLabel={d.health.overallLabel}
+            dimensions={sealDimensions}
+            constitutionLabel="SBR Constitution v2.1 · Governance Score"
+            narrative={
+              hasBalance
+                ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " governance breach" + (d.govAlignment.breaches > 1 ? "es" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " item" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "All rules satisfied." : ""}`
+                : "No portfolio balance yet. Enter your holdings to begin tracking."
+            }
+          />
 
-          {/* What To Do This Month — DCA FIRST (most actionable after the move card) */}
+          {/* 2. This Month's Action — the SBR decision */}
           {hasBalance && (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold">What To Do This Month</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{d.dca.headline}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">SBR Decision Engine · This Month</p>
+                  <p className="text-sm font-semibold mt-0.5">{d.nextMove.action}</p>
                 </div>
-                <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">SGD {SBR.monthlyContribution.toLocaleString()}/mo</span>
+                <span className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                  d.nextMove.severity === "critical" || d.nextMove.severity === "high" ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400" :
+                  d.nextMove.severity === "medium" ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                  "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400"
+                }`}>
+                  {d.nextMove.severity === "none" ? "STEADY" : d.nextMove.severity.toUpperCase()}
+                </span>
               </div>
-              {d.dca.overlayNote && <p className="px-5 pt-3 text-[11px] text-amber-500 leading-relaxed">{d.dca.overlayNote}</p>}
-              <div className="divide-y divide-border">
+
+              {/* DCA allocation rows */}
+              {d.dca.overlayNote && (
+                <p className="px-5 pt-3 text-[11px] text-amber-500 leading-relaxed">{d.dca.overlayNote}</p>
+              )}
+              <div className="divide-y divide-border/60">
                 {d.dca.allocations.map((a) => (
                   <div key={a.ticker} className="px-5 py-3 flex items-center gap-3">
                     <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: a.color }} />
@@ -228,41 +273,58 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                   </div>
                 ))}
               </div>
+
+              {/* Instruction block */}
+              <div className="m-4 rounded-lg border border-border bg-muted/30 p-4">
+                <p className="text-xs leading-relaxed mb-1.5">{d.nextMove.what}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{d.nextMove.why}</p>
+                {d.nextMove.when && (
+                  <p className="text-[11px] text-muted-foreground/70 mt-2 pt-2 border-t border-border">{d.nextMove.when}</p>
+                )}
+              </div>
             </div>
           )}
 
-          {/* KPI strip */}
+          {/* 3. Compliance Board — position bands */}
+          {hasBalance && (
+            <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />
+          )}
+
+          {/* ── PERFORMANCE KPIs ─────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <a href="/ytd" className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:bg-accent/40 transition-colors">
-              <div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">Portfolio Value</span><TrendingUp className="h-3.5 w-3.5 text-muted-foreground" /></div>
-              <p className="text-2xl font-black tabular-nums">{formatCurrency(d.totalValue, "SGD")}</p>
+              <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
+              <p className="text-xl font-black tabular-nums">{formatCurrency(d.totalValue, "SGD")}</p>
               {d.valueChange !== null
-                ? <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>{d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")} since last update</p>
+                ? <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>{d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}</p>
                 : <p className="text-[11px] text-muted-foreground">SGD · base currency</p>}
             </a>
             <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2">
-              <div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">Current phase</span><Layers className="h-3.5 w-3.5 text-muted-foreground" /></div>
-              <p className="text-2xl font-black tabular-nums text-teal-400">{d.phase.key}</p>
+              <span className="text-xs font-medium text-muted-foreground">Health Score</span>
+              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}>{d.health.overall}</p>
+              <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Phase</span>
+              <p className="text-xl font-black tabular-nums text-teal-400">{d.phase.key}</p>
               <p className="text-[11px] text-muted-foreground">{d.phase.range}</p>
             </div>
             <a href="/governance" className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:bg-accent/40 transition-colors">
-              <div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">Governance</span><ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" /></div>
-              <p className={`text-2xl font-black tabular-nums ${d.govAlignment.overall === "breach" ? "text-red-500" : d.govAlignment.overall === "watch" ? "text-amber-500" : "text-green-500"}`}>
+              <span className="text-xs font-medium text-muted-foreground">Governance</span>
+              <p className={`text-xl font-black tabular-nums ${d.govAlignment.overall === "breach" ? "text-red-500" : d.govAlignment.overall === "watch" ? "text-amber-500" : "text-green-500"}`}>
                 {d.govAlignment.breaches + d.govAlignment.watches === 0 ? "OK" : `${d.govAlignment.breaches + d.govAlignment.watches}`}
               </p>
               <p className="text-[11px] text-muted-foreground">{d.govAlignment.breaches} breach · {d.govAlignment.watches} watch</p>
             </a>
-            <a href="/contributions" className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:bg-accent/40 transition-colors">
-              <div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">Health score</span><Target className="h-3.5 w-3.5 text-muted-foreground" /></div>
-              <p className={`text-2xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}>{d.health.overall}</p>
-              <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
-            </a>
           </div>
 
-          {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
+          {/* ── WHAT IS HELD ─────────────────────────────────────────── */}
           {hasBalance && <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} />}
 
-          {/* Current phase — simplified: only the active phase, link to full framework */}
+          {/* ── GOVERNANCE RULES ─────────────────────────────────────── */}
+          {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
+
+          {/* Phase detail */}
           <div className="rounded-xl border border-teal-500/30 bg-teal-500/[0.04] p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
@@ -279,31 +341,44 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </div>
           </div>
 
-          <a href="/governance" className="block rounded-xl border border-border bg-card p-4 hover:bg-accent/40 transition-colors">
-            <p className="text-sm font-semibold">Full Constitution & Decision Engine →</p>
-            <p className="text-xs text-muted-foreground mt-0.5">All the rules in one place — the four funds, what to do each month, tech stock limits, what you actually own inside the funds, and the health check scorecard.</p>
-          </a>
         </div>
 
         {/* Right sidebar */}
         <div className="space-y-5">
+          {/* Allocation donut */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Governance Score</h3>
-            <HealthGauge score={d.health.overall} label={d.health.overallLabel} />
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Allocation</h3>
+            <p className="text-[11px] text-muted-foreground mb-3">Outer = actual · Inner = target</p>
+            <AllocationDonut data={d.donutData} totalValue={d.totalValue} />
           </div>
+
+          {/* Value history */}
+          {d.historyPoints.length >= 2 && (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value History</h3>
+                {d.valueChange !== null && (
+                  <span className={`text-[11px] font-bold tabular-nums ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {d.valueChange >= 0 ? "+" : ""}{formatCurrency(d.valueChange, "SGD")}
+                  </span>
+                )}
+              </div>
+              <PortfolioHistoryChart data={d.historyPoints} />
+            </div>
+          )}
 
           {/* Health score breakdown */}
           {hasBalance && (
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Score breakdown</h3>
               {[
-                { label: "Governance",     value: d.health.governance,    weight: "25%" },
-                { label: "Risk",           value: d.health.risk,          weight: "20%" },
-                { label: "Allocation",     value: d.health.allocation,    weight: "15%" },
-                { label: "Contribution",   value: d.health.contribution,  weight: "15%" },
-                { label: "Behaviour",      value: d.health.behavioural,   weight: "10%" },
-                { label: "Liquidity",      value: d.health.liquidity,     weight: "10%" },
-                { label: "Documentation",  value: d.health.documentation, weight: "5%"  },
+                { label: "Governance",    value: d.health.governance,    weight: "25%" },
+                { label: "Risk",          value: d.health.risk,          weight: "20%" },
+                { label: "Allocation",    value: d.health.allocation,    weight: "15%" },
+                { label: "Contribution",  value: d.health.contribution,  weight: "15%" },
+                { label: "Behaviour",     value: d.health.behavioural,   weight: "10%" },
+                { label: "Liquidity",     value: d.health.liquidity,     weight: "10%" },
+                { label: "Documentation", value: d.health.documentation, weight: "5%"  },
               ].map(({ label, value, weight }) => (
                 <div key={label}>
                   <div className="flex items-center justify-between mb-1">

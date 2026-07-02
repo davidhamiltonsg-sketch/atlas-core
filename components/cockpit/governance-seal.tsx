@@ -1,32 +1,40 @@
-import type { PortfolioHealth } from "@/lib/health"
 import { cn } from "@/lib/utils"
 
-interface Props {
-  health: PortfolioHealth
-  constitutionLabel?: string  // e.g. "Art. XXII · Good Standing"
-  narrative?: string          // one or two sentence explanation of the score
+export interface SealDimension {
+  label: string
+  score: number
+  maxScore: number   // weight / max contribution (e.g. 40 for Structural, 25 for Behavioural…)
+  status: "excellent" | "good" | "caution" | "critical"
+  citation?: string
 }
 
-const dimColor = (status: PortfolioHealth["structural"]["status"]) => ({
+interface Props {
+  overall: number
+  overallLabel: string
+  dimensions: SealDimension[]
+  constitutionLabel?: string
+  narrative?: string
+}
+
+const dimBadgeColor = (status: SealDimension["status"]) => ({
   excellent: "text-green-600 dark:text-green-400 border-green-500/30",
   good:      "text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
   caution:   "text-amber-600 dark:text-amber-400 border-amber-500/30",
   critical:  "text-red-600 dark:text-red-400 border-red-500/30",
 }[status])
 
-/** Circular governance score ring with dimension breakdown. */
-export function GovernanceSeal({ health, constitutionLabel, narrative }: Props) {
-  // SVG ring: r=45 → circumference ≈ 283. dashoffset = 283 × (1 - score/100)
+/** Circular governance score ring with dimension breakdown. Works for Atlas Core and SBR. */
+export function GovernanceSeal({ overall, overallLabel, dimensions, constitutionLabel, narrative }: Props) {
   const r = 45
   const circ = 2 * Math.PI * r
-  const offset = circ * (1 - health.overall / 100)
+  const offset = circ * (1 - overall / 100)
   const scoreColor =
-    health.overall >= 80 ? "text-green-600 dark:text-green-400" :
-    health.overall >= 65 ? "text-amber-600 dark:text-amber-400" :
+    overall >= 80 ? "text-green-600 dark:text-green-400" :
+    overall >= 65 ? "text-amber-600 dark:text-amber-400" :
     "text-red-600 dark:text-red-400"
   const ringColor =
-    health.overall >= 80 ? "stroke-green-500" :
-    health.overall >= 65 ? "stroke-amber-500" :
+    overall >= 80 ? "stroke-green-500" :
+    overall >= 65 ? "stroke-amber-500" :
     "stroke-red-500"
 
   return (
@@ -42,7 +50,7 @@ export function GovernanceSeal({ health, constitutionLabel, narrative }: Props) 
         </svg>
         <div className="absolute inset-0 grid place-items-center">
           <div className="text-center">
-            <span className={`text-2xl font-black tabular-nums ${scoreColor}`}>{health.overall}</span>
+            <span className={`text-2xl font-black tabular-nums ${scoreColor}`}>{overall}</span>
             <span className="block text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
           </div>
         </div>
@@ -53,22 +61,18 @@ export function GovernanceSeal({ health, constitutionLabel, narrative }: Props) 
         {constitutionLabel && (
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">{constitutionLabel}</p>
         )}
-        <h2 className="text-base font-bold mb-1">{health.overallLabel}</h2>
+        <h2 className="text-base font-bold mb-1">{overallLabel}</h2>
         {narrative && (
           <p className="text-xs text-muted-foreground leading-relaxed mb-3">{narrative}</p>
         )}
         <div className="flex flex-wrap gap-2">
-          {[health.structural, health.behavioural, health.concentration, health.execution].map((dim) => (
+          {dimensions.map((dim) => (
             <span
               key={dim.label}
-              className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md border", dimColor(dim.status))}
+              className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md border", dimBadgeColor(dim.status))}
               title={dim.citation}
             >
-              {dim.label.toUpperCase()} {dim.score}/{
-                dim.label === "Structural" ? 40 :
-                dim.label === "Behavioural" ? 25 :
-                dim.label === "Concentration" ? 25 : 10
-              }
+              {dim.label.toUpperCase()} {dim.score}/{dim.maxScore}
               {dim.citation && <span className="opacity-60 ml-1">· {dim.citation}</span>}
             </span>
           ))}
