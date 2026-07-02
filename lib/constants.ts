@@ -40,7 +40,7 @@ export const TICKER_TARGETS: Record<string, number> = {
 // amberHigh?: if set, the amber/soft zone is (amberHigh, high]; healthy zone is (hardLow, amberHigh].
 export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amberHigh?: number }> = {
   VT:   { low: 42, high: 60 },                    // Art. VII: hard cap 60%
-  QQQM: { low: 15, high: 31 },
+  QQQM: { low: 15, high: 30 },                    // Art. VII: hard cap 30% (matches the engines + DB seed)
   SMH:  { low: 5,  high: 12, amberHigh: 11 },     // Art. VII: amber zone 11–12%
   VWO:  { low: 3,  high: 13 },
   // Bitcoin sleeve (BTC + IBIT) — no lower hard trigger; hard cap 8% applies to the
@@ -265,7 +265,7 @@ export const SGOV_YIELD = {
   lastVerified:  '2026-06',
 } as const
 
-// ─── OPERATING ASSUMPTIONS & SAFEGUARDS (analyst review, v6.7) ────────────────
+// ─── OPERATING ASSUMPTIONS & SAFEGUARDS ──────────────────────────────────────
 // Hard, documented parameters for the blind spots a 20-year plan must pin down:
 // estate-tax trigger, emergency reserve, base/retirement currency, platform risk,
 // override policy, and the rule-conflict hierarchy.
@@ -292,9 +292,8 @@ export const OPERATING_ASSUMPTIONS = {
 export const GOVERNANCE_VERSION = '6.7' as const  // legacy v6.x version string (retained for backward compat)
 export const GOVERNANCE_UPDATED = '2026-07' as const
 
-// ─── LEGACY (v6.0) — retained; no external importer, kept for reference ───────
-// v6.1 Command Centre — market-aware governance rules from pattern analysis
-// These complement Section 3 drift bands with market-condition-aware overlays
+// ─── COMMAND CENTRE — market-aware governance overlays ───────────────────────
+// Market-condition-aware rules that complement the Section 3 drift bands with overlays
 export const COMMAND_CENTRE_RULES = {
   minHoldDays: 90,         // 3-month hold before any sale
   smhConcentrationCap: 12, // SMH hard cap at 12% weight (§4 override)

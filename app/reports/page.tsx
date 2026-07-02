@@ -14,7 +14,7 @@ import { ExportPdfButton } from "@/components/reports/export-pdf-button"
 import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
 import {
   ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
-  LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS,
+  LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS, ETF_WEIGHTS_AS_OF,
 } from "@/lib/look-through"
 import { HARD_THRESHOLDS, applyBitcoinSleeve } from "@/lib/constants"
 import { constitutionIdForEmail } from "@/lib/constitutions"
@@ -32,9 +32,10 @@ const SECTOR_CAPS = Object.fromEntries(
   Object.entries(LOOKTHROUGH_SECTOR_CAPS).map(([k, v]) => [k, { label: v.label, elevated: v.soft, excessive: v.hard }])
 ) as Record<"semiconductor" | "digital" | "us" | "ai", { label: string; elevated: number; excessive: number }>
 
-// Date the ETF look-through weights (COMPANY_WEIGHTS, SECTOR_WEIGHTS, GEO_WEIGHTS) were last reviewed.
-// Update this whenever you re-check the ETF composition data against the fund fact sheets.
-const LOOK_THROUGH_LAST_REVIEWED = new Date("2026-01-01")
+// Date the hardcoded ETF look-through weights were last reviewed — sourced from the single
+// as-of constant in lib/look-through.ts so the fallback weights and their staleness signal
+// can't drift apart. (Live DB look-through records, when present, override this per-record.)
+const LOOK_THROUGH_LAST_REVIEWED = new Date(ETF_WEIGHTS_AS_OF)
 const LOOK_THROUGH_STALE_DAYS = 90
 
 // Pairwise overlap data (approximate % of ETF-A that is shared with ETF-B, weighted)

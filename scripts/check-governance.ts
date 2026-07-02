@@ -14,6 +14,7 @@ import {
 } from "../lib/constants"
 import { LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS } from "../lib/look-through"
 import { GOVERNANCE_RULES } from "../prisma/governance-data"
+import { CORE_DEFAULTS } from "../lib/core-holdings"
 
 let failures = 0
 function eq(label: string, actual: unknown, expected: unknown) {
@@ -36,7 +37,7 @@ eq("target BTC",  TICKER_TARGETS.BTC,  7)
 
 // ── Art. VII hard-drift triggers (v1.1) ──────────────────────────────────────
 eq("hard VT",   HARD_THRESHOLDS.VT,   { low: 42, high: 60 })                    // Art. VII: cap 60%
-eq("hard QQQM", HARD_THRESHOLDS.QQQM, { low: 15, high: 31 })
+eq("hard QQQM", HARD_THRESHOLDS.QQQM, { low: 15, high: 30 })
 eq("hard SMH",  HARD_THRESHOLDS.SMH,  { low: 5,  high: 12, amberHigh: 11 })    // Art. VII: amber zone 11–12%
 eq("hard VWO",  HARD_THRESHOLDS.VWO,  { low: 3,  high: 13 })
 eq("hard BTC",  HARD_THRESHOLDS.BTC,  { high: 8 })
@@ -104,6 +105,18 @@ for (const ticker of ["VT", "QQQM", "SMH", "VWO", "BTC"]) {
   if (!new RegExp(`\\b${band.hardHigh}%`).test(rule.description)) {
     console.error(`  ✗ ${ticker} rule description omits hard high ${band.hardHigh}%`); failures++
   }
+}
+
+// ── DB seed ↔ constitution parity ────────────────────────────────────────────
+// CORE_DEFAULTS is what actually populates the live-DB hard caps (via ensureCoreHoldings /
+// syncHoldingFromTrades), and next-best-move trims off that DB value. If it drifts from
+// HARD_THRESHOLDS / TICKER_TARGETS, the engines would enforce a cap the constitution never
+// set — the one seed that was previously outside the contract-test net.
+for (const t of ["VT", "QQQM", "SMH", "VWO", "BTC", "IBIT"] as const) {
+  eq(`seed hardCap ${t}`, CORE_DEFAULTS[t]?.hardCapPct, HARD_THRESHOLDS[t]?.high)
+}
+for (const t of ["VT", "QQQM", "SMH", "VWO", "BTC"] as const) {
+  eq(`seed target ${t}`, CORE_DEFAULTS[t]?.targetPct, TICKER_TARGETS[t])
 }
 
 if (failures === 0) {

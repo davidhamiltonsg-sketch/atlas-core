@@ -8,6 +8,20 @@
 // Effective exposure for X = Σ over holdings of  (holding's % of NAV) × (ETF's % in X)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// As-of date for the hand-entered ETF weight tables below. These are fact-sheet
+// approximations that drift as funds rebalance; they feed the §4 look-through caps (the
+// "highest law"), so a staleness signal matters. Update this date whenever the weights are
+// refreshed from the latest fact sheets. Consumed by lookThroughWeightsAgeDays() below.
+export const ETF_WEIGHTS_AS_OF = "2026-06-30"
+
+/** Age (days) of the ETF weight tables relative to `now`, and whether they are stale
+ *  (older than `staleAfterDays`, default one quarter). Lets the UI flag §4 exposure as
+ *  "based on weights last refreshed N days ago" instead of implying live precision. */
+export function lookThroughWeightsAge(now: Date, staleAfterDays = 92): { ageDays: number; stale: boolean } {
+  const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(ETF_WEIGHTS_AS_OF).getTime()) / 86400000))
+  return { ageDays, stale: ageDays > staleAfterDays }
+}
+
 // Approximate % of each ETF made up by each mega-cap (fund fact-sheet level).
 export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
   VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
@@ -123,6 +137,18 @@ export function worstLookThroughBreach(lt: LookThroughResult): ExposureLine | nu
     .filter((l) => l.status === "breach")
     .sort((a, b) => (b.pct - b.hard) - (a.pct - a.hard))
   return breaches[0] ?? null
+}
+
+/** The single worst look-through APPROACH (over soft, under hard) — for the ladder's Step-4
+ *  "review, don't sell" warning. Returns null when something is already in hard breach (that
+ *  is a higher-priority Step-1 trim, not a soft warning). */
+export function worstLookThroughApproach(lt: LookThroughResult): ExposureLine | null {
+  const all = [...lt.companies, ...lt.sectors]
+  if (all.some((l) => l.status === "breach")) return null
+  const watching = all
+    .filter((l) => l.status === "watch")
+    .sort((a, b) => (b.pct - b.soft) - (a.pct - a.soft))
+  return watching[0] ?? null
 }
 
 /** Which holding contributes most to a given company/sector — the one to trim. */

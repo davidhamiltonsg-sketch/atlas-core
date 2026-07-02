@@ -120,7 +120,7 @@ export const GOVERNANCE_RULES: SeedRule[] = [
   // QQQM Governance · 4
   {
     title: "QQQM — Healthy Range 18–28%",
-    description: "QQQM target 23%. Healthy range 18–28%. Soft drift below 18% or above 28%. Hard drift below 15% or above 31%.",
+    description: "QQQM target 23%. Healthy range 18–28%. Soft drift below 18% or above 28%. Hard cap 30% (trim on breach); hard drift below 15%.",
     category: "QQQM Governance",
     active: true,
   },

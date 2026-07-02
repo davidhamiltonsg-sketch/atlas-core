@@ -14,7 +14,7 @@ import { computeLadder } from "@/lib/ladder"
 import { getBtcPhaseCard, getSmhBuyZone, getCombinedTechCeiling, getSgovQueueState } from "@/lib/cycle"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
 import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
-import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
+import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 import { isUsSited, isInScope } from "@/lib/approved-alternatives"
@@ -307,10 +307,18 @@ async function getDashboardData(userId: string) {
     if (peak > 0 && current < peak) portfolioDrawdownPct = ((current - peak) / peak) * 100
   }
 
+  // A look-through exposure over its soft cap but under its hard cap → Step-4 "review, don't
+  // sell" warning (non-terminal). Kept distinct from the hard breach, which is a Step-1 trim.
+  const ltApproach = worstLookThroughApproach(lookThrough)
+  const lookThroughSoftWarning = ltApproach
+    ? { label: ltApproach.label, pct: ltApproach.pct, soft: ltApproach.soft }
+    : undefined
+
   // Art. XIII: Decision Ladder
   const ladder = computeLadder(moveInputs, totalValue, {
     market: marketSnapshot.positions,
     lookThroughHardBreach: lookThroughBreach,
+    lookThroughSoftWarning,
     portfolioDrawdownPct,
   })
 

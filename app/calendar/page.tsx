@@ -44,14 +44,22 @@ async function getRulesNowData(userId: string) {
 
   const timeline = buildPortfolioTimeline(holdings.map((h) => ({ id: h.id, snapshots: h.snapshots.map((s) => ({ date: s.date, value: s.value })) })))
   let portfolioDrawdownPct: number | undefined
+  let drawdownDays: number | undefined
   if (timeline.length >= 2) {
-    const peak = Math.max(...timeline.map((t) => t.value))
-    const current = timeline[timeline.length - 1].value
-    if (peak > 0 && current < peak) portfolioDrawdownPct = ((current - peak) / peak) * 100
+    let peakIdx = 0
+    for (let i = 1; i < timeline.length; i++) if (timeline[i].value > timeline[peakIdx].value) peakIdx = i
+    const peak = timeline[peakIdx].value
+    const last = timeline[timeline.length - 1]
+    if (peak > 0 && last.value < peak) {
+      portfolioDrawdownPct = ((last.value - peak) / peak) * 100
+      // Days since the peak — lets the engine distinguish a sharp policy shock (A1, ≤21 days)
+      // from a slow grind (≥30 days); both branches gate on this and were previously inert.
+      drawdownDays = Math.max(0, Math.round((new Date(last.date).getTime() - new Date(timeline[peakIdx].date).getTime()) / 86400000))
+    }
   }
 
   const [market, calendar] = await Promise.all([getLiveMarketPositions(), getScheduledEvents(90)])
-  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: market.positions, lookThroughBreach, portfolioDrawdownPct })
+  const nextBestMove = computeNextBestMove(moveInputs, totalValue, { market: market.positions, lookThroughBreach, portfolioDrawdownPct, drawdownDays })
   return { nextBestMove, market, calendar, hasBalance: totalValue > 0 }
 }
 

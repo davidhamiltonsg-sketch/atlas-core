@@ -136,5 +136,19 @@ console.log("Atlas Core — engine scenario checks\n")
   }
 }
 
+// 11) Cross-engine agreement at a deep crash: with the buffer built, a ≤−25% drawdown must
+//     make BOTH engines say "keep buying" (A2), never contradictory advice.
+{
+  const positions = [
+    pos("VT", 52, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
+    pos("VWO", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+  ]
+  const nbm = computeNextBestMove(positions, 1000, { market: marketAll(), portfolioDrawdownPct: -30 })
+  const lad = computeLadder(positions, 1000, { market: {}, portfolioDrawdownPct: -30 })
+  expect("crash: both engines say keep buying",
+    /keep buying|crash protocol/i.test(nbm.action) && /keep buying|crash protocol/i.test(lad.headline),
+    `nbm="${nbm.action}" ladder="${lad.headline}"`)
+}
+
 if (failures === 0) { console.log("\n  ✓ All engine scenarios behaved as specified.\n"); process.exit(0) }
 else { console.error(`\n${failures} engine scenario(s) failed.\n`); process.exit(1) }

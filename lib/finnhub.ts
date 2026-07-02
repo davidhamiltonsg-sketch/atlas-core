@@ -1,5 +1,5 @@
 /**
- * Atlas Core — Finnhub server-side data layer (v6.1)
+ * Atlas Core — Finnhub server-side data layer
  *
  * Replaces hardcoded price / 52-week / yield figures with live values for the
  * recommendation logic, the buffer indicator, and the scheduled-events calendar.
