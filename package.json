@@ -13,7 +13,8 @@
     "check:engine": "npx tsx scripts/check-engine.ts",
     "check:constitution": "npx tsx scripts/check-constitution.ts",
     "check:ladder": "npx tsx scripts/check-ladder.ts",
-    "check": "npm run check:governance && npm run check:engine && npm run check:constitution && npm run check:ladder"
+    "check:sbr": "npx tsx scripts/check-sbr.ts",
+    "check": "npm run check:governance && npm run check:engine && npm run check:constitution && npm run check:ladder && npm run check:sbr"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
