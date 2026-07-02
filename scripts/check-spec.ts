@@ -10,10 +10,10 @@
  * Run:  npx tsx scripts/check-spec.ts   (or: npm run check:spec)
  */
 import { ATLAS_SPEC, SBR_SPEC } from "../lib/portfolio-spec"
-import { TICKER_TARGETS, HARD_THRESHOLDS, COMBINED_TECH_RULE } from "../lib/constants"
+import { TICKER_TARGETS, HARD_THRESHOLDS, COMBINED_TECH_RULE, DCA_PARAMS } from "../lib/constants"
 import { LOOKTHROUGH_SECTOR_CAPS } from "../lib/look-through"
 import { CORE_DEFAULTS } from "../lib/core-holdings"
-import { SILICON_BRICK_ROAD as SBR } from "../lib/constitutions"
+import { SILICON_BRICK_ROAD as SBR, ATLAS_CORE } from "../lib/constitutions"
 
 let failures = 0
 let passes = 0
@@ -41,6 +41,11 @@ for (const f of ATLAS_SPEC.funds) {
 }
 eq("combined tech soft", COMBINED_TECH_RULE.softCeiling, ATLAS_SPEC.combinedTech.soft)
 eq("combined tech hard", COMBINED_TECH_RULE.hardCeiling, ATLAS_SPEC.combinedTech.hard)
+eq("Atlas currency (DCA)", DCA_PARAMS.currency, ATLAS_SPEC.currency)
+eq("Atlas currency (registry)", ATLAS_CORE.currency, ATLAS_SPEC.currency)
+eq("Atlas monthly", DCA_PARAMS.monthlyContribution, ATLAS_SPEC.monthlyContribution)
+eq("Atlas January boost", DCA_PARAMS.annualJanuaryBoost, ATLAS_SPEC.annualJanuaryBoost)
+eq("Atlas horizon", DCA_PARAMS.horizonYear, ATLAS_SPEC.horizonYear)
 for (const [k, v] of Object.entries(ATLAS_SPEC.lookThroughSectors)) {
   eq(`look-through ${k}`, [LOOKTHROUGH_SECTOR_CAPS[k]?.soft, LOOKTHROUGH_SECTOR_CAPS[k]?.hard], [v.soft, v.hard])
 }

@@ -82,6 +82,12 @@ export const SBR_SPEC = {
   ],
 } as const
 
+/** The reporting currency for a constitution — the single source for "USD base vs SGD".
+ *  Toward the money-boundary pillar: callers should use this instead of `isSbr ? "SGD" : "USD"`. */
+export function reportingCurrencyForConstitution(id: string): "USD" | "SGD" {
+  return id === SBR_SPEC.id ? SBR_SPEC.currency : ATLAS_SPEC.currency
+}
+
 /** Look up a fund spec by ticker. */
 export function atlasFund(ticker: string): AtlasFundSpec | undefined {
   return ATLAS_SPEC.funds.find((f) => f.ticker === ticker)
