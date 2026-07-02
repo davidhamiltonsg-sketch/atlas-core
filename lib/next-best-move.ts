@@ -1,12 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Atlas Core — Next Best Move Engine (v6.0)
+// Atlas Core — Next Best Move Engine
 //
 // One engine. One answer. This computes the single highest-priority action across
 // ALL signals — drift, market opportunity, market risk, and structural gaps — and
 // returns it in plain English with a clear "what" and "why".
 //
-// It also produces a MARKET-AWARE DCA plan: the monthly contribution is no longer
-// routed purely on drift. When a market opportunity (a confirmed dip in a quality
+// It also produces a MARKET-AWARE DCA plan: the monthly contribution is not routed
+// purely on drift. When a market opportunity (a confirmed dip in a quality
 // asset) or a market risk (overbought / shock window) is live, the plan adapts.
 //
 // PRECEDENCE (highest wins — this is the law of the system):
@@ -28,7 +28,7 @@
 // conservatively (no positions near their 52w high unless live data confirms).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getBtcModifier, COMBINED_TECH_RULE, HARD_THRESHOLDS, type BtcCyclePhase } from "@/lib/constants"
+import { getBtcModifier, COMBINED_TECH_RULE, HARD_THRESHOLDS, CRASH_DRAWDOWN_PCT, type BtcCyclePhase } from "@/lib/constants"
 
 export type Severity = "critical" | "high" | "medium" | "low" | "none"
 
@@ -45,7 +45,7 @@ export interface PositionInput {
 }
 
 
-// ─── V6.0 RULE CONSTANTS ─────────────────────────────────────────────────────
+// ─── RULE CONSTANTS ──────────────────────────────────────────────────────────
 
 export const RULES = {
   minHoldDays: 90,
@@ -441,6 +441,26 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       what: `Start an SGOV (short-term Treasury) position and grow it toward ${RULES.shockBufferTargetPct}% of your portfolio using your new monthly contributions over the next few months. Do not sell anything to fund it.`,
       why: `You have ${bufferPct.toFixed(0)}% in defensive assets — below the ${RULES.shockBufferMinPct}% floor. You need dry powder for market dislocations. SGOV provides short-term Treasury yield with zero equity correlation. Build it from contributions — never by liquidating a holding.`,
       when: "Start this month; add a little each month until it reaches the 8–10% floor.",
+      color: "#10b981",
+    }
+  }
+
+  // ── PRECEDENCE 2.3: Deep crash (≥25% drawdown) → A2 crash protocol ────────────
+  // Art. XIV / Art. XXI A2: a sustained decline at or past the crash threshold. The
+  // pre-committed response is to keep scheduled contributions running and NOT redesign —
+  // the SAME instruction the Art. XIII ladder gives at its crash step, so the dashboard
+  // (ladder) and the calendar (this engine) never disagree at deep drawdowns. Fires only
+  // once the buffer is built (handled above), matching the ladder's step-5-before-step-6 order.
+  if (hasBalance
+      && opts.portfolioDrawdownPct !== undefined
+      && opts.portfolioDrawdownPct <= CRASH_DRAWDOWN_PCT) {
+    const pct = Math.abs(opts.portfolioDrawdownPct).toFixed(0)
+    return {
+      severity: "high", ticker: null,
+      action: "Crash protocol — keep buying",
+      what: `The portfolio is down ${pct}% from its high. Per pre-committed response A2, keep your scheduled contributions running unchanged and do not redesign. Sell nothing.`,
+      why: `A sustained decline past ${Math.abs(CRASH_DRAWDOWN_PCT)}% triggers the crash protocol (Art. XIV). The 2022 rule: keep buying through a rate-driven bear market — never redesign at the bottom.`,
+      when: "Continue contributions as normal until the drawdown clears.",
       color: "#10b981",
     }
   }

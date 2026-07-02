@@ -236,6 +236,27 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   expect("soft warning → standard DCA continues", r.headline.toLowerCase().includes("dca"))
 }
 
+// ─── 14. VT over 60% hard cap → Step 1, TRIM VT ──────────────────────────────
+{
+  console.log("\nStep 1 — VT over 60% hard cap")
+  const positions = BASE.map(p => p.ticker === "VT" ? { ...p, actualPct: 62 } : p)
+  const r = computeLadder(positions, TOTAL, { market: market() })
+  expect("VT cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
+  expect("VT cap → severity critical", r.severity === "critical")
+  expect("VT cap → ticker VT", r.ticker === "VT", r.ticker)
+  expect("VT cap → step 2 not_reached", r.steps[1].status === "not_reached")
+}
+
+// ─── 15. VWO over 13% hard cap → Step 1, TRIM VWO ────────────────────────────
+{
+  console.log("\nStep 1 — VWO over 13% hard cap")
+  const positions = BASE.map(p => p.ticker === "VWO" ? { ...p, actualPct: 14 } : p)
+  const r = computeLadder(positions, TOTAL, { market: market() })
+  expect("VWO cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
+  expect("VWO cap → severity critical", r.severity === "critical")
+  expect("VWO cap → ticker VWO", r.ticker === "VWO", r.ticker)
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)
 if (failures === 0) {

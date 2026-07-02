@@ -7,6 +7,7 @@
  * Run:  npx tsx scripts/check-engine.ts   (or: npm run check:engine)
  */
 import { computeNextBestMove, type PositionInput, type EngineMarket } from "../lib/next-best-move"
+import { computeLadder, type LiveMarketPos } from "../lib/ladder"
 
 let failures = 0
 function expect(label: string, cond: boolean, detail?: string) {
@@ -95,6 +96,44 @@ console.log("Atlas Core — engine scenario checks\n")
 {
   const m = computeNextBestMove([], 0, {})
   expect("empty portfolio → returns a safe action", typeof m.action === "string" && m.action.length > 0, `got "${m.action}"`)
+}
+
+// 8) VT over its 60% hard cap → CRITICAL trim VT (Art. VII).
+{
+  const positions = [
+    pos("VT", 62, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
+    pos("VWO", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+  ]
+  const m = computeNextBestMove(positions, 1000, { market: marketAll() })
+  expect("VT > 60% cap → critical trim VT", m.severity === "critical" && m.ticker === "VT" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+}
+
+// 9) VWO over its 13% hard cap → CRITICAL trim VWO (Art. VII).
+{
+  const positions = [
+    pos("VT", 52, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
+    pos("VWO", 14, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+  ]
+  const m = computeNextBestMove(positions, 1000, { market: marketAll() })
+  expect("VWO > 13% cap → critical trim VWO", m.severity === "critical" && m.ticker === "VWO" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+}
+
+// 10) Cross-engine agreement: the ladder (dashboard) and next-best-move (calendar) must
+//     trim the SAME ticker on a hard-cap breach — this is the invariant that was broken
+//     when only next-best-move enforced the VT/VWO caps.
+{
+  const ladderMarket: Record<string, LiveMarketPos> = {}
+  for (const [ticker, over] of [["VT", 62], ["VWO", 14]] as const) {
+    const positions = [
+      pos("VT",   ticker === "VT"  ? over : 52, 52, 60),
+      pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
+      pos("VWO",  ticker === "VWO" ? over : 8,  8, 13),
+      pos("BTC",  7, 7, 8), pos("SGOV", 8, 8, null),
+    ]
+    const nbm = computeNextBestMove(positions, 1000, { market: marketAll() })
+    const lad = computeLadder(positions, 1000, { market: ladderMarket })
+    expect(`both engines trim ${ticker} on breach`, nbm.ticker === ticker && lad.ticker === ticker, `nbm=${nbm.ticker} ladder=${lad.ticker}`)
+  }
 }
 
 if (failures === 0) { console.log("\n  ✓ All engine scenarios behaved as specified.\n"); process.exit(0) }

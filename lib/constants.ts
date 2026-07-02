@@ -1,13 +1,10 @@
 /**
  * Atlas Core — Governance Constants
- * Version: 6.1
  *
- * Changes from v6.0:
- * - BTC: Halving cycle modifier (§4.1)
- * - SMH: Cycle-aware soft band (§4.2)
- * - NEW: Combined tech concentration rule QQQM+SMH (§4.3)
- * - Hard caps remain static — floating applies to soft bands only
- *   (BTC's hard cap is the one exception: it floats by cycle phase.)
+ * The raw source of record for every rule value: allocation targets, position hard caps,
+ * drift bands, the BTC halving-cycle modifier (§4.1), the SMH cycle-aware soft band (§4.2),
+ * and the combined QQQM+SMH tech-concentration ceiling (§4.3). Hard caps are static; only
+ * the soft bands float — the one exception is BTC's hard cap, which moves by cycle phase.
  *
  * UNITS — IMPORTANT:
  *   Allocation targets, caps, soft/healthy bands and the combined-tech ceilings are
@@ -36,7 +33,7 @@ export const TICKER_TARGETS: Record<string, number> = {
 // (VT 60%); the drift bands (soft/hard triggers, SMH amber zone) live in Art. VIII.
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
 // conviction asset: accumulate on weakness toward target, never sold at a loss).
-// SMH cap tightened 15% → 12% (Principle 04). SMH amberHigh=11 adds a soft amber
+// SMH hard cap 12% (Principle 04). SMH amberHigh=11 adds a soft amber
 // zone 11–12% (Art. VII); display shows green <11%, amber 11–12%, red ≥12%.
 // BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
 // floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
@@ -203,7 +200,7 @@ export function getSmhSoftBand(pctFromHigh: number): SmhSoftBand {
   return SMH_SOFT_BANDS[getSmhCyclePhase(pctFromHigh)]
 }
 
-// ─── §4.3 — COMBINED TECH CONCENTRATION RULE (NEW in v6.1) ────────────────────
+// ─── §4.3 — COMBINED TECH CONCENTRATION RULE ─────────────────────────────────
 // Display/governance rule. QQQM+SMH combined exposure as a whole-number percent.
 export const COMBINED_TECH_RULE = {
   tickers:     ['QQQM', 'SMH'] as const,
@@ -311,3 +308,8 @@ export const COMMAND_CENTRE_RULES = {
   policyShockRecoveryDays: 42,  // Historical avg recovery: policy shocks
   macroShockRecoveryDays: 540,  // Historical avg recovery: macro cycles
 } as const
+
+// Art. XIV crash threshold: a drawdown at or beyond this (negative %) from the tracked
+// all-time high triggers the crash protocol (A2 — keep contributing, never redesign).
+// Single source of record so the Art. XIII ladder and the next-best-move engine agree.
+export const CRASH_DRAWDOWN_PCT = -25

@@ -9,12 +9,12 @@
  *   At step 2 (underweight redirect), buy anyway and log an exception.
  *   Drift correction is law; entry timing is preference. Law wins.
  *
- * Source: AtlasCoreConstitutionv1_4.html, Art. XIII + Art. XVIII precedence.
+ * Source: public/atlas-core-constitution.html, Art. XIII + Art. XVIII precedence.
  */
 
 import {
-  HARD_THRESHOLDS,
   COMBINED_TECH_RULE,
+  CRASH_DRAWDOWN_PCT,
   getBtcModifier,
   BITCOIN_TICKERS,
   BITCOIN_RUNOFF_TICKER,
@@ -99,7 +99,6 @@ const NEAR_HIGH_THRESHOLD = 0.03
 // Art. XI: SGOV shock buffer floor
 const SGOV_FLOOR_PCT = 8
 // Art. XIII step 6: crash protocol trigger
-const CRASH_DRAWDOWN_PCT = -25
 // Art. VII: hard caps for QQQM and SMH (also in HARD_THRESHOLDS; kept local for clarity)
 const QQQM_HARD_CAP = 30
 const SMH_HARD_CAP  = 12
@@ -237,6 +236,29 @@ export function computeLadder(
       rationale: `Combined tech concentration (Art. IX). Overlapping semi exposure means individual caps understate real concentration risk.`,
       when: "This month's dealing window. Respect the 90-day hold on recent lots.",
       ticker: trimTicker, severity: "critical", citation: "Art. XIII Step 1 / Art. IX",
+    })
+  }
+
+  // Every other single-position hard cap (VT 60%, VWO 13% — Art. VII). SMH, QQQM, and the
+  // Bitcoin sleeve are handled above; this catches any remaining position carrying a hard cap,
+  // so a VT or VWO breach triggers the mandated trim (Art. VII) instead of falling through to
+  // the step-3 soft redirect. Uses the same per-position cap as computeNextBestMove, so the two
+  // engines agree on which positions must be trimmed.
+  const capBreach = positions
+    .filter((p) =>
+      p.hardCapPct != null &&
+      !(BITCOIN_TICKERS as readonly string[]).includes(p.ticker) &&
+      p.actualPct > p.hardCapPct,
+    )
+    .sort((a, b) => (b.actualPct - b.hardCapPct!) - (a.actualPct - a.hardCapPct!))[0]
+  if (capBreach) {
+    steps[0].reason = `${capBreach.ticker}: ${capBreach.actualPct.toFixed(1)}% > ${capBreach.hardCapPct}% hard cap`
+    return build(1, {
+      headline: `Trim ${capBreach.ticker} — over cap`,
+      instruction: `${capBreach.ticker} is at ${capBreach.actualPct.toFixed(1)}%, over its ${capBreach.hardCapPct}% hard cap. Trim back toward the ${capBreach.targetPct}% target.`,
+      rationale: `${capBreach.ticker} hard cap ${capBreach.hardCapPct}% (Art. VII). No single position may exceed its cap — concentration beats conviction.`,
+      when: "This month's dealing window. Respect the 90-day hold on recent lots.",
+      ticker: capBreach.ticker, severity: "critical", citation: "Art. XIII Step 1 / Art. VII",
     })
   }
 

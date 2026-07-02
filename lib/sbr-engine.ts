@@ -33,7 +33,9 @@ export interface SbrEngineOpts {
   drawdownPct?: number
 }
 
-const A35_FLOOR = 7
+// Sourced from the constitution registry (Art. VII) — never a separate literal, so the
+// engine's floor can't silently drift from the documented/contract-checked value.
+const A35_FLOOR = SILICON_BRICK_ROAD.funds.find((f) => f.ticker === "A35")?.floor ?? 7
 
 export function sbrPhase(totalValue: number, c: Constitution = SILICON_BRICK_ROAD): ConstitutionPhase {
   const phases = c.phases ?? []
