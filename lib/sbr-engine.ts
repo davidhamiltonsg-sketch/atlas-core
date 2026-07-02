@@ -73,8 +73,9 @@ export function computeSbrNextMove(
 
   // 1 — SMH > 20% → mandatory sell to 15%
   if (smh && smh.actualPct > 20) {
+    const sellSgd = Math.round(((smh.actualPct - 15) / 100) * totalValue)
     return { severity: "critical", ticker: "SMH", action: "Sell SMH back to 15%",
-      what: `SMH is ${smh.actualPct.toFixed(1)}% of the portfolio — above its 20% hard limit. Sell enough to bring it back to 15% this month.`,
+      what: `SMH is ${smh.actualPct.toFixed(1)}% of the portfolio — above its 20% hard limit. Sell about SGD ${sellSgd.toLocaleString()} of SMH this month to bring it back to 15%.`,
       why: "This is the only time you are required to sell. Semiconductor stocks can fall 30–40% in a bad year; this limit protects you from that kind of concentrated loss.",
       when: "This month, before buying anything else.", color: "#f87171" }
   }
@@ -106,8 +107,10 @@ export function computeSbrNextMove(
   // 4 — phase instructions (III sells, IV halts equity)
   const phase = sbrPhase(totalValue, c)
   if (phase.key === "III") {
+    const qqqmSell = Math.round(0.03 * totalValue)
+    const vwraSell = Math.round(0.02 * totalValue)
     return { severity: "high", ticker: "A35", action: "Phase III — start shifting money to safety",
-      what: `Once this quarter, sell a small slice of QQQM (reduce by ~3%) and VWRA (reduce by ~2%) and move the proceeds to A35. Continue putting all new monthly contributions into A35 too.`,
+      what: `Once this quarter, sell about SGD ${qqqmSell.toLocaleString()} of QQQM (3% of the portfolio) and SGD ${vwraSell.toLocaleString()} of VWRA (2%), and move the SGD ${(qqqmSell + vwraSell).toLocaleString()} into A35. Continue putting all new monthly contributions into A35 too. Leave SMH untouched for now — it stays put through Phase III and is the first fund you sell when you buy the property.`,
       why: `You are in Phase III — about S$${(120000 - totalValue).toLocaleString()} away from your goal. Gradually moving to bonds now protects those gains if markets fall at the worst time.`,
       when: "On your next monthly window. Repeat each quarter until you reach Phase IV.", color: "#34d399" }
   }
@@ -250,7 +253,6 @@ export function computeSbrDca(
     alloc[p.ticker] = { ticker: p.ticker, name: p.name, color: p.color, amount: 0,
       standardAmount: Math.round(((targets[p.ticker] ?? p.targetPct) / 100 * monthly) / 10) * 10, tag: "zeroed", reason: "" }
   }
-  const total = positions.reduce((s, p) => s + p.value, 0)
   if (monthly <= 0 || positions.length === 0) {
     return { allocations: Object.values(alloc), headline: "No contribution to deploy.", marketOverlayActive: false, overlayNote: null }
   }

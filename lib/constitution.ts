@@ -100,7 +100,7 @@ export const RISK_REGISTER_SEEDS = [
 
 // ─── Art. XXII — GOVERNANCE SCORE DIMENSIONS ─────────────────────────────────
 // Weights (must sum to 100). Matches lib/health.ts PortfolioHealth.
-// v1.4: 4th dimension renamed Execution → Freshness.
+// The 4th dimension is Freshness — data/snapshot currency (Art. XXII).
 export const GOVERNANCE_SCORE = {
   structural:    { weight: 40, citation: 'Art. VI–IX'   },
   behavioural:   { weight: 25, citation: 'Art. XII–XIV' },

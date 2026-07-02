@@ -76,7 +76,7 @@ export function computePortfolioHealth({
     100 - companyHardBreaches * 15 - sectorHardBreaches * 12 - hardBreaches * 5
   ))
 
-  // ── Execution (Art. XIII): data freshness / snapshot discipline ──────────
+  // ── Freshness (Art. XXII): data freshness / snapshot discipline ──────────
   const execution =
     snapshotAgeDays <= 3  ? 100 :
     snapshotAgeDays <= 7  ? 95  :
