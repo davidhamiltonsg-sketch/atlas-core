@@ -59,8 +59,16 @@ const crashProtocol = [
   { tier: "1", label: "Noise", drawdown: "<10%", response: "No action. Continue DCA.", flag: null },
   { tier: "2", label: "Correction", drawdown: "10–15%", response: "No action. Consider increasing DCA if income permits.", flag: "If earnings revisions falling, accelerate quarterly review to monthly." },
   { tier: "3", label: "Bear", drawdown: "15–25%", response: "No selling. Contribution acceleration optional. Log emotional state.", flag: "Document whether drawdown is valuation-led or fundamental-led." },
-  { tier: "4", label: "Crisis", drawdown: ">25%", response: "Emergency review. Contributions continue unless income is impaired.", flag: "Assess permanent thesis change (§4.4)." },
-  { tier: "5", label: "Extreme", drawdown: ">40%", response: "Full governance review. No selling without written rationale.", flag: "Evaluate thesis, not price." },
+  { tier: "4", label: "Crisis", drawdown: ">25%", response: "Emergency review. Contributions continue unless income is impaired.", flag: "Assess permanent thesis change — is the reason for owning these funds still true?" },
+  { tier: "5", label: "Extreme", drawdown: ">40%", response: "Full governance review. No selling without written rationale.", flag: "Evaluate the reason for owning each fund, not the current price." },
+]
+
+const sbrCrashProtocol = [
+  { tier: "1", label: "Small dip", drawdown: "<10%", response: "Keep investing normally. This is normal market movement.", flag: null },
+  { tier: "2", label: "Correction", drawdown: "10–15%", response: "Keep investing normally. Do not change anything.", flag: "Remind yourself: every market has recovered from every dip so far." },
+  { tier: "3", label: "Big drop", drawdown: ">15%", response: "Put the full monthly contribution into VWRA only. No selling.", flag: "A falling market means your money buys more shares. This is a good thing." },
+  { tier: "4", label: "Crisis", drawdown: ">25%", response: "Keep investing — put everything into VWRA. Do not sell. Contributions stop only if you lose your income.", flag: "Check that your emergency fund outside the portfolio is intact." },
+  { tier: "5", label: "Extreme", drawdown: ">40%", response: "Same as above. Keep investing into VWRA. The only review needed: is your income still safe?", flag: "Do not sell. The worst outcomes happen when people sell at the bottom." },
 ]
 
 export default async function Behaviour() {
@@ -237,7 +245,7 @@ export default async function Behaviour() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {crashProtocol.map(({ tier, label, drawdown, response, flag }) => {
+              {(isSbr ? sbrCrashProtocol : crashProtocol).map(({ tier, label, drawdown, response, flag }) => {
                 const tierNum = parseInt(tier)
                 const color = tierNum <= 1 ? "text-green-500" : tierNum === 2 ? "text-yellow-400" : tierNum === 3 ? "text-orange-500" : "text-red-500"
                 return (

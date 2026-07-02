@@ -6,10 +6,10 @@ import { constitutionIdForEmail } from "@/lib/constitutions"
 // Default metadata for the governed core tickers, used to create any that are missing so the
 // plan is always represented (e.g. IBIT and SGOV, added to the plan after the DB was seeded).
 const CORE_DEFAULTS: Record<string, { name: string; targetPct: number; hardCapPct: number | null; toleranceBand: number; color: string }> = {
-  VT:   { name: "Vanguard Total World Stock ETF",        targetPct: 52, hardCapPct: 62,   toleranceBand: 3,   color: "#818cf8" },
+  VT:   { name: "Vanguard Total World Stock ETF",        targetPct: 52, hardCapPct: 62,   toleranceBand: 6,   color: "#818cf8" },
   VWO:  { name: "Vanguard FTSE Emerging Markets ETF",    targetPct: 8,  hardCapPct: 13,   toleranceBand: 3,   color: "#c4b5fd" },
-  QQQM: { name: "Invesco NASDAQ 100 ETF",                targetPct: 23, hardCapPct: 31,   toleranceBand: 2.5, color: "#a78bfa" },
-  SMH:  { name: "VanEck Semiconductor ETF",              targetPct: 10, hardCapPct: 12,   toleranceBand: 2.5, color: "#f472b6" },
+  QQQM: { name: "Invesco NASDAQ 100 ETF",                targetPct: 23, hardCapPct: 30,   toleranceBand: 5,   color: "#a78bfa" },
+  SMH:  { name: "VanEck Semiconductor ETF",              targetPct: 10, hardCapPct: 12,   toleranceBand: 3,   color: "#f472b6" },
   BTC:  { name: "Grayscale Bitcoin Mini ETF",            targetPct: 7,  hardCapPct: 8,    toleranceBand: 1,   color: "#f59e0b" },
   IBIT: { name: "iShares Bitcoin Trust ETF",             targetPct: 0,  hardCapPct: 8,    toleranceBand: 1,   color: "#f59e0b" },
   SGOV: { name: "iShares 0-3 Month Treasury Bond ETF",   targetPct: 0,  hardCapPct: null, toleranceBand: 2.5, color: "#10b981" },

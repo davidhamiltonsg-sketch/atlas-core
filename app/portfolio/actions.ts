@@ -74,11 +74,17 @@ export async function updateHoldingsManually(
 // Apply screenshot-extracted holdings: update existing tickers AND create any new ones
 // (e.g. IBIT, or an out-of-scope ETF). Every row that has units & price is brought in so
 // the portfolio stays accurate — out-of-scope tickers are then flagged on the dashboard.
+const SBR_ALLOWED_TICKERS = new Set(["VWRA", "QQQM", "SMH", "A35"])
+
 export async function applyExtractedHoldings(
   rows: Array<{ ticker: string; units: number; price: number }>
 ): Promise<{ updated: number; created: number }> {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
+
+  const user = await db.user.findUnique({ where: { id: session.userId }, select: { email: true } })
+  const constitutionId = constitutionIdForEmail(user?.email)
+  const isSbr = constitutionId === "silicon-brick-road"
 
   const usdSgdRate = await getUsdSgdRate()
   let updated = 0
@@ -90,12 +96,16 @@ export async function applyExtractedHoldings(
 
     let holding = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
     if (!holding) {
+      // Guard: SBR users can only have SBR tickers created. An Atlas Core screenshot
+      // uploaded by mistake must not create VT/VWO/BTC/IBIT entries in an SBR account.
+      if (isSbr && !SBR_ALLOWED_TICKERS.has(sym)) continue
       holding = await db.holding.create({
         data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
       })
       created++
     }
-    await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: r.units * r.price * usdSgdRate })
+    const fxMultiplier = sym === "A35" ? 1 : usdSgdRate
+    await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: r.units * r.price * fxMultiplier })
     updated++
   }
 

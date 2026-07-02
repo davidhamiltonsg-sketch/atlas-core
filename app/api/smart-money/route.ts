@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchSmartMoneyFeed } from '@/lib/smart-money'
+import { getSession } from '@/lib/session'
 
 export const revalidate = 14400 // 4 hours
 
 export async function GET(req: NextRequest) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
   const { searchParams } = new URL(req.url)
   const sourcesParam = searchParams.get('sources')
   const sources = sourcesParam

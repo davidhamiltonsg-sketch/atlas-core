@@ -86,11 +86,11 @@ export const ATLAS_CORE: Constitution = {
   broker: "IBKR Singapore",
   docPath: "/atlas-core-governance.html",
   funds: [
-    { ticker: "VT",   name: "Vanguard Total World Stock ETF",      role: "The big foundation — owns stocks from all over the world",                           target: 52, rangeLow: 46, rangeHigh: 58, hardCap: 60, color: "#6366f1" },
+    { ticker: "VT",   name: "Vanguard Total World Stock ETF",      role: "The big foundation — owns stocks from all over the world",                           target: 52, rangeLow: 46, rangeHigh: 58, hardCap: 62, color: "#6366f1" },
     { ticker: "QQQM", name: "Invesco NASDAQ-100 ETF",              role: "The growth engine — the 100 biggest US tech companies",                             target: 23, rangeLow: 18, rangeHigh: 28, hardCap: 30, color: "#8b5cf6" },
     { ticker: "SMH",  name: "VanEck Semiconductor ETF",            role: "The chip bet — semiconductor companies tied to AI and computing",                    target: 10, rangeLow: 7,  rangeHigh: 12, hardCap: 12, color: "#a78bfa" },
     { ticker: "VWO",  name: "Vanguard FTSE Emerging Markets ETF",  role: "The geography balancer — extra exposure to emerging market economies",              target: 8,  rangeLow: 5,  rangeHigh: 11, hardCap: 13, color: "#c4b5fd" },
-    { ticker: "BTC",  name: "Grayscale Bitcoin Mini Trust (IBIT)", role: "The wild card — high upside, but kept deliberately small to limit the damage if it falls", target: 7, rangeLow: 6, rangeHigh: 8, hardCap: 8, color: "#f59e0b" },
+    { ticker: "BTC",  name: "Grayscale Bitcoin Mini Trust",        role: "The wild card — high upside, but kept deliberately small to limit the damage if it falls", target: 7, rangeLow: 6, rangeHigh: 8, hardCap: 8, color: "#f59e0b" },
   ],
   skipAtHighPct: 3,
   decisionLadder: [],
@@ -115,7 +115,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
     { ticker: "VWRA", name: "Vanguard FTSE All-World UCITS ETF", role: "Stable global core — always accumulate",        target: 50, rangeLow: 44, rangeHigh: 56, hardCap: 62, color: "#2dd4bf" },
     { ticker: "QQQM", name: "Invesco NASDAQ-100 ETF",            role: "Growth tilt — US large-cap tech",              target: 25, rangeLow: 20, rangeHigh: 30, hardCap: 30, color: "#60a5fa" },
     { ticker: "SMH",  name: "VanEck Semiconductor ETF",          role: "Growth tilt — semiconductors (most volatile)", target: 15, rangeLow: 11, rangeHigh: 19, hardCap: 20, color: "#a78bfa", note: "Only mandatory sell in the portfolio — trim to 15% if it exceeds 20%." },
-    { ticker: "A35",  name: "ABF Singapore Bond Index Fund",     role: "SGD safety floor — dry powder for deployment", target: 10, rangeLow: 7,  rangeHigh: 13, hardCap: null, floor: 7, color: "#34d399", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
+    { ticker: "A35",  name: "ABF Singapore Bond Index Fund",     role: "SGD safety buffer — your insurance policy in local currency", target: 10, rangeLow: 7,  rangeHigh: 13, hardCap: null, floor: 7, color: "#34d399", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
   ],
   combined: { tickers: ["QQQM", "SMH"], warning: 40, hard: 45, resume: 42, label: "Combined QQQM + SMH ceiling" },
   totalEquityMaxPct: 92,
@@ -123,8 +123,8 @@ export const SILICON_BRICK_ROAD: Constitution = {
   skipAtHighPct: 3,
   phases: [
     { key: "I",   label: "Phase I — Full growth",              range: "Below SGD 72,000",        min: 0,      max: 72000,  selling: false, body: "Standard allocation. All contributions at target weights per the Decision Engine. Maximum equity exposure — let the portfolio run.", targets: { VWRA: 50, QQQM: 25, SMH: 15, A35: 10 } },
-    { key: "II",  label: "Phase II — Controlled growth",       range: "SGD 72,000–101,000",      min: 72000,  max: 102000, selling: false, body: "No selling. Redirect new contributions only toward safety. Existing holdings unchanged.", targets: { VWRA: 55, QQQM: 20, SMH: 10, A35: 15 } },
-    { key: "III", label: "Phase III — Locking in gains", range: "SGD 102,000–113,000",   min: 102000, max: 114000, selling: true,  body: "Start gradually moving money to safety. Once per quarter (on your monthly window), sell a small slice of QQQM and VWRA and put the proceeds into A35. Goal: shift from 90% stocks to roughly 80% stocks. Don't touch SMH — it will be liquidated last when you buy the property.", targets: { VWRA: 45, QQQM: 20, SMH: 15, A35: 25 } },
+    { key: "II",  label: "Phase II — Controlled growth",       range: "SGD 72,000–102,000",      min: 72000,  max: 102000, selling: false, body: "No selling. Redirect new contributions only toward safety. Existing holdings unchanged.", targets: { VWRA: 55, QQQM: 20, SMH: 10, A35: 15 } },
+    { key: "III", label: "Phase III — Locking in gains", range: "SGD 102,000–114,000",   min: 102000, max: 114000, selling: true,  body: "Start gradually moving money to safety. Once per quarter (on your monthly window), sell a small slice of QQQM and VWRA and put the proceeds into A35. Goal: shift from 90% stocks to roughly 80% stocks. Don't touch SMH — it will be liquidated last when you buy the property.", targets: { VWRA: 45, QQQM: 20, SMH: 15, A35: 25 } },
     { key: "IV",  label: "Phase IV — Ready to buy",      range: "Above SGD 114,000",       min: 114000, max: null,   selling: false, body: "Stop buying stocks entirely. Every monthly contribution goes straight into A35. This builds up your SGD cash pile so you're ready to move when the right property comes up. Start planning the purchase — the money should be ready to exit within 60 days of deciding." },
   ],
   decisionLadder: [
@@ -160,7 +160,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
     { category: "Allocation discipline", weight: 15, assessed: "Positions within comfortable ranges, or correct phase response active." },
     { category: "Contribution discipline", weight: 15, assessed: "Monthly contribution made; no undocumented misses." },
     { category: "Behavioural discipline", weight: 10, assessed: "No trades outside the Decision Engine; 72-hour rule applied; Decision Journal maintained." },
-    { category: "Liquidity & currency",  weight: 10, assessed: "A35 above 7%; emergency fund maintained; USD exposure within limits." },
+    { category: "Liquidity and currency safety",  weight: 10, assessed: "A35 above 7%; emergency fund maintained; USD exposure within limits." },
     { category: "Documentation",         weight: 5,  assessed: "Trade log current; Command Centre completed; exception register updated." },
   ],
 }

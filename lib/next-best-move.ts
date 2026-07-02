@@ -28,7 +28,7 @@
 // carried from the prior 23 Jun snapshot and may be stale — treat as UNVERIFIED.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getBtcModifier, COMBINED_TECH_RULE, type BtcCyclePhase } from "@/lib/constants"
+import { getBtcModifier, COMBINED_TECH_RULE, HARD_THRESHOLDS, type BtcCyclePhase } from "@/lib/constants"
 
 export type Severity = "critical" | "high" | "medium" | "low" | "none"
 
@@ -434,7 +434,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     }
     // §4.3 — combined QQQM+SMH HARD ceiling. Trim the semis tilt (SMH) first.
     const combined = combinedTechPct(positions)
-    if (combined > COMBINED_TECH_RULE.hardCeiling) {
+    if (combined >= COMBINED_TECH_RULE.hardCeiling) {
       const smhPos = positions.find((p) => p.ticker === "SMH")
       const trimTicker = smhPos ? "SMH" : "QQQM"
       return {
@@ -597,8 +597,8 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   if (hasBalance) {
     const hardUnder = positions
       .filter((p) => {
-        const drift = p.actualPct - p.targetPct
-        return drift < 0 && Math.abs(drift) > p.toleranceBand * 2
+        const ht = HARD_THRESHOLDS[p.ticker]
+        return ht?.low !== undefined && p.actualPct < ht.low
       })
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
     if (hardUnder.length > 0) {

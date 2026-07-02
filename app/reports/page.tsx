@@ -103,6 +103,7 @@ async function getReportData(userId: string) {
   }
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
+  const hasBalance = totalValue > 0
 
   const positions = holdings.map((h) => {
     const latest = h.snapshots[0]
@@ -110,8 +111,9 @@ async function getReportData(userId: string) {
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
     const drift = Math.abs(actualPct - h.targetPct)
     const driftPct = actualPct - h.targetPct
-    const outsideBand = drift > h.toleranceBand
-    const overCap = h.hardCapPct !== null && actualPct > h.hardCapPct
+    // Suppress drift/cap alerts when portfolio has no balance (prevents false alarms)
+    const outsideBand = hasBalance && drift > h.toleranceBand
+    const overCap = hasBalance && h.hardCapPct !== null && actualPct > h.hardCapPct
 
     // Snapshot history for drift trend
     const history = h.snapshots.map((s) => ({
@@ -192,7 +194,7 @@ async function getReportData(userId: string) {
   const sectorBreaches  = (Object.keys(SECTOR_CAPS) as (keyof typeof SECTOR_CAPS)[]).filter(
     (k) => sectorExposure[k] > SECTOR_CAPS[k].elevated
   ).length
-  const hardBreaches   = positions.filter(p => {
+  const hardBreaches   = !hasBalance ? 0 : positions.filter(p => {
     const ht = HARD_THRESHOLDS[p.ticker]
     return p.overCap ||
       (ht?.low !== undefined && p.actualPct < ht.low) ||
@@ -237,7 +239,7 @@ async function getReportData(userId: string) {
   const ruleCategories = [...new Set(rules.map(r => r.category as string))]
 
   return {
-    totalValue, positions, companyExposure, sectorExposure, geoExposure,
+    totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, softBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
     rules, ruleCategories, lookThroughUpdatedAt,
@@ -324,11 +326,25 @@ export default async function Reports() {
   if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
 
   const {
-    totalValue, positions, companyExposure, sectorExposure, geoExposure,
+    totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
     rules, ruleCategories, lookThroughUpdatedAt,
   } = await getReportData(session.userId)
+
+  if (!hasBalance) {
+    return (
+      <Shell title="Reports" subtitle="Portfolio analysis and concentration" userName={session.name} isAdmin={session.role === "admin"}>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-8 py-16 text-center">
+          <TrendingUp className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm font-semibold">No portfolio data yet</p>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            Enter your holdings on the <a href="/portfolio" className="underline font-semibold">Portfolio</a> page to see the look-through analysis, concentration report, and health score.
+          </p>
+        </div>
+      </Shell>
+    )
+  }
 
   const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
   // Staleness: prefer DB updatedAt; fall back to hardcoded review date

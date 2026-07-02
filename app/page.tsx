@@ -230,7 +230,10 @@ async function getDashboardData(userId: string) {
   const hardBreaches  = positions.filter(p => p.status === "hard").length
   const softBreaches  = positions.filter(p => p.status === "soft").length
   const snapshotAgeDays = daysSinceUpdate ?? 999
-  const health = computePortfolioHealth({ hardBreaches, softBreaches, maxDrift, activeRules, totalRules, snapshotAgeDays })
+  const lookThrough = computeLookThrough(positions)
+  const companyHardBreaches = lookThrough.companies.filter(c => c.status === "breach").length
+  const sectorHardBreaches  = lookThrough.sectors.filter(s => s.status === "breach").length
+  const health = computePortfolioHealth({ hardBreaches, softBreaches, maxDrift, companyHardBreaches, sectorHardBreaches, activeRules, totalRules, snapshotAgeDays })
   const healthScore = health.overall
   const healthLabel = health.overallLabel
 
@@ -290,7 +293,6 @@ async function getDashboardData(userId: string) {
   const [marketSnapshot, sgov] = await Promise.all([getLiveMarketPositions(), getSgovYield()])
 
   // §4 — live look-through concentration (effective company/sector exposure across all funds)
-  const lookThrough = computeLookThrough(positions)
   const ltBreach = worstLookThroughBreach(lookThrough)
   const lookThroughBreach = ltBreach
     ? {
@@ -794,10 +796,10 @@ export default async function Dashboard() {
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary/60"
-                  style={{ width: `${Math.min(100, (totalValue / base2045) * 100)}%` }}
+                  style={{ width: `${base2045 > 0 ? Math.min(100, (totalValue / base2045) * 100) : 0}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">{((totalValue / base2045) * 100).toFixed(1)}% of goal</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{base2045 > 0 ? `${((totalValue / base2045) * 100).toFixed(1)}% of goal` : "—"}</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4 card-elevated">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Next Contribution</p>

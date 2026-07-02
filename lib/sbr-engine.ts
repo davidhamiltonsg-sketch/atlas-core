@@ -78,12 +78,20 @@ export function computeSbrNextMove(
       when: "This month, before buying anything else.", color: "#f87171" }
   }
 
-  // 2 — combined QQQM + SMH > 45% → halt both
+  // 2 — combined QQQM + SMH > 45% (hard limit) → halt both, buy VWRA only
   if (combined > comb.hard) {
-    return { severity: "critical", ticker: "QQQM", action: "Stop buying QQQM and SMH — they are over 45% together",
-      what: `QQQM + SMH combined is ${combined.toFixed(1)}% — above the 45% limit. Put all new money into VWRA until they drop below ${comb.resume}% combined.`,
+    return { severity: "critical", ticker: "VWRA", action: "Stop buying QQQM and SMH — they are over 45% together",
+      what: `QQQM + SMH combined is ${combined.toFixed(1)}% — above the 45% hard limit. Put all new money into VWRA until they drop below ${comb.resume}% combined.`,
       why: "QQQM and SMH both hold a lot of the same tech companies, so together they concentrate your risk. The limit stops them from taking over the portfolio.",
-      when: "Every month until the combined share drops below 42%.", color: "#60a5fa" }
+      when: "Every month until the combined share drops below 42%.", color: "#2dd4bf" }
+  }
+
+  // 2b — combined QQQM + SMH >= 40% (warning) → redirect buys to VWRA
+  if (combined >= comb.warning) {
+    return { severity: "medium", ticker: "VWRA", action: "Tech funds are getting heavy — buy VWRA only this month",
+      what: `QQQM + SMH are ${combined.toFixed(1)}% together — past the ${comb.warning}% warning level. Skip both this month and put all new money into VWRA instead.`,
+      why: "When tech stocks get heavy, buying global stocks (VWRA) keeps the balance. You can return to QQQM and SMH when they drop below 42% combined.",
+      when: "This month.", color: "#2dd4bf" }
   }
 
   // 3 — A35 below its 7% floor → build the safety floor
@@ -109,16 +117,7 @@ export function computeSbrNextMove(
       when: "Now, and every month until you buy.", color: "#34d399" }
   }
 
-  // 5 — drawdown handling (phase-aware):
-  // If progress > 65% of target AND drawdown > 10% → preserve in A35 (not equity).
-  // If early stage AND drawdown > 15% → accumulate equity core (VWRA).
-  const progressFrac = totalValue / (c.targetValue ?? 120000)
-  if (opts.drawdownPct !== undefined && progressFrac >= 0.65 && opts.drawdownPct <= -10) {
-    return { severity: "high", ticker: "A35", action: "Markets are down and you are close to your goal — protect what you have",
-      what: `The portfolio is down ${Math.abs(opts.drawdownPct).toFixed(0)}% from its recent high and you are ${(progressFrac * 100).toFixed(0)}% of the way to S$120,000. Put this month's contribution into A35 only.`,
-      why: "When you are this close to the finish line, a market drop is not a buying opportunity — it is a risk. A35 (Singapore bonds) locks in your progress while stocks recover.",
-      when: "This month, until the portfolio recovers.", color: "#34d399" }
-  }
+  // 5 — drawdown > 15% from recent high → all new money to VWRA (constitution step 5)
   if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) {
     return { severity: "high", ticker: "VWRA", action: "Markets are down — put everything into VWRA",
       what: `The portfolio is down ${Math.abs(opts.drawdownPct).toFixed(0)}% from its recent high. Put the full monthly contribution into VWRA. Do not sell anything.`,
@@ -157,14 +156,15 @@ export function computeSbrNextMove(
 // the Atlas Core 4-dimension engine which was designed for a different policy.
 
 export interface SbrHealth {
-  overall: number           // 0–100
+  overall: number
   overallLabel: "Good standing" | "Review recommended" | "Action required"
-  governance: number        // 0–100 — decision engine followed, no unauthorised trades
-  risk: number              // 0–100 — SMH cap, combined ceiling, no breaches
-  allocation: number        // 0–100 — all funds within comfortable ranges
-  contribution: number      // 0–100 — based on snapshot freshness as proxy
-  liquidity: number         // 0–100 — A35 above floor
-  execution: number         // 0–100 — snapshot age
+  governance: number     // 25% — decision steps followed, no unauthorised trades
+  risk: number           // 20% — SMH cap, combined ceiling, no breaches
+  allocation: number     // 15% — all funds within comfortable ranges
+  contribution: number   // 15% — monthly investing discipline (proxy: snapshot freshness)
+  behavioural: number    // 10% — no impulse trades, 72-hour rule applied (proxy: 100 until journal tracking added)
+  liquidity: number      // 10% — A35 above 7% floor, emergency fund maintained
+  documentation: number  // 5%  — trade log current, decision journal up to date (proxy: 100 until tracking added)
 }
 
 export function computeSbrHealth(
@@ -174,7 +174,7 @@ export function computeSbrHealth(
   c: Constitution = SILICON_BRICK_ROAD,
 ): SbrHealth {
   if (totalValue <= 0) {
-    return { overall: 0, overallLabel: "Action required", governance: 0, risk: 0, allocation: 0, contribution: 0, liquidity: 0, execution: 0 }
+    return { overall: 0, overallLabel: "Action required", governance: 0, risk: 0, allocation: 0, contribution: 0, behavioural: 0, liquidity: 0, documentation: 0 }
   }
 
   const smh = positions.find(p => p.ticker === "SMH")
@@ -196,32 +196,36 @@ export function computeSbrHealth(
   const a35Pct = a35?.actualPct ?? 0
   const liquidity = a35Pct >= 8 ? 100 : a35Pct >= 7 ? 80 : a35Pct >= 5 ? 50 : 20
 
-  // Execution / snapshot freshness (25%): how recent is the data
-  const execution = snapshotAgeDays <= 3 ? 100 : snapshotAgeDays <= 7 ? 90 : snapshotAgeDays <= 14 ? 75 : snapshotAgeDays <= 30 ? 55 : snapshotAgeDays <= 60 ? 30 : 10
-
-  // Governance (25%): proxy — no breaches = full score; each breach costs points
+  // Governance (25%): no breaches = full score; each hard breach costs 30pts, soft costs 10pts
   const hardBreaches = smhBreach || combBreach ? 1 : 0
   const softBreaches = combWarn || outOfRange.length > 0 ? 1 : 0
   const governance = Math.max(0, 100 - hardBreaches * 30 - softBreaches * 10)
 
-  // Contribution (5%): inferred from snapshot freshness (no contribution journal yet)
+  // Contribution (15%): proxy via snapshot freshness — monthly investing discipline
   const contribution = snapshotAgeDays <= 35 ? 100 : snapshotAgeDays <= 65 ? 70 : 40
 
-  // Weighted composite — reconciled to 100%:
-  // governance 25%, risk 20%, allocation 15%, contribution 15%, execution 20%, liquidity 5%.
+  // Behavioural (10%): no impulse trades, 72-hour rule applied — defaults to 100 until decision journal is tracked
+  const behavioural = 100
+
+  // Documentation (5%): trade log current, decision journal up to date — defaults to 100 until tracking is added
+  const documentation = 100
+
+  // Weighted composite — constitution scorecard (Article XIX):
+  // governance 25%, risk 20%, allocation 15%, contribution 15%, behavioural 10%, liquidity 10%, documentation 5%
   const overall = Math.round(
-    governance   * 0.25 +
-    risk         * 0.20 +
-    allocation   * 0.15 +
-    contribution * 0.15 +
-    execution    * 0.20 +
-    liquidity    * 0.05
+    governance    * 0.25 +
+    risk          * 0.20 +
+    allocation    * 0.15 +
+    contribution  * 0.15 +
+    behavioural   * 0.10 +
+    liquidity     * 0.10 +
+    documentation * 0.05
   )
 
   const overallLabel: SbrHealth["overallLabel"] =
     overall >= 80 ? "Good standing" : overall >= 65 ? "Review recommended" : "Action required"
 
-  return { overall, overallLabel, governance, risk, allocation, contribution, liquidity, execution }
+  return { overall, overallLabel, governance, risk, allocation, contribution, behavioural, liquidity, documentation }
 }
 
 // ─── Market-aware monthly split ──────────────────────────────────────────────
@@ -264,7 +268,8 @@ export function computeSbrDca(
 
   // Route by the ladder priority.
   if (a35 && a35.actualPct < A35_FLOOR) return allToOne("A35", "A35 is below its minimum — topping it up first.", "A35 is below its 7% floor — all contributions go there until it is back above 8%.")
-  if (phase.key === "IV") return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (close to the goal). All new money goes into A35 to build up your SGD cash for the purchase.")
+  if (phase.key === "IV") return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (above SGD 114,000 — close to the goal). All new money goes into A35 to build up your SGD cash for the property purchase.")
+  if (phase.key === "III") return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
   if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) return allToOne("VWRA", "Markets are down — buying more VWRA.", "The portfolio is more than 15% below its recent high. All contributions go to VWRA — a falling market is a buying opportunity early in the journey.")
 
   // Otherwise: proportional split at (phase) targets among eligible funds.

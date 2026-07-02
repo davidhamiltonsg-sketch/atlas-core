@@ -148,7 +148,7 @@ export function ExecutionPlan({
               onBlur={handleBlur}
               className="w-24 text-sm font-black tabular-nums bg-transparent focus:outline-none"
             />
-            <span className="text-[11px] text-muted-foreground ml-1.5">USD</span>
+            <span className="text-[11px] text-muted-foreground ml-1.5">SGD</span>
           </div>
           {contribution !== defaultContribution && (
             <button
@@ -400,7 +400,7 @@ export function ExecutionPlan({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                <p className="text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">Annual Lump Sum — ${annualLumpSum.toLocaleString()} USD</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">Annual Lump Sum — S${annualLumpSum.toLocaleString()}</p>
               </div>
               <p className="text-xs text-muted-foreground mb-3">Deploy as a single batch. Allocate proportionally — boost the most underweight positions first.</p>
               <div className="flex flex-wrap gap-x-5 gap-y-2">

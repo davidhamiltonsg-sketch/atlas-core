@@ -62,7 +62,7 @@ async function main() {
         units: h.snapshot.units,
         price: h.snapshot.price,
         value: h.snapshot.value,
-        currency: "USD",
+        currency: "SGD",
         date: new Date(),
       },
     })
