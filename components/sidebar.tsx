@@ -21,7 +21,6 @@ import {
   Coins,
   CalendarDays,
   Download,
-  Zap,
   Landmark,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -34,7 +33,7 @@ type NavGroupDef = { label: string; items: NavItem[] }
 // Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
 const BRAND: Record<ConstitutionId, { short: string; name: string; version: string; gradient: string }> = {
-  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v6.7 · GDEA", gradient: "from-indigo-500 to-violet-600" },
+  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v1.1 · GDEA", gradient: "from-indigo-500 to-violet-600" },
   "silicon-brick-road": { short: "SBR", name: "Silicon Brick Road", version: "v2.1 · SBR",  gradient: "from-teal-500 to-emerald-600" },
 }
 
@@ -55,9 +54,8 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/dividends", label: "Dividends", icon: Coins },
     ] },
     { label: "Insights", items: [
-      { href: "/command-centre", label: "Command Centre", icon: Zap },
-      { href: "/smart-money", label: "Smart Money", icon: Landmark },
       { href: "/reports", label: "What You Own", icon: FileBarChart2 },
+      { href: "/smart-money", label: "Research", icon: Landmark },
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/risk", label: "Risk", icon: BarChart3 },
       { href: "/ytd", label: "YTD / P&L", icon: CalendarDays },

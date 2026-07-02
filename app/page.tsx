@@ -14,7 +14,6 @@ import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeNextBestMove, computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { NextBestMove } from "@/components/dashboard/next-best-move"
-import { ActionPlan } from "@/components/dashboard/action-plan"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
 import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, largestContributor } from "@/lib/look-through"
@@ -607,19 +606,6 @@ export default async function Dashboard() {
 
           {/* Your Action Plan — the staged, step-by-step sequence (source of truth,
               shared with the Command Centre "When to Act" calendar) */}
-          {hasBalance && (
-            <CollapsibleSection
-              title="Your Action Plan — Step by Step"
-              defaultOpen={true}
-              badge={
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                  Do these in order
-                </span>
-              }
-            >
-              <ActionPlan />
-            </CollapsibleSection>
-          )}
 
           {/* How to use Atlas */}
           <CollapsibleSection title="How to Use Atlas" defaultOpen={false}>

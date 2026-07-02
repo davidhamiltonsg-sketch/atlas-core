@@ -12,7 +12,7 @@
  *  - No streaming/websockets, no sentiment, no predictive scores.
  */
 
-import { MARKET_STATE, type EngineMarket } from "@/lib/next-best-move"
+import type { EngineMarket } from "@/lib/next-best-move"
 import { SGOV_YIELD } from "@/lib/constants"
 
 const BASE = "https://finnhub.io/api/v1"
@@ -53,7 +53,7 @@ interface FinnhubQuote { c?: number }
 interface FinnhubMetricResp { metric?: Record<string, number | null> }
 
 export interface MarketSnapshot {
-  positions: EngineMarket          // overlay merged by the engine over MARKET_STATE
+  positions: EngineMarket          // live price/52w overlay for the recommendation engine
   asOf: string                     // ISO timestamp of this read
   stale: boolean                   // true when we fell back to verified constants
   liveTickers: string[]            // which tickers got a real live read
@@ -74,7 +74,7 @@ export async function getLiveMarketPositions(
   const asOf = new Date().toISOString()
 
   if (!finnhubConfigured()) {
-    return { positions: {}, asOf, stale: true, liveTickers: [], note: "FINNHUB_API_KEY not set — showing last verified figures." }
+    return { positions: {}, asOf, stale: true, liveTickers: [], note: "FINNHUB_API_KEY not set — no live prices available." }
   }
 
   const positions: EngineMarket = {}
@@ -148,8 +148,9 @@ interface FinnhubEarningsResp {
 }
 
 // Known fixed dates — static config (governance-relevant, not generated signals).
+// Tariff truce: extended to 10 Nov 2026 (Busan Trump–Xi deal, 30 Oct 2025); renegotiated annually.
 const STATIC_EVENTS: ScheduledEvent[] = [
-  { date: MARKET_STATE.tariffTruceExpiry, kind: "policy", title: "US–China tariff truce expiry", detail: "Truce expires; renegotiated annually. Watch from September. (Context, not a signal.)" },
+  { date: "2026-11-10", kind: "policy", title: "US–China tariff truce expiry", detail: "Truce expires; renegotiated annually. Watch from September. (Context, not a signal.)" },
 ]
 
 const EARNINGS_TICKERS = ["NVDA", "AAPL", "MSFT", "AMZN", "META", "GOOGL", "AVGO", "TSM"]

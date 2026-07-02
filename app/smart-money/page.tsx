@@ -17,7 +17,7 @@ export default async function SmartMoneyPage({
 
   return (
     <Shell
-      title="Smart Money"
+      title="Research"
       subtitle="Congressional & insider disclosures on your holdings — read-only intelligence"
       userName={session.name}
       isAdmin={session.role === "admin"}

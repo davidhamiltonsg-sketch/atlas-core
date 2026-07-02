@@ -33,14 +33,13 @@ export const SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "insights", label: "Insights", root: "/command-centre",
+    id: "insights", label: "Insights", root: "/reports",
     tabs: [
-      { href: "/command-centre", label: "Command Centre" },
       { href: "/reports", label: "What You Own" },
+      { href: "/smart-money", label: "Research" },
       { href: "/forecast", label: "Forecast" },
       { href: "/ytd", label: "YTD / P&L" },
       { href: "/risk", label: "Risk" },
-      { href: "/smart-money", label: "Smart Money" },
       { href: "/history", label: "History" },
     ],
   },

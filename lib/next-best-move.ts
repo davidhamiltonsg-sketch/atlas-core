@@ -23,9 +23,9 @@
 // loss (a sunk cost). A conviction asset is sold ONLY on a broken thesis. The shock
 // buffer is built from new contributions, never by liquidating a held position.
 //
-// Macro states and the SGOV/SMH levels below were re-verified against live market
-// sources on 24 Jun 2026 (see MARKET_STATE). Per-position levels for VT/QQQM/VWO are
-// carried from the prior 23 Jun snapshot and may be stale — treat as UNVERIFIED.
+// Live market data is supplied at runtime from lib/finnhub (price + 52w levels).
+// When unavailable, the engine runs with empty market overlay — skip rule applies
+// conservatively (no positions near their 52w high unless live data confirms).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { getBtcModifier, COMBINED_TECH_RULE, HARD_THRESHOLDS, type BtcCyclePhase } from "@/lib/constants"
@@ -44,51 +44,6 @@ export interface PositionInput {
   latestPrice: number
 }
 
-// ─── MARKET STATE (fact-checked 23 Jun 2026) ─────────────────────────────────
-// This is the live market overlay. Update these when conditions change.
-// Each field carries the real, verified figure — no invented numbers.
-
-export const MARKET_STATE = {
-  asOf: "2026-06-24",
-  // SGOV yield — VERIFIED 24 Jun 2026: dividend yield 3.85% (18 Jun), 30-day SEC yield 3.55% (17 Jun).
-  sgovYieldPct: 3.85,
-  sgovSecYieldPct: 3.55,
-  // Iran / Strait of Hormuz — VERIFIED 24 Jun 2026: VOLATILE AND CONTESTED. A 17 Jun
-  // memorandum to end the conflict and reopen the Strait collapsed within days; Iran
-  // RE-CLOSED the Strait on 20 Jun citing Israeli violations (US military denies). Geneva
-  // talks were postponed 19 Jun. Brent ~$77–80 mid-to-late Jun. Risk is genuinely TWO-SIDED
-  // and fluid week to week: a durable deal removes the overhang (bullish); sustained closure
-  // spikes oil and inflation (bearish). Do not trade the headlines.
-  iranRiskState: "volatile-contested" as const,
-  // US–China tariff truce — VERIFIED 24 Jun 2026: extended to 10 Nov 2026 (Busan Trump–Xi
-  // deal, 30 Oct 2025); renegotiated annually. Section 301 exclusions extended to same date.
-  tariffTruceExpiry: "2026-11-10",
-  // Fed — VERIFIED 24 Jun 2026: held at 3.50–3.75% for a 4th consecutive meeting (17 Jun);
-  // first meeting under chair Kevin Warsh; statement dropped prior easing language and nodded
-  // to possible hikes ahead. Stance: on hold, hawkish-risk.
-  fedStance: "on-hold-hawkish-risk" as const,
-  positions: {
-    SMH: {
-      // VERIFIED 24 Jun 2026: ~$668.91, 52w range $265.74–$671.83 — at/near 52w high (overbought).
-      price: 668.91, lo52: 265.74, hi52: 671.83, histVolPct: 52.8, // histVolPct UNVERIFIED (estimate)
-      condition: "overbought" as const,
-      dipEntry1: 590, dipEntry2: 550, dipEntry3: 510,
-    },
-    // VT/QQQM/VWO levels below are UNVERIFIED — carried from the prior 23 Jun snapshot.
-    QQQM: { price: 303.41, lo52: 214.72, hi52: 308.21, histVolPct: 23.7, condition: "extended" as const, dipEntry1: 285, dipEntry2: 270, dipEntry3: 255 },
-    VT:   { price: 157.53, lo52: 121.51, hi52: 159.41, histVolPct: 15.5, condition: "accumulate" as const, dipEntry1: 148, dipEntry2: 142, dipEntry3: 135 },
-    VWO:  { price: 61.20,  lo52: 46.31,  hi52: 61.35,  histVolPct: 20.6, condition: "decide" as const,     dipEntry1: 59,  dipEntry2: 56,  dipEntry3: 52 },
-    // BTC is a HELD CONVICTION asset, not an exit candidate. Underweight vs its 7% target →
-    // accumulate on weakness toward target under its 8% cap. (price UNVERIFIED; no 52w market overlay.)
-    BTC:  { price: 28.44,  lo52: 0,      hi52: 0,      histVolPct: 0,    condition: "accumulate" as const,  dipEntry1: 0,   dipEntry2: 0,   dipEntry3: 0 },
-    // IBIT — tax-effective Bitcoin vehicle; BTC transitions here like-for-like. Same sleeve.
-    IBIT: { price: 0,      lo52: 0,      hi52: 0,      histVolPct: 0,    condition: "accumulate" as const,  dipEntry1: 0,   dipEntry2: 0,   dipEntry3: 0 },
-  } as Record<string, {
-    price: number; lo52: number; hi52: number; histVolPct: number
-    condition: "overbought" | "extended" | "accumulate" | "decide"
-    dipEntry1: number; dipEntry2: number; dipEntry3: number
-  }>,
-} as const
 
 // ─── V6.0 RULE CONSTANTS ─────────────────────────────────────────────────────
 
@@ -143,14 +98,13 @@ export function applyBitcoinSleeve<T extends { ticker: string; actualPct: number
 }
 
 // ─── LIVE MARKET OVERLAY (Finnhub, §F1) ──────────────────────────────────────
-// A live overlay can replace the hardcoded price / 52-week levels / volatility used
-// by the recommendation logic. When absent (no key, fetch failed), the engine falls
-// back to the verified MARKET_STATE constants above.
+// A live overlay can replace price / 52-week levels for the recommendation logic.
+// When absent (no Finnhub key, fetch failed), engine runs conservatively with no skip rule.
 export interface LiveMarketPos { price: number; lo52: number; hi52: number; histVolPct: number }
 export type EngineMarket = Record<string, LiveMarketPos>
 
 export interface EngineOptions {
-  /** Live price/52w/vol overlay per ticker (from lib/finnhub). Falls back to MARKET_STATE. */
+  /** Live price/52w/vol overlay per ticker (from lib/finnhub). Falls back to empty when unavailable. */
   market?: EngineMarket
   /** Current BTC halving-cycle phase, for the floating BTC hard cap (§4.1). */
   btcCyclePhase?: BtcCyclePhase
@@ -162,24 +116,9 @@ export interface EngineOptions {
   drawdownDays?: number
 }
 
-/** Merge a live overlay over the hardcoded MARKET_STATE positions. */
+/** Return live market overlay. When absent, returns empty map (no stale fallback). */
 function resolveMarket(override?: EngineMarket): EngineMarket {
-  const base: EngineMarket = {}
-  for (const [t, m] of Object.entries(MARKET_STATE.positions)) {
-    base[t] = { price: m.price, lo52: m.lo52, hi52: m.hi52, histVolPct: m.histVolPct }
-  }
-  if (override) {
-    for (const [t, m] of Object.entries(override)) {
-      // Only overlay sane values; a 0/NaN live read keeps the verified fallback.
-      base[t] = {
-        price:      m.price > 0 ? m.price : base[t]?.price ?? 0,
-        lo52:       m.lo52  > 0 ? m.lo52  : base[t]?.lo52  ?? 0,
-        hi52:       m.hi52  > 0 ? m.hi52  : base[t]?.hi52  ?? 0,
-        histVolPct: m.histVolPct > 0 ? m.histVolPct : base[t]?.histVolPct ?? 0,
-      }
-    }
-  }
-  return base
+  return override ?? {}
 }
 
 /** Combined QQQM+SMH exposure (§4.3) as a whole-number percent of NAV. */
@@ -500,7 +439,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       severity: "high", ticker: "SGOV",
       action: "Build your shock buffer",
       what: `Start an SGOV (short-term Treasury) position and grow it toward ${RULES.shockBufferTargetPct}% of your portfolio using your new monthly contributions over the next few months. Do not sell anything to fund it.`,
-      why: `You have ${bufferPct.toFixed(0)}% in defensive assets — below the ${RULES.shockBufferMinPct}% floor. With the Strait of Hormuz situation volatile and Fed rate-hike risk live, you need dry powder. SGOV yields about ${MARKET_STATE.sgovYieldPct}% (SEC ${MARKET_STATE.sgovSecYieldPct}%) with zero equity correlation. Build it from contributions — never by liquidating a holding.`,
+      why: `You have ${bufferPct.toFixed(0)}% in defensive assets — below the ${RULES.shockBufferMinPct}% floor. You need dry powder for market dislocations. SGOV provides short-term Treasury yield with zero equity correlation. Build it from contributions — never by liquidating a holding.`,
       when: "Start this month; add a little each month until it reaches the 8–10% floor.",
       color: "#10b981",
     }
