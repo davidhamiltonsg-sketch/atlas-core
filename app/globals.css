@@ -119,8 +119,10 @@
   --color-card-foreground:   hsl(var(--card-foreground));
   --color-primary:           hsl(var(--primary));
   --color-primary-foreground:hsl(var(--primary-foreground));
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Phase 6: Fraunces (display serif) + IBM Plex Mono (data) */
+  --font-sans:  var(--font-geist-sans);
+  --font-serif: var(--font-fraunces);
+  --font-mono:  var(--font-ibm-plex-mono);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
@@ -269,6 +271,49 @@ body {
   font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1;
+}
+
+/* ─── Phase 6: Typography utilities ─────────────────────────────────────────
+   font-display  — Fraunces optical serif, used for governance seal numbers,
+                   constitution headings, and any hero metric value.
+   font-data     — IBM Plex Mono, used for portfolio values, health scores,
+                   percentages, citations, and article labels.
+   These compose with Tailwind's size/weight utilities freely.            */
+
+.font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-feature-settings: "onum" 1;  /* oldstyle figures in body text */
+}
+.font-data {
+  font-family: var(--font-ibm-plex-mono), "Courier New", monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;  /* true tabular, slashed zero */
+  letter-spacing: -0.01em;
+}
+
+/* Apply IBM Plex Mono globally to tabular-nums elements so every number in the
+   app automatically gets the financial monospace treatment without per-element classes. */
+.tabular-nums {
+  font-family: var(--font-ibm-plex-mono), "Courier New", monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* ─── Cockpit semantic colour tokens (Art. XXII palette) ───────────────────
+   --seal:  governance ring accent (constitution declaration colour)
+   --pass:  step CLEAR / position healthy
+   --fire:  step FIRED / hard breach
+   --drift: soft drift / amber warning
+   These are additive — they do NOT replace existing success/warning/danger.  */
+:root {
+  --seal:  238 72% 56%;   /* electric indigo — matches --primary light */
+  --pass:  142 71% 29%;   /* forest green   — matches --success light  */
+  --fire:  0   84% 52%;   /* danger red      — matches --danger light   */
+  --drift: 38  92% 44%;   /* amber           — matches --warning light  */
+}
+.dark {
+  --seal:  238 68% 64%;
+  --pass:  142 72% 45%;
+  --fire:  0   84% 65%;
+  --drift: 43  96% 55%;
 }
 
 /* ─── Banner accents (calm-first) ─────────────────────────────────────────── */

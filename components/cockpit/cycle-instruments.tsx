@@ -30,10 +30,10 @@ function InstrumentTile({
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${badgeColor}`}>{badge}</span>
       </div>
       <div className="mt-1">
-        <p className={`text-2xl font-black tabular-nums leading-none ${statColor}`}>{stat}</p>
-        <p className="text-[11px] text-muted-foreground mt-1">{sub}</p>
+        <p className={`font-data text-2xl font-black tabular-nums leading-none ${statColor}`}>{stat}</p>
+        <p className="font-data text-[11px] text-muted-foreground mt-1">{sub}</p>
       </div>
-      {note && <p className="text-[10px] text-muted-foreground/70 leading-relaxed border-t border-border pt-2 mt-1">{note}</p>}
+      {note && <p className="font-data text-[10px] text-muted-foreground/70 leading-relaxed border-t border-border pt-2 mt-1">{note}</p>}
     </div>
   )
 }

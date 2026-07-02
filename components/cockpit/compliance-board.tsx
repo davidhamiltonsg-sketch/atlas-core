@@ -61,9 +61,9 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: p.color }} />
           <span className="text-xs font-bold">{p.ticker}</span>
-          <span className={`text-[9px] font-bold ml-auto ${statusStyle}`}>{statusLabel}</span>
+          <span className={`font-data text-[9px] font-bold ml-auto ${statusStyle}`}>{statusLabel}</span>
         </div>
-        <div className="text-[10px] text-muted-foreground mt-0.5 pl-4">
+        <div className="font-data text-[10px] text-muted-foreground mt-0.5 pl-4">
           {p.actualPct.toFixed(1)}% · <span className="text-muted-foreground/60">{p.targetPct}% tgt</span>
         </div>
       </div>

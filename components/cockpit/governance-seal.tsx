@@ -50,8 +50,8 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
         </svg>
         <div className="absolute inset-0 grid place-items-center">
           <div className="text-center">
-            <span className={`text-2xl font-black tabular-nums ${scoreColor}`}>{overall}</span>
-            <span className="block text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
+            <span className={`text-2xl font-display font-black tabular-nums ${scoreColor}`}>{overall}</span>
+            <span className="block text-[9px] font-data font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
           </div>
         </div>
       </div>
@@ -59,9 +59,9 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
       {/* Meta */}
       <div className="flex-1 min-w-0">
         {constitutionLabel && (
-          <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">{constitutionLabel}</p>
+          <p className="font-data text-[10px] font-bold uppercase tracking-widest text-primary mb-1">{constitutionLabel}</p>
         )}
-        <h2 className="text-base font-bold mb-1">{overallLabel}</h2>
+        <h2 className="font-display text-base font-bold mb-1">{overallLabel}</h2>
         {narrative && (
           <p className="text-xs text-muted-foreground leading-relaxed mb-3">{narrative}</p>
         )}

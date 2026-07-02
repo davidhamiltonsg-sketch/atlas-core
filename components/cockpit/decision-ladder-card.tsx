@@ -36,8 +36,8 @@ export function DecisionLadderCard({ ladder, monthlyContribution, daysToWindow, 
       {/* Header */}
       <div className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Art. XIII · Decision Ladder</p>
-          <p className="text-sm font-semibold mt-0.5">{ladder.headline}</p>
+          <p className="font-data text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Art. XIII · Decision Ladder</p>
+          <p className="font-display text-sm font-bold mt-0.5">{ladder.headline}</p>
         </div>
         {daysToWindow !== null ? (
           <span className="shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-muted-foreground/30 text-muted-foreground">
@@ -57,7 +57,7 @@ export function DecisionLadderCard({ ladder, monthlyContribution, daysToWindow, 
             key={step.step}
             className={`px-5 py-2.5 flex items-center gap-3 ${step.status === "fired" ? "bg-amber-500/[0.05]" : ""}`}
           >
-            <span className="shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+            <span className="font-data shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
               {step.step}
             </span>
             <div className="flex-1 min-w-0">
@@ -81,9 +81,9 @@ export function DecisionLadderCard({ ladder, monthlyContribution, daysToWindow, 
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-current/20 flex items-center justify-between gap-3">
-          <p className="text-[11px] opacity-70">{ladder.when}</p>
+          <p className="font-data text-[11px] opacity-70">{ladder.when}</p>
           {ladder.ticker && (
-            <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded bg-current/10 tabular-nums">
+            <span className="font-data shrink-0 text-[10px] font-bold px-2 py-0.5 rounded bg-current/10 tabular-nums">
               {ladder.ticker}
             </span>
           )}
