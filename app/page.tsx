@@ -322,6 +322,35 @@ async function getDashboardData(userId: string) {
     }
   })
 
+  // Show BTC + IBIT as ONE Bitcoin-sleeve row (they are a single 7% position: BTC in
+  // run-off, IBIT the accumulation vehicle). Judged on the COMBINED weight vs the 7% target
+  // and the cycle-aware cap — not two rows where BTC reads "OK" and IBIT reads "SOFT ↓".
+  {
+    const btc = complianceBands.find((b) => b.ticker === "BTC")
+    const ibit = complianceBands.find((b) => b.ticker === "IBIT")
+    if (btc && ibit) {
+      const sleevePct = btc.actualPct + ibit.actualPct
+      const band = 1  // Art. VIII healthy range 6–8% (target 7 ± 1)
+      const cap = HARD_THRESHOLDS["IBIT"]?.high ?? 8
+      const sleeve: ComplianceBandPosition = {
+        ticker: "BTC", name: "Bitcoin sleeve · BTC + IBIT", color: btc.color,
+        value: btc.value + ibit.value,
+        actualPct: sleevePct, targetPct: BITCOIN_SLEEVE_TARGET_PCT,
+        softLow: Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - band),
+        softHigh: BITCOIN_SLEEVE_TARGET_PCT + band,
+        hardLow: undefined,
+        hardHigh: cap,
+        status: sleevePct > cap ? "hard" : Math.abs(sleevePct - BITCOIN_SLEEVE_TARGET_PCT) > band ? "soft" : "healthy",
+      }
+      const rest = complianceBands.filter((b) => b.ticker !== "BTC" && b.ticker !== "IBIT")
+      rest.push(sleeve)
+      const ord: Record<ActionStatus, number> = { hard: 0, soft: 1, healthy: 2 }
+      rest.sort((a, b) => ord[a.status] - ord[b.status])
+      complianceBands.length = 0
+      complianceBands.push(...rest)
+    }
+  }
+
   // Cycle Instruments (Art. VIII, IX, XI, XIV)
   const smhLive = marketSnapshot.positions["SMH"]
   const qqqmPct = positions.find(p => p.ticker === "QQQM")?.actualPct ?? 0
@@ -379,12 +408,16 @@ export default async function Dashboard() {
 
   const d = await getDashboardData(session.userId)
 
-  // Build SealDimension array for GovernanceSeal
+  // Build SealDimension array for GovernanceSeal. Each dimension's raw score is 0–100;
+  // the badge shows its WEIGHTED contribution (rawScore/100 × weight) out of that weight,
+  // so the four badges sum to the overall score (Art. XXII weights: 40/25/25/10) instead
+  // of printing a 0–100 value against a smaller weight cap (e.g. "78/40").
+  const weighted = (score: number, weight: number) => Math.round((score / 100) * weight)
   const sealDimensions: SealDimension[] = [
-    { label: "Structural",    score: d.health.structural.score,    maxScore: 40, status: d.health.structural.status,    citation: d.health.structural.citation },
-    { label: "Behavioural",   score: d.health.behavioural.score,   maxScore: 25, status: d.health.behavioural.status,   citation: d.health.behavioural.citation },
-    { label: "Concentration", score: d.health.concentration.score, maxScore: 25, status: d.health.concentration.status, citation: d.health.concentration.citation },
-    { label: "Execution",     score: d.health.execution.score,     maxScore: 10, status: d.health.execution.status,     citation: d.health.execution.citation },
+    { label: "Structural",    score: weighted(d.health.structural.score, 40),    maxScore: 40, status: d.health.structural.status,    citation: d.health.structural.citation },
+    { label: "Behavioural",   score: weighted(d.health.behavioural.score, 25),   maxScore: 25, status: d.health.behavioural.status,   citation: d.health.behavioural.citation },
+    { label: "Concentration", score: weighted(d.health.concentration.score, 25), maxScore: 25, status: d.health.concentration.status, citation: d.health.concentration.citation },
+    { label: "Execution",     score: weighted(d.health.execution.score, 10),     maxScore: 10, status: d.health.execution.status,     citation: d.health.execution.citation },
   ]
 
   return (
