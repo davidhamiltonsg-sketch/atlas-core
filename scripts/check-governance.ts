@@ -22,10 +22,10 @@ function eq(label: string, actual: unknown, expected: unknown) {
   if (a !== e) { console.error(`  ✗ ${label}: expected ${e}, got ${a}`); failures++ }
 }
 
-console.log(`Atlas Core — governance contract check (doc v6.7)\n`)
+console.log(`Atlas Core — governance contract check (Constitution v1.1)\n`)
 
 // ── Version ──────────────────────────────────────────────────────────────────
-eq("GOVERNANCE_VERSION", GOVERNANCE_VERSION, "6.7")
+eq("GOVERNANCE_VERSION", GOVERNANCE_VERSION, "6.7")  // legacy version string retained
 
 // ── §1/§3 target weights ─────────────────────────────────────────────────────
 eq("target VT",   TICKER_TARGETS.VT,   52)
@@ -34,10 +34,10 @@ eq("target SMH",  TICKER_TARGETS.SMH,  10)
 eq("target VWO",  TICKER_TARGETS.VWO,  8)
 eq("target BTC",  TICKER_TARGETS.BTC,  7)
 
-// ── §3 hard-drift triggers ───────────────────────────────────────────────────
-eq("hard VT",   HARD_THRESHOLDS.VT,   { low: 42, high: 62 })
+// ── Art. VII hard-drift triggers (v1.1) ──────────────────────────────────────
+eq("hard VT",   HARD_THRESHOLDS.VT,   { low: 42, high: 60 })                    // Art. VII: cap 60%
 eq("hard QQQM", HARD_THRESHOLDS.QQQM, { low: 15, high: 31 })
-eq("hard SMH",  HARD_THRESHOLDS.SMH,  { low: 5,  high: 12 })
+eq("hard SMH",  HARD_THRESHOLDS.SMH,  { low: 5,  high: 12, amberHigh: 11 })    // Art. VII: amber zone 11–12%
 eq("hard VWO",  HARD_THRESHOLDS.VWO,  { low: 3,  high: 13 })
 eq("hard BTC",  HARD_THRESHOLDS.BTC,  { high: 8 })
 

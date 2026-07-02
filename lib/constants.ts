@@ -32,16 +32,18 @@ export const TICKER_TARGETS: Record<string, number> = {
   IBIT: 0,   // target Bitcoin vehicle — rises as BTC falls; sleeve total stays 7%
 }
 
-// v6.1 hard drift thresholds (Section 3.1) — whole-number percent
+// v1.1 hard drift thresholds (Art. VII) — whole-number percent
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
 // conviction asset: accumulate on weakness toward target, never sold at a loss).
-// SMH cap tightened 15% → 12% (Principle 04).
+// SMH cap tightened 15% → 12% (Principle 04). SMH amberHigh=11 adds a soft amber
+// zone 11–12% (Art. VII); display shows green <11%, amber 11–12%, red ≥12%.
 // BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
 // floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
-export const HARD_THRESHOLDS: Record<string, { low?: number; high: number }> = {
-  VT:   { low: 42, high: 62 },
+// amberHigh?: if set, the amber/soft zone is (amberHigh, high]; healthy zone is (hardLow, amberHigh].
+export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amberHigh?: number }> = {
+  VT:   { low: 42, high: 60 },                    // Art. VII: hard cap 60% (was 62% in v6.x)
   QQQM: { low: 15, high: 31 },
-  SMH:  { low: 5,  high: 12 },
+  SMH:  { low: 5,  high: 12, amberHigh: 11 },     // Art. VII: amber zone 11–12%
   VWO:  { low: 3,  high: 13 },
   // Bitcoin sleeve (BTC + IBIT) — no lower hard trigger; hard cap 8% applies to the
   // COMBINED sleeve (the engine sums BTC + IBIT). Per-ticker values mirror the sleeve cap.
@@ -82,7 +84,7 @@ export function getGovernanceBandRow(ticker: string): GovernanceBandRow | null {
   return {
     ticker, target, classification: profile.classification, color: profile.color,
     healthyLow:  Math.max(hardLow, target - profile.band),
-    healthyHigh: Math.min(hardHigh, target + profile.band),
+    healthyHigh: Math.min(hard.amberHigh ?? hardHigh, target + profile.band),
     softLow: hardLow, softHigh: hardHigh,
     hardLow, hardHigh,
   }
@@ -138,7 +140,8 @@ export function getBtcCyclePhase(
     (now.getFullYear() - halvingDate.getFullYear()) * 12 +
     (now.getMonth() - halvingDate.getMonth())
   if (btcPriceVsCycleHigh !== undefined && btcPriceVsCycleHigh < 0.50) return 'bear'
-  if (monthsSinceHalving <= 24) return 'post_halving_bull'
+  // Art. VIII: bull window = months 12–24 post-halving only. Months 0–12 = normal (catalyst not yet priced).
+  if (monthsSinceHalving >= 12 && monthsSinceHalving <= 24) return 'post_halving_bull'
   return 'normal'
 }
 
@@ -216,7 +219,7 @@ export const BEHAVIORAL_RULES = {
 export const DCA_PARAMS = {
   monthlyContribution:  3000,
   annualJanuaryBoost:  20000,
-  currency:            'USD',
+  currency:            'SGD', // Art. XIII: contributions in SGD
   brokerageAccount:    'IBKR Singapore',
   horizonYear:         2045,
 } as const
@@ -238,9 +241,11 @@ export const OPERATING_ASSUMPTIONS = {
   retirementCurrency: "SGD",
   // Emergency cash held OUTSIDE this portfolio (so SGOV stays available for deployment).
   emergencyReserveMonths: 6,
-  // US estate tax bites on US-sited assets above ~USD 60k for non-US persons. When US-sited
-  // ETF value exceeds this, begin migrating to the Irish-UCITS alternatives (§6B).
-  usEstateTaxTriggerUsd: 60_000,
+  // US estate tax bites on US-sited assets above ~USD 60k for non-US persons (estate-tax risk begins).
+  // Art. XV: migration is MANDATORY when US-sited ETF value exceeds USD 100k (UCITS mandate threshold).
+  // Two-tier: warn at 60k (estate-tax risk live), require migration at 100k.
+  usEstateTaxTriggerUsd:    60_000,   // Art. XV: warn — estate-tax risk begins
+  ucitsMandatoryTriggerUsd: 100_000,  // Art. XV: mandate — UCITS migration required above this
   broker: "IBKR Singapore",
   // Single-broker exposure is accepted; revisit a second custodian on a regulatory change,
   // sanctions/capital-control risk, or once the balance is a material single-point risk.
@@ -250,8 +255,8 @@ export const OPERATING_ASSUMPTIONS = {
   overridePolicy: "overrides only at the annual January review or a documented emergency — logged with reason",
 } as const
 
-export const GOVERNANCE_VERSION = '6.7' as const
-export const GOVERNANCE_UPDATED = '2026-06' as const
+export const GOVERNANCE_VERSION = '6.7' as const  // legacy v6.x version string (retained for backward compat)
+export const GOVERNANCE_UPDATED = '2026-07' as const
 
 // ─── LEGACY (v6.0) — retained; no external importer, kept for reference ───────
 // v6.1 Command Centre — market-aware governance rules from pattern analysis

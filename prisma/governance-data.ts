@@ -95,7 +95,7 @@ export const GOVERNANCE_RULES: SeedRule[] = [
   // VT Governance · 4
   {
     title: "VT — Healthy Range 46–58%",
-    description: "VT target 52%. Healthy range 46–58%. Soft drift below 46% or above 58% — redirect contributions. Hard drift below 42% or above 62% — rebalance review required.",
+    description: "VT target 52%. Healthy range 46–58%. Soft drift below 46% or above 58% — redirect contributions. Hard drift below 42% or above 60% — rebalance review required. (Art. VII v1.1: hard cap reduced from 62% to 60%.)",
     category: "VT Governance",
     active: true,
   },
@@ -144,8 +144,8 @@ export const GOVERNANCE_RULES: SeedRule[] = [
   },
   // SMH Governance · 2
   {
-    title: "SMH — Healthy Range 7–12%",
-    description: "SMH target 10%. Healthy range 7–12%. Soft drift above 12% — halt accumulation. Hard cap 12% — selectively trim back to target.",
+    title: "SMH — Healthy Range 7–11%",
+    description: "SMH target 10%. Healthy range 7–11% (green). Amber zone 11–12% — no new buys. Hard cap 12% — trim back to target. (Art. VII v1.1: amber zone 11–12% added; green ceiling lowered from 12% to 11%.)",
     category: "SMH Governance",
     active: true,
   },

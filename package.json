@@ -11,7 +11,8 @@
     "seed:sbr": "npx tsx prisma/seed-sbr.ts",
     "check:governance": "npx tsx scripts/check-governance.ts",
     "check:engine": "npx tsx scripts/check-engine.ts",
-    "check": "npm run check:governance && npm run check:engine"
+    "check:constitution": "npx tsx scripts/check-constitution.ts",
+    "check": "npm run check:governance && npm run check:engine && npm run check:constitution"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
