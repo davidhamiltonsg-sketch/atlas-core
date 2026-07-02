@@ -259,6 +259,24 @@ async function getDashboardData(userId: string) {
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
+  // Collapse BTC + IBIT into one Bitcoin-sleeve slice (one 7% position).
+  {
+    const btc = donutData.find((d) => d.ticker === "BTC")
+    const ibit = donutData.find((d) => d.ticker === "IBIT")
+    if (btc && ibit) {
+      const merged = {
+        ticker: "BTC", name: "Bitcoin sleeve (BTC + IBIT)",
+        actualPct: btc.actualPct + ibit.actualPct, targetPct: BITCOIN_SLEEVE_TARGET_PCT,
+        color: btc.color, value: btc.value + ibit.value,
+      }
+      const rest = donutData.filter((d) => d.ticker !== "BTC" && d.ticker !== "IBIT")
+      rest.push(merged)
+      rest.sort((a, b) => b.actualPct - a.actualPct)
+      donutData.length = 0
+      donutData.push(...rest)
+    }
+  }
+
   const moveInputs: PositionInput[] = positions.map(p => ({
     ticker: p.ticker, name: p.name, color: p.color, value: p.value,
     actualPct: p.actualPct, targetPct: p.targetPct,
@@ -306,7 +324,41 @@ async function getDashboardData(userId: string) {
     actualPct: p.actualPct, targetPct: p.targetPct, toleranceBand: p.toleranceBand ?? 2.5,
     hardCapPct: p.hardCapPct ?? null, status: p.status,
     thisMonth: dcaByTicker.get(p.ticker) ?? null,
+    aggregate: false as boolean,
   }))
+
+  // Collapse BTC + IBIT into a single Bitcoin-sleeve row. Value, cost basis and
+  // unrealised P/L are additive across the two vehicles; per-instrument shares/price are
+  // not, so the row is flagged `aggregate` and the table renders "—" for those cells.
+  {
+    const btc = holdingsRows.find((r) => r.ticker === "BTC")
+    const ibit = holdingsRows.find((r) => r.ticker === "IBIT")
+    if (btc && ibit) {
+      const value = btc.value + ibit.value
+      const anyCost = btc.unrealisedSgd !== null || ibit.unrealisedSgd !== null
+      const unrealisedSgd = anyCost ? (btc.unrealisedSgd ?? 0) + (ibit.unrealisedSgd ?? 0) : null
+      const costBasis = (btc.value - (btc.unrealisedSgd ?? 0)) + (ibit.value - (ibit.unrealisedSgd ?? 0))
+      const unrealisedPct = anyCost && costBasis > 0 ? (unrealisedSgd! / costBasis) * 100 : null
+      const sleevePct = btc.actualPct + ibit.actualPct
+      const cap = HARD_THRESHOLDS["IBIT"]?.high ?? 8
+      const status: ActionStatus = sleevePct > cap ? "hard" : Math.abs(sleevePct - BITCOIN_SLEEVE_TARGET_PCT) > 1 ? "soft" : "healthy"
+      const sleeve = {
+        ticker: "BTC", name: "Bitcoin sleeve · BTC + IBIT", color: btc.color,
+        units: 0, value, latestPrice: 0, priceChangePct: null, priceHistory: [] as number[],
+        avgCostUsd: null as number | null, unrealisedSgd, unrealisedPct,
+        actualPct: sleevePct, targetPct: BITCOIN_SLEEVE_TARGET_PCT, toleranceBand: 1,
+        hardCapPct: cap, status,
+        thisMonth: dcaByTicker.get("IBIT") ?? dcaByTicker.get("BTC") ?? null,
+        aggregate: true as boolean,
+      }
+      const rest = holdingsRows.filter((r) => r.ticker !== "BTC" && r.ticker !== "IBIT")
+      rest.push(sleeve)
+      const ord: Record<ActionStatus, number> = { hard: 0, soft: 1, healthy: 2 }
+      rest.sort((a, b) => ord[a.status] - ord[b.status])
+      holdingsRows.length = 0
+      holdingsRows.push(...rest)
+    }
+  }
 
   // Compliance Board — band data per position
   const complianceBands: ComplianceBandPosition[] = positions.map((p) => {

@@ -25,6 +25,9 @@ export interface HoldingRow {
   status: HoldingStatus
   // This month's plain-English action for this holding (from the market-aware DCA plan)
   thisMonth: { amount: number; tag: string; reason: string } | null
+  // True for a synthetic aggregate row (e.g. the BTC + IBIT Bitcoin sleeve): value,
+  // unrealised, and band are meaningful, but per-instrument shares/price/avg-cost are not.
+  aggregate?: boolean
 }
 
 // Share counts can be fractional (e.g. BTC) — show up to 4 dp but trim trailing zeros.
@@ -136,14 +139,19 @@ export function HoldingsTable({ positions, totalValue, priceStale = false }: { p
                     <span className="text-[11px] text-muted-foreground">{p.name}</span>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
-                    {p.units > 0 ? fmtUnits(p.units) : <span className="text-muted-foreground">0</span>}
+                    {p.aggregate ? <span className="text-muted-foreground">—</span>
+                      : p.units > 0 ? fmtUnits(p.units) : <span className="text-muted-foreground">0</span>}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
-                    {p.latestPrice > 0 ? <div className="font-medium">${p.latestPrice.toFixed(2)}</div> : <span className="text-muted-foreground">—</span>}
-                    {p.avgCostUsd != null && (
-                      <div className={`text-[10px] tabular-nums ${p.avgCostUsd > 0 && p.latestPrice > 0 ? (p.latestPrice >= p.avgCostUsd ? "text-green-500" : "text-red-500") : "text-muted-foreground"}`}>
-                        avg ${p.avgCostUsd.toFixed(2)}
-                      </div>
+                    {p.aggregate ? <span className="text-muted-foreground">—</span> : (
+                      <>
+                        {p.latestPrice > 0 ? <div className="font-medium">${p.latestPrice.toFixed(2)}</div> : <span className="text-muted-foreground">—</span>}
+                        {p.avgCostUsd != null && (
+                          <div className={`text-[10px] tabular-nums ${p.avgCostUsd > 0 && p.latestPrice > 0 ? (p.latestPrice >= p.avgCostUsd ? "text-green-500" : "text-red-500") : "text-muted-foreground"}`}>
+                            avg ${p.avgCostUsd.toFixed(2)}
+                          </div>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums font-medium">
