@@ -445,6 +445,38 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     }
   }
 
+  // ── PRECEDENCE 2.4: Sharp policy shock → A1 (14-day wait, then tranches) ──────
+  // Art. XXI A1: a sharp, recent drop from a discrete event (tariff/geopolitical/regulatory)
+  // — proxied here as ≤ −10% over a short window (≤ ~21 days), distinct from the slow grind
+  // below. The pre-committed response is to WAIT 14 calendar days, then deploy the SGOV
+  // buffer 30/40/30 into the most beaten-down quality holding. Advisory only — sells nothing.
+  if (hasBalance
+      && opts.portfolioDrawdownPct !== undefined && opts.portfolioDrawdownPct <= -10
+      && opts.portfolioDrawdownPct > -20
+      && (opts.drawdownDays ?? 0) <= 21
+      && bufferPct >= RULES.shockBufferMinPct) {
+    const waiting = (opts.drawdownDays ?? 0) < 14
+    let worst: { ticker: string; color: string; fromHigh: number } | null = null
+    for (const p of positions) {
+      if (["SGOV", "AGG", "CASH"].includes(p.ticker)) continue
+      const m = market[p.ticker]
+      if (!m || m.hi52 === 0) continue
+      const fromHigh = ((m.price - m.hi52) / m.hi52) * 100
+      if (!worst || fromHigh < worst.fromHigh) worst = { ticker: p.ticker, color: p.color, fromHigh }
+    }
+    const tk = worst?.ticker ?? "VT"
+    return {
+      severity: "high", ticker: tk,
+      action: waiting ? "Policy shock — hold 14 days" : "Policy shock — deploy Tranche 1",
+      what: waiting
+        ? `The portfolio is down ${Math.abs(opts.portfolioDrawdownPct).toFixed(0)}% in a sharp, event-driven drop. Per pre-committed response A1, take NO action for 14 calendar days (day ${opts.drawdownDays ?? 0} of 14). Sell nothing. Keep scheduled contributions running.`
+        : `The 14-day A1 cooling-off has elapsed. Deploy the SGOV buffer in three tranches (30% → 40% → 30%) into ${tk}, the most beaten-down quality holding. Sell nothing.`,
+      why: `A1 is written while calm: sharp shocks recover, and acting inside the first 14 days is where judgement fails. The buffer exists precisely to deploy into this — not to sit out the fear.`,
+      when: waiting ? "Reassess after the 14-day window." : "At your next dealing window. Hold Tranches 2–3 for the recovery.",
+      color: worst?.color ?? "#10b981",
+    }
+  }
+
   // ── PRECEDENCE 2.5: Slow-grind drawdown → DEPLOY tranche 1 (§1.2 condition 2) ──
   // A sustained fall (≥20% over ≥30 days) with no V-shaped bounce, when the buffer is
   // already built (≥ floor), deploys ONE tranche of SGOV into the most beaten-down quality
@@ -521,10 +553,18 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
         }
       }
       const capLine = p.hardCapPct !== null ? ` Keep it under its ${p.hardCapPct}% cap.` : ""
+      // Art. XXI A5 (v1.5): a conviction position ≥50% below its high triggers a documented
+      // thesis review — a review, NOT a sell. Continue accumulating unless the structural
+      // criteria are met. Surfaced as an advisory clause; it never flips the action to a sell.
+      const mkt = market[p.ticker]
+      const offHigh = mkt && mkt.hi52 > 0 ? ((mkt.price - mkt.hi52) / mkt.hi52) * 100 : 0
+      const reviewLine = offHigh <= -50
+        ? ` ${p.ticker} is ${Math.abs(offHigh).toFixed(0)}% below its high — log a documented thesis review (Art. XXI A5): a review, not a sell. Keep accumulating unless the structural criteria are met.`
+        : ""
       return {
         severity: "medium", ticker: p.ticker,
         action: `Accumulate ${p.ticker} toward ${p.targetPct}%`,
-        what: `${p.ticker} is underweight at ${p.actualPct.toFixed(1)}% versus its ${p.targetPct}% target. Direct this month's contribution into it to accumulate on weakness toward target.${capLine}`,
+        what: `${p.ticker} is underweight at ${p.actualPct.toFixed(1)}% versus its ${p.targetPct}% target. Direct this month's contribution into it to accumulate on weakness toward target.${capLine}${reviewLine}`,
         why: `${p.ticker} is a held conviction position. What matters is today's price, not any past loss: at a lower weight you are adding toward target at a better cost basis. A red number is a sunk cost — never a reason to sell.`,
         when: "With this month's contribution, while it stays below target.",
         color: p.color,

@@ -24,8 +24,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Atlas Core · v1.4",
-  description: "Investment operating system — Constitution v1.4 · GDEA",
+  title: "Atlas Core · v1.5",
+  description: "Investment operating system — Constitution v1.5 · GDEA",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

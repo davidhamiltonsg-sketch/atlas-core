@@ -118,7 +118,7 @@ export async function sendPasswordResetEmail(
                   </td>
                   <td style="padding-left:12px;">
                     <div style="font-size:15px;font-weight:700;color:#1a1a2e;">Atlas Core</div>
-                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v1.4 · GDEA</div>
+                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v1.5 · GDEA</div>
                   </td>
                 </tr>
               </table>

@@ -108,11 +108,16 @@ export interface BtcCycleModifier {
   rationale: string
 }
 
+// v1.5 (Art. X): the cap NEVER WIDENS on a cycle forecast — that would operationalise a
+// market prediction the doctrine (Art. XXV) rejects. It holds at 8% and only TIGHTENS
+// defensively (to 6%) in a deep drawdown, which is prudence, not forecasting. The
+// post-halving-bull phase therefore no longer widens the cap; it is retained only so the
+// cockpit can label the phase. Target is a constant 7% (matches Art. VI).
 export const BTC_CYCLE_MODIFIERS: Record<BtcCyclePhase, BtcCycleModifier> = {
   post_halving_bull: {
-    phase: 'post_halving_bull', hardHigh: 10, target: 8, softHigh: 9,
+    phase: 'post_halving_bull', hardHigh: 8, target: 7, softHigh: 8,
     label: 'Post-Halving Bull',
-    rationale: '12–24 months post-halving. Wider cap reflects historically elevated return window.',
+    rationale: '12–24 months post-halving. Cap held at 8% — it no longer widens on the cycle (v1.5).',
   },
   normal: {
     phase: 'normal', hardHigh: 8, target: 7, softHigh: 8,
@@ -122,7 +127,7 @@ export const BTC_CYCLE_MODIFIERS: Record<BtcCyclePhase, BtcCycleModifier> = {
   bear: {
     phase: 'bear', hardHigh: 6, target: 5, softHigh: 5.5,
     label: 'Bear / Risk-Off',
-    rationale: 'BTC drawdown >50% from cycle high. Reduce exposure ceiling.',
+    rationale: 'BTC drawdown >50% from cycle high. Cap tightens defensively — protection, not a forecast.',
   },
 }
 
@@ -178,9 +183,13 @@ export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
     signal: 'Standard soft band applies.',
   },
   bottom: {
-    phase: 'bottom', softLow: 5, softHigh: 14, healthyLow: 7, healthyHigh: 14,
+    // v1.5: the pullback widens the buy zone only on the LOW side (accumulate down to 5%).
+    // The upper bound stays clamped to the 12% hard cap (Art. VII) — the cap never moves,
+    // so healthyHigh/softHigh may never exceed it (was 14, which contradicted Art. XI's own
+    // "the 12% hard cap never moves"). See Art. XI accumulation precedence.
+    phase: 'bottom', softLow: 5, softHigh: 12, healthyLow: 7, healthyHigh: 12,
     label: 'Cycle Bottom',
-    signal: 'SMH >20% off 52-week high. Soft band widens — accumulation window.',
+    signal: 'SMH >20% off 52-week high. Buy zone widens on the downside — accumulate toward the 12% cap.',
   },
 }
 

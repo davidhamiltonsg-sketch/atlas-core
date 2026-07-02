@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Atlas Core — Investment Constitution v1.4</title>
+<title>Atlas Core — Investment Constitution v1.5</title>
 <style>
   :root{
     --bg:#07090f; --panel:#0d1020a0; --card:#0e1222; --border:#1c2236;
@@ -215,7 +215,7 @@
       <h1>Investment Constitution</h1>
       <p class="lede">A rules-based framework governing the accumulation of long-term retirement capital toward a 2045 horizon. Every decision — what to buy, when to buy it, when to hold, and when to trim — is determined by a fixed set of rules written here. Fear, excitement, and market noise do not get a vote. Constitution · Governance · Operations.</p>
       <div class="pills">
-        <span class="pill v">Version 1.4</span>
+        <span class="pill v">Version 1.5</span>
         <span class="pill">Active Constitution</span>
         <span class="pill g">Horizon 2045</span>
         <span class="pill a">~19-Year Accumulation Phase</span>
@@ -276,6 +276,7 @@
           <li><span class="n">XXVII</span><a href="#a27">Governance Risk Register · new</a></li>
           <li><span class="n">XXVIII</span><a href="#a28">Counter-Thesis Register · new</a></li>
           <li><span class="n">XXIX</span><a href="#a29">Constitutional Decision Journal · new</a></li>
+          <li><span class="n">XXX</span><a href="#a30">Constitutional Crisis Protocol · new</a></li>
         </ol>
         <div class="toc-book">Appendices</div>
         <ol>
@@ -446,7 +447,7 @@
         <tr><td class="tk">QQQM</td><td class="num">23%</td><td class="num c-amber">30%</td><td class="c-violet">★ yes</td><td>Primary growth engine. Trim only at cap.</td></tr>
         <tr><td class="tk">SMH</td><td class="num">10%</td><td class="num c-red">12%</td><td class="c-violet">★ yes</td><td>Tightest cap. Trim back to 10% on breach.</td></tr>
         <tr><td class="tk">VWO</td><td class="num">8%</td><td class="num">13%</td><td class="c-muted">—</td><td>Geographic diversifier. Not a conviction hold.</td></tr>
-        <tr><td class="tk">BTC (IBIT)</td><td class="num">7%</td><td class="num c-amber">8% / 10%</td><td class="c-violet">★ yes</td><td>Cap adjusts by halving cycle — see Article X.</td></tr>
+        <tr><td class="tk">BTC (IBIT)</td><td class="num">7%</td><td class="num c-amber">8% (6% deep-bear)</td><td class="c-violet">★ yes</td><td>Constant 8% cap; tightens to 6% only in a &gt;50% drawdown — see Article X.</td></tr>
       </tbody>
     </table>
     <div class="callout"><strong>What "conviction hold" means in practice.</strong> QQQM, SMH, and BTC can grow above their target weight without triggering a sell — you only sell when they hit the hard cap above. And critically: you cannot sell them simply because they are losing money. A conviction position is only exited when its thesis breaks — the specific conditions for each are defined in Article XXI (Pre-Committed Responses).</div>
@@ -485,7 +486,7 @@
       <tbody>
         <tr><td>Semiconductor (total)</td><td class="num c-amber">16%</td><td class="num c-red">20%</td><td>Pause SMH accumulation</td><td>Halt SMH; redirect to VT</td></tr>
         <tr><td>Digital Economy (combined)</td><td class="num c-amber">48%</td><td class="num c-red">54%</td><td>Increase VT/VWO emphasis</td><td>Halt QQQM &amp; SMH accumulation</td></tr>
-        <tr><td>US Market (total effective)</td><td class="num c-amber">70%</td><td class="num c-red">78%</td><td>Prioritise VT/VWO</td><td>Pause all tech concentration increases</td></tr>
+        <tr><td>US Market (total effective)</td><td class="num c-amber">66%</td><td class="num c-red">70%</td><td>Prioritise VT/VWO</td><td>Pause all tech concentration increases</td></tr>
         <tr><td>AI Infrastructure cluster</td><td class="num c-amber">38%</td><td class="num c-red">46%</td><td>Reduce SMH additions; favour VT</td><td>Halt SMH; reduce QQQM</td></tr>
       </tbody>
     </table>
@@ -507,13 +508,14 @@
   <!-- ARTICLE X — BTC CYCLE FRAMEWORK -->
   <section id="a10">
     <h2 class="sec"><span class="art">Article X</span>Bitcoin Cycle Framework</h2>
-    <p>Bitcoin's hard cap adjusts with its market cycle, because Bitcoin's return profile is structurally phase-dependent. The last halving was 19 April 2024. Phase is determined by elapsed months since that date and distance from the cycle peak.</p>
+    <p>Bitcoin's cap holds at a constant 8% and <strong>only ever tightens</strong> — it never widens on the cycle. The last halving was 19 April 2024. Phase is tracked for context, but the cap moves in one direction only: down, and only in a sustained deep drawdown.</p>
     <div class="grid c3">
-      <div class="cardx"><span class="tag bull">Post-Halving Bull Phase</span><h4>12–24 months after halving</h4><div class="big c-green">10%</div><p>Target 8%, soft warning at 9%. Cap widens because Bitcoin has historically returned most in this phase.</p></div>
+      <div class="cardx"><span class="tag bull">Post-Halving Bull Phase</span><h4>12–24 months after halving</h4><div class="big c-indigo">8%</div><p>Target 7%, soft warning at 8%. <strong>The cap does not widen here</strong> — same governance as normal. The phase is shown for context only.</p></div>
       <div class="cardx" style="border-color:#2a2f58"><span class="tag ind">Normal Phase</span><h4>No special halving catalyst</h4><div class="big c-indigo">8%</div><p>Target 7%, soft warning at 8%. Standard governance. Applies when 24+ months have elapsed and price is within 50% of cycle high.</p></div>
       <div class="cardx"><span class="tag bear">Bear / Deep Drawdown</span><h4>Price more than 50% below cycle peak</h4><div class="big c-red">6%</div><p>Target drops to 5%. Cap tightens to protect the portfolio if Bitcoin is in a sustained deep drawdown.</p></div>
     </div>
-    <div class="callout"><strong>Why 7%?</strong> The 7% target is calibrated deliberately. It is large enough to be meaningful — a 3× return on 7% moves the total portfolio by 21 percentage points. It is small enough to survive a complete loss — if Bitcoin went to zero, the portfolio loses 7% and continues. Below 5%, Bitcoin's upside becomes irrelevant to retirement outcomes. Above 10% (outside the post-halving bull window), Bitcoin becomes the third-largest position by weight — transforming it from an optionality overlay into a structural conviction bet. That is a different portfolio with a different risk profile. 7%, flexing to 8–10% in the bull phase, is the range that captures asymmetric upside without making the portfolio dependent on Bitcoin performing.</div>
+    <div class="callout phi"><strong>Why the cap no longer widens (v1.5).</strong> The v1.4 framework raised the cap to 10% during the post-halving window on the belief that "Bitcoin has historically returned most in this phase." That is a market forecast — precisely what the Investment Beliefs Charter (Article XXV) rejects. Increasing exposure because prices are expected to rise is pro-cyclical timing, not governance. The cap is now a constant 8% and moves in only one direction: it tightens defensively to 6% in a &gt;50% drawdown (prudence, not prediction). Whether Bitcoin is 6 months or 18 months post-halving changes nothing about the ceiling.</div>
+    <div class="callout"><strong>Why 7%?</strong> The 7% target is calibrated deliberately. It is large enough to be meaningful — a 3× return on 7% moves the total portfolio by 21 percentage points. It is small enough to survive a complete loss — if Bitcoin went to zero, the portfolio loses 7% and continues. Below 5%, Bitcoin's upside becomes irrelevant to retirement outcomes. Above 8%, Bitcoin drifts toward becoming a structural conviction bet rather than an optionality overlay — a different portfolio with a different risk profile. 7%, capped at 8%, is the range that captures asymmetric upside without making the portfolio dependent on Bitcoin performing.</div>
   </section>
 
   <!-- ARTICLE XI — SMH BUY ZONE -->
@@ -525,10 +527,11 @@
       <tbody>
         <tr><td class="tk c-red">Near the Top</td><td>Within 5% of 52-week high</td><td class="num">7–10%</td><td class="num">9–10%</td><td>Hold. Do not add. Wait for the pullback.</td></tr>
         <tr><td class="tk c-amber">Normal</td><td>Not near high or low</td><td class="num">7–12%</td><td class="num">7–12%</td><td>Normal accumulation rules apply.</td></tr>
-        <tr><td class="tk c-green">Sharp Pullback</td><td>More than 20% below 52-week high</td><td class="num">5–14%</td><td class="num">7–14%</td><td>Buy window open — deploy in tranches per §XIII.</td></tr>
+        <tr><td class="tk c-green">Sharp Pullback</td><td>More than 20% below 52-week high</td><td class="num">5–12%</td><td class="num">7–12%</td><td>Buy window open — deploy in tranches per §XIII.</td></tr>
       </tbody>
     </table>
     <div class="callout law"><strong>SMH alert ladder — mechanics only (v1.1).</strong> The Constitution defines the mechanics: three tranches (30% → 40% → 30%), first tranche on a confirmed ≥12% pullback, second after three green weeks from trough, third on confirmed uptrend, minimum 3 months between tranches. The <em>price levels</em> themselves are perishable and are set and maintained in the application, recalculated against the rolling 52-week high. Dollar figures do not belong in a permanent document — v1.0 hard-coded $590/$550/$510, which were stale within one quarter.</div>
+    <div class="callout warn"><strong>The buy zone never overrides the cap (v1.5).</strong> The dynamic buy zone widens how <em>aggressively</em> you accumulate on the downside — it does not raise the ceiling. SMH's size range is bounded at the 12% hard cap in every phase (v1.4 mistakenly printed 14% here, contradicting this article's own "the 12% hard cap never moves"). Accumulation precedence for SMH is fixed: the <strong>12% hard cap (Art. VII) outranks the dynamic buy-zone sizing (this article), which outranks any shock-deployment (Art. XXI)</strong>. Concentration always beats conviction; the cap always wins.</div>
   </section>
 
   <!-- ARTICLE XII — COMBINED TECH CEILING -->
@@ -714,6 +717,7 @@
         <tr><td class="tk">Review cadence</td><td>Article XVII — Review Cadence</td></tr>
         <tr><td class="tk">Priority when rules conflict</td><td>Article XVIII — Decision Ladder</td></tr>
         <tr><td class="tk">Tax and liquidity order</td><td>Article XXVI — Tax &amp; Liquidity Constitution</td></tr>
+        <tr><td class="tk">Systemic-crisis deliberation</td><td>Article XXX — Constitutional Crisis Protocol</td></tr>
       </tbody>
     </table>
   </section>
@@ -780,13 +784,14 @@
 
     <div class="pc">
       <div class="hd"><span class="ix">A</span> Shock Response (pre-decided)</div>
-      <div class="rule"><span class="rid">A1</span><span class="t">Policy shock response.</span><div class="d">On a &gt;~10% drop from a discrete event (tariff announcement, geopolitical event, regulatory shock): take <strong>no action for 14 calendar days</strong>, then deploy the SGOV buffer into the most beaten-down quality holding in three tranches: 30% → 40% → 30%. Sell nothing.</div></div>
+      <div class="rule"><span class="rid">A1</span><span class="t">Policy shock response.</span><div class="d">On a &gt;~10% drop from a discrete event (tariff announcement, geopolitical event, regulatory shock): take <strong>no action for 14 calendar days</strong>, then deploy the SGOV buffer into the most beaten-down quality holding in three tranches: 30% → 40% → 30%. Sell nothing. <em>Operator-initiated: the application surfaces the A1 checklist (the 14-day countdown and the tranche plan) when a sharp event-driven drop is detected, but does not auto-execute — deployment is a manual dealing-window action. This is distinct from the automatic macro/slow-grind handling (A2).</em></div></div>
       <div class="rule"><span class="rid">A2</span><span class="t">Macro shock response.</span><div class="d">On a sustained decline (rate cycle, recession, structural de-rating): hold everything, continue scheduled contributions unchanged, do not redesign. The 2022 rule — the only correct response to a rate-driven bear market is to keep buying.</div></div>
       <div class="rule"><span class="rid">A3</span><span class="t">A loss is never a sell trigger.</span><div class="d">Being down is a sunk cost. Exit a conviction holding only when its thesis breaks — never on the colour of a number. Ask: "Would I buy this at today's price?" If yes, do not sell.<br><br>
         <strong>Broken-thesis criteria — QQQM:</strong> Thesis breaks if US mega-cap tech structurally loses pricing power for 3+ consecutive years AND a credible non-US digital economy alternative emerges at equivalent scale. Valuation de-rating, a rate cycle, or a single bad earnings year are not broken-thesis conditions.<br><br>
         <strong>Broken-thesis criteria — SMH:</strong> Thesis breaks if semiconductor capex growth reverses for 3+ consecutive quarters AND AI compute demand enters a sustained structural decline — not a cyclical inventory correction. Cyclical downturns within a secular upcycle are not broken-thesis conditions.<br><br>
         <strong>Broken-thesis criteria — BTC:</strong> Thesis breaks if (a) a critical protocol-layer vulnerability is confirmed unresolved, or (b) sovereign adoption reverses across 3+ major economies simultaneously with no recovery path, or (c) a technically superior monetary-layer replacement achieves dominant network effect. Regulatory pressure in a single jurisdiction, price drawdown alone, or short-cycle sentiment shifts are not broken-thesis conditions.</div></div>
       <div class="rule"><span class="rid">A4</span><span class="t">Never crystallise a loss to fund something else.</span><div class="d">Buffers, new positions, and rebalances are funded from new contributions — never by selling an underwater position.</div></div>
+      <div class="rule"><span class="rid">A5</span><span class="t">Deep-drawdown thesis review (new v1.5).</span><div class="d">When a conviction position falls <strong>≥50% below its high</strong>, a documented <strong>thesis review</strong> is triggered — <em>a review, not a sell</em>. Re-test the position against its A3 broken-thesis criteria in writing. If no structural break is confirmed, continue accumulating on weakness toward target. Only if the review is genuinely inconclusive may <em>that one position's</em> accumulation be paused for up to two quarters (contributions redirect to VT); the broken-thesis test remains the only exit. This closes the gap between a −50% drawdown and the 3-year broken-thesis threshold without letting price alone force a decision.</div></div>
     </div>
 
     <div class="pc">
@@ -980,7 +985,38 @@
         <tr><td class="tk">Review date &amp; outcome assessment</td><td>At twelve months: Was the amendment beneficial? Was the original reasoning correct? Would it be repeated?</td></tr>
       </tbody>
     </table>
-    <div class="callout law"><strong>Institutional memory.</strong> Every amendment becomes part of the permanent memory of Atlas Core. No decision shall be forgotten. Every improvement — and every mistake — becomes evidence for future governance. The v1.1 and v1.2 revisions are the journal's first two entries, with outcome assessments due July 2027.</div>
+    <div class="callout law"><strong>Institutional memory.</strong> Every amendment becomes part of the permanent memory of Atlas Core. No decision shall be forgotten. Every improvement — and every mistake — becomes evidence for future governance. The v1.1 and v1.2 revisions are the journal's first two entries, with outcome assessments due July 2027. The v1.5 US-cap and Bitcoin-cap changes are recorded as a third entry — logged transparently as an operator-directed amendment made outside the standard Article V triggers, with its 12-month outcome assessment due July 2027.</div>
+  </section>
+
+  <!-- ARTICLE XXX — CONSTITUTIONAL CRISIS PROTOCOL (new v1.5) -->
+  <section id="a30">
+    <h2 class="sec"><span class="art">Article XXX</span>Constitutional Crisis Protocol</h2>
+    <p>Articles XX–XXI govern <em>ordinary</em> uncertainty — corrections, bear markets, policy shocks — where the correct response is almost always to hold and keep buying. This article governs the rare <strong>systemic</strong> event that challenges the framework's own assumptions. Its purpose is not to enable action; it is to impose deliberation and prevent a genuine crisis from becoming an excuse to abandon the Constitution.</p>
+
+    <div class="callout phi"><strong>The default in a crisis is still the default everywhere: do nothing.</strong> A systemic event triggers <em>review</em>, never reflexive de-risking. This article defines how to think when the world appears to be breaking — not a licence to sell.</div>
+
+    <h3>What counts as a systemic threat</h3>
+    <p>A closed list. Nothing outside it invokes this article; a market crash, a recession, or a scary headline is Article XXI, not Article XXX.</p>
+    <table>
+      <thead><tr><th>Systemic threat</th><th>What it is (and is not)</th></tr></thead>
+      <tbody>
+        <tr><td class="tk">Sovereign default of a core market</td><td>An actual default/restructuring of US or a core sovereign — not a debt-ceiling scare or a downgrade.</td></tr>
+        <tr><td class="tk">Supply-chain destruction of a core holding</td><td>A Taiwan-type conflict that physically removes a core holding's productive base (e.g. TSMC) — not export controls or a cyclical chip glut.</td></tr>
+        <tr><td class="tk">Base-currency hyperinflation</td><td>Sustained monetary collapse of USD/SGD — not an elevated-CPI cycle.</td></tr>
+        <tr><td class="tk">Permanent deglobalisation</td><td>A durable structural break in the global equity system VT is built on — not a trade war or a bad decade.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The crisis procedure</h3>
+    <ol class="ladder">
+      <li><b>Name the threat in writing.</b> State which of the four systemic threats applies and the specific, verifiable evidence that it is occurring — not feared, occurring. If it is not on the list, this article does not apply.</li>
+      <li><b>Mandatory 14-day deliberation.</b> No structural change for 14 calendar days from the moment the threat is named. Contributions continue on schedule; the buffer may be deployed per Article XXI, but nothing is sold. Panic does not survive two weeks of writing.</li>
+      <li><b>Independent consultation.</b> Obtain at least one qualified outside view before any structural action. The Constitutional Reviewer role (Article III) may not both propose and ratify a crisis change.</li>
+      <li><b>Test against broken-thesis criteria.</b> A systemic event only justifies exiting a holding if it satisfies that holding's Article XXI(A3) broken-thesis test. A −60% price move does not; a confirmed permanent destruction of the thesis does.</li>
+      <li><b>Any change runs the full amendment process.</b> If — after all of the above — a structural change is warranted, it is enacted under Article V and recorded in the Article XXIX decision journal. A crisis is <strong>not itself a permitted Article V trigger</strong>; only a confirmed thesis break, or a genuine life/regulatory change, is. Absent that, the pre-committed instruction remains: hold, keep contributing, wait.</li>
+    </ol>
+
+    <div class="callout warn"><strong>Why this is deliberately hard to act on.</strong> The whole portfolio is built for events that <em>feel</em> existential and turn out not to be. Every systemic scare since 1987 that did not end civilisation also ended the investors who sold into it. This article makes it structurally difficult to convert fear into an irreversible decision — while leaving a real, evidenced, permanent thesis break as the one door that still opens.</div>
   </section>
 
   <!-- ══════════════════════ APPENDICES ══════════════════════ -->
@@ -1096,6 +1132,7 @@
     <table class="chlog">
       <thead><tr><th>Version</th><th>Date</th><th>Summary of Changes</th></tr></thead>
       <tbody>
+        <tr><td class="tk c-indigo">v1.5</td><td>July 2026</td><td>Consistency, crisis-preparedness, and operator-directed rule changes following an independent critical review. <strong>Corrections (no rule change):</strong> (1) Article XI — SMH pullback buy-zone corrected from 5–14%/7–14% to 5–12%/7–12% to respect the 12% hard cap the same article declares immovable; SMH accumulation precedence stated explicitly (cap &gt; buy-zone &gt; shock deploy). (2) Article XXI A1 clarified as operator-initiated (the app surfaces the checklist; it does not auto-execute). <strong>New content:</strong> (3) Article XXX — Constitutional Crisis Protocol added (closed systemic-threat list, 14-day deliberation, freeze-default, amendment-process gate). (4) Article XXI A5 — deep-drawdown (≥50%) thesis-review trigger added (a review, never a sell). <strong>Operator-directed rule changes (see note):</strong> (5) Article IX — US-market look-through cap tightened 70%/78% → 66%/70%. (6) Article X — Bitcoin cap no longer widens on the cycle; constant 8%, tightening to 6% only in a &gt;50% drawdown (removes the pro-cyclical bull-phase 10% cap that conflicted with Article XXV). <strong>Governance note:</strong> changes (5) and (6) are substantive amendments that did not arise from an Article V permitted trigger — "optimisation" is expressly forbidden. They were adopted under explicit operator direction following the review, and are logged here and in the Article XXIX journal as a deliberate, transparent exception. Outcome assessment due July 2027.</td></tr>
         <tr><td class="tk c-indigo">v1.4</td><td>July 2026</td><td>Precision and completeness release following 7-dimension adversarial review. (1) Article IV: doctrine pointer replaces four beliefs that duplicated Article XXV — doctrine now in one place only. (2) Article IX: look-through defined in plain English at first use. (3) Article XV: opener and migration callout rewritten in plain English; UCITS/TER/NRA/withholding replaced throughout. (4) Article XXII: red band now mandates no new discretionary trade until breach resolved and logged. (5) Article XIII: contribution-remainder note added. (6) Articles XXIII and XXIV: changelog openers replaced with plain purpose statements. (7) Article XVIII: self-justification stripped — history belongs in Appendix F. (8) Appendix E: income-growth flag and dual-currency/SGOV check added. (9) Book V divider label cleaned. No rule, threshold, cap, or position changed.</td></tr>
         <tr><td class="tk c-muted">v1.3</td><td>July 2026</td><td>Simplification and deduplication release. (1) Article XIX deleted: 1,085-word rule register that restated Articles VI–IX verbatim, replaced with a pointer table directing readers to the single authoritative source of each rule. (2) Article XX preamble stripped of changelog prose. (3) Article XXI preamble cut to one sentence. (4) Article VI callouts rewritten in plain English. (5) Articles II and IV preambles condensed. (6) Article XXV jurisdiction callout halved. (7) Article XXVI gate callout halved. (8) "New in v1.1" stripped from all headings. (9) Plain-English pass. No rule, threshold, cap, or position changed.</td></tr>
         <tr><td class="tk c-muted">v1.2</td><td>July 2026</td><td>Doctrine release — Book V added (Articles XXV–XXIX), integrating the Investment Beliefs Charter, Tax &amp; Liquidity Constitution, Governance Risk Register, Counter-Thesis Register, and Constitutional Decision Journal. Four conflicts resolved during integration: (1) Charter supremacy defined as interpretive, not operational — the Article XVIII hierarchy still resolves mechanical conflicts, so doctrine cannot become a back door around hard limits. (2) The liquidity waterfall subordinated to Article XVI's extraordinary-circumstances gate — it defines funding order after the gate passes, never a new withdrawal path. (3) Article XXVII scoped to permanent structural risks, explicitly distinct from the perishable Article XX register delegated to the application in v1.1. (4) Counter-Thesis Register extended to all positions (not only convictions) and bound to Article XXI as monitoring argument versus exit evidence. Employer-restriction supremacy codified. Decision Journal established with v1.1 and v1.2 as its first entries, outcome assessments due July 2027. (5) Doctrinal jurisdiction clause added to Article XXV following post-integration adversarial review: Articles II, XXV, and IV assigned fixed, non-overlapping authority (self-governance / market beliefs / derived practice) to prevent the three doctrine layers from becoming an unranked-overlap defect of the dual-ladder class; creation of any fourth doctrinal layer prohibited. No changes to positions, targets, caps, or behavioural rules.</td></tr>
@@ -1117,7 +1154,7 @@
   </div>
 
   <footer>
-    Atlas Core — Investment Constitution v1.4 · July 2026 · Horizon 2045 · Atlas Universe<br>
+    Atlas Core — Investment Constitution v1.5 · July 2026 · Horizon 2045 · Atlas Universe<br>
     This document is the authoritative source for all governance decisions. Where the accompanying application and this Constitution conflict on a mechanical rule, the application governs. Where they conflict on constitutional intent, this document governs.<br>
     Atlas Core and Silicon Brick Road are separate and independent portfolios. They are never consolidated.
   </footer>

@@ -22,7 +22,7 @@ function eq(label: string, actual: unknown, expected: unknown) {
   if (a !== e) { console.error(`  ✗ ${label}: expected ${e}, got ${a}`); failures++ }
 }
 
-console.log(`Atlas Core — governance contract check (Constitution v1.4)\n`)
+console.log(`Atlas Core — governance contract check (Constitution v1.5)\n`)
 
 // ── Version ──────────────────────────────────────────────────────────────────
 eq("GOVERNANCE_VERSION", GOVERNANCE_VERSION, "6.7")  // legacy version string retained
@@ -42,7 +42,8 @@ eq("hard VWO",  HARD_THRESHOLDS.VWO,  { low: 3,  high: 13 })
 eq("hard BTC",  HARD_THRESHOLDS.BTC,  { high: 8 })
 
 // ── §4.1 BTC halving-cycle caps ──────────────────────────────────────────────
-eq("BTC bull  target/soft/hard", [BTC_CYCLE_MODIFIERS.post_halving_bull.target, BTC_CYCLE_MODIFIERS.post_halving_bull.softHigh, BTC_CYCLE_MODIFIERS.post_halving_bull.hardHigh], [8, 9, 10])
+// v1.5: bull phase no longer widens the cap — it holds at 8% (target 7, soft 8), same as normal.
+eq("BTC bull  target/soft/hard", [BTC_CYCLE_MODIFIERS.post_halving_bull.target, BTC_CYCLE_MODIFIERS.post_halving_bull.softHigh, BTC_CYCLE_MODIFIERS.post_halving_bull.hardHigh], [7, 8, 8])
 eq("BTC normal target/soft/hard", [BTC_CYCLE_MODIFIERS.normal.target, BTC_CYCLE_MODIFIERS.normal.softHigh, BTC_CYCLE_MODIFIERS.normal.hardHigh], [7, 8, 8])
 eq("BTC bear  target/hard", [BTC_CYCLE_MODIFIERS.bear.target, BTC_CYCLE_MODIFIERS.bear.hardHigh], [5, 6])
 
@@ -52,7 +53,7 @@ eq("combined tech soft/hard", [COMBINED_TECH_RULE.softCeiling, COMBINED_TECH_RUL
 // ── §4 look-through sector caps (soft/hard) ──────────────────────────────────
 eq("sector semiconductor", [LOOKTHROUGH_SECTOR_CAPS.semiconductor.soft, LOOKTHROUGH_SECTOR_CAPS.semiconductor.hard], [16, 20])
 eq("sector digital",       [LOOKTHROUGH_SECTOR_CAPS.digital.soft,       LOOKTHROUGH_SECTOR_CAPS.digital.hard],       [48, 54])
-eq("sector us",            [LOOKTHROUGH_SECTOR_CAPS.us.soft,            LOOKTHROUGH_SECTOR_CAPS.us.hard],            [70, 78])
+eq("sector us",            [LOOKTHROUGH_SECTOR_CAPS.us.soft,            LOOKTHROUGH_SECTOR_CAPS.us.hard],            [66, 70])  // v1.5: tightened from 70/78
 eq("sector ai",            [LOOKTHROUGH_SECTOR_CAPS.ai.soft,            LOOKTHROUGH_SECTOR_CAPS.ai.hard],            [38, 46])
 
 // ── §4 look-through company caps (soft/hard) ─────────────────────────────────

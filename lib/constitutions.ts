@@ -76,7 +76,7 @@ export const ATLAS_CORE: Constitution = {
   id: "atlas-core",
   name: "Atlas Core — Investment Constitution",
   shortName: "Atlas Core",
-  version: "1.4",
+  version: "1.5",
   updated: "2026-07",
   motto: "Disciplina Supra Praedictio",
   objective: "A long-term retirement portfolio targeting 2045. Its job is to grow wealth by following a fixed set of rules instead of feelings, headlines, or random ideas. Not for trading or gambling — for staying invested until 2045 and letting compounding do the work.",

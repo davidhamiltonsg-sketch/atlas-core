@@ -1,21 +1,25 @@
 /**
- * Atlas Core — Constitution v1.4 (July 2026)
+ * Atlas Core — Constitution v1.5 (July 2026)
  *
  * Single version-pinned governance module. All Phase 2+ code imports from HERE.
  * lib/constants.ts remains the raw source of record; this file re-exports everything
  * and adds the dealing window, throttle, risk register seeds, currency policy,
  * succession, and governance-score dimensions.
  *
- * v1.1 → v1.4 was an editorial / structural / doctrinal release only: per Appendix F,
- * no rule, threshold, cap, or position changed. The numeric contract below is therefore
- * identical to v1.1; only the version pin, citations, and documentation move to v1.4.
- * The 4th governance dimension was renamed Execution → Freshness (Art. XXII).
+ * v1.5 (following an independent critical review) carries the framework's first
+ * SUBSTANTIVE rule changes since the constitutional format: the US look-through cap
+ * tightened to 66/70 (Art. IX) and the Bitcoin cap de-cyclicalised to a constant 8%,
+ * tightening to 6% only in a >50% drawdown (Art. X). It also corrects the SMH pullback
+ * band (≤12% cap) and adds Art. XXX (Crisis Protocol) + Art. XXI A5 (deep-drawdown
+ * review). These changes are logged as operator-directed amendments in Appendix F / Art.
+ * XXIX (they did not arise from a standard Art. V trigger). Earlier v1.1→v1.4 were
+ * editorial/doctrinal only. The 4th governance dimension is Freshness (Art. XXII).
  *
  * Source document:
- *   AtlasCoreConstitutionv1_4.html  (public/atlas-core-constitution.html)
+ *   AtlasCoreConstitutionv1_5.html  (public/atlas-core-constitution.html)
  */
 
-export const CONSTITUTION_VERSION = '1.4' as const
+export const CONSTITUTION_VERSION = '1.5' as const
 export const CONSTITUTION_UPDATED = '2026-07' as const
 
 // ─── Re-export all constants from lib/constants.ts ────────────────────────────

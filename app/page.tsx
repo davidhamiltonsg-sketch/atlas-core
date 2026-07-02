@@ -473,7 +473,7 @@ export default async function Dashboard() {
   ]
 
   return (
-    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v1.4" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v1.5" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-start gap-2">

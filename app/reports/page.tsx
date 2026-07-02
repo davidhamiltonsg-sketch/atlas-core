@@ -447,13 +447,13 @@ export default async function Reports() {
   }
 
   return (
-    <Shell title="Reports" subtitle="Overlap & concentration engine — v1.4" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Reports" subtitle="Overlap & concentration engine — v1.5" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* ── Print-only cover page ── hidden on screen, rendered in PDF ── */}
       <div className="print-header hidden">
 
         {/* Eyebrow + title */}
-        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v1.4</p>
+        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v1.5</p>
         <h1>Annual Portfolio Report</h1>
         <p className="ph-sub">{reportDate} &nbsp;·&nbsp; Personal &amp; Confidential</p>
 

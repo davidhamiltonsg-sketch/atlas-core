@@ -1,7 +1,7 @@
 /**
- * Atlas Core — Constitution v1.4 contract check.
+ * Atlas Core — Constitution v1.5 contract check.
  *
- * Verifies that code constants match the Constitution v1.4 document:
+ * Verifies that code constants match the Constitution v1.5 document:
  *   drift classifier, cycle-phase resolver, dealing-window calculator,
  *   UCITS thresholds, contribution currency, throttle limits.
  *
@@ -50,11 +50,11 @@ function ok(label: string, condition: boolean) {
   }
 }
 
-console.log(`Atlas Core — Constitution v1.4 contract check\n`)
+console.log(`Atlas Core — Constitution v1.5 contract check\n`)
 
 // ─── Version pin ──────────────────────────────────────────────────────────────
 console.log("Version")
-eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.4")
+eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.5")
 
 // ─── Art. VII — Hard thresholds ───────────────────────────────────────────────
 console.log("\nArt. VII — Thresholds")
@@ -152,7 +152,7 @@ eq("price store currency",CURRENCY_POLICY.priceStore, "USD")
 // ─── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)
 if (failures === 0) {
-  console.log(`  All ${passes} checks passed. Constitution v1.4 ✓`)
+  console.log(`  All ${passes} checks passed. Constitution v1.5 ✓`)
   process.exit(0)
 } else {
   console.error(`  ${failures} check(s) failed, ${passes} passed.`)

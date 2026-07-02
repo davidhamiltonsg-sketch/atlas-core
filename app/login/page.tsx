@@ -29,7 +29,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20" />
           </div>
           <h1 className="text-xl font-bold tracking-tight">Atlas Core</h1>
-          <p className="text-xs text-muted-foreground mt-1">v1.4 · GDEA · Sign in to continue</p>
+          <p className="text-xs text-muted-foreground mt-1">v1.5 · GDEA · Sign in to continue</p>
         </div>
 
         {/* Form */}

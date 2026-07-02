@@ -146,7 +146,7 @@ export default async function Governance() {
   )
 
   return (
-    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — Constitution v1.4" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Governance Engine" subtitle="Rules, thresholds, and disciplined execution — Constitution v1.5" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Full constitution document */}
       <a href="/atlas-core-constitution.html" target="_blank" rel="noopener noreferrer"
@@ -155,7 +155,7 @@ export default async function Governance() {
           <FileText className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400">Full Constitution (v1.4)</p>
+          <p className="text-xs font-bold text-indigo-400">Full Constitution (v1.5)</p>
           <p className="text-xs text-muted-foreground">The complete constitution — all caps, bands, look-through limits, pre-committed shock responses, doctrine (Book V), the registers, and the 2040–2045 glide path.</p>
         </div>
         <span className="text-xs font-semibold text-indigo-400 group-hover:text-indigo-300 shrink-0">Open ↗</span>
@@ -167,7 +167,7 @@ export default async function Governance() {
           <Zap className="h-4 w-4 text-indigo-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400 mb-0.5">v1.4 — Bitcoin via IBIT · monthly check-in system · live data</p>
+          <p className="text-xs font-bold text-indigo-400 mb-0.5">v1.5 — Bitcoin via IBIT · monthly check-in system · live data</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they're down. BTC and IBIT count as one Bitcoin position (7% target, 8% max), with older BTC units gradually swapping into IBIT. The SGOV cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you're doing it, and when.
           </p>

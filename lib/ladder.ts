@@ -1,10 +1,10 @@
 /**
- * Atlas Core — Art. XIII Decision Ladder (Constitution v1.4)
+ * Atlas Core — Art. XIII Decision Ladder (Constitution v1.5)
  *
  * The sole decision engine for Atlas Core. One function: computeLadder().
  * Walk the 8 steps in order, stop at the first that fires and return its instruction.
  *
- * Precedence rule (introduced in v1.1, unchanged through v1.4):
+ * Precedence rule (introduced in v1.1, unchanged through v1.5):
  *   Skip rule (B1 — don't buy within 3% of 52w high) applies at STEP 7 ONLY.
  *   At step 2 (underweight redirect), buy anyway and log an exception.
  *   Drift correction is law; entry timing is preference. Law wins.
