@@ -46,6 +46,17 @@ function attr(attrs: string, key: string): string {
   return m?.[1] ?? ""
 }
 
+// A forex / cash currency-conversion row (e.g. USD.SGD, SGD.HKD, USD.HKD) is NOT an
+// investment trade or a contribution — it is just money moving between currencies inside
+// the IBKR account. Importing these as equity trades inflates the trade log, invents
+// bogus "contributions", and pollutes the risk timeline with ghost holdings.
+// Identify them two ways for robustness: IBKR's assetCategory="CASH", or a CCC.CCC symbol.
+const FOREX_SYMBOL = /^[A-Z]{3}\.[A-Z]{3}$/
+export function isForexRow(symbol: string, assetCategory?: string): boolean {
+  if (assetCategory && assetCategory.toUpperCase() === "CASH") return true
+  return FOREX_SYMBOL.test(symbol.trim().toUpperCase())
+}
+
 function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: string; reportDate: string } {
   const positions: FlexPosition[] = []
   const re = /<OpenPosition\s+([^>]+)\/?>/g
@@ -58,6 +69,9 @@ function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: stri
     const markPrice = parseFloat(attr(a, "markPrice"))
     const positionValue = parseFloat(attr(a, "positionValue"))
     const currency = attr(a, "currency")
+
+    // Skip forex / cash balances — a currency position is not an investment holding.
+    if (isForexRow(symbol, attr(a, "assetCategory"))) continue
 
     if (symbol && !isNaN(units) && units > 0 && !isNaN(markPrice)) {
       positions.push({ symbol, units, markPrice, positionValue, currency })
@@ -100,6 +114,9 @@ function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividend
     const currency  = attr(a, "currency")
     const fxRate    = parseFloat(attr(a, "fxRateToBase")) || 1.35
     const tradeDate = attr(a, "tradeDate") || attr(a, "dateTime")?.split(";")?.[0] || ""
+
+    // Skip forex / cash conversions — they are not investment trades (see isForexRow).
+    if (isForexRow(symbol, attr(a, "assetCategory"))) continue
 
     if (symbol && tradeID && !isNaN(quantity) && !isNaN(price)) {
       executions.push({ tradeID, symbol, buySell, quantity: Math.abs(quantity), price, currency, fxRate, tradeDate })

@@ -209,11 +209,15 @@ export default async function RiskPage() {
   const data = await getRiskData(session.userId)
 
   const hasData = data.dataPoints >= 2
-  // Sharpe requires 12+ periods; volatility shown from 4+ (single-point annualisation is noise below that)
+  // Sharpe requires 12+ periods. Annualised volatility (and the VaR derived from it) needs
+  // 8+ period-returns: with fewer, scaling a couple of noisy period moves by √(365/gap)
+  // over-annualises wildly (e.g. a handful of daily snapshots reads as ~85% "High"), which
+  // is a statistical artefact, not real portfolio risk. Below the bar we show "—" instead.
+  const VOL_MIN_PERIODS = 8
   const hasSufficientData = data.periodReturns.length >= 12
-  const hasEnoughForVol = data.periodReturns.length >= 4
+  const hasEnoughForVol = data.periodReturns.length >= VOL_MIN_PERIODS
 
-  const volInfo = hasData ? volLabel(data.annualisedVol) : null
+  const volInfo = hasEnoughForVol ? volLabel(data.annualisedVol) : null
   const sharpeInfo = data.sharpe !== null ? sharpeLabel(data.sharpe) : null
   const ddInfo = hasData ? ddLabel(data.maxDrawdown) : null
   const hhiInfo = hhiLabel(data.hhiScore)
@@ -227,11 +231,14 @@ export default async function RiskPage() {
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
             <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-amber-500">Sharpe Ratio unavailable — insufficient history</p>
+              <p className="text-xs font-semibold text-amber-500">
+                {hasEnoughForVol ? "Sharpe Ratio unavailable — insufficient history" : "Volatility & VaR unavailable — insufficient history"}
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Sharpe Ratio requires at least 12 monthly snapshots to avoid geometric annualisation artefacts
-                ({data.periodReturns.length} period{data.periodReturns.length !== 1 ? "s" : ""} available — need {Math.max(0, 12 - data.periodReturns.length)} more).
-                Volatility and drawdown are shown from 4+ snapshots.
+                {hasEnoughForVol
+                  ? <>Sharpe Ratio requires at least 12 snapshots to avoid geometric annualisation artefacts ({data.periodReturns.length} period{data.periodReturns.length !== 1 ? "s" : ""} available — need {Math.max(0, 12 - data.periodReturns.length)} more).</>
+                  : <>Annualised volatility and Value at Risk need at least {VOL_MIN_PERIODS} snapshots — with fewer, annualising a couple of noisy moves produces a meaningless figure, so they are hidden ({data.periodReturns.length} period{data.periodReturns.length !== 1 ? "s" : ""} available — need {Math.max(0, VOL_MIN_PERIODS - data.periodReturns.length)} more). Sharpe needs 12+.</>}
+                {" "}Drawdown and concentration are shown from any history.
               </p>
             </div>
           </div>
@@ -244,7 +251,7 @@ export default async function RiskPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
               <p className="text-xs text-muted-foreground">Annualised Volatility</p>
             </div>
-            {hasData ? (
+            {hasEnoughForVol ? (
               <>
                 <p className={`text-2xl font-black tabular-nums ${volInfo?.color}`}>
                   {formatPercent(data.annualisedVol * 100, 1, false)}
@@ -252,7 +259,10 @@ export default async function RiskPage() {
                 <p className={`text-[11px] font-semibold mt-0.5 ${volInfo?.color}`}>{volInfo?.label}</p>
               </>
             ) : (
-              <p className="text-2xl font-black text-muted-foreground">—</p>
+              <>
+                <p className="text-2xl font-black text-muted-foreground">—</p>
+                <p className="text-[11px] font-semibold mt-0.5 text-muted-foreground">Insufficient history</p>
+              </>
             )}
           </div>
 
@@ -303,8 +313,8 @@ export default async function RiskPage() {
           </div>
         </div>
 
-        {/* VaR */}
-        {hasData && (
+        {/* VaR — only when annualised volatility is statistically meaningful (VaR is derived from it) */}
+        {hasEnoughForVol && (
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="px-5 py-4 border-b border-border flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-500" />

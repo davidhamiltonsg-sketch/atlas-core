@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
-import { fetchFlexPositions } from "@/lib/ibkr-flex"
+import { fetchFlexPositions, isForexRow } from "@/lib/ibkr-flex"
 import { db } from "@/lib/db"
 
 // Allow up to 30s for the FLEX polling loop
@@ -73,6 +73,8 @@ export async function PUT(req: Request) {
   let updated = 0
   let created = 0
   for (const pos of body.positions) {
+    // Never persist a forex / cash balance as a holding (see isForexRow).
+    if (pos.symbol && isForexRow(pos.symbol)) continue
     // Resolve the holding: by id, else by symbol, else CREATE it (new ticker like IBIT).
     let holdingId: string | null = null
     if (pos.holdingId) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
-import { fetchFlexActivity } from "@/lib/ibkr-flex"
+import { fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { syncHoldingFromTrades, getUsdSgdRate } from "@/lib/holdings-sync"
 import { db } from "@/lib/db"
 
@@ -67,11 +67,13 @@ export async function POST() {
   })
   const holdingMap = new Map(holdings.map(h => [h.ticker.toUpperCase(), h.id]))
 
-  const executions = result.executions.map(e => ({
-    ...e,
-    alreadyImported: importedTradeIds.has(e.tradeID),
-    holdingKnown: holdingMap.has(e.symbol.toUpperCase()),
-  }))
+  const executions = result.executions
+    .filter(e => !isForexRow(e.symbol))   // forex/cash conversions are not trades
+    .map(e => ({
+      ...e,
+      alreadyImported: importedTradeIds.has(e.tradeID),
+      holdingKnown: holdingMap.has(e.symbol.toUpperCase()),
+    }))
 
   const dividends = result.dividends.map(d => ({
     ...d,
@@ -119,6 +121,8 @@ export async function PUT(req: Request) {
 
   // Import executions
   for (const e of body.executions ?? []) {
+    // Never import forex / cash conversions as trades or contributions (see isForexRow).
+    if (isForexRow(e.symbol)) continue
     // Skip if already imported
     const exists = await db.trade.findFirst({
       where: { userId: session.userId, note: { contains: `[ibkr:${e.tradeID}]` } },
