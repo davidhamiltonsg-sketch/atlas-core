@@ -56,7 +56,7 @@ export const LOOKTHROUGH_COMPANY_CAPS: Record<string, { soft: number; hard: numb
 export const LOOKTHROUGH_SECTOR_CAPS: Record<string, { label: string; soft: number; hard: number }> = {
   semiconductor: { label: "Semiconductor", soft: 16, hard: 20 },
   digital:       { label: "Digital Economy", soft: 48, hard: 54 },
-  us:            { label: "US Market", soft: 66, hard: 70 },   // v1.5: tightened from 70/78 (Art. IX)
+  us:            { label: "US Market", soft: 66, hard: 70 },   // Art. IX US look-through caps
   ai:            { label: "AI Infrastructure", soft: 38, hard: 46 },
 }
 

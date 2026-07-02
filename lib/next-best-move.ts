@@ -553,7 +553,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
         }
       }
       const capLine = p.hardCapPct !== null ? ` Keep it under its ${p.hardCapPct}% cap.` : ""
-      // Art. XXI A5 (v1.5): a conviction position ≥50% below its high triggers a documented
+      // Art. XXI A5: a conviction position ≥50% below its high triggers a documented
       // thesis review — a review, NOT a sell. Continue accumulating unless the structural
       // criteria are met. Surfaced as an advisory clause; it never flips the action to a sell.
       const mkt = market[p.ticker]

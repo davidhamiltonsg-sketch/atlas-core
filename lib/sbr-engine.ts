@@ -7,7 +7,7 @@
 //
 // Priority (highest wins): SMH cap → combined ceiling → A35 floor → phase (III/IV) →
 // drawdown → underweight (drift correction) → skip-at-high → standard split.
-// v2.2: underweight now outranks skip-at-high — a below-range fund is bought even near its high.
+// Underweight outranks skip-at-high — a below-range fund is bought even near its high.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
@@ -127,9 +127,9 @@ export function computeSbrNextMove(
   }
 
   // 6 — any fund below its comfortable range → fill the most underweight FIRST.
-  // v2.2: fixing a fund that has drifted below its range beats the skip-at-high rule — so a
+  // Fixing a fund that has drifted below its range beats the skip-at-high rule — so a
   // below-range fund is bought even if it is near its yearly high (drift correction wins). This
-  // also matches computeSbrDca, which already fills a below-range fund before applying the skip.
+  // matches computeSbrDca, which also fills a below-range fund before applying the skip.
   const under = positions.filter((p) => p.actualPct < p.rangeLow).sort((a, b) => (a.actualPct - a.rangeLow) - (b.actualPct - b.rangeLow))
   if (under.length > 0) {
     const p = under[0]
@@ -275,9 +275,9 @@ export function computeSbrDca(
   }
 
   // Route by the ladder priority — MUST match computeSbrNextMove and Article VI:
-  // combined tech ceiling (step 2) outranks the A35 floor (step 3). Previously the floor
-  // was checked first here, so for e.g. combined 46% + A35 5% the headline said "buy VWRA"
-  // while this split routed everything to A35 — a contradiction on the same screen.
+  // combined tech ceiling (step 2) outranks the A35 floor (step 3), so for e.g. combined
+  // 46% + A35 5% both the headline and this split route to VWRA — never a contradiction
+  // where the headline says "buy VWRA" while the split sends everything to A35.
   if (combined > comb.hard) return allToOne("VWRA", "Combined QQQM+SMH over 45% — halt both, buy VWRA.", `QQQM + SMH combined is ${combined.toFixed(1)}% — over the 45% hard limit. All new money goes to VWRA until they drop below ${comb.resume}% combined.`)
   if (combined >= comb.warning) return allToOne("VWRA", "Tech funds over 40% combined — buy VWRA only.", `QQQM + SMH are ${combined.toFixed(1)}% together — past the ${comb.warning}% warning level. Skip both this month; all new money goes to VWRA.`)
   if (a35 && a35.actualPct < A35_FLOOR) return allToOne("A35", "A35 is below its minimum — topping it up first.", "A35 is below its 7% floor — all contributions go there until it is back above 8%.")
