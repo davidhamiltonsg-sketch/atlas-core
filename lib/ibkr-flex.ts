@@ -73,8 +73,15 @@ function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: stri
     // Skip forex / cash balances — a currency position is not an investment holding.
     if (isForexRow(symbol, attr(a, "assetCategory"))) continue
 
-    if (symbol && !isNaN(units) && units > 0 && !isNaN(markPrice)) {
-      positions.push({ symbol, units, markPrice, positionValue, currency })
+    // Keep a position as long as it has a symbol, positive units, and AT LEAST ONE value field.
+    // markPrice is an OPTIONAL Flex column — if the query doesn't include it, requiring it here
+    // silently dropped every real position and surfaced as "no open positions were found". Derive
+    // the missing field from the other so the value still lands.
+    const hasValue = !isNaN(markPrice) || !isNaN(positionValue)
+    if (symbol && !isNaN(units) && units > 0 && hasValue) {
+      const mp = isNaN(markPrice) ? (units > 0 && !isNaN(positionValue) ? positionValue / units : 0) : markPrice
+      const pv = isNaN(positionValue) ? units * mp : positionValue
+      positions.push({ symbol, units, markPrice: mp, positionValue: pv, currency })
     }
   }
 
@@ -280,7 +287,15 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
       if (xml.includes("<OpenPosition")) {
         const { positions, accountId, reportDate } = parseFlexXml(xml)
         if (positions.length === 0) {
-          return { success: false, error: "IBKR returned a report but no open positions were found" }
+          // The report DID contain OpenPosition markup but nothing survived parsing. Log a raw
+          // sample so the actual attribute names/format are visible in the runtime logs, and tell
+          // the user the likely cause instead of a dead-end "none found".
+          const sample = xml.match(/<OpenPosition\b[^>]*>/)?.[0] ?? "(no <OpenPosition ...> row found — the report may be positions-empty)"
+          console.error("[ibkr-flex] fetchFlexPositions parsed 0 positions. Sample OpenPosition row:", sample.slice(0, 400))
+          return {
+            success: false,
+            error: "IBKR returned a report but no open positions could be read. If you hold positions, the Flex query is likely missing the position/markPrice/positionValue fields — add them to the query in IBKR (or confirm the account currently holds open positions).",
+          }
         }
         return { success: true, positions, accountId, reportDate }
       }

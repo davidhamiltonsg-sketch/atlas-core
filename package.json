@@ -16,7 +16,8 @@
     "check:sbr": "npx tsx scripts/check-sbr.ts",
     "check:spec": "npx tsx scripts/check-spec.ts",
     "check:money": "npx tsx scripts/check-money.ts",
-    "check": "npm run check:spec && npm run check:money && npm run check:governance && npm run check:engine && npm run check:constitution && npm run check:ladder && npm run check:sbr"
+    "check:ingest": "npx tsx scripts/check-ingest.ts",
+    "check": "npm run check:spec && npm run check:money && npm run check:ingest && npm run check:governance && npm run check:engine && npm run check:constitution && npm run check:ladder && npm run check:sbr"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
