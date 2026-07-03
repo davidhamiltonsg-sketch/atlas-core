@@ -73,8 +73,15 @@ function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: stri
     // Skip forex / cash balances — a currency position is not an investment holding.
     if (isForexRow(symbol, attr(a, "assetCategory"))) continue
 
-    if (symbol && !isNaN(units) && units > 0 && !isNaN(markPrice)) {
-      positions.push({ symbol, units, markPrice, positionValue, currency })
+    // Keep a position as long as it has a symbol, positive units, and AT LEAST ONE value field.
+    // markPrice is an OPTIONAL Flex column — if the query doesn't include it, requiring it here
+    // silently dropped every real position and surfaced as "no open positions were found". Derive
+    // the missing field from the other so the value still lands.
+    const hasValue = !isNaN(markPrice) || !isNaN(positionValue)
+    if (symbol && !isNaN(units) && units > 0 && hasValue) {
+      const mp = isNaN(markPrice) ? (units > 0 && !isNaN(positionValue) ? positionValue / units : 0) : markPrice
+      const pv = isNaN(positionValue) ? units * mp : positionValue
+      positions.push({ symbol, units, markPrice: mp, positionValue: pv, currency })
     }
   }
 
@@ -228,23 +235,41 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
 
 export async function fetchFlexPositions(token: string, queryId: string): Promise<FlexResult> {
   try {
-    // Step 1: request statement generation
+    // Step 1: request statement generation. IBKR's report engine is sometimes momentarily busy
+    // and returns error 1001 ("Statement could not be generated at this time. Please try again
+    // shortly.") with NO reference code — a transient condition, not a rate-limit (1018/1019).
+    // Retry ONCE after a short wait for that transient case (mirrors fetchFlexActivity); without
+    // this the authoritative position/value sync fails on a blip and the portfolio can't refresh
+    // to IBKR's true values. Never hammer it — a second transient failure gives up with guidance.
     const sendUrl = `${FLEX_BASE}.SendRequest?v=3&t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&p=3`
-    const sendRes = await fetch(sendUrl, { cache: "no-store" })
-    if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
+    let referenceCode: string | undefined
+    let getUrl = `${FLEX_BASE}.GetStatement`
+    let sendXml = ""
+    for (let sendAttempt = 0; sendAttempt < 2; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(6000)
+      const sendRes = await fetch(sendUrl, { cache: "no-store" })
+      if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
+      sendXml = await sendRes.text()
 
-    const sendXml = await sendRes.text()
-    const referenceCode =
-      sendXml.match(/referenceCode="([^"]+)"/)?.[1] ??
-      sendXml.match(/<ReferenceCode>([^<]+)<\/ReferenceCode>/i)?.[1]
-    const getUrl =
-      sendXml.match(/url="([^"]+)"/)?.[1] ??
-      sendXml.match(/<Url>([^<]+)<\/Url>/i)?.[1] ??
-      `${FLEX_BASE}.GetStatement`
+      referenceCode =
+        sendXml.match(/referenceCode="([^"]+)"/)?.[1] ??
+        sendXml.match(/<ReferenceCode>([^<]+)<\/ReferenceCode>/i)?.[1]
+      getUrl =
+        sendXml.match(/url="([^"]+)"/)?.[1] ??
+        sendXml.match(/<Url>([^<]+)<\/Url>/i)?.[1] ??
+        `${FLEX_BASE}.GetStatement`
+
+      if (referenceCode) break
+      if (!RETRYABLE.some((s) => sendXml.includes(s))) break // only retry the transient case
+    }
 
     if (!referenceCode) {
-      console.error("[ibkr-flex] fetchFlexPositions no referenceCode. Raw XML (600):", sendXml.slice(0, 600))
-      return { success: false, error: extractError(sendXml) }
+      console.error("[ibkr-flex] fetchFlexPositions no referenceCode after retry. Raw XML (600):", sendXml.slice(0, 600))
+      const ibkrError = extractError(sendXml)
+      if (RETRYABLE.some((s) => sendXml.includes(s))) {
+        return { success: false, error: `IBKR: ${ibkrError} This is usually temporary on IBKR's side — wait a few minutes before trying again (tapping repeatedly extends the wait).` }
+      }
+      return { success: false, error: `IBKR: ${ibkrError}` }
     }
 
     // Step 2: poll until ready (max ~30s)
@@ -262,7 +287,15 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
       if (xml.includes("<OpenPosition")) {
         const { positions, accountId, reportDate } = parseFlexXml(xml)
         if (positions.length === 0) {
-          return { success: false, error: "IBKR returned a report but no open positions were found" }
+          // The report DID contain OpenPosition markup but nothing survived parsing. Log a raw
+          // sample so the actual attribute names/format are visible in the runtime logs, and tell
+          // the user the likely cause instead of a dead-end "none found".
+          const sample = xml.match(/<OpenPosition\b[^>]*>/)?.[0] ?? "(no <OpenPosition ...> row found — the report may be positions-empty)"
+          console.error("[ibkr-flex] fetchFlexPositions parsed 0 positions. Sample OpenPosition row:", sample.slice(0, 400))
+          return {
+            success: false,
+            error: "IBKR returned a report but no open positions could be read. If you hold positions, the Flex query is likely missing the position/markPrice/positionValue fields — add them to the query in IBKR (or confirm the account currently holds open positions).",
+          }
         }
         return { success: true, positions, accountId, reportDate }
       }

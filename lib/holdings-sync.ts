@@ -3,6 +3,10 @@ import { CORE_TICKERS } from "@/lib/approved-alternatives"
 import { fetchFlexPositions, fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
+import {
+  parseFlexDate, naturalKey, executionNaturalKey,
+  selectExecutionsToImport, selectStaleDuplicateTrades, type ExistingTradeRow,
+} from "@/lib/ingest-dedup"
 
 // CORE_DEFAULTS (the governed-ticker seed metadata) lives in lib/core-holdings.ts so the
 // contract checks can import it db-free and assert it matches the constitution's caps.
@@ -131,11 +135,6 @@ export async function syncHoldingFromTrades(userId: string, ticker: string, fxRa
 }
 
 // ─── IBKR activity (trades + dividends) import ────────────────────────────────
-// Parse IBKR date YYYYMMDD → Date.
-export function parseFlexDate(s: string): Date {
-  if (s.length === 8) return new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`)
-  return new Date(s)
-}
 
 export interface FlexExecution {
   tradeID: string; symbol: string; buySell: "BUY" | "SELL"
@@ -168,25 +167,59 @@ export async function importIbkrActivityForUser(
   const CORE = new Set<string>(CORE_TICKERS)
   const inScope = (sym: string) => CORE.has(sym.trim().toUpperCase())
 
+  // Load the existing trade log ONCE and dedup in memory: by IBKR tradeID (normal re-run) AND by
+  // natural key with multiplicity (safe when IBKR reissues tradeIDs for the same executions — see
+  // selectExecutionsToImport). This is what stops a reconfigured Flex query from doubling the log.
+  const existingTrades = await db.trade.findMany({
+    where: { userId }, select: { id: true, note: true, ticker: true, type: true, units: true, price: true, date: true },
+  })
+  const existingTradeIDs = new Set<string>()
+  const existingNaturalCounts = new Map<string, number>()
+  const existingByKey = new Map<string, ExistingTradeRow[]>()
+  for (const t of existingTrades) {
+    const ibkrId = t.note?.match(/\[ibkr:([^\]]+)\]/)?.[1] ?? null
+    if (ibkrId) existingTradeIDs.add(ibkrId)
+    const k = naturalKey(t.ticker, t.type, t.units, t.price, t.date)
+    existingNaturalCounts.set(k, (existingNaturalCounts.get(k) ?? 0) + 1)
+    const arr = existingByKey.get(k) ?? []
+    arr.push({ id: t.id, ibkrId, date: t.date })
+    existingByKey.set(k, arr)
+  }
+  const scoped = executions.filter((e) => !isForexRow(e.symbol) && inScope(e.symbol))
+  const toImport = selectExecutionsToImport(scoped, existingTradeIDs, existingNaturalCounts)
+
   let trades = 0
   let divs = 0
   const affected = new Set<string>()
 
-  for (const e of executions) {
-    if (isForexRow(e.symbol)) continue // forex/cash conversions are never trades
-    if (!inScope(e.symbol)) continue   // skip anything outside the Atlas Core plan
-    const exists = await db.trade.findFirst({
-      where: { userId, note: { contains: `[ibkr:${e.tradeID}]` } },
-    })
-    if (exists) continue
+  // Heal any already-doubled trades using this report as the source of truth (removes the
+  // duplicates a prior re-import under new tradeIDs left behind). Only keys the report covers are
+  // touched, so trades outside its window are safe.
+  const batchNaturalCounts = new Map<string, number>()
+  const batchTradeIDs = new Set<string>()
+  for (const e of scoped) {
+    batchNaturalCounts.set(executionNaturalKey(e), (batchNaturalCounts.get(executionNaturalKey(e)) ?? 0) + 1)
+    batchTradeIDs.add(e.tradeID)
+  }
+  const staleIds = selectStaleDuplicateTrades(existingByKey, batchNaturalCounts, batchTradeIDs)
+  if (staleIds.length > 0) {
+    const removed = existingTrades.filter((t) => staleIds.includes(t.id))
+    for (const t of removed) affected.add(t.ticker.toUpperCase())
+    for (const id of staleIds) {
+      await db.contributionRecord.deleteMany({ where: { userId, note: { contains: `[trade:${id}]` } } })
+    }
+    await db.trade.deleteMany({ where: { id: { in: staleIds } } })
+  }
 
+  for (const e of toImport) {
     affected.add(e.symbol.toUpperCase())
+    const tradeDate = parseFlexDate(e.tradeDate)
     const amountSgd = e.quantity * e.price * e.fxRate
     const trade = await db.trade.create({
       data: {
         userId, ticker: e.symbol.toUpperCase(), type: e.buySell,
         units: e.quantity, price: e.price, amount: amountSgd, fxRate: e.fxRate,
-        date: parseFlexDate(e.tradeDate), note: `[ibkr:${e.tradeID}]`,
+        date: tradeDate, note: `[ibkr:${e.tradeID}]`,
       },
     })
     if (e.buySell === "BUY") {
@@ -196,7 +229,7 @@ export async function importIbkrActivityForUser(
           // SGD — the contributions view and the monthly target are SGD, so the linked
           // contribution is stored in SGD (settled amount), not the USD trade notional.
           amount: amountSgd,
-          date: parseFlexDate(e.tradeDate),
+          date: tradeDate,
           note: `[trade:${trade.id}] [ibkr:${e.tradeID}] BUY ${e.quantity} ${e.symbol} @ $${e.price}`,
         },
       })
