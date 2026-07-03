@@ -152,8 +152,9 @@ agree("furthest-underweight wins", [sp("VWRA", 40), sp("QQQM", 18), sp("SMH", 15
 // combined exactly 40 → warning fires (≥). combined exactly 45 → still warning, NOT hard (>45).
 agree("combined == 40 → warning", [sp("VWRA", 45), sp("QQQM", 25), sp("SMH", 15), sp("A35", 15)], TOTAL, {}, "VWRA", "medium")
 agree("combined == 45 → warning not hard", [sp("VWRA", 40), sp("QQQM", 30), sp("SMH", 15), sp("A35", 15)], TOTAL, {}, "VWRA", "medium")
-// A35 exactly 7 → NOT below floor (floor is <7); everything else in range → standard split.
-eq("A35 == 7 → not floor branch", nm([sp("VWRA", 55), sp("QQQM", 22), sp("SMH", 13), sp("A35", 10)]).severity, "none")
+// A35 exactly 7 → NOT below floor (floor is <7, strict); A35=6 → floor fires.
+eq("A35 == 7 → not floor branch", nm([sp("VWRA", 58), sp("QQQM", 22), sp("SMH", 13), sp("A35", 7)]).severity, "none")
+agree("A35 == 6 → floor fires", [sp("VWRA", 59), sp("QQQM", 22), sp("SMH", 13), sp("A35", 6)], TOTAL, {}, "A35", "high")
 // SMH exactly 20 → NOT over cap (cap is >20).
 eq("SMH == 20 → no forced sell", nm([sp("VWRA", 52), sp("QQQM", 16), sp("SMH", 20), sp("A35", 12)]).ticker !== "SMH", true)
 

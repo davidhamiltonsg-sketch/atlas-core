@@ -370,13 +370,9 @@ export function computeSbrDca(
       const qqqm = positions.find((p) => p.ticker === "QQQM")
       const smh  = positions.find((p) => p.ticker === "SMH")
       const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
-      const techHalt = combined >= comb.warning
-
-      const under = [...positions].sort((a, b) => (a.actualPct - a.rangeLow) - (b.actualPct - b.rangeLow))
-      const mostUnder = under[0]
-      if (mostUnder && mostUnder.actualPct < mostUnder.rangeLow && !(techHalt && ["QQQM", "SMH"].includes(mostUnder.ticker))) {
-        return allToOne(mostUnder.ticker, `Below its ${mostUnder.rangeLow}% range — filling with new money.`, `${mostUnder.ticker} is under its comfortable range; the full contribution fills it.`)
-      }
+      // smh_cap fires when SMH alone is over its hard cap — the combined-ceiling warning
+      // does NOT additionally apply, so guard techHalt to avoid zeroing QQQM incorrectly.
+      const techHalt = branch.tag !== "smh_cap" && combined >= comb.warning
 
       const eligible = positions.filter((p) => {
         if (techHalt && ["QQQM", "SMH"].includes(p.ticker)) return false
