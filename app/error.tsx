@@ -43,7 +43,7 @@ export default function Error({
         </div>
         <button
           onClick={reset}
-          className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+          className="w-full py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
         >
           Try again
         </button>

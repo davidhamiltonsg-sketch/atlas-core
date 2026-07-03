@@ -31,7 +31,7 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    id: "C", title: "Structural limits", Icon: Ruler, accent: "text-indigo-500 bg-indigo-500/10",
+    id: "C", title: "Structural limits", Icon: Ruler, accent: "text-violet-500 bg-violet-500/10",
     rules: [
       { id: "C1", name: "Hard caps are inviolable", body: "SMH ≤ 12%, BTC ≤ its cycle cap, combined QQQM+SMH ≤ 42% (§4.3). A breach triggers a trim back to target. No debate, no exceptions." },
       { id: "C2", name: "Maintain an 8–10% defensive buffer at all times once built", body: "Built only from new contributions (see A4)." },

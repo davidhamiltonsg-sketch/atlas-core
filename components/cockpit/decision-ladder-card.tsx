@@ -10,7 +10,7 @@ interface Props {
 const SEVERITY_STYLES = {
   critical: "border-red-500/60 bg-red-500/[0.08] text-red-700 dark:text-red-300",
   high:     "border-amber-500/60 bg-amber-500/[0.08] text-amber-700 dark:text-amber-300",
-  medium:   "border-indigo-500/40 bg-indigo-500/[0.08] text-indigo-700 dark:text-indigo-300",
+  medium:   "border-violet-500/40 bg-violet-500/[0.08] text-violet-700 dark:text-violet-300",
   low:      "border-border bg-card/60 text-foreground",
   none:     "border-border bg-card/60 text-foreground",
 }
@@ -32,11 +32,11 @@ const stepStatusColor: Record<StepStatus, string> = {
 /** Art. XIII Decision Ladder — 8-step display with instruction block. */
 export function DecisionLadderCard({ ladder, monthlyContribution, daysToWindow, windowClosesLabel }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-2xl ring-hero overflow-hidden">
       {/* Header */}
       <div className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">
         <div>
-          <p className="font-data text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Art. XIII · Decision Ladder</p>
+          <p className="font-data text-[10px] font-bold uppercase tracking-widest text-primary">Art. XIII · Decision Ladder</p>
           <p className="font-display text-sm font-bold mt-0.5">{ladder.headline}</p>
         </div>
         {daysToWindow !== null ? (

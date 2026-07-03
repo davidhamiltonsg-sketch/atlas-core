@@ -47,6 +47,11 @@ export function sbrPhase(totalValue: number, c: Constitution = SILICON_BRICK_ROA
   return phases[0]
 }
 
+// Fund colours come from the registry so a palette rebrand never needs an engine edit.
+function fundColor(c: Constitution, ticker: string): string {
+  return c.funds.find((f) => f.ticker === ticker)?.color ?? "#64748b"
+}
+
 function pctFromHigh(p: SbrPosition): number | null {
   if (p.hi52 <= 0 || p.latestPrice <= 0) return null
   return ((p.latestPrice - p.hi52) / p.hi52) * 100
@@ -146,7 +151,7 @@ export function computeSbrNextMove(
       return { severity: "none", ticker: "VWRA", action: "Make your first contribution",
         what: `Invest this month's SGD ${c.monthlyContribution.toLocaleString()} at the target split: VWRA 50% · QQQM 25% · SMH 15% · A35 10%.`,
         why: "The portfolio is empty. The first step is to start — monthly contributions are the most powerful thing you can do.",
-        when: "Anytime this month.", color: "#2dd4bf" }
+        when: "Anytime this month.", color: fundColor(c, "VWRA") }
 
     case "smh_cap":
       return { severity: "critical", ticker: "SMH", action: "Sell SMH back to 15%",
@@ -158,39 +163,39 @@ export function computeSbrNextMove(
       return { severity: "critical", ticker: "VWRA", action: "Stop buying QQQM and SMH — they are over 45% together",
         what: `QQQM + SMH combined is ${branch.combined.toFixed(1)}% — above the 45% hard limit. Put all new money into VWRA until they drop below ${branch.resume}% combined.`,
         why: "QQQM and SMH both hold a lot of the same tech companies, so together they concentrate your risk. The limit stops them from taking over the portfolio.",
-        when: "Every month until the combined share drops below 42%.", color: "#2dd4bf" }
+        when: "Every month until the combined share drops below 42%.", color: fundColor(c, "VWRA") }
 
     case "combined_warn":
       return { severity: "medium", ticker: "VWRA", action: "Tech funds are getting heavy — buy VWRA only this month",
         what: `QQQM + SMH are ${branch.combined.toFixed(1)}% together — past the ${branch.warning}% warning level. Skip both this month and put all new money into VWRA instead.`,
         why: "When tech stocks get heavy, buying global stocks (VWRA) keeps the balance. You can return to QQQM and SMH when they drop below 42% combined.",
-        when: "This month.", color: "#2dd4bf" }
+        when: "This month.", color: fundColor(c, "VWRA") }
 
     case "a35_floor":
       return { severity: "high", ticker: "A35", action: "Top up A35 — the safety buffer is low",
         what: `A35 is ${branch.a35Pct.toFixed(1)}% — below its minimum 7%. Put all this month's money into A35 until it is back above 8%.`,
         why: "A35 (Singapore bonds, in SGD) is your safety net. Keeping it topped up means you always have stable local-currency savings to fall back on.",
-        when: "This month, until A35 is above 8%.", color: "#34d399" }
+        when: "This month, until A35 is above 8%.", color: fundColor(c, "A35") }
 
     case "phase_III": {
       const remaining = Math.round(120000 - branch.totalValue)
       return { severity: "high", ticker: "A35", action: "Phase III — start shifting money to safety",
         what: `Once this quarter, sell about SGD ${branch.qqqmSell.toLocaleString()} of QQQM (3% of the portfolio) and SGD ${branch.vwraSell.toLocaleString()} of VWRA (2%), and move the SGD ${(branch.qqqmSell + branch.vwraSell).toLocaleString()} into A35. Continue putting all new monthly contributions into A35 too. Leave SMH untouched for now — it stays put through Phase III and is the first fund you sell when you buy the property.`,
         why: `You are in Phase III — about S$${remaining.toLocaleString()} away from your goal. Gradually moving to bonds now protects those gains if markets fall at the worst time.`,
-        when: "On your next monthly window. Repeat each quarter until you reach Phase IV.", color: "#34d399" }
+        when: "On your next monthly window. Repeat each quarter until you reach Phase IV.", color: fundColor(c, "A35") }
     }
 
     case "phase_IV":
       return { severity: "high", ticker: "A35", action: "Phase IV — stop buying stocks, everything to A35",
         what: "Stop buying any stocks this month. Every new contribution goes into A35. Start making a timeline for the property purchase — the money should be ready to move within 60 days of deciding.",
         why: `You are in Phase IV — above S$114,000 and close to your goal. Building up SGD cash now means you will not be forced to sell stocks at a bad time when you need the deposit.`,
-        when: "Now, and every month until you buy.", color: "#34d399" }
+        when: "Now, and every month until you buy.", color: fundColor(c, "A35") }
 
     case "drawdown":
       return { severity: "high", ticker: "VWRA", action: "Markets are down — deploy your reserve into VWRA",
         what: `The portfolio is down ${Math.abs(branch.drawdownPct).toFixed(0)}% from its recent high. First deploy your small cash reserve into VWRA, then put the full monthly contribution into VWRA too. Do not sell anything.`,
         why: "A falling market is a buying opportunity early in the journey. The cash reserve is spare cash kept for exactly this — deploying it (plus contributions) into the most diversified fund is one of the best things you can do.",
-        when: "This month.", color: "#2dd4bf" }
+        when: "This month.", color: fundColor(c, "VWRA") }
 
     case "underweight": {
       const p = branch.fund
@@ -204,7 +209,7 @@ export function computeSbrNextMove(
       return { severity: "low", ticker: branch.skipped[0], action: `Skip ${branch.skipped.join(" & ")} this month — near its yearly high`,
         what: `Invest normally, but skip ${branch.skipped.join(" and ")} this month (it is within 3% of its highest price this year, and already in range). Put that money into VWRA instead.`,
         why: "Buying something at almost its highest-ever price is a fast way to feel instant regret if it dips next week. VWRA has no such restriction — you buy it no matter what.",
-        when: "This month.", color: "#2dd4bf" }
+        when: "This month.", color: fundColor(c, "VWRA") }
 
     case "standard": {
       const splitTargets = branch.phase.targets ?? Object.fromEntries(c.funds.map((f) => [f.ticker, f.target]))
@@ -212,7 +217,7 @@ export function computeSbrNextMove(
       return { severity: "none", ticker: "ALL", action: "All good — invest at the standard split",
         what: `Split this month's contribution at the target weights: ${splitStr}. Everything is in range.`,
         why: "Every fund is within its comfortable range and none are at their limits. Nothing to fix — just keep the habit going.",
-        when: "Anytime this month.", color: "#34d399" }
+        when: "Anytime this month.", color: fundColor(c, "A35") }
     }
   }
 }

@@ -338,7 +338,7 @@ export default async function YtdPage() {
 
           <div className="rounded-xl border border-border bg-card p-4 card-elevated">
             <p className="text-xs text-muted-foreground mb-1">{L.deployed}</p>
-            <p className={`text-2xl font-black tabular-nums ${deployed > 0 ? (isSbr ? "text-teal-400" : "text-indigo-400") : "text-muted-foreground"}`}>
+            <p className={`text-2xl font-black tabular-nums ${deployed > 0 ? (isSbr ? "text-sky-400" : "text-violet-400") : "text-muted-foreground"}`}>
               {deployed > 0 ? formatCurrency(deployed, deployedCcy) : "—"}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{isSbr ? `From your top-ups ${data.year}` : `From BUY trades ${data.year}`}</p>

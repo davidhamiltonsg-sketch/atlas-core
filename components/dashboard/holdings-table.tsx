@@ -137,7 +137,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="h-2 w-2 rounded-full shrink-0" style={{ background: p.color }} />
                       <span className="font-bold">{p.ticker}</span>
-                      {alt && <span className="rounded-full bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20 px-1.5 py-0.5 text-[9px] font-semibold">{alt}</span>}
+                      {alt && <span className="rounded-full bg-violet-500/10 text-violet-500 dark:text-violet-400 ring-1 ring-violet-500/20 px-1.5 py-0.5 text-[9px] font-semibold">{alt}</span>}
                       {offScope && <span className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold">not in plan — review</span>}
                     </div>
                     <span className="text-[11px] text-muted-foreground">{p.name}</span>

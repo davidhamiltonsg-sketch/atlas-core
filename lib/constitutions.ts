@@ -93,10 +93,10 @@ export const ATLAS_CORE: Constitution = {
   broker: "IBKR Singapore",
   docPath: "/atlas-core-constitution.html",
   funds: [
-    { ticker: "VT",   name: "Vanguard Total World Stock ETF",      role: "The big foundation — owns stocks from all over the world",                           target: 52, rangeLow: 46, rangeHigh: 58, hardCap: 60, color: "#6366f1" },
-    { ticker: "QQQM", name: "Invesco NASDAQ-100 ETF",              role: "The growth engine — the 100 biggest US tech companies",                             target: 23, rangeLow: 18, rangeHigh: 28, hardCap: 30, color: "#8b5cf6" },
-    { ticker: "SMH",  name: "VanEck Semiconductor ETF",            role: "The chip bet — semiconductor companies tied to AI and computing",                    target: 10, rangeLow: 7,  rangeHigh: 12, hardCap: 12, color: "#a78bfa" },
-    { ticker: "VWO",  name: "Vanguard FTSE Emerging Markets ETF",  role: "The geography balancer — extra exposure to emerging market economies",              target: 8,  rangeLow: 5,  rangeHigh: 11, hardCap: 13, color: "#c4b5fd" },
+    { ticker: "VT",   name: "Vanguard Total World Stock ETF",      role: "The big foundation — owns stocks from all over the world",                           target: 52, rangeLow: 46, rangeHigh: 58, hardCap: 60, color: "#7c3aed" },
+    { ticker: "QQQM", name: "Invesco NASDAQ-100 ETF",              role: "The growth engine — the 100 biggest US tech companies",                             target: 23, rangeLow: 18, rangeHigh: 28, hardCap: 30, color: "#a78bfa" },
+    { ticker: "SMH",  name: "VanEck Semiconductor ETF",            role: "The chip bet — semiconductor companies tied to AI and computing",                    target: 10, rangeLow: 7,  rangeHigh: 12, hardCap: 12, color: "#c026d3" },
+    { ticker: "VWO",  name: "Vanguard FTSE Emerging Markets ETF",  role: "The geography balancer — extra exposure to emerging market economies",              target: 8,  rangeLow: 5,  rangeHigh: 11, hardCap: 13, color: "#8b5cf6" },
     { ticker: "BTC",  name: "iShares Bitcoin Trust ETF (IBIT)",    role: "The wild card — high upside, but kept deliberately small to limit the damage if it falls", target: 7, rangeLow: 6, rangeHigh: 8, hardCap: 8, color: "#f59e0b" },
   ],
   skipAtHighPct: 3,
@@ -109,10 +109,10 @@ export const ATLAS_CORE: Constitution = {
 // Presentation only — plain-English names, roles, colours, notes. Rule numbers (target,
 // range, cap, floor) come from SBR_SPEC.funds, merged in below.
 const SBR_PRESENTATION: Record<string, { name: string; role: string; color: string; note?: string }> = {
-  VWRA: { name: "Vanguard FTSE All-World UCITS ETF", role: "Stable global core — always accumulate",        color: "#2dd4bf" },
-  QQQM: { name: "Invesco NASDAQ-100 ETF",            role: "Growth tilt — US large-cap tech",              color: "#60a5fa" },
-  SMH:  { name: "VanEck Semiconductor ETF",          role: "Growth tilt — semiconductors (most volatile)", color: "#a78bfa", note: "Only mandatory sell in the portfolio — trim to 15% if it exceeds 20%." },
-  A35:  { name: "ABF Singapore Bond Index Fund",     role: "SGD safety buffer — your insurance policy in local currency", color: "#34d399", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
+  VWRA: { name: "Vanguard FTSE All-World UCITS ETF", role: "Stable global core — always accumulate",        color: "#38bdf8" },
+  QQQM: { name: "Invesco NASDAQ-100 ETF",            role: "Growth tilt — US large-cap tech",              color: "#2563eb" },
+  SMH:  { name: "VanEck Semiconductor ETF",          role: "Growth tilt — semiconductors (most volatile)", color: "#818cf8", note: "Only mandatory sell in the portfolio — trim to 15% if it exceeds 20%." },
+  A35:  { name: "ABF Singapore Bond Index Fund",     role: "SGD safety buffer — your insurance policy in local currency", color: "#0891b2", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
 }
 
 const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({

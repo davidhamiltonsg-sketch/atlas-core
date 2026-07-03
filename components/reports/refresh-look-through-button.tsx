@@ -30,7 +30,7 @@ export function RefreshLookThroughButton({ lastUpdated }: { lastUpdated: Date | 
       <button
         onClick={handleRefresh}
         disabled={isPending}
-        className="no-print inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/[0.06] hover:bg-indigo-500/10 text-indigo-500 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60"
+        className="no-print inline-flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/[0.06] hover:bg-violet-500/10 text-violet-500 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60"
       >
         <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
         {isPending ? "Fetching holdings…" : "Refresh Holdings Data"}

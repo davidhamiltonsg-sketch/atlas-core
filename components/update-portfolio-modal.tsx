@@ -218,10 +218,10 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               {/* IBKR Sync */}
               <button
                 onClick={() => { setMode("ibkr"); handleIBKRSync() }}
-                className="flex flex-col items-center gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/[0.06] p-4 hover:bg-indigo-500/10 transition-colors text-left group"
+                className="flex flex-col items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/[0.06] p-4 hover:bg-violet-500/10 transition-colors text-left group"
               >
-                <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/15 flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-500/25 transition-colors">
-                  <RefreshCw className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <div className="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-500/15 flex items-center justify-center group-hover:bg-violet-200 dark:group-hover:bg-violet-500/25 transition-colors">
+                  <RefreshCw className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Sync IBKR</p>
@@ -264,7 +264,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
             <div>
               {ibkrState === "fetching" && (
                 <div className="flex flex-col items-center gap-3 py-10">
-                  <RefreshCw className="h-8 w-8 text-indigo-500 animate-spin" />
+                  <RefreshCw className="h-8 w-8 text-violet-500 animate-spin" />
                   <p className="text-sm font-medium">Fetching from IBKR…</p>
                   <p className="text-xs text-muted-foreground">Generating FLEX report — usually takes 5–10 seconds</p>
                 </div>
@@ -307,16 +307,16 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                         className={`flex items-center justify-between rounded-lg px-3 py-2.5 border ${
                           pos.matched
                             ? "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20"
-                            : "bg-indigo-50 dark:bg-indigo-500/[0.08] border-indigo-200 dark:border-indigo-500/20"
+                            : "bg-violet-50 dark:bg-violet-500/[0.08] border-violet-200 dark:border-violet-500/20"
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           {pos.matched
                             ? <Check className="h-3.5 w-3.5 text-green-500" />
-                            : <ArrowUpCircle className="h-3.5 w-3.5 text-indigo-500" />
+                            : <ArrowUpCircle className="h-3.5 w-3.5 text-violet-500" />
                           }
                           <span className="text-xs font-bold">{pos.symbol}</span>
-                          {!pos.matched && <span className="text-[10px] text-indigo-500">new — will be added</span>}
+                          {!pos.matched && <span className="text-[10px] text-violet-500">new — will be added</span>}
                           {offScope && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                         </div>
                         <div className="text-right">
@@ -365,14 +365,14 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                     step="0.001"
                     value={manualValues[h.id]?.units ?? ""}
                     onChange={(e) => handleManualChange(h.id, "units", e.target.value)}
-                    className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                    className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-right outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                   />
                   <input
                     type="number"
                     step="0.01"
                     value={manualValues[h.id]?.price ?? ""}
                     onChange={(e) => handleManualChange(h.id, "price", e.target.value)}
-                    className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-right outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                    className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-right outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                   />
                 </div>
               ))}
@@ -387,10 +387,10 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border hover:border-indigo-400 dark:hover:border-indigo-500 py-10 transition-colors group"
+                    className="w-full flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border hover:border-violet-400 dark:hover:border-violet-500 py-10 transition-colors group"
                   >
-                    <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 transition-colors">
-                      <Upload className="h-6 w-6 text-muted-foreground group-hover:text-indigo-500 transition-colors" />
+                    <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-violet-50 dark:group-hover:bg-violet-500/10 transition-colors">
+                      <Upload className="h-6 w-6 text-muted-foreground group-hover:text-violet-500 transition-colors" />
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-medium">Click to upload screenshot</p>
@@ -402,7 +402,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
               {screenshotState === "processing" && (
                 <div className="flex flex-col items-center gap-3 py-10">
-                  <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+                  <Loader2 className="h-8 w-8 text-violet-500 animate-spin" />
                   <p className="text-sm font-medium">Analysing screenshot…</p>
                   <p className="text-xs text-muted-foreground">Claude AI is extracting your holdings data</p>
                 </div>
@@ -431,11 +431,11 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                       const matched = holdings.find((h) => h.ticker === row.ticker)
                       const offScope = !isInScope(row.ticker)
                       return (
-                        <div key={row.ticker} className={`flex items-center justify-between rounded-lg px-3 py-2 border ${matched ? "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20" : "bg-indigo-50 dark:bg-indigo-500/[0.08] border-indigo-200 dark:border-indigo-500/20"}`}>
+                        <div key={row.ticker} className={`flex items-center justify-between rounded-lg px-3 py-2 border ${matched ? "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20" : "bg-violet-50 dark:bg-violet-500/[0.08] border-violet-200 dark:border-violet-500/20"}`}>
                           <div className="flex items-center gap-2">
-                            {matched ? <Check className="h-3.5 w-3.5 text-green-500" /> : <ArrowUpCircle className="h-3.5 w-3.5 text-indigo-500" />}
+                            {matched ? <Check className="h-3.5 w-3.5 text-green-500" /> : <ArrowUpCircle className="h-3.5 w-3.5 text-violet-500" />}
                             <span className="text-xs font-bold">{row.ticker}</span>
-                            {!matched && <span className="text-[10px] text-indigo-500">new — will be added</span>}
+                            {!matched && <span className="text-[10px] text-violet-500">new — will be added</span>}
                             {offScope && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                           </div>
                           <div className="text-right">
@@ -476,7 +476,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               <button
                 onClick={handleConfirmIBKR}
                 disabled={isPending || saved}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Save {ibkrPositions.length} position{ibkrPositions.length !== 1 ? "s" : ""}
@@ -487,7 +487,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               <button
                 onClick={handleSaveManual}
                 disabled={isPending || saved}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Save Values
@@ -498,7 +498,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               <button
                 onClick={handleConfirmScreenshot}
                 disabled={isPending || saved || extractedRows.filter((r) => r.units > 0 && r.price > 0).length === 0}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Confirm & Save

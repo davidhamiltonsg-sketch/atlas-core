@@ -102,7 +102,7 @@ export function DriftNotifications({ alerts }: DriftNotificationsProps) {
       }
       className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
         enabled
-          ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+          ? "border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-400"
           : "border-border bg-card hover:bg-accent text-muted-foreground"
       } ${permission === "denied" ? "opacity-50 cursor-not-allowed" : ""}`}
     >

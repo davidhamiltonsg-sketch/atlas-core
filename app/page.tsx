@@ -23,6 +23,7 @@ import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
 import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { SbrDashboard } from "@/components/sbr/sbr-dashboard"
 import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
 import { DecisionLadderCard } from "@/components/cockpit/decision-ladder-card"
@@ -176,7 +177,7 @@ async function getDashboardData(userId: string) {
     const avgCostUsd = cb && cb.units > 0 ? cb.usd / cb.units : null
     const unrealisedSgd = costBasisSgd > 0 ? value - costBasisSgd : null
     const unrealisedPct = costBasisSgd > 0 ? (unrealisedSgd! / costBasisSgd) * 100 : null
-    return { ticker: h.ticker, name: h.name, color: h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd, costBasisSgd, unrealisedSgd, unrealisedPct, units: h.snapshots[0]?.units ?? 0 }
+    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd, costBasisSgd, unrealisedSgd, unrealisedPct, units: h.snapshots[0]?.units ?? 0 }
   })
 
   // Bitcoin sleeve consolidation — BTC in run-off, IBIT is accumulation vehicle
@@ -256,7 +257,7 @@ async function getDashboardData(userId: string) {
   const donutData = holdings.map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
-    return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
+    return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
   // Collapse BTC + IBIT into one Bitcoin-sleeve slice (one 7% position).
@@ -567,12 +568,12 @@ export default async function Dashboard() {
           {/* ── PERFORMANCE ───────────────────────────────────────────── */}
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <a href="/ytd" className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2 hover:border-primary/30 hover:bg-accent/40 transition-colors group">
+            <a href="/ytd" className="rounded-2xl card-lux p-4 flex flex-col gap-2 group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Portfolio</span>
                 <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <p className="text-xl font-black tabular-nums">{formatCurrency(d.totalValue, "SGD")}</p>
+              <p className="text-2xl font-black tabular-nums gradient-text">{formatCurrency(d.totalValue, "SGD")}</p>
               {d.valueChange !== null ? (
                 <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>
                   {d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}
@@ -581,17 +582,17 @@ export default async function Dashboard() {
                 <p className="text-[11px] text-muted-foreground">USD/SGD {d.usdSgdRate.toFixed(4)}</p>
               )}
             </a>
-            <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
+            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Health</span>
               <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}>{d.health.overall}</p>
               <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
             </div>
-            <a href="/portfolio" className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${d.driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
+            <a href="/portfolio" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${d.driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
               <span className="text-xs font-medium text-muted-foreground">Drift Alerts</span>
               <p className={`text-xl font-black tabular-nums ${d.driftAlerts > 0 ? (d.hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}>{d.driftAlerts}</p>
               <p className="text-[11px] text-muted-foreground">{d.driftAlerts === 0 ? "All on target" : `${d.hardBreaches}H / ${d.softBreaches}S breach`}</p>
             </a>
-            <a href="/forecast" className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${
+            <a href="/forecast" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${
               d.onTrackPct === null ? "border-border hover:border-primary/30" :
               d.onTrackPct >= 95 ? "border-green-500/30" :
               d.onTrackPct >= 80 ? "border-yellow-400/30" : "border-red-500/30"
@@ -625,7 +626,7 @@ export default async function Dashboard() {
         <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
 
           {/* Allocation donut */}
-          <div className="rounded-xl border border-border bg-card p-5 card-elevated">
+          <div className="rounded-2xl card-lux p-5">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Allocation</h2>
             <p className="text-[11px] text-muted-foreground mb-3">Outer = actual · Inner = target</p>
             <AllocationDonut data={d.donutData} totalValue={d.totalValue} />
@@ -633,7 +634,7 @@ export default async function Dashboard() {
 
           {/* Value history */}
           {d.historyPoints.length >= 2 && (
-            <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+            <div className="rounded-2xl card-lux p-4">
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value History</h2>
                 {d.valueChange !== null && (
@@ -649,7 +650,7 @@ export default async function Dashboard() {
 
           {/* 2045 goal + contribution countdown */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+            <div className="rounded-2xl card-lux p-4">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">2045 Base Case</p>
               <p className="text-lg font-black tabular-nums gradient-text leading-tight">
                 {d.base2045 >= 1_000_000
@@ -658,17 +659,17 @@ export default async function Dashboard() {
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">10% p.a. · {d.yearsTo2045} yr</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-primary/60" style={{ width: `${d.base2045 > 0 ? Math.min(100, (d.totalValue / d.base2045) * 100) : 0}%` }} />
+                <div className="h-full rounded-full bar-brand opacity-90" style={{ width: `${d.base2045 > 0 ? Math.min(100, (d.totalValue / d.base2045) * 100) : 0}%` }} />
               </div>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+            <div className="rounded-2xl card-lux p-4">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Next Contribution</p>
               <p className="text-lg font-black tabular-nums leading-tight">
                 {d.daysToContribution === 0 ? "Today" : `${d.daysToContribution}d`}
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "SGD")}</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-primary/60" style={{ width: `${Math.max(5, 100 - (d.daysToContribution / 31) * 100)}%` }} />
+                <div className="h-full rounded-full bar-brand opacity-90" style={{ width: `${Math.max(5, 100 - (d.daysToContribution / 31) * 100)}%` }} />
               </div>
             </div>
           </div>

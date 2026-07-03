@@ -64,7 +64,7 @@ export function WatchlistClient({ items: initialItems }: WatchlistClientProps) {
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Watchlist ({items.length})</h2>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
         >
           {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
           {showForm ? "Cancel" : "Add to Watchlist"}
@@ -91,24 +91,24 @@ export function WatchlistClient({ items: initialItems }: WatchlistClientProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticker</label>
-                <input name="ticker" required placeholder="e.g. AVUV" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all uppercase" />
+                <input name="ticker" required placeholder="e.g. AVUV" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all uppercase" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Name</label>
-                <input name="name" required placeholder="Avantis U.S. Small Cap Value" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="name" required placeholder="Avantis U.S. Small Cap Value" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Hypothetical Target % (optional)</label>
-                <input name="targetPct" type="number" step="0.5" min="0" max="100" placeholder="5" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="targetPct" type="number" step="0.5" min="0" max="100" placeholder="5" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Research Note</label>
-                <input name="note" placeholder="Why you're watching this…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="note" placeholder="Why you're watching this…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
             </div>
-            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
+            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               Add
             </button>
@@ -132,7 +132,7 @@ export function WatchlistClient({ items: initialItems }: WatchlistClientProps) {
                     <span className="text-sm font-black">{item.ticker}</span>
                     <span className="text-xs text-muted-foreground">{item.name}</span>
                     {item.targetPct !== null && (
-                      <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-full">
                         {item.targetPct}% hypothetical
                       </span>
                     )}

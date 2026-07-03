@@ -104,14 +104,14 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowIBKRImport(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/[0.06] hover:bg-indigo-500/10 text-indigo-500 text-xs font-semibold px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/[0.06] hover:bg-violet-500/10 text-violet-500 text-xs font-semibold px-3 py-1.5 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Import IBKR
           </button>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
           >
             {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
             {showForm ? "Cancel" : "Record Dividend"}
@@ -139,14 +139,14 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticker</label>
-                <input name="ticker" required list="div-ticker-list" placeholder="VT" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all uppercase" />
+                <input name="ticker" required list="div-ticker-list" placeholder="VT" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all uppercase" />
                 <datalist id="div-ticker-list">
                   {holdings.map(h => <option key={h.ticker} value={h.ticker} />)}
                 </datalist>
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Payment Date</label>
-                <input name="paymentDate" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="paymentDate" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -154,30 +154,30 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Amount Received (SGD)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S$</span>
-                  <input name="amount" type="number" step="0.01" min="0.01" required placeholder="150.00" className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                  <input name="amount" type="number" step="0.01" min="0.01" required placeholder="150.00" className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Units Held at Payment</label>
-                <input name="units" type="number" step="0.001" min="0.001" required placeholder="428" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="units" type="number" step="0.001" min="0.001" required placeholder="428" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Note (optional)</label>
-              <input name="note" placeholder="Q1 2025 distribution…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+              <input name="note" placeholder="Q1 2025 distribution…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
             </div>
             {/* DRIP toggle */}
-            <div className={`rounded-lg border p-3 transition-colors ${isDrip ? "border-indigo-500/40 bg-indigo-500/5" : "border-border bg-muted/20"}`}>
+            <div className={`rounded-lg border p-3 transition-colors ${isDrip ? "border-violet-500/40 bg-violet-500/5" : "border-border bg-muted/20"}`}>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isDrip}
                   onChange={e => setIsDrip(e.target.checked)}
-                  className="h-4 w-4 rounded border-border accent-indigo-500"
+                  className="h-4 w-4 rounded border-border accent-violet-500"
                 />
                 <div>
                   <span className="text-xs font-semibold flex items-center gap-1.5">
-                    <RefreshCw className="h-3 w-3 text-indigo-500" />
+                    <RefreshCw className="h-3 w-3 text-violet-500" />
                     DRIP — Dividend Reinvestment Plan
                   </span>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -186,7 +186,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                 </div>
               </label>
               {isDrip && (
-                <div className="mt-3 pt-3 border-t border-indigo-500/20">
+                <div className="mt-3 pt-3 border-t border-violet-500/20">
                   <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                     Units Acquired via DRIP <span className="text-red-500">*</span>
                   </label>
@@ -197,7 +197,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                     min="0.000001"
                     required={isDrip}
                     placeholder="e.g. 0.9743"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                   />
                   <p className="text-[11px] text-muted-foreground mt-1">
                     A BUY trade will also be recorded in the trade log for these units.
@@ -205,7 +205,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                 </div>
               )}
             </div>
-            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
+            <button type="submit" disabled={isPending} className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors">
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Record
             </button>
@@ -245,7 +245,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         {d.isDrip && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-indigo-500/20">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-violet-500/20">
                             <RefreshCw className="h-2.5 w-2.5" />
                             DRIP{d.dripUnits ? ` +${d.dripUnits} units` : ""}
                           </span>

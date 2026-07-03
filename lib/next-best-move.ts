@@ -648,7 +648,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       what: `Invest your normal monthly amount, but skip ${overboughtNames.join(" and ")} this month (at 52-week highs) and put that share into VT instead.`,
       why: `Everything is healthy, but ${overboughtNames.join(" and ")} ${overboughtNames.length > 1 ? "are" : "is"} at the top of ${overboughtNames.length > 1 ? "their" : "its"} range. Buying VT instead avoids paying the highest price.`,
       when: "This month, on your usual contribution date.",
-      color: "#6366f1",
+      color: "#8b5cf6",
     }
   }
 

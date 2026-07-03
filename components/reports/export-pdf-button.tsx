@@ -19,7 +19,7 @@ export function ExportPdfButton() {
     <button
       onClick={handleExport}
       disabled={loading}
-      className="no-print inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-accent/60 hover:border-indigo-500/30 transition-all disabled:opacity-60"
+      className="no-print inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-accent/60 hover:border-violet-500/30 transition-all disabled:opacity-60"
     >
       {loading
         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

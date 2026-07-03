@@ -16,11 +16,14 @@ export interface CoreHoldingDefault {
 }
 
 // Presentation only — names and colours. Rule numbers come from ATLAS_SPEC below.
+// Colours are the Atlas "mixed purples" brand ramp — a lightness ladder within the
+// violet→purple→fuchsia family (CVD-validated vs dark + light surfaces; every mark in the
+// app is also direct-labelled by ticker). BTC/IBIT keep semantic amber, SGOV green.
 const PRESENTATION: Record<string, { name: string; color: string }> = {
-  VT:   { name: "Vanguard Total World Stock ETF",        color: "#818cf8" },
-  VWO:  { name: "Vanguard FTSE Emerging Markets ETF",    color: "#c4b5fd" },
+  VT:   { name: "Vanguard Total World Stock ETF",        color: "#7c3aed" },
+  VWO:  { name: "Vanguard FTSE Emerging Markets ETF",    color: "#8b5cf6" },
   QQQM: { name: "Invesco NASDAQ 100 ETF",                color: "#a78bfa" },
-  SMH:  { name: "VanEck Semiconductor ETF",              color: "#f472b6" },
+  SMH:  { name: "VanEck Semiconductor ETF",              color: "#c026d3" },
   BTC:  { name: "Grayscale Bitcoin Mini ETF",            color: "#f59e0b" },
   IBIT: { name: "iShares Bitcoin Trust ETF",             color: "#f59e0b" },
   SGOV: { name: "iShares 0-3 Month Treasury Bond ETF",   color: "#10b981" },

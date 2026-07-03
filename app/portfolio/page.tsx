@@ -276,8 +276,8 @@ export default async function Portfolio() {
                 </div>
               </div>
               <div className="px-5 py-4 flex items-start gap-3">
-                <div className="shrink-0 h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center mt-0.5">
-                  <span className="text-sm font-black text-indigo-500">📷</span>
+                <div className="shrink-0 h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center mt-0.5">
+                  <span className="text-sm font-black text-violet-500">📷</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold mb-1">Upload a screenshot</p>

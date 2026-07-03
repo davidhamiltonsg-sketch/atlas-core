@@ -150,28 +150,28 @@ export default async function Governance() {
 
       {/* Full constitution document */}
       <a href="/atlas-core-constitution.html" target="_blank" rel="noopener noreferrer"
-        className="rounded-xl border border-indigo-500/40 bg-gradient-to-r from-indigo-500/[0.08] to-violet-500/[0.06] p-4 mb-4 flex items-center gap-3 hover:from-indigo-500/[0.12] transition-colors group">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
-          <FileText className="h-4 w-4 text-indigo-400" />
+        className="rounded-xl border border-violet-500/40 bg-gradient-to-r from-violet-500/[0.08] to-violet-500/[0.06] p-4 mb-4 flex items-center gap-3 hover:from-violet-500/[0.12] transition-colors group">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/20 shrink-0">
+          <FileText className="h-4 w-4 text-violet-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400">Full Constitution (v1.5)</p>
+          <p className="text-xs font-bold text-violet-400">Full Constitution (v1.5)</p>
           <p className="text-xs text-muted-foreground">The complete constitution — all caps, bands, look-through limits, pre-committed shock responses, doctrine (Book V), the registers, and the 2040–2045 glide path.</p>
         </div>
-        <span className="text-xs font-semibold text-indigo-400 group-hover:text-indigo-300 shrink-0">Open ↗</span>
+        <span className="text-xs font-semibold text-violet-400 group-hover:text-violet-300 shrink-0">Open ↗</span>
       </a>
 
       {/* Command Centre callout */}
-      <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.05] p-4 mb-6 flex items-start gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
-          <Zap className="h-4 w-4 text-indigo-400" />
+      <div className="rounded-xl border border-violet-500/30 bg-violet-500/[0.05] p-4 mb-6 flex items-start gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/20 shrink-0">
+          <Zap className="h-4 w-4 text-violet-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-indigo-400 mb-0.5">v1.5 — Bitcoin via IBIT · monthly check-in system · live data</p>
+          <p className="text-xs font-bold text-violet-400 mb-0.5">v1.5 — Bitcoin via IBIT · monthly check-in system · live data</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they&apos;re down. BTC and IBIT count as one Bitcoin position (7% target, 8% max), with older BTC units gradually swapping into IBIT. The SGOV cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you&apos;re doing it, and when.
           </p>
-          <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+          <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors">
             Go to Command Centre →
           </a>
         </div>

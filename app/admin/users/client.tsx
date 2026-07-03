@@ -85,7 +85,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 text-xs font-semibold transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             New User
@@ -102,7 +102,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
                 <input
                   name="name"
                   required
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                   placeholder="Jane Smith"
                 />
               </div>
@@ -112,7 +112,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
                   name="email"
                   type="email"
                   required
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                   placeholder="jane@example.com"
                 />
               </div>
@@ -123,7 +123,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
                   type="password"
                   required
                   minLength={8}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                   placeholder="Min. 8 characters"
                 />
               </div>
@@ -131,7 +131,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
                 <label className="block text-[11px] font-medium text-muted-foreground mb-1">Role</label>
                 <select
                   name="role"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                 >
                   <option value="user">Standard User</option>
                   <option value="admin">Admin</option>
@@ -150,7 +150,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
               <button
                 type="submit"
                 disabled={isPending || formSuccess}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : formSuccess ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                 {formSuccess ? "Created!" : "Create User"}
@@ -171,9 +171,9 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
           {users.map((u) => (
             <div key={u.id} className="flex items-center justify-between px-5 py-4 hover:bg-accent/20 transition-colors">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${u.role === "admin" ? "bg-indigo-50 dark:bg-indigo-500/10" : "bg-muted"}`}>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${u.role === "admin" ? "bg-violet-50 dark:bg-violet-500/10" : "bg-muted"}`}>
                   {u.role === "admin"
-                    ? <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    ? <ShieldCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                     : <User className="h-4 w-4 text-muted-foreground" />
                   }
                 </div>
@@ -181,7 +181,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium truncate">{u.name}</p>
                     {u.id === currentUserId && (
-                      <span className="text-[10px] bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-medium">you</span>
+                      <span className="text-[10px] bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded-full font-medium">you</span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>

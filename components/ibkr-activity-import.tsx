@@ -150,8 +150,8 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
 
           {state === "idle" && (
             <div className="flex flex-col items-center gap-4 py-8">
-              <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                <RefreshCw className="h-7 w-7 text-indigo-500" />
+              <div className="h-14 w-14 rounded-2xl bg-violet-500/10 flex items-center justify-center">
+                <RefreshCw className="h-7 w-7 text-violet-500" />
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold">Fetch IBKR Activity</p>
@@ -161,7 +161,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
               </div>
               <button
                 onClick={handleFetch}
-                className="flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-2.5 transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-5 py-2.5 transition-colors"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Fetch from IBKR
@@ -171,7 +171,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
 
           {state === "fetching" && (
             <div className="flex flex-col items-center gap-3 py-10">
-              <RefreshCw className="h-8 w-8 text-indigo-500 animate-spin" />
+              <RefreshCw className="h-8 w-8 text-violet-500 animate-spin" />
               <p className="text-sm font-medium">Fetching activity report…</p>
               <p className="text-xs text-muted-foreground">Generating FLEX report — usually 5–15 seconds</p>
             </div>
@@ -215,7 +215,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                     Trades ({executions.length})
                   </h3>
                   {newTrades.length > 0 && (
-                    <span className="text-[10px] text-indigo-500 font-semibold">{newTrades.length} new</span>
+                    <span className="text-[10px] text-violet-500 font-semibold">{newTrades.length} new</span>
                   )}
                 </div>
                 {executions.length === 0 ? (
@@ -234,7 +234,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                             e.alreadyImported
                               ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
                               : isSelected
-                              ? "border-indigo-500/40 bg-indigo-500/[0.06] cursor-pointer"
+                              ? "border-violet-500/40 bg-violet-500/[0.06] cursor-pointer"
                               : "border-border bg-card cursor-pointer hover:bg-accent/30"
                           }`}
                         >
@@ -249,7 +249,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                                 return next
                               })
                             }}
-                            className="shrink-0 accent-indigo-600"
+                            className="shrink-0 accent-violet-600"
                           />
                           <ArrowUpCircle className={`h-3.5 w-3.5 shrink-0 ${e.buySell === "BUY" ? "text-green-500" : "text-red-500"}`} />
                           <div className="flex-1 min-w-0">
@@ -257,7 +257,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                               <span className={`text-xs font-bold ${e.buySell === "BUY" ? "text-green-500" : "text-red-500"}`}>{e.buySell}</span>
                               <span className="text-xs font-semibold">{e.symbol}</span>
                               <span className="text-[11px] text-muted-foreground">{e.quantity} × ${e.price.toFixed(2)}</span>
-                              {!e.holdingKnown && <span className="text-[10px] text-indigo-400 italic">new — will be added</span>}
+                              {!e.holdingKnown && <span className="text-[10px] text-violet-400 italic">new — will be added</span>}
                               {!isInScope(e.symbol) && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                             </div>
                           </div>
@@ -284,7 +284,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                     Dividends ({dividends.length})
                   </h3>
                   {newDivs.length > 0 && (
-                    <span className="text-[10px] text-indigo-500 font-semibold">{newDivs.length} new</span>
+                    <span className="text-[10px] text-violet-500 font-semibold">{newDivs.length} new</span>
                   )}
                 </div>
                 {dividends.length === 0 ? (
@@ -318,14 +318,14 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                                 return next
                               })
                             }}
-                            className="shrink-0 accent-indigo-600"
+                            className="shrink-0 accent-violet-600"
                           />
                           <TrendingUp className="h-3.5 w-3.5 shrink-0 text-green-500" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-semibold">{d.symbol}</span>
                               <span className="text-[11px] text-muted-foreground truncate">{d.description}</span>
-                              {!d.holdingKnown && <span className="text-[10px] text-indigo-400 italic">new — will be added</span>}
+                              {!d.holdingKnown && <span className="text-[10px] text-violet-400 italic">new — will be added</span>}
                               {!isInScope(d.symbol) && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                             </div>
                           </div>
@@ -402,7 +402,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
             <button
               onClick={handleConfirm}
               disabled={isPending || !canImport}
-              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 transition-colors"
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Import {totalNew} item{totalNew !== 1 ? "s" : ""}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { loginAction } from "./actions"
+import { AtlasCoreMark } from "@/components/brand/brand-mark"
 import { Lock } from "lucide-react"
 
 export default function LoginPage() {
@@ -20,20 +21,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div data-theme="atlas-core" className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 mb-4">
-            <span className="text-sm font-black text-white tracking-tight">AC</span>
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20" />
-          </div>
+          <AtlasCoreMark className="h-16 w-16 drop-shadow-lg mb-4" />
           <h1 className="text-xl font-bold tracking-tight">Atlas Core</h1>
           <p className="text-xs text-muted-foreground mt-1">v1.5 · GDEA · Sign in to continue</p>
         </div>
 
         {/* Form */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl card-lux p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -44,7 +42,7 @@ export default function LoginPage() {
                 name="email"
                 required
                 autoComplete="email"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                 placeholder="you@atlas.local"
               />
             </div>
@@ -58,7 +56,7 @@ export default function LoginPage() {
                 name="password"
                 required
                 autoComplete="current-password"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -72,7 +70,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-lg btn-brand disabled:opacity-60 text-sm font-semibold py-2.5"
             >
               <Lock className="h-3.5 w-3.5" />
               {isPending ? "Signing in…" : "Sign in"}

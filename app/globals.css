@@ -1,109 +1,125 @@
 @import "tailwindcss";
 
-/* ─── Light mode — Cool Slate / Electric Indigo ───────────────────────────── */
+/* ─── Atlas Core (default) · Light — Violet Aurora ──────────────────────────
+   Brand = vivid mixed purples: violet → purple → fuchsia. The three brand
+   stops (--brand-a/b/c) drive every gradient, glow, aurora and ring in the
+   app, so both portfolios re-skin from one place.                            */
 :root {
-  --background:         220 20% 97%;     /* cool off-white #f4f5f9 */
-  --foreground:         224 40% 10%;     /* deep graphite-navy #0d1120 */
-  --card:               0   0%  100%;    /* pure white cards */
-  --card-foreground:    224 40% 10%;
-  --muted:              220 16% 94%;     /* light cool grey */
-  --muted-foreground:   220 12% 44%;     /* secondary text */
-  --border:             220 20% 88%;     /* cool blue-grey border */
-  --accent:             238 80% 97%;     /* faint indigo wash */
-  --accent-foreground:  224 40% 10%;
-  --primary:            238 72% 56%;     /* electric indigo #4f52e8 */
-  --primary-foreground: 0   0%  100%;    /* white on indigo */
+  --background:         258 45% 97.5%;   /* violet-tinted porcelain */
+  --foreground:         260 42% 10%;     /* deep aubergine-navy */
+  --card:               0   0%  100%;
+  --card-foreground:    260 42% 10%;
+  --muted:              258 28% 93.5%;
+  --muted-foreground:   257 12% 43%;
+  --border:             257 26% 87%;
+  --accent:             262 85% 96.5%;   /* faint violet wash */
+  --accent-foreground:  260 42% 10%;
+  --primary:            262 83% 56%;     /* vivid violet #7936e8 */
+  --primary-foreground: 0   0%  100%;
+
+  /* Brand gradient stops — violet-600 → purple-500 → fuchsia-500 */
+  --brand-a:            262 83% 58%;
+  --brand-b:            271 91% 65%;
+  --brand-c:            292 84% 61%;
+  --ring:               262 83% 60%;
 
   /* Semantic status palette (consolidated): positive · caution · critical · info */
   --success:            142 71% 29%;
   --warning:            38  92% 44%;
   --danger:             0   84% 52%;
-  --info:               238 72% 56%;
+  --info:               262 83% 56%;
 
-  /* Sidebar — slightly off-white with indigo tint */
-  --sidebar-bg:         228 30% 98%;
-  --sidebar-border:     220 20% 90%;
+  --sidebar-bg:         259 45% 98%;
+  --sidebar-border:     257 26% 89%;
 }
 
-/* ─── Dark mode — Obsidian / Muted Electric Indigo ────────────────────────── */
+/* ─── Atlas Core · Dark — Violet Obsidian ───────────────────────────────────── */
 .dark {
-  --background:         240 27%  5%;    /* deep obsidian #09090f */
-  --foreground:         220 14% 94%;    /* soft white, not pure */
-  --card:               240 22%  8%;    /* elevated surface #0e0e1c */
-  --card-foreground:    220 14% 94%;
-  --muted:              240 18% 12%;    /* recessed surface #141425 */
-  --muted-foreground:   240  9% 58%;    /* secondary text */
-  --border:             240 16% 17%;    /* controlled border #20203a */
-  --accent:             240 18% 11%;
-  --accent-foreground:  220 14% 94%;
-  --primary:            238 68% 64%;    /* muted electric indigo */
-  --primary-foreground: 0   0%  100%;
+  --background:         259 34%  5.5%;  /* violet-black */
+  --foreground:         258 20% 95%;
+  --card:               258 28%  8.5%;
+  --card-foreground:    258 20% 95%;
+  --muted:              258 22% 12.5%;
+  --muted-foreground:   256 12% 62%;
+  --border:             257 22% 18%;
+  --accent:             258 24% 11.5%;
+  --accent-foreground:  258 20% 95%;
+  --primary:            258 92% 72%;    /* bright violet #a78bfa+ */
+  --primary-foreground: 259 40% 8%;
+
+  /* violet-400 → purple-400 → fuchsia-400, brighter for dark surfaces */
+  --brand-a:            255 92% 74%;
+  --brand-b:            270 95% 72%;
+  --brand-c:            292 91% 70%;
+  --ring:               258 92% 74%;
 
   --success:            142 72% 45%;
   --warning:            43  96% 55%;
   --danger:             0   84% 65%;
-  --info:               238 68% 64%;
+  --info:               258 92% 72%;
 
-  --sidebar-bg:         240 26%  6%;    /* slightly lighter than bg */
-  --sidebar-border:     240 16% 14%;
+  --sidebar-bg:         259 32%  6.5%;
+  --sidebar-border:     257 22% 15%;
 }
 
-/* ─── Silicon Brick Road Theme — teal-emerald, distinct from Atlas Core ─────── */
-/* Applied via data-theme="sbr" on the shell root div.
-   Atlas Core = obsidian + electric indigo. SBR = deep teal + warm emerald.     */
+/* ─── Silicon Brick Road — Azure Current ─────────────────────────────────────
+   Applied via data-theme="sbr" on the shell root div.
+   Brand = bright mixed blues: sky → blue → cyan.                             */
 
 /* SBR light mode */
 [data-theme="sbr"] {
-  --background:         178 35% 96%;   /* teal-tinted off-white #f0f8f7 */
-  --foreground:         180 42%  8%;   /* deep teal-navy #0c1d1d */
+  --background:         208 60% 97%;    /* sky-tinted porcelain */
+  --foreground:         218 45%  9%;    /* deep marine navy */
   --card:               0   0%  100%;
-  --card-foreground:    180 42%  8%;
-  --muted:              175 26% 92%;   /* light teal-grey */
-  --muted-foreground:   175 16% 40%;
-  --border:             175 30% 84%;   /* teal-tinted border */
-  --accent:             174 60% 94%;   /* faint teal wash */
-  --accent-foreground:  180 42%  8%;
-  --primary:            174 72% 36%;   /* teal #16a69a */
+  --card-foreground:    218 45%  9%;
+  --muted:              210 34% 93%;
+  --muted-foreground:   213 14% 42%;
+  --border:             211 32% 86%;
+  --accent:             205 90% 95.5%;  /* faint sky wash */
+  --accent-foreground:  218 45%  9%;
+  --primary:            212 92% 48%;    /* vivid azure #0a6fea */
   --primary-foreground: 0   0%  100%;
-  --sidebar-bg:         178 40% 97%;
-  --sidebar-border:     175 32% 88%;
+
+  /* sky-500 → blue-600 → cyan-600 */
+  --brand-a:            199 95% 46%;
+  --brand-b:            221 88% 55%;
+  --brand-c:            189 94% 40%;
+  --ring:               212 92% 52%;
+  --info:               212 92% 48%;
+
+  --sidebar-bg:         207 55% 97.5%;
+  --sidebar-border:     211 32% 88%;
 }
 
 /* SBR dark mode */
 .dark [data-theme="sbr"] {
-  --background:         180 36%  4%;   /* deep teal-black #050e0e */
-  --foreground:         175 18% 93%;   /* warm off-white */
-  --card:               180 30%  7%;   /* elevated teal-dark #0a1717 */
-  --card-foreground:    175 18% 93%;
-  --muted:              180 25% 11%;   /* recessed surface */
-  --muted-foreground:   175 10% 54%;
-  --border:             180 22% 15%;   /* teal border */
-  --accent:             175 22% 10%;
-  --accent-foreground:  175 18% 93%;
-  --primary:            174 76% 44%;   /* bright teal #1ac4b7 */
-  --primary-foreground: 0   0%  100%;
-  --sidebar-bg:         180 34%  5%;
-  --sidebar-border:     180 25% 12%;
+  --background:         217 44%  5%;    /* marine black */
+  --foreground:         210 24% 95%;
+  --card:               216 36%  8%;
+  --card-foreground:    210 24% 95%;
+  --muted:              215 30% 12%;
+  --muted-foreground:   213 14% 60%;
+  --border:             215 28% 17%;
+  --accent:             215 28% 11%;
+  --accent-foreground:  210 24% 95%;
+  --primary:            202 95% 60%;    /* bright sky #2eb0f7 */
+  --primary-foreground: 218 45% 8%;
+
+  /* sky-400 → blue-400 → cyan-400, brighter for dark surfaces */
+  --brand-a:            199 93% 62%;
+  --brand-b:            217 92% 68%;
+  --brand-c:            187 90% 55%;
+  --ring:               202 95% 62%;
+  --info:               202 95% 60%;
+
+  --sidebar-bg:         217 40%  6%;
+  --sidebar-border:     215 28% 14%;
 }
 
-/* SBR gradient text (teal → emerald instead of indigo → violet) */
-[data-theme="sbr"] .gradient-text {
-  background: linear-gradient(135deg, hsl(174 72% 36%), hsl(160 68% 40%));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.dark [data-theme="sbr"] .gradient-text {
-  background: linear-gradient(135deg, hsl(174 76% 55%), hsl(160 62% 62%));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* SBR glow utility */
-[data-theme="sbr"] .glow-primary {
-  box-shadow: 0 0 20px 4px rgb(20 184 166 / 0.18),
-              0 0 40px 8px rgb(20 184 166 / 0.08);
+/* Legacy alias — brand glow (theme-aware via brand stops) */
+.glow-primary {
+  box-shadow: 0 0 20px 2px hsl(var(--brand-b) / 0.20),
+              0 0 44px 10px hsl(var(--brand-a) / 0.10);
 }
 
 /* ─── Tailwind theme tokens ───────────────────────────────────────────────── */
@@ -214,40 +230,125 @@ body {
   box-shadow: none;
 }
 
-/* ─── Gradient text utility ───────────────────────────────────────────────── */
+/* ─── Gradient text — 3-stop brand ramp, theme-aware via brand stops ───────── */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(238 72% 52%), hsl(260 70% 65%));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.dark .gradient-text {
-  background: linear-gradient(135deg, hsl(238 68% 72%), hsl(260 60% 80%));
+  background: linear-gradient(118deg, hsl(var(--brand-a)), hsl(var(--brand-b)) 52%, hsl(var(--brand-c)));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ─── Glassmorphism ───────────────────────────────────────────────────────── */
+/* ─── Aurora mesh background — painted behind every page via the theme root ──
+   The shell root carries data-theme; its ::before is a fixed, non-interactive
+   layer of brand-hued radial washes. Screen only (never print).              */
+@media screen {
+  [data-theme] { position: relative; isolation: isolate; }
+  [data-theme]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(58% 42% at 10% -4%,  hsl(var(--brand-a) / 0.10), transparent 62%),
+      radial-gradient(46% 38% at 92% 6%,   hsl(var(--brand-c) / 0.08), transparent 64%),
+      radial-gradient(72% 52% at 50% 112%, hsl(var(--brand-b) / 0.07), transparent 62%);
+  }
+  .dark [data-theme]::before {
+    background:
+      radial-gradient(58% 42% at 10% -4%,  hsl(var(--brand-a) / 0.16), transparent 62%),
+      radial-gradient(46% 38% at 92% 6%,   hsl(var(--brand-c) / 0.12), transparent 64%),
+      radial-gradient(72% 52% at 50% 112%, hsl(var(--brand-b) / 0.10), transparent 62%);
+  }
+}
+
+/* ─── Glassmorphism — translucent surface with inner top-light ────────────── */
 .glass {
-  background: rgb(255 255 255 / 0.025);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgb(255 255 255 / 0.07);
+  background: linear-gradient(180deg, hsl(var(--card) / 0.72), hsl(var(--card) / 0.52));
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid hsl(var(--border) / 0.85);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
 }
-.dark .glass {
-  background: rgb(255 255 255 / 0.028);
-  border-color: rgb(255 255 255 / 0.07);
+
+/* ─── card-lux — the standard elevated card of the redesign ────────────────
+   Frosted surface over the aurora, hairline border, top light, and a brand
+   tint on hover. Interactive (<a>/<button>) cards also lift.                 */
+.card-lux {
+  background: linear-gradient(180deg, hsl(var(--card) / 0.88), hsl(var(--card) / 0.66));
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid hsl(var(--border) / 0.9);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04),
+              0 1px 2px rgb(0 0 0 / 0.05);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
+.card-lux:hover {
+  border-color: hsl(var(--brand-b) / 0.35);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.05),
+              0 10px 34px -14px hsl(var(--brand-b) / 0.30);
+}
+a.card-lux:hover, button.card-lux:hover { transform: translateY(-2px); }
+
+/* ─── ring-hero — slow animated brand ring for THE hero card ───────────────
+   Conic gradient runs around the border; the card face stays opaque. Falls
+   back to a static gradient ring where @property is unsupported.             */
+@property --spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes spin-border { to { --spin: 360deg; } }
+.ring-hero {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    conic-gradient(from var(--spin),
+      hsl(var(--brand-a) / 0.9) 0%,
+      hsl(var(--brand-b) / 0.9) 18%,
+      hsl(var(--brand-c) / 0.85) 36%,
+      hsl(var(--border)) 55%,
+      hsl(var(--border)) 82%,
+      hsl(var(--brand-a) / 0.9) 100%) border-box;
+  animation: spin-border 9s linear infinite;
+  box-shadow: 0 0 34px -12px hsl(var(--brand-b) / 0.35);
+}
+
+/* ─── Brand button + bar ──────────────────────────────────────────────────── */
+.btn-brand {
+  background: linear-gradient(135deg, hsl(var(--brand-a)), hsl(var(--brand-b)) 55%, hsl(var(--brand-c)));
+  color: #fff;
+  box-shadow: 0 6px 20px -8px hsl(var(--brand-b) / 0.55),
+              inset 0 1px 0 rgb(255 255 255 / 0.18);
+  transition: filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-brand:hover:not(:disabled) { filter: brightness(1.08) saturate(1.05); transform: translateY(-1px); }
+.btn-brand:active:not(:disabled) { transform: translateY(0); }
+
+.bar-brand {
+  background: linear-gradient(90deg, hsl(var(--brand-a)), hsl(var(--brand-b)) 55%, hsl(var(--brand-c)));
+}
+
+/* ─── Selection tint ──────────────────────────────────────────────────────── */
+::selection { background: hsl(var(--brand-b) / 0.28); }
 
 /* ─── Elevated card surfaces ──────────────────────────────────────────────── */
 .surface-1 { background: hsl(var(--card)); }
 .surface-2 { background: hsl(var(--muted)); }
 
-/* ─── Indigo glow ─────────────────────────────────────────────────────────── */
+/* ─── Brand glow (legacy name kept for existing call-sites) ───────────────── */
 .glow-indigo {
-  box-shadow: 0 0 20px 4px rgb(99 102 241 / 0.18),
-              0 0 40px 8px rgb(99 102 241 / 0.08);
+  box-shadow: 0 0 20px 4px hsl(var(--brand-b) / 0.18),
+              0 0 40px 8px hsl(var(--brand-a) / 0.08);
+}
+
+/* ─── Motion respect ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ring-hero, .loadbar, .float-soft, .spin-slow, .chart-enter,
+  .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red {
+    animation: none !important;
+  }
+  .card-lux, a.card-lux, .btn-brand { transition: none !important; }
 }
 
 /* ─── Data label style ────────────────────────────────────────────────────── */
@@ -304,17 +405,19 @@ body {
    --drift: soft drift / amber warning
    These are additive — they do NOT replace existing success/warning/danger.  */
 :root {
-  --seal:  238 72% 56%;   /* electric indigo — matches --primary light */
-  --pass:  142 71% 29%;   /* forest green   — matches --success light  */
-  --fire:  0   84% 52%;   /* danger red      — matches --danger light   */
-  --drift: 38  92% 44%;   /* amber           — matches --warning light  */
+  --seal:  262 83% 56%;   /* vivid violet — matches --primary light */
+  --pass:  142 71% 29%;   /* forest green — matches --success light  */
+  --fire:  0   84% 52%;   /* danger red    — matches --danger light   */
+  --drift: 38  92% 44%;   /* amber         — matches --warning light  */
 }
 .dark {
-  --seal:  238 68% 64%;
+  --seal:  258 92% 72%;
   --pass:  142 72% 45%;
   --fire:  0   84% 65%;
   --drift: 43  96% 55%;
 }
+[data-theme="sbr"]       { --seal: 212 92% 48%; }  /* vivid azure */
+.dark [data-theme="sbr"] { --seal: 202 95% 60%; }  /* bright sky  */
 
 /* ─── Banner accents (calm-first) ─────────────────────────────────────────── */
 /* No flashing — a steady coloured border communicates urgency without anxiety. */

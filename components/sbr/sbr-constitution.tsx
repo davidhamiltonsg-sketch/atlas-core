@@ -20,13 +20,13 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
     <Shell title="The Plan" subtitle={`Silicon Brick Road v${SBR.version} · ${SBR.motto}`} userName={name} isAdmin={isAdmin}>
       {/* Doc link */}
       <a href={SBR.docPath} target="_blank" rel="noopener noreferrer"
-        className="rounded-xl border border-teal-500/40 bg-gradient-to-r from-teal-500/[0.08] to-emerald-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-teal-500/[0.12] transition-colors group">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/20 shrink-0"><FileText className="h-4 w-4 text-teal-400" /></div>
+        className="rounded-xl border border-sky-500/40 bg-gradient-to-r from-sky-500/[0.10] via-blue-500/[0.07] to-cyan-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-sky-500/[0.12] transition-colors group">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/20 shrink-0"><FileText className="h-4 w-4 text-sky-400" /></div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-teal-400">Full Document (v{SBR.version})</p>
+          <p className="text-xs font-bold text-sky-400">Full Document (v{SBR.version})</p>
           <p className="text-xs text-muted-foreground">The complete written plan — rules, monthly steps, property purchase guide, and record-keeping templates.</p>
         </div>
-        <span className="text-xs font-semibold text-teal-400 shrink-0">Open ↗</span>
+        <span className="text-xs font-semibold text-sky-400 shrink-0">Open ↗</span>
       </a>
 
       {/* Objective */}
@@ -76,7 +76,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
         <div className="divide-y divide-border">
           {SBR.decisionLadder.map((s) => (
             <div key={s.n} className="px-5 py-3 flex gap-3">
-              <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md bg-teal-500/10 text-teal-400 text-[11px] font-black">{s.n}</span>
+              <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md bg-sky-500/10 text-sky-400 text-[11px] font-black">{s.n}</span>
               <div><p className="text-xs font-semibold">{s.title}</p><p className="text-[11px] text-muted-foreground mt-0.5">{s.detail}</p></div>
             </div>
           ))}
@@ -85,11 +85,11 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
 
       {/* Phases */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
-        <div className="px-5 py-4 border-b border-border flex items-center gap-2"><Layers className="h-4 w-4 text-teal-400" /><h2 className="text-sm font-semibold">The Four Phases of Your Journey</h2></div>
+        <div className="px-5 py-4 border-b border-border flex items-center gap-2"><Layers className="h-4 w-4 text-sky-400" /><h2 className="text-sm font-semibold">The Four Phases of Your Journey</h2></div>
         <div className="divide-y divide-border">
           {(SBR.phases ?? []).map((p) => (
             <div key={p.key} className="px-5 py-3">
-              <div className="flex items-center gap-2 mb-0.5"><span className="text-xs font-black text-teal-400">{p.label}</span><span className="text-[10px] text-muted-foreground">· {p.range}</span>{p.selling && <span className="rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase ml-auto">sells</span>}</div>
+              <div className="flex items-center gap-2 mb-0.5"><span className="text-xs font-black text-sky-400">{p.label}</span><span className="text-[10px] text-muted-foreground">· {p.range}</span>{p.selling && <span className="rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase ml-auto">sells</span>}</div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">{p.body}</p>
             </div>
           ))}
@@ -110,7 +110,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
       <div className="space-y-4 mb-6">
         {Object.entries(rulesByCat).map(([cat, rules]) => (
           <div key={cat} className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="px-5 py-2.5 border-b border-border bg-muted/30"><p className="text-[10px] font-bold uppercase tracking-wider text-teal-400">{cat}</p></div>
+            <div className="px-5 py-2.5 border-b border-border bg-muted/30"><p className="text-[10px] font-bold uppercase tracking-wider text-sky-400">{cat}</p></div>
             <div className="divide-y divide-border">
               {rules.map((r) => (<div key={r.title} className="px-5 py-3"><p className="text-xs font-semibold">{r.title}</p><p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{r.description}</p></div>))}
             </div>
@@ -120,7 +120,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
 
       {/* Scorecard */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-teal-400" /><h2 className="text-sm font-semibold">Monthly Health Check</h2><span className="ml-auto text-[11px] text-muted-foreground">Target score ≥ 95%</span></div>
+        <div className="px-5 py-4 border-b border-border flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-sky-400" /><h2 className="text-sm font-semibold">Monthly Health Check</h2><span className="ml-auto text-[11px] text-muted-foreground">Target score ≥ 95%</span></div>
         <div className="overflow-x-auto"><table className="w-full text-xs min-w-[560px]">
           <thead><tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30"><th className="px-5 py-2.5">What we check</th><th className="px-3 py-2.5 text-right">Weight</th><th className="px-5 py-2.5">Pass condition</th></tr></thead>
           <tbody className="divide-y divide-border">{(SBR.scorecard ?? []).map((s) => (<tr key={s.category}><td className="px-5 py-3 font-medium">{s.category}</td><td className="px-3 py-3 text-right tabular-nums font-semibold">{s.weight}%</td><td className="px-5 py-3 text-muted-foreground">{s.assessed}</td></tr>))}</tbody>

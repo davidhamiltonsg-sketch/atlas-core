@@ -33,10 +33,10 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
   const isSbr = isSbrLegacy || constitutionId === "silicon-brick-road"
   // Brand the shared page to the active portfolio: teal for Silicon Brick Road, indigo for
   // Atlas Core. Full class-name literals so Tailwind compiles them (no dynamic string building).
-  const accentBtn   = isSbr ? "bg-teal-600 hover:bg-teal-700" : "bg-indigo-600 hover:bg-indigo-700"
-  const accentRing  = isSbr ? "focus:ring-teal-500/30 focus:border-teal-500" : "focus:ring-indigo-500/30 focus:border-indigo-500"
-  const accentHover = isSbr ? "hover:text-teal-500" : "hover:text-indigo-500"
-  const accentBadge = isSbr ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" : "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400"
+  const accentBtn   = isSbr ? "bg-sky-600 hover:bg-sky-700" : "bg-violet-600 hover:bg-violet-700"
+  const accentRing  = isSbr ? "focus:ring-sky-500/30 focus:border-sky-500" : "focus:ring-violet-500/30 focus:border-violet-500"
+  const accentHover = isSbr ? "hover:text-sky-500" : "hover:text-violet-500"
+  const accentBadge = isSbr ? "bg-sky-500/10 text-sky-600 dark:text-sky-400" : "bg-violet-500/10 text-violet-500 dark:text-violet-400"
   const [holdings, setHoldings] = useState(initial)
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -174,7 +174,7 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Target % <span className={isSbr ? "text-teal-400" : "text-indigo-400"}>({remaining.toFixed(1)}% remaining)</span></label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Target % <span className={isSbr ? "text-sky-400" : "text-violet-400"}>({remaining.toFixed(1)}% remaining)</span></label>
                 <input name="targetPct" type="number" required step="0.5" min="0" max="100" placeholder="52" className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all`} />
               </div>
               <div>

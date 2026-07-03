@@ -128,7 +128,7 @@ function ConeTooltip({ active, payload, label, inflated }: {
         </div>
         <div className="flex justify-between gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            <div className="h-1.5 w-1.5 rounded-full bg-violet-500" />
             <span className="text-muted-foreground">Base (expected)</span>
           </div>
           <span className="font-bold text-foreground tabular-nums">{fmtShort(base)}</span>
@@ -292,7 +292,7 @@ function ConeChart({ data, currentValue, inflated }: {
           <span>P10–P90 range (80% probability)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-0.5 w-6 rounded bg-indigo-500" />
+          <div className="h-0.5 w-6 rounded bg-violet-500" />
           <span>Base case (10% p.a.)</span>
         </div>
         <div className="flex items-center gap-1.5 ml-auto">
@@ -350,7 +350,7 @@ function ContribChart({ data, currentValue, monthlyContribution }: {
           <span>+20% contributions (${Math.round(monthlyContribution * 1.2).toLocaleString()}/mo)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-0.5 w-6 rounded bg-indigo-500" />
+          <div className="h-0.5 w-6 rounded bg-violet-500" />
           <span>Current (${monthlyContribution.toLocaleString()}/mo)</span>
         </div>
         <div className="flex items-center gap-2">
@@ -408,11 +408,11 @@ export function ForecastChartPanel({ data, currentValue, milestones = [], monthl
             onClick={() => setInflated(v => !v)}
             className={`ml-auto flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
               inflated
-                ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-400"
+                ? "border-violet-500/50 bg-violet-500/10 text-violet-400"
                 : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
             }`}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${inflated ? "bg-indigo-400" : "bg-muted-foreground"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${inflated ? "bg-violet-400" : "bg-muted-foreground"}`} />
             {inflated ? "Real values (−2.5% CPI)" : "Nominal values"}
           </button>
         )}

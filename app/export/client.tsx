@@ -10,7 +10,7 @@ const EXPORTS = [
     label: "Current Portfolio",
     description: "Latest snapshot per holding — ticker, units, price, value, target allocation.",
     icon: PieChart,
-    color: "text-indigo-400",
+    color: "text-violet-400",
   },
   {
     type: "snapshots",
@@ -79,9 +79,9 @@ export function ExportButtons({ isAdmin = false }: { isAdmin?: boolean }) {
       </div>
 
       {/* Full backup (JSON) */}
-      <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/[0.04] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-xl border border-violet-500/30 bg-violet-500/[0.04] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <Archive className="h-5 w-5 shrink-0 mt-0.5 text-indigo-400" />
+          <Archive className="h-5 w-5 shrink-0 mt-0.5 text-violet-400" />
           <div>
             <p className="text-sm font-semibold">Full Backup (JSON)</p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Everything in one file — holdings, all snapshots, trades, contributions, dividends, behaviour log, watchlist, and the rule register.</p>
@@ -89,7 +89,7 @@ export function ExportButtons({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
         <button
           onClick={() => download("backup")}
-          className="shrink-0 flex items-center justify-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs font-semibold px-4 py-2 transition-colors"
+          className="shrink-0 flex items-center justify-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 text-violet-600 dark:text-violet-300 text-xs font-semibold px-4 py-2 transition-colors"
         >
           <Download className="h-3.5 w-3.5" /> Download backup
         </button>
