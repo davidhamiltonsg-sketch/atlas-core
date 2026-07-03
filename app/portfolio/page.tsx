@@ -11,7 +11,7 @@ import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-butto
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
-import { applyBitcoinSleeve } from "@/lib/next-best-move"
+import { applyBitcoinSleeve, BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
 
 // Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
 export const maxDuration = 60
@@ -101,7 +101,25 @@ export default async function Portfolio() {
   const hardBreaches = holdings.filter((h) => h.isHard).length
   const softBreaches = holdings.filter((h) => h.isSoft).length
 
-  const donutData = holdings.map((h) => ({
+  // Merge BTC+IBIT into one sleeve entry for visual display (donut, bars, drift summary)
+  const btcSlot = holdings.find(h => h.ticker === "BTC")
+  const ibitSlot = holdings.find(h => h.ticker === "IBIT")
+  const displaySlots = (btcSlot && ibitSlot)
+    ? holdings
+        .filter(h => h.ticker !== "IBIT")
+        .map(h => h.ticker !== "BTC" ? h : {
+          ...h,
+          name: "Bitcoin sleeve",
+          value: h.value + ibitSlot.value,
+          actualPct: h.actualPct + ibitSlot.actualPct,
+          targetPct: BITCOIN_SLEEVE_TARGET_PCT,
+          drift: (h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT,
+          withinBand: Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) <= h.toleranceBand,
+          isSoft: !h.isHard && Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) > h.toleranceBand,
+        })
+    : holdings
+
+  const donutData = displaySlots.map((h) => ({
     ticker: h.ticker,
     name: h.name,
     actualPct: h.actualPct,
@@ -351,7 +369,7 @@ export default async function Portfolio() {
               <div className="mb-1">
                 <span className="text-[10px] text-muted-foreground">Actual</span>
                 <div className="flex h-3 rounded-lg overflow-hidden gap-px bg-muted mt-0.5">
-                  {holdings.map((h) => (
+                  {displaySlots.map((h) => (
                     <div
                       key={h.ticker}
                       style={{ width: `${h.actualPct}%`, backgroundColor: h.color }}
@@ -365,7 +383,7 @@ export default async function Portfolio() {
               <div className="mb-3">
                 <span className="text-[10px] text-muted-foreground">Target</span>
                 <div className="flex h-2 rounded-lg overflow-hidden gap-px bg-muted mt-0.5">
-                  {holdings.map((h) => (
+                  {displaySlots.map((h) => (
                     <div
                       key={h.ticker}
                       style={{ width: `${h.targetPct}%`, backgroundColor: h.color, opacity: 0.4 }}
@@ -375,11 +393,11 @@ export default async function Portfolio() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {holdings.map((h) => (
+                {displaySlots.map((h) => (
                   <div key={h.ticker} className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: h.color }} />
                     <span className="text-[11px] text-muted-foreground">
-                      <span className="font-semibold text-foreground">{h.ticker}</span> {h.actualPct.toFixed(1)}%
+                      <span className="font-semibold text-foreground">{h.name}</span> {h.actualPct.toFixed(1)}%
                     </span>
                   </div>
                 ))}
@@ -399,7 +417,7 @@ export default async function Portfolio() {
 
           {/* Per-holding drift summary */}
           <div className="mt-5 space-y-2.5 border-t border-border pt-4">
-            {holdings.map((h) => {
+            {displaySlots.map((h) => {
               const driftColor = h.isHard
                 ? "#ef4444"                                 // red-500 — hard breach always red
                 : h.isSoft
