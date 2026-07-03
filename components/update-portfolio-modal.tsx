@@ -82,15 +82,43 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
   // ── Screenshot ────────────────────────────────────────────────────────────
 
+  // Downscale a screenshot in the browser before sending it to the server action. Phone
+  // screenshots are multiple MB; a Server Action request body is capped (~1MB by default), so an
+  // un-resized image is rejected BEFORE the action runs — which previously left the modal stuck
+  // on "Analysing…" forever. Resizing to a ~1600px JPEG keeps the payload well under the limit
+  // and speeds up the vision call.
+  async function downscaleScreenshot(file: File, maxEdge = 1600, quality = 0.8): Promise<{ base64: string; mime: string }> {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(r.result as string)
+      r.onerror = () => reject(new Error("Could not read the image file"))
+      r.readAsDataURL(file)
+    })
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error("Could not decode the image"))
+      i.src = dataUrl
+    })
+    const scale = Math.min(1, maxEdge / Math.max(img.width, img.height))
+    const ctx = scale < 1 ? document.createElement("canvas").getContext("2d") : null
+    if (!ctx) return { base64: dataUrl.split(",")[1], mime: file.type } // already small enough
+    ctx.canvas.width = Math.round(img.width * scale)
+    ctx.canvas.height = Math.round(img.height * scale)
+    ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height)
+    return { base64: ctx.canvas.toDataURL("image/jpeg", quality).split(",")[1], mime: "image/jpeg" }
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setScreenshotState("processing")
     setExtractError(null)
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string
-      const result = await extractFromScreenshot(dataUrl.split(",")[1], file.type)
+    // try/catch so a failed action (oversized body, timeout, network) surfaces an error instead of
+    // leaving the spinner stuck forever — the previous code awaited inside reader.onload with no catch.
+    try {
+      const { base64, mime } = await downscaleScreenshot(file)
+      const result = await extractFromScreenshot(base64, mime)
       if (result.success) {
         setExtractedRows(result.data)
         setScreenshotState("preview")
@@ -98,8 +126,10 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
         setExtractError(result.error)
         setScreenshotState("error")
       }
+    } catch (err) {
+      setExtractError(err instanceof Error ? err.message : "Could not process the screenshot — try again or use Manual entry.")
+      setScreenshotState("error")
     }
-    reader.readAsDataURL(file)
   }
 
   function handleConfirmScreenshot() {
