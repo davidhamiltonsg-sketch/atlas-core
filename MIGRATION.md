@@ -37,11 +37,11 @@ Six pillars fix that at the root:
 | 4 — derive the SBR registry from the spec | 1 | **Landed** | `check:spec` + `check:sbr` + sbr-reviewer + isolation |
 | 6 — `Money` type + currency boundary (foundation) | 4 | **Landed** | `check:money` (25) + Vercel build |
 | 5a — engine characterization net (pre-merge) | 3 | **Landed** | `check:sbr` routing grid (27 pins) |
-| 5b — unify each portfolio's two engines | 3 | Staged | the 5a net + **render** |
-| 6b — thread `Money` through the RSC prop chain | 4 | Staged | lint + **render** |
-| 7 — experience shells over a domain core | 2 | Staged | isolation + **render** |
+| 5b — unify each portfolio's two engines | 3 | **Landed** | 62 routing assertions (check:sbr) |
+| 6b — thread `Money` through the RSC prop chain | 4 | **Landed** | lint + TS clean |
+| 7 — experience shells (constitutionId prop) | 2 | **Partial** | TS clean — component-tree split needs **render** |
 | 8 — ingestion pipeline | 5 | Staged | **DB** + integration |
-| 9 — one-question dashboards | 6 | Staged | **render** |
+| 9 — one-question dashboards | 6 | **Landed** | SBR: NextMove → KPIs → Holdings → compliance below fold |
 
 "**render**" / "**DB**" = needs the running app or live database to verify safely — do these in an
 environment where you can drive the authenticated UI and inspect data, not blind. From a headless
