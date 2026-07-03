@@ -145,7 +145,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const yfSymbols = holdings.map(h => YF_TICKER_MAP[h.ticker] ?? h.ticker)
   const symbols = yfSymbols.join(",")
 
-  let priceMap: Record<string, number> = {}
+  const priceMap: Record<string, number> = {}
   let batchSuccess = false
 
   for (const host of YF_HOSTS) {
@@ -324,7 +324,7 @@ export async function extractFromScreenshot(
     const client = new Anthropic({ apiKey })
 
     const message = await client.messages.create({
-      model: "claude-opus-4-6",
+      model: "claude-opus-4-8",
       max_tokens: 1024,
       messages: [
         {
