@@ -132,7 +132,7 @@ export function combinedTechPct(positions: PositionInput[]): number {
 
 export interface NextMove {
   severity: Severity
-  ticker: string
+  ticker: string | null
   // The headline — what to do, in 6 words or fewer
   action: string
   // One sentence, plain English: exactly what to do

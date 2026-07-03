@@ -2,11 +2,16 @@ import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { constitutionIdForEmail } from "@/lib/constitutions"
+import { reportingCurrencyForConstitution } from "@/lib/portfolio-spec"
 import { ContributionsClient } from "./client"
 
 export default async function ContributionsPage() {
   const session = await getSession()
   if (!session) redirect("/login")
+
+  const constitutionId = constitutionIdForEmail(session.email)
+  const currency = reportingCurrencyForConstitution(constitutionId)
 
   const [contributions, user] = await Promise.all([
     db.contributionRecord.findMany({
@@ -27,6 +32,7 @@ export default async function ContributionsPage() {
       <ContributionsClient
         contributions={serialized}
         monthlyTarget={user?.monthlyContribution ?? 3000}
+        currency={currency}
       />
     </Shell>
   )

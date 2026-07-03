@@ -15,6 +15,7 @@ type Contribution = {
 interface ContributionsClientProps {
   contributions: Contribution[]
   monthlyTarget: number
+  currency?: "USD" | "SGD"
 }
 
 // Group contributions by year-month
@@ -28,7 +29,9 @@ function groupByMonth(contributions: Contribution[]) {
   return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]))
 }
 
-export function ContributionsClient({ contributions: initialContributions, monthlyTarget }: ContributionsClientProps) {
+export function ContributionsClient({ contributions: initialContributions, monthlyTarget, currency = "SGD" }: ContributionsClientProps) {
+  const ccyLabel = currency === "USD" ? "USD" : "SGD"
+  const ccyPrefix = currency === "USD" ? "US$" : "S$"
   const [contributions, setContributions] = useState(initialContributions)
   const [showForm, setShowForm] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -85,20 +88,20 @@ export function ContributionsClient({ contributions: initialContributions, month
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Total Contributed</p>
-          <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(total, "SGD")}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">SGD across {monthCount} months</p>
+          <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(total, currency)}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{ccyLabel} across {monthCount} months</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Monthly Average</p>
-          <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(Math.round(avgMonthly), "SGD")}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">vs target {formatCurrency(monthlyTarget, "SGD")}</p>
+          <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(Math.round(avgMonthly), currency)}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">vs target {formatCurrency(monthlyTarget, currency)}</p>
         </div>
         <div className={`rounded-xl border bg-card p-4 card-elevated ${avgMonthly >= monthlyTarget ? "border-green-500/30" : "border-yellow-400/30"}`}>
           <p className="text-xs text-muted-foreground">Target Achievement</p>
           <p className={`text-2xl font-black mt-1 tabular-nums ${avgMonthly >= monthlyTarget ? "text-green-500" : "text-yellow-400"}`}>
             {monthlyTarget > 0 ? `${((avgMonthly / monthlyTarget) * 100).toFixed(0)}%` : "—"}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">of {formatCurrency(monthlyTarget, "SGD")} target</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">of {formatCurrency(monthlyTarget, currency)} target</p>
         </div>
       </div>
 
@@ -133,9 +136,9 @@ export function ContributionsClient({ contributions: initialContributions, month
           <form onSubmit={handleAdd} className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Amount (SGD)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Amount ({ccyLabel})</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">S$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{ccyPrefix}</span>
                   <input name="amount" type="number" step="any" min="1" required defaultValue={monthlyTarget} className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
                 </div>
               </div>
@@ -175,9 +178,9 @@ export function ContributionsClient({ contributions: initialContributions, month
                   <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                   <h3 className="text-sm font-semibold flex-1">{label}</h3>
                   <span className={`text-sm font-black tabular-nums ${monthTotal >= monthlyTarget ? "text-green-500" : "text-yellow-400"}`}>
-                    {formatCurrency(monthTotal, "SGD")}
+                    {formatCurrency(monthTotal, currency)}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">/ {formatCurrency(monthlyTarget, "SGD")}</span>
+                  <span className="text-[11px] text-muted-foreground">/ {formatCurrency(monthlyTarget, currency)}</span>
                 </div>
                 <div className="h-1 bg-muted">
                   <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
@@ -187,7 +190,7 @@ export function ContributionsClient({ contributions: initialContributions, month
                     <div key={c.id} className="flex items-center justify-between px-5 py-2.5">
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                        <span className="text-xs font-semibold">{formatCurrency(c.amount, "SGD")}</span>
+                        <span className="text-xs font-semibold">{formatCurrency(c.amount, currency)}</span>
                         {c.note && <span className="text-xs text-muted-foreground">{c.note}</span>}
                       </div>
                       <button onClick={() => handleDelete(c.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
@@ -220,9 +223,9 @@ export function ContributionsClient({ contributions: initialContributions, month
                   </div>
                   <div className="text-right">
                     {done ? (
-                      <span className="text-xs font-bold text-green-500">{formatCurrency(actualAmount, "SGD")} ✓</span>
+                      <span className="text-xs font-bold text-green-500">{formatCurrency(actualAmount, currency)} ✓</span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">{formatCurrency(m.target, "SGD")} target</span>
+                      <span className="text-xs text-muted-foreground">{formatCurrency(m.target, currency)} target</span>
                     )}
                   </div>
                 </div>
