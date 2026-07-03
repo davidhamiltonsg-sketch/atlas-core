@@ -8,7 +8,8 @@ import { HoldingsClient } from "./client"
 export default async function HoldingsPage() {
   const session = await getSession()
   if (!session) redirect("/login")
-  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const constitutionId = constitutionIdForEmail(session.email)
+  const isSbr = constitutionId === "silicon-brick-road"
 
   const holdings = await db.holding.findMany({
     where: { userId: session.userId },
@@ -38,7 +39,7 @@ export default async function HoldingsPage() {
 
   return (
     <Shell title={isSbr ? "Your Funds" : "Holdings"} subtitle={isSbr ? "Add or update the four funds you hold" : "Add, edit, or remove assets from your portfolio"} userName={session.name} isAdmin={session.role === "admin"}>
-      <HoldingsClient holdings={serialized} totalTargetPct={totalTargetPct} isSbr={isSbr} />
+      <HoldingsClient holdings={serialized} totalTargetPct={totalTargetPct} constitutionId={constitutionId} />
     </Shell>
   )
 }

@@ -19,7 +19,9 @@ type Holding = {
 interface HoldingsClientProps {
   holdings: Holding[]
   totalTargetPct: number
+  /** @deprecated use constitutionId */
   isSbr?: boolean
+  constitutionId?: string
 }
 
 const PRESET_COLORS = [
@@ -27,7 +29,8 @@ const PRESET_COLORS = [
   "#f59e0b", "#ef4444", "#f97316", "#ec4899", "#84cc16",
 ]
 
-export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal, isSbr = false }: HoldingsClientProps) {
+export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal, isSbr: isSbrLegacy = false, constitutionId = "atlas-core" }: HoldingsClientProps) {
+  const isSbr = isSbrLegacy || constitutionId === "silicon-brick-road"
   // Brand the shared page to the active portfolio: teal for Silicon Brick Road, indigo for
   // Atlas Core. Full class-name literals so Tailwind compiles them (no dynamic string building).
   const accentBtn   = isSbr ? "bg-teal-600 hover:bg-teal-700" : "bg-indigo-600 hover:bg-indigo-700"

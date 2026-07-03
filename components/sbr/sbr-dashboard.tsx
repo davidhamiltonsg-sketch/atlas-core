@@ -289,26 +289,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </div>
           )}
 
-          {/* 2. Health score — the constitution's own scorecard, plain-English warning */}
-          <GovernanceSeal
-            overall={d.health.overall}
-            overallLabel={d.health.overallLabel}
-            dimensions={sealDimensions}
-            constitutionLabel="Your plan — health score"
-            lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
-            narrative={
-              hasBalance
-                ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
-                : "No portfolio balance yet. Enter your holdings to begin tracking."
-            }
-          />
-
-          {/* 3. Compliance Board — position bands */}
-          {hasBalance && (
-            <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />
-          )}
-
-          {/* ── PERFORMANCE KPIs ─────────────────────────────────────── */}
+          {/* 2. KPI strip — portfolio snapshot above the fold, before compliance details */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <a href="/ytd" className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:bg-accent/40 transition-colors">
               <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
@@ -336,13 +317,34 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </a>
           </div>
 
-          {/* ── WHAT IS HELD ─────────────────────────────────────────── */}
+          {/* 3. What is held — above the fold, before compliance instrumentation */}
           {hasBalance && <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} contributionCurrency="SGD" plainEnglish />}
 
-          {/* ── GOVERNANCE RULES ─────────────────────────────────────── */}
+          {/* ── COMPLIANCE DETAILS — below the fold (progressive disclosure) ── */}
+
+          {/* 4. Health score — constitution scorecard with rule-level warning */}
+          <GovernanceSeal
+            overall={d.health.overall}
+            overallLabel={d.health.overallLabel}
+            dimensions={sealDimensions}
+            constitutionLabel="Your plan — health score"
+            lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
+            narrative={
+              hasBalance
+                ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
+                : "No portfolio balance yet. Enter your holdings to begin tracking."
+            }
+          />
+
+          {/* 5. Compliance Board — position bands */}
+          {hasBalance && (
+            <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />
+          )}
+
+          {/* 6. Governance rules checklist */}
           {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
 
-          {/* Phase detail */}
+          {/* 7. Phase detail */}
           <div className="rounded-xl border border-teal-500/30 bg-teal-500/[0.04] p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
