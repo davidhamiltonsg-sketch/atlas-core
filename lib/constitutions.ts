@@ -8,7 +8,14 @@
 //
 // David's Atlas Core keeps its bespoke engine (lib/next-best-move.ts, lib/constants.ts);
 // this registry drives the Silicon Brick Road experience end-to-end (lib/sbr-engine.ts).
+//
+// The SBR rule NUMBERS below are DERIVED from the single source in lib/portfolio-spec.ts
+// (SBR_SPEC); this file only adds the plain-English presentation (names, roles, colours,
+// notes, phase copy). scripts/check-spec.ts asserts the derivation, so a rule value here
+// can never drift from the spec / engine / served doc.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { SBR_SPEC } from "@/lib/portfolio-spec"
 
 export type ConstitutionId = "atlas-core" | "silicon-brick-road"
 
@@ -98,6 +105,43 @@ export const ATLAS_CORE: Constitution = {
 }
 
 // ─── Silicon Brick Road (Dami) — full config, drives the whole SBR experience ──────────
+
+// Presentation only — plain-English names, roles, colours, notes. Rule numbers (target,
+// range, cap, floor) come from SBR_SPEC.funds, merged in below.
+const SBR_PRESENTATION: Record<string, { name: string; role: string; color: string; note?: string }> = {
+  VWRA: { name: "Vanguard FTSE All-World UCITS ETF", role: "Stable global core — always accumulate",        color: "#2dd4bf" },
+  QQQM: { name: "Invesco NASDAQ-100 ETF",            role: "Growth tilt — US large-cap tech",              color: "#60a5fa" },
+  SMH:  { name: "VanEck Semiconductor ETF",          role: "Growth tilt — semiconductors (most volatile)", color: "#a78bfa", note: "Only mandatory sell in the portfolio — trim to 15% if it exceeds 20%." },
+  A35:  { name: "ABF Singapore Bond Index Fund",     role: "SGD safety buffer — your insurance policy in local currency", color: "#34d399", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
+}
+
+const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({
+  ticker: f.ticker,
+  name: SBR_PRESENTATION[f.ticker]?.name ?? f.ticker,
+  role: SBR_PRESENTATION[f.ticker]?.role ?? "",
+  target: f.target,
+  rangeLow: f.rangeLow,
+  rangeHigh: f.rangeHigh,
+  hardCap: f.hardCap,
+  ...(f.floor !== undefined ? { floor: f.floor } : {}),
+  color: SBR_PRESENTATION[f.ticker]?.color ?? "#64748b",
+  ...(SBR_PRESENTATION[f.ticker]?.note ? { note: SBR_PRESENTATION[f.ticker]!.note } : {}),
+}))
+
+// Phase copy is presentation; the value bounds (min/max) are derived from SBR_SPEC.phases by key.
+const SBR_PHASE_COPY: Array<Omit<ConstitutionPhase, "min" | "max">> = [
+  { key: "I",   label: "Phase I — Full growth",        range: "Below SGD 72,000",   selling: false, body: "Standard allocation. All contributions at target weights per the Decision Engine. Maximum equity exposure — let the portfolio run.", targets: { VWRA: 50, QQQM: 25, SMH: 15, A35: 10 } },
+  { key: "II",  label: "Phase II — Controlled growth", range: "SGD 72,000–102,000", selling: false, body: "No selling. Redirect new contributions only toward safety. Existing holdings unchanged.", targets: { VWRA: 55, QQQM: 20, SMH: 10, A35: 15 } },
+  { key: "III", label: "Phase III — Locking in gains", range: "SGD 102,000–114,000", selling: true,  body: "Start gradually moving money to safety. Once per quarter (on your monthly window), sell a small slice of QQQM and VWRA and put the proceeds into A35. Goal: shift from 90% stocks to roughly 80% stocks. Don't touch SMH — it will be liquidated last when you buy the property.", targets: { VWRA: 45, QQQM: 20, SMH: 15, A35: 25 } },
+  { key: "IV",  label: "Phase IV — Ready to buy",      range: "Above SGD 114,000",  selling: false, body: "Stop buying stocks entirely. Every monthly contribution goes straight into A35. This builds up your SGD cash pile so you're ready to move when the right property comes up. Start planning the purchase — the money should be ready to exit within 60 days of deciding." },
+]
+
+const SBR_PHASES: ConstitutionPhase[] = SBR_PHASE_COPY.map((p) => {
+  const spec = SBR_SPEC.phases.find((x) => x.key === p.key)
+  if (!spec) throw new Error(`SBR phase ${p.key} missing from SBR_SPEC`)
+  return { ...p, min: spec.min, max: spec.max }
+})
+
 export const SILICON_BRICK_ROAD: Constitution = {
   id: "silicon-brick-road",
   name: "Silicon Brick Road — Investment Constitution",
@@ -106,27 +150,17 @@ export const SILICON_BRICK_ROAD: Constitution = {
   updated: "2026-07",
   motto: "Discipline Over Prediction",
   objective: "Save and grow your money toward a home deposit of S$120,000. The timeline is flexible — but being ready when the right property appears is not.",
-  targetValue: 120000,
-  currency: "SGD",
-  monthlyContribution: 2000,
+  targetValue: SBR_SPEC.targetValue,
+  currency: SBR_SPEC.currency,
+  monthlyContribution: SBR_SPEC.monthlyContribution,
   broker: "IBKR Singapore",
   docPath: "/silicon-brick-road.html",
-  funds: [
-    { ticker: "VWRA", name: "Vanguard FTSE All-World UCITS ETF", role: "Stable global core — always accumulate",        target: 50, rangeLow: 44, rangeHigh: 56, hardCap: 62, color: "#2dd4bf" },
-    { ticker: "QQQM", name: "Invesco NASDAQ-100 ETF",            role: "Growth tilt — US large-cap tech",              target: 25, rangeLow: 20, rangeHigh: 30, hardCap: 30, color: "#60a5fa" },
-    { ticker: "SMH",  name: "VanEck Semiconductor ETF",          role: "Growth tilt — semiconductors (most volatile)", target: 15, rangeLow: 11, rangeHigh: 19, hardCap: 20, color: "#a78bfa", note: "Only mandatory sell in the portfolio — trim to 15% if it exceeds 20%." },
-    { ticker: "A35",  name: "ABF Singapore Bond Index Fund",     role: "SGD safety buffer — your insurance policy in local currency", target: 10, rangeLow: 7,  rangeHigh: 13, hardCap: null, floor: 7, color: "#34d399", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
-  ],
-  combined: { tickers: ["QQQM", "SMH"], warning: 40, hard: 45, resume: 42, label: "Combined QQQM + SMH ceiling" },
-  totalEquityMaxPct: 92,
-  drawdownTriggerPct: 15,
-  skipAtHighPct: 3,
-  phases: [
-    { key: "I",   label: "Phase I — Full growth",              range: "Below SGD 72,000",        min: 0,      max: 72000,  selling: false, body: "Standard allocation. All contributions at target weights per the Decision Engine. Maximum equity exposure — let the portfolio run.", targets: { VWRA: 50, QQQM: 25, SMH: 15, A35: 10 } },
-    { key: "II",  label: "Phase II — Controlled growth",       range: "SGD 72,000–102,000",      min: 72000,  max: 102000, selling: false, body: "No selling. Redirect new contributions only toward safety. Existing holdings unchanged.", targets: { VWRA: 55, QQQM: 20, SMH: 10, A35: 15 } },
-    { key: "III", label: "Phase III — Locking in gains", range: "SGD 102,000–114,000",   min: 102000, max: 114000, selling: true,  body: "Start gradually moving money to safety. Once per quarter (on your monthly window), sell a small slice of QQQM and VWRA and put the proceeds into A35. Goal: shift from 90% stocks to roughly 80% stocks. Don't touch SMH — it will be liquidated last when you buy the property.", targets: { VWRA: 45, QQQM: 20, SMH: 15, A35: 25 } },
-    { key: "IV",  label: "Phase IV — Ready to buy",      range: "Above SGD 114,000",       min: 114000, max: null,   selling: false, body: "Stop buying stocks entirely. Every monthly contribution goes straight into A35. This builds up your SGD cash pile so you're ready to move when the right property comes up. Start planning the purchase — the money should be ready to exit within 60 days of deciding." },
-  ],
+  funds: SBR_FUNDS,
+  combined: { tickers: [...SBR_SPEC.combined.tickers], warning: SBR_SPEC.combined.warning, hard: SBR_SPEC.combined.hard, resume: SBR_SPEC.combined.resume, label: "Combined QQQM + SMH ceiling" },
+  totalEquityMaxPct: SBR_SPEC.totalEquityMaxPct,
+  drawdownTriggerPct: SBR_SPEC.drawdownTriggerPct,
+  skipAtHighPct: SBR_SPEC.skipAtHighPct,
+  phases: SBR_PHASES,
   decisionLadder: [
     { n: 1, title: "Is SMH over 20% of the portfolio?", detail: "→ You must sell some SMH to bring it back to 15%. This is the only time in the whole system you are required to sell. Do it in the current month's buying window." },
     { n: 2, title: "Are QQQM and SMH together over 45%?", detail: "→ Stop buying both. Put all new money into VWRA until their combined share drops below 42%." },
