@@ -332,31 +332,57 @@ export default async function Portfolio() {
             </div>
 
             <div className="divide-y divide-border">
-              {holdings.map((h) => (
-                <HoldingRow
-                  key={h.ticker}
-                  holding={{
-                    id: h.id,
-                    ticker: h.ticker,
-                    name: h.name,
-                    color: h.color,
-                    value: h.value,
-                    actualPct: h.actualPct,
-                    targetPct: h.targetPct,
-                    hardCapPct: h.hardCapPct,
-                    drift: h.drift,
-                    withinBand: h.withinBand,
-                    overCap: h.overCap,
-                    isHard: h.isHard,
-                    isSoft: h.isSoft,
-                    latestSnapshot: h.latestSnapshot ? { units: h.latestSnapshot.units, price: h.latestSnapshot.price } : null,
-                    sparklineValues: h.sparklineValues,
-                    avgCostUsd: h.avgCostUsd,
-                    unrealisedSgd: h.unrealisedSgd,
-                    unrealisedPct: h.unrealisedPct,
-                  }}
-                />
-              ))}
+              {(() => {
+                const sleeveTickers = new Set(["BTC", "IBIT"])
+                const mainHoldings = holdings.filter(h => !sleeveTickers.has(h.ticker))
+                const sleeveHoldings = holdings.filter(h => sleeveTickers.has(h.ticker))
+                const renderRow = (h: typeof holdings[0]) => (
+                  <HoldingRow
+                    key={h.ticker}
+                    holding={{
+                      id: h.id,
+                      ticker: h.ticker,
+                      name: h.name,
+                      color: h.color,
+                      value: h.value,
+                      actualPct: h.actualPct,
+                      targetPct: h.targetPct,
+                      hardCapPct: h.hardCapPct,
+                      drift: h.drift,
+                      withinBand: h.withinBand,
+                      overCap: h.overCap,
+                      isHard: h.isHard,
+                      isSoft: h.isSoft,
+                      latestSnapshot: h.latestSnapshot ? { units: h.latestSnapshot.units, price: h.latestSnapshot.price } : null,
+                      sparklineValues: h.sparklineValues,
+                      avgCostUsd: h.avgCostUsd,
+                      unrealisedSgd: h.unrealisedSgd,
+                      unrealisedPct: h.unrealisedPct,
+                    }}
+                  />
+                )
+                return (
+                  <>
+                    {mainHoldings.map(renderRow)}
+                    {sleeveHoldings.length > 0 && (
+                      <>
+                        <div className="px-5 py-2 bg-muted/20 flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Bitcoin sleeve — combined target {BITCOIN_SLEEVE_TARGET_PCT}%
+                            {btcSlot && ibitSlot && hasBalance && (
+                              <span className="ml-2 normal-case font-normal">
+                                ({(btcSlot.actualPct + ibitSlot.actualPct).toFixed(1)}% actual)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {sleeveHoldings.map(renderRow)}
+                      </>
+                    )}
+                  </>
+                )
+              })()}
             </div>
 
             {/* Stacked allocation bar */}
