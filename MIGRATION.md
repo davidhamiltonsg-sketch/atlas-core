@@ -34,15 +34,34 @@ Six pillars fix that at the root:
 | 1 — `lib/portfolio-spec.ts` single source | 1 | **Landed** | `check:spec` (71) |
 | 2 — Atlas constants + seed derive from spec | 1 | **Landed** | full `npm run check` |
 | 3 — reporting-currency single source + helper | 4 (foundation) | **Landed** | `check:spec` |
-| 4 — derive the SBR registry from the spec | 1 | Next | `check:spec` + `check:sbr` + sbr-reviewer |
-| 5 — unify each portfolio's two engines | 3 | Staged | scenario checks + **render** |
-| 6 — `Money` type threaded through | 4 | Staged | lint + **render** |
+| 4 — derive the SBR registry from the spec | 1 | **Landed** | `check:spec` + `check:sbr` + sbr-reviewer + isolation |
+| 6 — `Money` type + currency boundary (foundation) | 4 | **Landed** | `check:money` (25) + Vercel build |
+| 5a — engine characterization net (pre-merge) | 3 | **Landed** | `check:sbr` routing grid (27 pins) |
+| 5b — unify each portfolio's two engines | 3 | Staged | the 5a net + **render** |
+| 6b — thread `Money` through the RSC prop chain | 4 | Staged | lint + **render** |
 | 7 — experience shells over a domain core | 2 | Staged | isolation + **render** |
 | 8 — ingestion pipeline | 5 | Staged | **DB** + integration |
 | 9 — one-question dashboards | 6 | Staged | **render** |
 
 "**render**" / "**DB**" = needs the running app or live database to verify safely — do these in an
-environment where you can drive the UI and inspect data, not blind.
+environment where you can drive the authenticated UI and inspect data, not blind. From a headless
+CI/agent environment the Vercel build gives a full typecheck + RSC compile and `get_runtime_errors`
+gives deployed-error telemetry, but the dashboards sit behind the app's own login — so David's/Dami's
+screens can't be driven without credentials, and the contract/`check:*` grids are the standing net for
+those paths.
+
+### What each staged increment is now blocked on
+- **5b (engine merge):** the characterization net (5a) pins every routing branch, boundary, and
+  priority tie for both SBR engines, and already surfaced a latent divergence (the two engines read
+  the phase from different inputs — `total` param vs summed position values). The actual merge to one
+  `decide()` still needs the SBR dashboard driven once (headline + split for a live portfolio) before
+  shipping — a wrong route is a wrong buy instruction for Dami. The net makes that a fast, safe
+  follow-up, not a blind rewrite.
+- **6b (`Money` threading):** the type + formatter + boundary exist and are proven display-identical;
+  threading `Money` through server-component props is render-verified per page.
+- **7 / 9 (shells, one-question dashboards):** structural UI — needs the authenticated app.
+- **8 (ingestion pipeline):** needs the live IBKR sandbox + Turso DB (note: current deployed runtime
+  errors are all IBKR FLEX `1001` "try again shortly" transients, already handled with a retry).
 
 ## Roadmap for the remaining increments
 

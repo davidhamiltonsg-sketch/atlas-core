@@ -61,51 +61,110 @@ eq("Phase I selling",   phase("I")?.selling,   false)
 eq("Phase III selling", phase("III")?.selling, true)
 eq("Phase IV selling",  phase("IV")?.selling,  false)
 
-// ── Two-engine agreement (Article VI) ─────────────────────────────────────────
-// The headline instruction (computeSbrNextMove) and the money-split (computeSbrDca) must
-// route to the same fund in the key ladder branches — otherwise Dami sees one fund named
-// in the headline while the split sends the money somewhere else. Total is kept in Phase I.
-console.log("\nArt. VI — Two-engine routing agreement")
-const TOTAL = 50_000 // Phase I
-function sp(ticker: string, actualPct: number): SbrPosition {
+// ── Two-engine routing characterization (Article VI) ──────────────────────────
+// The headline instruction (computeSbrNextMove) and the money-split (computeSbrDca) encode
+// the SAME ladder in two independently-written functions. This grid pins, for every ladder
+// branch plus its boundaries and priority ties, which fund each engine routes to — so the two
+// can never silently diverge, and so the planned unification behind a single decide() can be
+// refactored UNDER this net (a merge that changes any routing fails here). Total is set per
+// scenario to select the intended phase.
+console.log("\nArt. VI — Two-engine routing characterization")
+const TOTAL = 50_000 // Phase I default
+// Build a position whose SGD value reflects `total` — computeSbrDca derives the phase from the
+// sum of position values, so a phase scenario must scale values to that total, not just pass it
+// to the headline engine. sp() defaults to the Phase-I total.
+function spAt(total: number, ticker: string, actualPct: number, hi52 = 0): SbrPosition {
   const f = fund(ticker)
   return {
-    ticker, name: ticker, color: "#000", value: (actualPct / 100) * TOTAL, actualPct,
+    ticker, name: ticker, color: "#000", value: (actualPct / 100) * total, actualPct,
     targetPct: f.target, rangeLow: f.rangeLow, rangeHigh: f.rangeHigh,
-    hardCap: f.hardCap, floor: f.floor, latestPrice: 100, hi52: 0,
+    hardCap: f.hardCap, floor: f.floor, latestPrice: 100, hi52,
   }
 }
+function sp(ticker: string, actualPct: number, hi52 = 0): SbrPosition {
+  return spAt(TOTAL, ticker, actualPct, hi52)
+}
+// hi52 = 101 with latestPrice 100 → 0.99% below the 52-week high, inside the 3% skip band.
+const NEAR_HIGH = 101
 // Primary destination of the split = the fund receiving the most money.
 function dcaPrimary(plan: { allocations: { ticker: string; amount: number }[] }): string {
   return plan.allocations.reduce((best, a) => (a.amount > (best?.amount ?? -1) ? a : best),
     null as { ticker: string; amount: number } | null)?.ticker ?? "?"
 }
-function agree(label: string, positions: SbrPosition[], opts: { drawdownPct?: number }, expected: string) {
-  const nm = computeSbrNextMove(positions, TOTAL, opts)
-  const dc = computeSbrDca(positions, SBR.monthlyContribution, opts)
-  const primary = dcaPrimary(dc)
-  eq(`${label} — headline`, nm.ticker, expected)
-  eq(`${label} — split matches headline`, primary, expected)
+function nm(positions: SbrPosition[], total = TOTAL, opts: { drawdownPct?: number } = {}) {
+  return computeSbrNextMove(positions, total, opts)
 }
-// Combined QQQM+SMH over the 45% hard ceiling → both buy VWRA.
-agree("combined > 45%", [sp("VWRA", 39), sp("QQQM", 30), sp("SMH", 16), sp("A35", 15)], {}, "VWRA")
-// A35 below its 7% floor (combined kept under the warning) → both top up A35.
-agree("A35 below floor", [sp("VWRA", 61), sp("QQQM", 22), sp("SMH", 12), sp("A35", 5)], {}, "A35")
-// Drawdown past 15% → both buy VWRA. Weights chosen so the drawdown branch fires FIRST:
-// combined QQQM+SMH = 34% (under the 40% warning), A35 ≥ 7% floor, every fund in range —
-// so nothing higher on the ladder pre-empts the drawdown routing this scenario is testing.
-agree("drawdown > 15%", [sp("VWRA", 55), sp("QQQM", 22), sp("SMH", 12), sp("A35", 11)], { drawdownPct: -20 }, "VWRA")
+function primary(positions: SbrPosition[], opts: { drawdownPct?: number } = {}) {
+  return dcaPrimary(computeSbrDca(positions, SBR.monthlyContribution, opts))
+}
+// Both engines route to `expected`, and the headline carries `severity`.
+function agree(label: string, positions: SbrPosition[], total: number, opts: { drawdownPct?: number }, expected: string, severity: string) {
+  const h = nm(positions, total, opts)
+  eq(`${label} — headline ${expected}/${severity}`, [h.ticker, h.severity], [expected, severity])
+  eq(`${label} — split → ${expected}`, primary(positions, opts), expected)
+}
 
-// SMH over its 20% cap: the headline instruction is to SELL SMH (a sell is not something the
-// contribution planner represents), and the money-split must never add MORE SMH. A sell and a
-// buy are different flows, but they must not conflict on the same screen.
+// ---- Every branch of the ladder, isolated so only the tested branch fires ----
+// 1 — empty portfolio → headline is the first-contribution nudge (VWRA).
+eq("empty → first contribution", [nm([sp("VWRA", 0)], 0).ticker, nm([sp("VWRA", 0)], 0).severity], ["VWRA", "none"])
+// 2 — SMH > 20% cap: headline SELLS SMH (critical); the split must never buy MORE SMH.
 {
-  const positions = [sp("VWRA", 51), sp("QQQM", 15), sp("SMH", 22), sp("A35", 12)]
-  const nm = computeSbrNextMove(positions, TOTAL, {})
-  const dc = computeSbrDca(positions, SBR.monthlyContribution, {})
-  eq("SMH>20% — headline sells SMH", nm.ticker, "SMH")
-  eq("SMH>20% — split never buys more SMH", dcaPrimary(dc) !== "SMH", true)
+  const p = [sp("VWRA", 51), sp("QQQM", 15), sp("SMH", 22), sp("A35", 12)]
+  eq("SMH>20% — headline sells SMH", [nm(p).ticker, nm(p).severity], ["SMH", "critical"])
+  eq("SMH>20% — split never buys more SMH", primary(p) !== "SMH", true)
 }
+// 3 — combined QQQM+SMH over the 45% hard ceiling → both buy VWRA (critical).
+agree("combined 46 (hard)", [sp("VWRA", 39), sp("QQQM", 30), sp("SMH", 16), sp("A35", 15)], TOTAL, {}, "VWRA", "critical")
+// 4 — combined in the 40–45 warning band → both buy VWRA (medium).
+agree("combined 42 (warning)", [sp("VWRA", 43), sp("QQQM", 27), sp("SMH", 15), sp("A35", 15)], TOTAL, {}, "VWRA", "medium")
+// 5 — A35 below its 7% floor → both top up A35 (high).
+agree("A35 below floor", [sp("VWRA", 61), sp("QQQM", 22), sp("SMH", 12), sp("A35", 5)], TOTAL, {}, "A35", "high")
+// 6 — Phase III (SGD 102–114k) → both route to A35 (high). Values scaled to the phase total so
+// the split engine (which reads the phase from summed position values) sees Phase III too.
+agree("Phase III", [spAt(108_000, "VWRA", 50), spAt(108_000, "QQQM", 22), spAt(108_000, "SMH", 13), spAt(108_000, "A35", 15)], 108_000, {}, "A35", "high")
+// 7 — Phase IV (above SGD 114k) → both route to A35 (high).
+agree("Phase IV", [spAt(118_000, "VWRA", 50), spAt(118_000, "QQQM", 22), spAt(118_000, "SMH", 13), spAt(118_000, "A35", 15)], 118_000, {}, "A35", "high")
+// 8 — drawdown past −15% (nothing higher firing) → both buy VWRA (high).
+agree("drawdown −20", [sp("VWRA", 55), sp("QQQM", 22), sp("SMH", 12), sp("A35", 11)], TOTAL, { drawdownPct: -20 }, "VWRA", "high")
+// 9 — a fund below its range → both fill that fund (medium).
+agree("SMH underweight", [sp("VWRA", 57), sp("QQQM", 22), sp("SMH", 8), sp("A35", 13)], TOTAL, {}, "SMH", "medium")
+// 9b — two funds under range → both fill the FURTHEST-below one (VWRA −4 beats QQQM −2).
+agree("furthest-underweight wins", [sp("VWRA", 40), sp("QQQM", 18), sp("SMH", 15), sp("A35", 27)], TOTAL, {}, "VWRA", "medium")
+
+// ---- Known asymmetry the unification should resolve, pinned so it can't drift silently ----
+// 10 — skip-at-high: QQQM in range but within 3% of its high. The headline NAMES the skipped
+// fund (QQQM, low severity) while the split redirects the money to VWRA. Two different meanings
+// of "the fund", pinned deliberately.
+{
+  const p = [sp("VWRA", 50), sp("QQQM", 25, NEAR_HIGH), sp("SMH", 13), sp("A35", 12)]
+  eq("skip-at-high — headline names skipped QQQM", [nm(p).ticker, nm(p).severity], ["QQQM", "low"])
+  eq("skip-at-high — split redirects to VWRA", primary(p), "VWRA")
+}
+// 11 — all in range, none near high, no drawdown → standard split. Headline is ALL (none);
+// the proportional split's largest share is VWRA (target 50%).
+{
+  const p = [sp("VWRA", 50), sp("QQQM", 25), sp("SMH", 13), sp("A35", 12)]
+  eq("standard — headline ALL/none", [nm(p).ticker, nm(p).severity], ["ALL", "none"])
+  eq("standard — split largest is VWRA", primary(p), "VWRA")
+}
+
+// ---- Boundary conditions: the ≥ / > edges where two hand-written ladders most easily diverge ----
+// combined exactly 40 → warning fires (≥). combined exactly 45 → still warning, NOT hard (>45).
+agree("combined == 40 → warning", [sp("VWRA", 45), sp("QQQM", 25), sp("SMH", 15), sp("A35", 15)], TOTAL, {}, "VWRA", "medium")
+agree("combined == 45 → warning not hard", [sp("VWRA", 40), sp("QQQM", 30), sp("SMH", 15), sp("A35", 15)], TOTAL, {}, "VWRA", "medium")
+// A35 exactly 7 → NOT below floor (floor is <7); everything else in range → standard split.
+eq("A35 == 7 → not floor branch", nm([sp("VWRA", 55), sp("QQQM", 22), sp("SMH", 13), sp("A35", 10)]).severity, "none")
+// SMH exactly 20 → NOT over cap (cap is >20).
+eq("SMH == 20 → no forced sell", nm([sp("VWRA", 52), sp("QQQM", 16), sp("SMH", 20), sp("A35", 12)]).ticker !== "SMH", true)
+
+// ---- Priority ties: when two conditions hold, the SAME higher rule wins in BOTH engines ----
+// combined>45 beats drawdown → critical VWRA (not the drawdown's high).
+agree("combined>45 beats drawdown", [sp("VWRA", 34), sp("QQQM", 30), sp("SMH", 16), sp("A35", 20)], TOTAL, { drawdownPct: -20 }, "VWRA", "critical")
+// A35 floor beats drawdown → both A35 (high).
+agree("A35 floor beats drawdown", [sp("VWRA", 61), sp("QQQM", 22), sp("SMH", 12), sp("A35", 5)], TOTAL, { drawdownPct: -20 }, "A35", "high")
+// Drift beats skip-at-high on the SAME fund: QQQM under range AND near its high → both FILL
+// QQQM (this is the "drift correction wins" reconciliation, the whole point of ladder step 6).
+agree("drift beats skip on QQQM", [sp("VWRA", 57), sp("QQQM", 18, NEAR_HIGH), sp("SMH", 13), sp("A35", 12)], TOTAL, {}, "QQQM", "medium")
 
 // ── Hidden-exposure look-through (Article XVII) ───────────────────────────────
 console.log("\nArt. XVII — Hidden-exposure look-through")
