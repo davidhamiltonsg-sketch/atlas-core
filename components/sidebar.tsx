@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
+import { BrandMark } from "./brand/brand-mark"
 import type { ConstitutionId } from "@/lib/constitutions"
 
 type NavItem = { href: string; label: string; icon: React.ElementType }
@@ -33,9 +34,9 @@ type NavGroupDef = { label: string; items: NavItem[] }
 
 // Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
-const BRAND: Record<ConstitutionId, { short: string; name: string; version: string; gradient: string }> = {
-  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v1.5 · GDEA", gradient: "from-violet-500 via-purple-500 to-fuchsia-500" },
-  "silicon-brick-road": { short: "SBR", name: "Silicon Brick Road", version: "v2.2 · SBR",  gradient: "from-sky-400 via-blue-500 to-cyan-500" },
+const BRAND: Record<ConstitutionId, { name: string; version: string }> = {
+  "atlas-core":         { name: "Atlas Core",         version: "v1.5 · GDEA" },
+  "silicon-brick-road": { name: "Silicon Brick Road", version: "v2.2 · SBR" },
 }
 
 const NAV: Record<ConstitutionId, NavGroupDef[]> = {
@@ -154,10 +155,7 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-[hsl(var(--sidebar-border))]">
           <div className="flex items-center gap-3">
-            <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-md", constitutionId === "silicon-brick-road" ? "shadow-sky-500/30" : "shadow-violet-500/30", brand.gradient)}>
-              <span className="text-[11px] font-black text-white tracking-tight">{brand.short}</span>
-              <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
-            </div>
+            <BrandMark constitutionId={constitutionId} className="h-9 w-9 shrink-0 drop-shadow-md" />
             <div>
               <p className="text-sm font-bold tracking-tight leading-none">{brand.name}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">{brand.version}</p>

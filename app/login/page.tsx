@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { loginAction } from "./actions"
+import { AtlasCoreMark } from "@/components/brand/brand-mark"
 import { Lock } from "lucide-react"
 
 export default function LoginPage() {
@@ -24,10 +25,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 shadow-lg shadow-violet-500/30 mb-4">
-            <span className="text-sm font-black text-white tracking-tight">AC</span>
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20" />
-          </div>
+          <AtlasCoreMark className="h-16 w-16 drop-shadow-lg mb-4" />
           <h1 className="text-xl font-bold tracking-tight">Atlas Core</h1>
           <p className="text-xs text-muted-foreground mt-1">v1.5 · GDEA · Sign in to continue</p>
         </div>
