@@ -35,9 +35,9 @@ export function MonthlyCheck({ lastCheckIso }: { lastCheckIso: string | null }) 
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/[0.06] px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-500/30 bg-violet-500/[0.06] px-4 py-3">
       <div className="flex items-center gap-2.5">
-        <CalendarCheck className="h-4 w-4 text-indigo-500 shrink-0" />
+        <CalendarCheck className="h-4 w-4 text-violet-500 shrink-0" />
         <p className="text-xs">
           <span className="font-semibold">Time for your monthly check.</span>{" "}
           <span className="text-muted-foreground">
@@ -49,7 +49,7 @@ export function MonthlyCheck({ lastCheckIso }: { lastCheckIso: string | null }) 
       <button
         onClick={mark}
         disabled={isPending}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 px-3 py-1.5 text-xs font-semibold text-white transition-colors shrink-0"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 px-3 py-1.5 text-xs font-semibold text-white transition-colors shrink-0"
       >
         {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
         Mark this month done

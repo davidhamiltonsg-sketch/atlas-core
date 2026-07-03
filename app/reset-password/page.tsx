@@ -19,7 +19,7 @@ function ResetPasswordForm() {
     return (
       <div className="text-center">
         <p className="text-sm text-muted-foreground">Invalid reset link. Please request a new one.</p>
-        <Link href="/forgot-password" className="mt-3 inline-block text-xs text-indigo-600 dark:text-indigo-400 underline">
+        <Link href="/forgot-password" className="mt-3 inline-block text-xs text-violet-600 dark:text-violet-400 underline">
           Request new link
         </Link>
       </div>
@@ -48,7 +48,7 @@ function ResetPasswordForm() {
             required
             minLength={8}
             autoComplete="new-password"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
             placeholder="Min. 8 characters"
           />
           <button
@@ -68,7 +68,7 @@ function ResetPasswordForm() {
           name="confirm"
           required
           autoComplete="new-password"
-          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
           placeholder="Repeat password"
         />
       </div>
@@ -82,7 +82,7 @@ function ResetPasswordForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 transition-colors"
       >
         <Lock className="h-3.5 w-3.5" />
         {isPending ? "Saving…" : "Set new password"}
@@ -97,7 +97,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 mb-4">
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg shadow-violet-500/30 mb-4">
             <span className="text-sm font-black text-white tracking-tight">AC</span>
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20" />
           </div>

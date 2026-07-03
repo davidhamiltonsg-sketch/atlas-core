@@ -120,7 +120,7 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
               <button key={s} onClick={() => toggleSource(s)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  on ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+                  on ? "border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-300"
                      : "border-border text-muted-foreground hover:bg-accent/60"
                 )}>
                 <Icon className="h-3.5 w-3.5" />{label}
@@ -148,7 +148,7 @@ export function SmartMoneyClient({ initialAtlasOnly = false }: { initialAtlasOnl
               <button key={d} onClick={() => setDaysBack(d)}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
-                  daysBack === d ? "bg-indigo-600 text-white" : "text-muted-foreground hover:bg-accent/60"
+                  daysBack === d ? "bg-violet-600 text-white" : "text-muted-foreground hover:bg-accent/60"
                 )}>
                 {d}d
               </button>
@@ -258,7 +258,7 @@ function TradeTable({ trades }: { trades: SmartMoneyTrade[] }) {
                 )}
                 {t.sourceUrl && (
                   <a href={t.sourceUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 ml-1 text-indigo-500 hover:underline">
+                    className="inline-flex items-center gap-0.5 ml-1 text-violet-500 hover:underline">
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -283,7 +283,7 @@ function FinnhubSetup() {
         congressional trades may require a Finnhub premium plan.
       </p>
       <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-        <li>Create a free key at <a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline">finnhub.io</a>.</li>
+        <li>Create a free key at <a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer" className="text-violet-500 hover:underline">finnhub.io</a>.</li>
         <li>Add <code className="rounded bg-muted px-1 py-0.5 text-[11px]">FINNHUB_API_KEY</code> to your Vercel project environment variables (and <code className="rounded bg-muted px-1 py-0.5 text-[11px]">.env.local</code> for local dev).</li>
         <li>Redeploy. This page will populate automatically.</li>
       </ol>

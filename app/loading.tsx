@@ -23,7 +23,7 @@ export default function Loading() {
             }}
           />
           {/* AC mark */}
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-2xl shadow-indigo-500/40">
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-2xl shadow-violet-500/40">
             <span className="text-2xl font-black tracking-tight text-white">AC</span>
             <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/20" />
           </div>
@@ -32,12 +32,12 @@ export default function Loading() {
         {/* Wordmark */}
         <div className="text-center">
           <p className="text-lg font-bold tracking-tight text-white">Atlas Core</p>
-          <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-indigo-300/70">Investment Operating System</p>
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-violet-300/70">Investment Operating System</p>
         </div>
 
         {/* Moving progress bar */}
         <div className="h-1 w-44 overflow-hidden rounded-full bg-white/10">
-          <div className="loadbar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400" />
+          <div className="loadbar h-full w-1/3 rounded-full bg-gradient-to-r from-violet-400 via-violet-400 to-cyan-400" />
         </div>
 
         <p className="text-[11px] text-slate-400/80">Loading your portfolio…</p>

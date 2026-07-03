@@ -163,10 +163,10 @@ export function ExecutionPlan({
 
       {/* Market overlay note — explains why the plan adapted to conditions */}
       {dcaPlan.marketOverlayActive && dcaPlan.overlayNote && (
-        <div className="px-5 py-3 border-b border-indigo-500/20 bg-indigo-500/[0.05] flex gap-2.5">
-          <TrendingDown className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
+        <div className="px-5 py-3 border-b border-violet-500/20 bg-violet-500/[0.05] flex gap-2.5">
+          <TrendingDown className="h-4 w-4 text-violet-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-0.5">
+            <p className="text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5">
               Plan adjusted for market conditions
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">{dcaPlan.overlayNote}</p>
@@ -395,12 +395,12 @@ export function ExecutionPlan({
 
       {/* Annual lump sum section */}
       {annualLumpSum > 0 && (
-        <div className="border-t border-border bg-indigo-500/[0.03] px-5 py-4">
+        <div className="border-t border-border bg-violet-500/[0.03] px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                <p className="text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">Annual Lump Sum — S${annualLumpSum.toLocaleString()}</p>
+                <Zap className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Annual Lump Sum — S${annualLumpSum.toLocaleString()}</p>
               </div>
               <p className="text-xs text-muted-foreground mb-3">Deploy as a single batch. Allocate proportionally — boost the most underweight positions first.</p>
               <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -415,10 +415,10 @@ export function ExecutionPlan({
                   return (
                     <div key={ticker} className="flex flex-col items-start">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{ticker}</span>
-                      <span className={`text-sm font-black tabular-nums ${isZeroed ? "text-muted-foreground/50 line-through" : isBoosted ? "text-indigo-600 dark:text-indigo-400" : "text-foreground"}`}>
+                      <span className={`text-sm font-black tabular-nums ${isZeroed ? "text-muted-foreground/50 line-through" : isBoosted ? "text-violet-600 dark:text-violet-400" : "text-foreground"}`}>
                         ${amount.toLocaleString()}
                       </span>
-                      {isBoosted && <span className="text-[9px] text-indigo-600 dark:text-indigo-500 font-semibold">boosted</span>}
+                      {isBoosted && <span className="text-[9px] text-violet-600 dark:text-violet-500 font-semibold">boosted</span>}
                       {isZeroed && <span className="text-[9px] text-muted-foreground font-semibold">skip</span>}
                     </div>
                   )

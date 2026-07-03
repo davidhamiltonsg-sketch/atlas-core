@@ -34,8 +34,8 @@ type NavGroupDef = { label: string; items: NavItem[] }
 // Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
 const BRAND: Record<ConstitutionId, { short: string; name: string; version: string; gradient: string }> = {
-  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v1.5 · GDEA", gradient: "from-indigo-500 to-violet-600" },
-  "silicon-brick-road": { short: "SBR", name: "Silicon Brick Road", version: "v2.2 · SBR",  gradient: "from-teal-500 to-emerald-600" },
+  "atlas-core":         { short: "AC",  name: "Atlas Core",         version: "v1.5 · GDEA", gradient: "from-violet-500 via-purple-500 to-fuchsia-500" },
+  "silicon-brick-road": { short: "SBR", name: "Silicon Brick Road", version: "v2.2 · SBR",  gradient: "from-sky-400 via-blue-500 to-cyan-500" },
 }
 
 const NAV: Record<ConstitutionId, NavGroupDef[]> = {
@@ -104,17 +104,17 @@ function NavLink({ href, label, icon: Icon, onClick, constitutionId = "atlas-cor
         "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
         active
           ? sbr
-            ? "bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300"
-            : "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+            ? "bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300"
+            : "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300"
           : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
       )}
     >
       {active && (
-        <span className={cn("absolute left-0 inset-y-1.5 w-0.5 rounded-full", sbr ? "bg-teal-500" : "bg-indigo-500")} />
+        <span className={cn("absolute left-0 inset-y-1.5 w-0.5 rounded-full", sbr ? "bg-sky-500" : "bg-violet-500")} />
       )}
       <Icon className={cn(
         "h-4 w-4 shrink-0 transition-colors",
-        active ? (sbr ? "text-teal-600 dark:text-teal-400" : "text-indigo-600 dark:text-indigo-400") : ""
+        active ? (sbr ? "text-sky-600 dark:text-sky-400" : "text-violet-600 dark:text-violet-400") : ""
       )} />
       {label}
     </Link>
@@ -154,7 +154,7 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-[hsl(var(--sidebar-border))]">
           <div className="flex items-center gap-3">
-            <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-md", constitutionId === "silicon-brick-road" ? "shadow-teal-500/30" : "shadow-indigo-500/30", brand.gradient)}>
+            <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br shadow-md", constitutionId === "silicon-brick-road" ? "shadow-sky-500/30" : "shadow-violet-500/30", brand.gradient)}>
               <span className="text-[11px] font-black text-white tracking-tight">{brand.short}</span>
               <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20" />
             </div>

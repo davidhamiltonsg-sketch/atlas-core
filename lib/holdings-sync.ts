@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
 import { fetchFlexPositions, fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { constitutionIdForEmail, SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import {
   parseFlexDate, naturalKey, executionNaturalKey,
@@ -13,8 +13,10 @@ import {
 
 /**
  * Make sure every Atlas Core governed ticker exists as a holding for a user (creating any gaps
- * at 0 units). Atlas Core ONLY — silently returns 0 for SBR users to prevent cross-contamination.
- * Idempotent — only creates what is missing.
+ * at 0 units), and keep each existing row's PRESENTATION (name, colour) in sync with the seed —
+ * so a rebrand of the fund palette self-heals rows seeded under the old colours. Rule numbers
+ * (targets/caps) are never touched here. Atlas Core ONLY — silently returns 0 for SBR users to
+ * prevent cross-contamination. Idempotent.
  */
 export async function ensureCoreHoldings(userId: string): Promise<number> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
@@ -23,13 +25,34 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
   let created = 0
   for (const ticker of CORE_TICKERS) {
     const existing = await db.holding.findFirst({ where: { userId, ticker } })
-    if (existing) continue
     const d = CORE_DEFAULTS[ticker] ?? { name: ticker, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" }
+    if (existing) {
+      if (existing.color !== d.color || existing.name !== d.name) {
+        await db.holding.update({ where: { id: existing.id }, data: { color: d.color, name: d.name } })
+      }
+      continue
+    }
     const h = await db.holding.create({ data: { userId, ticker, ...d } })
     await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0 })
     created++
   }
   return created
+}
+
+/**
+ * Keep an SBR user's holding rows' PRESENTATION (name, colour) in sync with the Silicon Brick
+ * Road registry — so a fund-palette rebrand self-heals rows provisioned under old colours.
+ * SBR ONLY (silently returns for Atlas users); never touches rule numbers or snapshots.
+ */
+export async function ensureSbrPresentation(userId: string): Promise<void> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
+  if (!user || constitutionIdForEmail(user.email) !== "silicon-brick-road") return
+  for (const f of SILICON_BRICK_ROAD.funds) {
+    const existing = await db.holding.findFirst({ where: { userId, ticker: f.ticker } })
+    if (existing && (existing.color !== f.color || existing.name !== f.name)) {
+      await db.holding.update({ where: { id: existing.id }, data: { color: f.color, name: f.name } })
+    }
+  }
 }
 
 const YF = "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d"

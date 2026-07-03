@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
-import { upsertSnapshotToday, ensureCoreHoldings } from "@/lib/holdings-sync"
+import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation } from "@/lib/holdings-sync"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 import Anthropic from "@anthropic-ai/sdk"
 
@@ -132,6 +132,8 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const constitutionId = constitutionIdForEmail(user?.email)
   if (constitutionId === "atlas-core") {
     await ensureCoreHoldings(session.userId)
+  } else {
+    await ensureSbrPresentation(session.userId)
   }
 
   const holdings = await db.holding.findMany({

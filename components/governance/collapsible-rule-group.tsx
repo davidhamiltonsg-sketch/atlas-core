@@ -45,7 +45,7 @@ export function CollapsibleRuleGroup({ category, rules, defaultOpen = false }: C
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-accent/30 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
-          {(() => { const Icon = CATEGORY_ICONS[category] ?? Circle; return <Icon className="h-4 w-4 text-indigo-400 shrink-0" aria-hidden /> })()}
+          {(() => { const Icon = CATEGORY_ICONS[category] ?? Circle; return <Icon className="h-4 w-4 text-violet-400 shrink-0" aria-hidden /> })()}
           <div>
             <p className="text-sm font-semibold">{category}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">

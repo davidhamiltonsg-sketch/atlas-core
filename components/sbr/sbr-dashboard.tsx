@@ -48,7 +48,8 @@ async function getSbrData(userId: string) {
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
     const live = priceMap[h.ticker]
     return {
-      ticker: h.ticker, name: h.name, color: h.color, value, actualPct,
+      // Registry colour wins over the DB row so a palette rebrand applies without a reseed.
+      ticker: h.ticker, name: h.name, color: fund?.color ?? h.color, value, actualPct,
       targetPct: h.targetPct, rangeLow: fund?.rangeLow ?? h.targetPct - h.toleranceBand,
       rangeHigh: fund?.rangeHigh ?? h.targetPct + h.toleranceBand, hardCap: h.hardCapPct,
       floor: fund?.floor, latestPrice: live?.price || h.snapshots[0]?.price || 0, hi52: live?.hi52 || 0,
@@ -116,7 +117,7 @@ async function getSbrData(userId: string) {
     const cb = h.snapshots[0]
     const a = dcaByTicker.get(h.ticker)
     return {
-      ticker: h.ticker, name: h.name, color: h.color, units: cb?.units ?? 0, value: p.value,
+      ticker: h.ticker, name: h.name, color: p.color, units: cb?.units ?? 0, value: p.value,
       latestPrice: cb?.price ?? 0, priceChangePct: null, priceHistory: [],
       avgCostUsd: null, unrealisedSgd: null, unrealisedPct: null,
       actualPct: p.actualPct, targetPct: h.targetPct, toleranceBand: h.toleranceBand,
@@ -138,7 +139,8 @@ async function getSbrData(userId: string) {
   const donutData = holdingsSorted.map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
-    return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: h.color, value }
+    const fundColor = SBR.funds.find((f) => f.ticker === h.ticker)?.color ?? h.color
+    return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: fundColor, value }
   })
 
   const latest = holdings.reduce<Date | null>((d, h) => { const s = h.snapshots[0]?.date; return s && (!d || s > d) ? s : d }, null)
@@ -175,17 +177,17 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
       {/* Constitution banner */}
       <a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer"
-        className="rounded-xl border border-teal-500/40 bg-gradient-to-r from-teal-500/[0.08] to-emerald-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-teal-500/[0.12] transition-colors group">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/20 shrink-0"><FileText className="h-4 w-4 text-teal-400" /></div>
+        className="rounded-xl border border-sky-500/40 bg-gradient-to-r from-sky-500/[0.10] via-blue-500/[0.07] to-cyan-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-sky-500/[0.12] transition-colors group">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/20 shrink-0"><FileText className="h-4 w-4 text-sky-400" /></div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-teal-400">Silicon Brick Road — Investment Constitution (v2.2)</p>
+          <p className="text-xs font-bold text-sky-400">Silicon Brick Road — Investment Constitution (v2.2)</p>
           <p className="text-xs text-muted-foreground">The complete written plan — four funds, monthly decision steps, phase rules, and how to buy the property when you&apos;re ready.</p>
         </div>
-        <span className="text-xs font-semibold text-teal-400 group-hover:text-teal-300 shrink-0">Open ↗</span>
+        <span className="text-xs font-semibold text-sky-400 group-hover:text-sky-300 shrink-0">Open ↗</span>
       </a>
 
       {/* Progress bar — the primary SBR KPI */}
-      <div className="rounded-xl border border-border bg-card p-5 mb-5">
+      <div className="rounded-2xl card-lux p-5 mb-5">
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Progress to target</p>
@@ -195,7 +197,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-black tabular-nums text-teal-400">{progress}%</p>
+            <p className="text-4xl font-black tabular-nums gradient-text">{progress}%</p>
             <p className="text-xs text-muted-foreground">{d.phase.label.split("—")[0].trim()}</p>
           </div>
         </div>
@@ -205,12 +207,12 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             const width = pm.endFrac * 100 - start
             const isCurrent = pm.label === d.phase.key
             return (
-              <div key={pm.label} className={`absolute top-0 h-full border-r border-background/40 ${isCurrent ? "bg-teal-500/20" : "bg-transparent"}`}
+              <div key={pm.label} className={`absolute top-0 h-full border-r border-background/40 ${isCurrent ? "bg-sky-500/20" : "bg-transparent"}`}
                 style={{ left: `${start}%`, width: `${width}%` }} />
             )
           })}
           {hasBalance && (
-            <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-700"
+            <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 transition-all duration-700"
               style={{ width: `${Math.min(100, valueFrac * 100)}%` }} />
           )}
         </div>
@@ -221,7 +223,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             const isCurrent = pm.label === d.phase.key
             return (
               <div key={pm.label} className="text-center" style={{ width: `${width}%` }}>
-                <span className={`text-[10px] font-bold ${isCurrent ? "text-teal-400" : "text-muted-foreground/50"}`}>{pm.label}</span>
+                <span className={`text-[10px] font-bold ${isCurrent ? "text-sky-400" : "text-muted-foreground/50"}`}>{pm.label}</span>
               </div>
             )
           })}
@@ -233,8 +235,8 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
       {/* Empty-state welcome — covers both "nothing entered yet" and "funds set but showing S$0" */}
       {!hasBalance && (
-        <div className="mb-5 rounded-xl border border-teal-500/30 bg-teal-500/[0.06] px-5 py-4">
-          <p className="text-sm font-bold text-teal-400">Your four funds are set up — let&apos;s add what you hold</p>
+        <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
+          <p className="text-sm font-bold text-sky-400">Your four funds are set up — let&apos;s add what you hold</p>
           <p className="text-xs text-muted-foreground mt-0.5">Your plan is ready (VWRA 50 · QQQM 25 · SMH 15 · A35 10), but the portfolio is still showing S$0. Add what you currently own on the <a href="/portfolio" className="underline font-semibold">Portfolio</a> page, and this page will tell you what to buy each month.</p>
         </div>
       )}
@@ -244,10 +246,10 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
           {/* 1. This month — the single decision Dami needs, first on the page */}
           {hasBalance && (
-            <div className="rounded-xl border border-teal-500/40 bg-card overflow-hidden">
+            <div className="rounded-2xl ring-hero overflow-hidden">
               <div className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400">This month</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">This month</p>
                   <p className="text-base font-semibold mt-0.5">{d.nextMove.action}</p>
                 </div>
                 <span className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
@@ -291,24 +293,24 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
           {/* 2. KPI strip — portfolio snapshot above the fold, before compliance details */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <a href="/ytd" className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:bg-accent/40 transition-colors">
+            <a href="/ytd" className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
               <p className="text-xl font-black tabular-nums">{formatCurrency(d.totalValue, "SGD")}</p>
               {d.valueChange !== null
                 ? <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>{d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}</p>
                 : <p className="text-[11px] text-muted-foreground">SGD · base currency</p>}
             </a>
-            <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2">
+            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Health Score</span>
               <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}>{d.health.overall}</p>
               <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2">
+            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Phase</span>
-              <p className="text-xl font-black tabular-nums text-teal-400">{d.phase.key}</p>
+              <p className="text-xl font-black tabular-nums text-sky-400">{d.phase.key}</p>
               <p className="text-[11px] text-muted-foreground">{d.phase.range}</p>
             </div>
-            <a href="/governance" className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:bg-accent/40 transition-colors">
+            <a href="/governance" className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Governance</span>
               <p className={`text-xl font-black tabular-nums ${d.govAlignment.overall === "breach" ? "text-red-500" : d.govAlignment.overall === "watch" ? "text-amber-500" : "text-green-500"}`}>
                 {d.govAlignment.breaches + d.govAlignment.watches === 0 ? "OK" : `${d.govAlignment.breaches + d.govAlignment.watches}`}
@@ -345,17 +347,17 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
 
           {/* 7. Phase detail */}
-          <div className="rounded-xl border border-teal-500/30 bg-teal-500/[0.04] p-5">
+          <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.04] p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400">Phase {d.phase.key} — Active</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400">Phase {d.phase.key} — Active</span>
                   <span className="text-[10px] text-muted-foreground">· {d.phase.range}</span>
                   {d.phase.selling && <span className="rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase">sells</span>}
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{d.phase.body}</p>
               </div>
-              <a href="/governance" className="flex items-center gap-1 text-[11px] font-semibold text-teal-400 hover:text-teal-300 shrink-0">
+              <a href="/governance" className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 shrink-0">
                 All phases <ChevronRight className="h-3 w-3" />
               </a>
             </div>
@@ -366,7 +368,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         {/* Right sidebar */}
         <div className="space-y-5">
           {/* Allocation donut */}
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div className="rounded-2xl card-lux p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Allocation</h3>
             <p className="text-[11px] text-muted-foreground mb-3">Outer = actual · Inner = target</p>
             <AllocationDonut data={d.donutData} totalValue={d.totalValue} />
@@ -374,7 +376,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
           {/* Value history */}
           {d.historyPoints.length >= 2 && (
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-2xl card-lux p-4">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value History</h3>
                 {d.valueChange !== null && (
@@ -389,7 +391,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
           {/* Health score breakdown */}
           {hasBalance && (
-            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="rounded-2xl card-lux p-5 space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Score breakdown</h3>
               {[
                 { label: "Governance",    value: d.health.governance,    weight: "25%" },

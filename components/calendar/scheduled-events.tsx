@@ -2,7 +2,7 @@ import { CalendarDays, Building2, Landmark, AlertTriangle, Info } from "lucide-r
 import type { ScheduledEvent } from "@/lib/finnhub"
 
 const KIND_META = {
-  economic: { label: "Economic", Icon: Landmark,   cls: "text-indigo-500 bg-indigo-500/10" },
+  economic: { label: "Economic", Icon: Landmark,   cls: "text-violet-500 bg-violet-500/10" },
   earnings: { label: "Earnings", Icon: Building2,  cls: "text-violet-500 bg-violet-500/10" },
   policy:   { label: "Policy",   Icon: AlertTriangle, cls: "text-amber-500 bg-amber-500/10" },
 } as const

@@ -92,14 +92,14 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowIBKRImport(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/[0.06] hover:bg-indigo-500/10 text-indigo-500 text-xs font-semibold px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/[0.06] hover:bg-violet-500/10 text-violet-500 text-xs font-semibold px-3 py-1.5 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Import IBKR
           </button>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
           >
             {showForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
             {showForm ? "Cancel" : "Log Trade"}
@@ -135,7 +135,7 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
                   required
                   list="ticker-list"
                   placeholder="VT"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all uppercase"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all uppercase"
                 />
                 <datalist id="ticker-list">
                   {holdings.map(h => <option key={h.ticker} value={h.ticker} />)}
@@ -143,7 +143,7 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Type</label>
-                <select name="type" required className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all">
+                <select name="type" required className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all">
                   <option value="BUY">BUY</option>
                   <option value="SELL">SELL</option>
                 </select>
@@ -152,25 +152,25 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Units</label>
-                <input name="units" type="number" step="0.001" min="0.001" required placeholder="10" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="units" type="number" step="0.001" min="0.001" required placeholder="10" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Price (USD)</label>
-                <input name="price" type="number" step="0.01" min="0.01" required placeholder="155.52" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="price" type="number" step="0.01" min="0.01" required placeholder="155.52" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Date</label>
-                <input name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+                <input name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Note (optional)</label>
-              <input name="note" placeholder="Monthly contribution…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all" />
+              <input name="note" placeholder="Monthly contribution…" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all" />
             </div>
             <button
               type="submit"
               disabled={isPending}
-              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               Log Trade

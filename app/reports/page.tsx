@@ -324,8 +324,8 @@ function SectionHeader({ icon: Icon, title, sub, badge }: {
   return (
     <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
       <div className="flex items-start gap-3">
-        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10">
-          <Icon className="h-4 w-4 text-indigo-500" />
+        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+          <Icon className="h-4 w-4 text-violet-500" />
         </div>
         <div>
           <h2 className="text-sm font-bold">{title}</h2>
@@ -1135,7 +1135,7 @@ export default async function Reports() {
                 {/* Usage bar */}
                 <div className="relative h-2.5 rounded-full bg-muted overflow-hidden mb-2">
                   <div
-                    className={`h-full rounded-full ${status === "excessive" ? "bg-red-500" : status === "elevated" ? "bg-amber-500" : "bg-indigo-500"}`}
+                    className={`h-full rounded-full ${status === "excessive" ? "bg-red-500" : status === "elevated" ? "bg-amber-500" : "bg-violet-500"}`}
                     style={{ width: `${Math.min(100, (value / excessive) * 100)}%`, opacity: 0.8 }}
                   />
                   <div className="absolute inset-y-0 w-0.5 bg-amber-500/70" style={{ left: `${(elevated / excessive) * 100}%` }} />
@@ -1234,7 +1234,7 @@ export default async function Reports() {
           title="Your Investment Rules"
           sub={`${rules.length} active rules across ${ruleCategories.length} categories — these are the guardrails that protect your plan`}
           badge={
-            <span className="shrink-0 rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+            <span className="shrink-0 rounded-lg bg-violet-500/10 border border-violet-500/20 px-2.5 py-1 text-xs font-bold text-violet-600 dark:text-violet-400">
               {rules.length} rules active
             </span>
           }

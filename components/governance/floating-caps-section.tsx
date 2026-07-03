@@ -117,11 +117,11 @@ export function FloatingCapsSection() {
       </div>
 
       {/* ── Combined tech concentration (§4.3, NEW) ── */}
-      <div className="mx-5 mb-5 rounded-xl border border-indigo-500/25 bg-indigo-500/[0.05] p-4">
+      <div className="mx-5 mb-5 rounded-xl border border-violet-500/25 bg-violet-500/[0.05] p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Layers className="h-4 w-4 text-indigo-500" />
+          <Layers className="h-4 w-4 text-violet-500" />
           <h3 className="text-sm font-bold">{COMBINED_TECH_RULE.label}</h3>
-          <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[9px] font-bold text-indigo-500">NEW · §4.3</span>
+          <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[9px] font-bold text-violet-500">NEW · §4.3</span>
         </div>
         <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">{COMBINED_TECH_RULE.rationale}</p>
         <div className="flex flex-wrap gap-4">
@@ -165,17 +165,17 @@ export function FloatingCapsSection() {
                     <td className="px-4 py-3 tabular-nums text-red-400">
                       {hard.low !== undefined ? `${hard.low}%–${hard.high}%` : `≤ ${hard.high}%`}
                     </td>
-                    <td className={`px-4 py-3 ${floats ? "text-indigo-600 dark:text-indigo-300 font-medium" : "text-muted-foreground"}`}>
+                    <td className={`px-4 py-3 ${floats ? "text-violet-600 dark:text-violet-300 font-medium" : "text-muted-foreground"}`}>
                       {floats ? cycleCell : "Static — no cycle modifier"}
                     </td>
                   </tr>
                 )
               })}
-              <tr className="bg-indigo-500/[0.04]">
+              <tr className="bg-violet-500/[0.04]">
                 <td className="px-4 py-3 font-bold">QQQM+SMH</td>
                 <td className="px-4 py-3 tabular-nums text-muted-foreground">—</td>
                 <td className="px-4 py-3 tabular-nums text-red-400">≤ {COMBINED_TECH_RULE.hardCeiling}%</td>
-                <td className="px-4 py-3 text-indigo-600 dark:text-indigo-300 font-medium">Combined tech: soft {COMBINED_TECH_RULE.softCeiling}% · hard {COMBINED_TECH_RULE.hardCeiling}%</td>
+                <td className="px-4 py-3 text-violet-600 dark:text-violet-300 font-medium">Combined tech: soft {COMBINED_TECH_RULE.softCeiling}% · hard {COMBINED_TECH_RULE.hardCeiling}%</td>
               </tr>
             </tbody>
           </table>

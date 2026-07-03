@@ -9,14 +9,14 @@ const STATUS_TEXT: Record<Status, string> = {
   positive: "text-green-600 dark:text-green-400",
   caution:  "text-amber-600 dark:text-amber-400",
   critical: "text-red-600 dark:text-red-400",
-  info:     "text-indigo-600 dark:text-indigo-400",
+  info:     "text-violet-600 dark:text-violet-400",
   neutral:  "text-muted-foreground",
 }
 const STATUS_PILL: Record<Status, string> = {
   positive: "bg-green-500/10 text-green-600 dark:text-green-400 ring-green-500/20",
   caution:  "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
   critical: "bg-red-500/10 text-red-600 dark:text-red-400 ring-red-500/20",
-  info:     "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-indigo-500/20",
+  info:     "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-violet-500/20",
   neutral:  "bg-muted text-muted-foreground ring-border",
 }
 const STATUS_ICON = {

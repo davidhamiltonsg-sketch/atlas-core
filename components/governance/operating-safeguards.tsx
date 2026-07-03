@@ -39,8 +39,8 @@ export function OperatingSafeguards() {
       <div className="divide-y divide-border">
         {ITEMS.map(({ Icon, title, body }) => (
           <div key={title} className="flex items-start gap-3 px-5 py-3.5">
-            <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
-              <Icon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
+            <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
+              <Icon className="h-3.5 w-3.5 text-violet-500 dark:text-violet-400" />
             </span>
             <div>
               <p className="text-xs font-semibold">{title}</p>

@@ -101,7 +101,7 @@ export default async function HistoryPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-2">
           <p className="text-xs text-muted-foreground">All-Time High</p>
-          <p className="text-2xl font-black tabular-nums text-indigo-500">{formatCurrency(peak, "SGD")}</p>
+          <p className="text-2xl font-black tabular-nums text-violet-500">{formatCurrency(peak, "SGD")}</p>
           <p className="text-[11px] text-muted-foreground">Peak portfolio value</p>
         </div>
         <div className={`rounded-xl border bg-card p-4 card-elevated flex flex-col gap-2 ${drawdown < -10 ? "border-red-500/30" : drawdown < -5 ? "border-yellow-400/30" : "border-border"}`}>

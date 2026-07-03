@@ -25,13 +25,13 @@ const SEVERITY_CONFIG = {
   },
   medium: {
     Icon: Zap,
-    ring: "border-indigo-500/40",
-    bg: "bg-indigo-500/[0.06]",
+    ring: "border-violet-500/40",
+    bg: "bg-violet-500/[0.06]",
     glow: "",
-    iconBg: "bg-indigo-500/20",
-    iconColor: "text-indigo-500",
+    iconBg: "bg-violet-500/20",
+    iconColor: "text-violet-500",
     label: "Your next move",
-    labelColor: "text-indigo-700 dark:text-indigo-400",
+    labelColor: "text-violet-700 dark:text-violet-400",
   },
   low: {
     Icon: TrendingUp,
@@ -111,7 +111,7 @@ export function NextBestMove({ move, dataAsOf, stale, lastDone }: { move: NextMo
             <MarkDoneButton action={move.action} />
             <a
               href="/command-centre"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-400 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-400 transition-colors"
             >
               Full plan
               <ArrowRight className="h-3.5 w-3.5" />
