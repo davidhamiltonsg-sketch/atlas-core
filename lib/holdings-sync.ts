@@ -175,8 +175,20 @@ export async function importIbkrActivityForUser(
   for (const e of executions) {
     if (isForexRow(e.symbol)) continue // forex/cash conversions are never trades
     if (!inScope(e.symbol)) continue   // skip anything outside the Atlas Core plan
+    const tradeDate = parseFlexDate(e.tradeDate)
+    // Primary dedup: the IBKR trade id embedded in the note. Secondary dedup: the natural key
+    // (ticker + side + units + price + date). IBKR can re-issue the SAME execution under a NEW
+    // tradeID (e.g. when the Flex query is reconfigured); keying only on id would then import
+    // every buy a second time and double the whole portfolio's units/value. The natural-key
+    // check makes the import idempotent against that.
     const exists = await db.trade.findFirst({
-      where: { userId, note: { contains: `[ibkr:${e.tradeID}]` } },
+      where: {
+        userId,
+        OR: [
+          { note: { contains: `[ibkr:${e.tradeID}]` } },
+          { ticker: e.symbol.toUpperCase(), type: e.buySell, units: e.quantity, price: e.price, date: tradeDate },
+        ],
+      },
     })
     if (exists) continue
 
@@ -186,7 +198,7 @@ export async function importIbkrActivityForUser(
       data: {
         userId, ticker: e.symbol.toUpperCase(), type: e.buySell,
         units: e.quantity, price: e.price, amount: amountSgd, fxRate: e.fxRate,
-        date: parseFlexDate(e.tradeDate), note: `[ibkr:${e.tradeID}]`,
+        date: tradeDate, note: `[ibkr:${e.tradeID}]`,
       },
     })
     if (e.buySell === "BUY") {
@@ -196,7 +208,7 @@ export async function importIbkrActivityForUser(
           // SGD — the contributions view and the monthly target are SGD, so the linked
           // contribution is stored in SGD (settled amount), not the USD trade notional.
           amount: amountSgd,
-          date: parseFlexDate(e.tradeDate),
+          date: tradeDate,
           note: `[trade:${trade.id}] [ibkr:${e.tradeID}] BUY ${e.quantity} ${e.symbol} @ $${e.price}`,
         },
       })
