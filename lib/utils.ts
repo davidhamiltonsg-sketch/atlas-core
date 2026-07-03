@@ -1,17 +1,16 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatMoney, type Currency } from "@/lib/money"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Legacy call-shape kept so existing call-sites don't churn; delegates to the single
+// Money formatter (lib/money.ts) so there is one formatting implementation. Output is
+// unchanged. New code should prefer formatMoney(Money) directly.
 export function formatCurrency(value: number, currency = "SGD"): string {
-  return new Intl.NumberFormat("en-SG", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
+  return formatMoney({ amount: value, ccy: currency as Currency })
 }
 
 export function formatPercent(value: number, decimals = 1, signed = true): string {

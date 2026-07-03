@@ -4,6 +4,7 @@ import { formatCurrency, formatPercent } from "@/lib/utils"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { reportingCurrencyForConstitution } from "@/lib/portfolio-spec"
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, Info } from "lucide-react"
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
@@ -232,9 +233,10 @@ export default async function YtdPage() {
 
   // Silicon Brick Road reports in SGD and is plain-English — never surface the USD-base
   // "capital deployed" or USD per-unit prices that belong to the Atlas Core (USD) portfolio.
-  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const constitutionId = constitutionIdForEmail(session.email)
+  const isSbr = constitutionId === "silicon-brick-road"
   const deployed    = isSbr ? data.ytdContribTotalSgd : data.ytdContribTotal
-  const deployedCcy = isSbr ? "SGD" : "USD"
+  const deployedCcy = reportingCurrencyForConstitution(constitutionId) // single source, not isSbr ? "SGD" : "USD"
 
   // Plain-English labels for Silicon Brick Road (Dami is a non-expert) vs the institutional
   // wording Atlas Core uses. Currency is already handled above; this swaps the vocabulary.
