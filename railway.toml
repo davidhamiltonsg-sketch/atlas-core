@@ -8,5 +8,13 @@ healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
+# ── Cron jobs (configure in Railway dashboard → Cron Jobs) ────────────────────
+# Each job calls the endpoint with:  Authorization: Bearer $CRON_SECRET
+#
+#  /api/cron/sync-holdings  — "0 22 * * *"   — 10 PM SGT daily (IBKR sync)
+#  /api/cron/daily          — "0 23 * * *"   — 11 PM SGT daily (governance digest)
+#  /api/cron/monthly        — "0 0 14 * *"   — midnight SGT on the 14th (dealing-window reminder)
+#  /api/cron/annual         — "0 0 1 1 *"    — midnight SGT Jan 1 (annual audit reminder)
+
 [[volumes]]
 mountPath = "/app/data"
