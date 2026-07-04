@@ -4,9 +4,12 @@ import { Suspense, useState, useTransition } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { loginAction } from "./actions"
-import { BrandMark } from "@/components/brand/brand-mark"
+import { AtlasCoreMark, SbrMark } from "@/components/brand/brand-mark"
+import { SpinningMark, SPIN_THEME } from "@/components/brand/spinning-mark"
 import { Lock } from "lucide-react"
 import type { ConstitutionId } from "@/lib/constitutions"
+
+const PORTFOLIO_MARK = { "atlas-core": AtlasCoreMark, "silicon-brick-road": SbrMark } as const
 
 const PORTFOLIO_META: Record<ConstitutionId, { theme: string; name: string; version: string; placeholder: string; footer: string }> = {
   "atlas-core": {
@@ -48,7 +51,14 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <BrandMark constitutionId={portfolio} className="h-16 w-16 drop-shadow-lg mb-4" />
+          <SpinningMark
+            Mark={PORTFOLIO_MARK[portfolio]}
+            conic={SPIN_THEME[portfolio].conic}
+            glowShadow={SPIN_THEME[portfolio].glow}
+            size="h-16 w-16"
+            ringInset="-inset-3"
+            className="mb-4"
+          />
           <h1 className="font-display text-xl font-semibold tracking-tight">{meta.name}</h1>
           <p className="text-xs text-muted-foreground mt-1">{meta.version}</p>
         </div>
