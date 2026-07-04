@@ -259,7 +259,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         </div>
         {hasBalance && (
           <p className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground leading-relaxed">
-            At SGD {SBR.monthlyContribution.toLocaleString()}/month and your current fund mix ({(d.growthRates.base * 100).toFixed(1)}% p.a. blended growth),
+            At SGD {SBR.monthlyContribution.toLocaleString()}/month and your current fund mix ({(d.growthRates.base * 100).toFixed(1)}% growth a year, blended from what you actually hold),
             {" "}projected to reach your goal around <span className="font-semibold text-foreground">{monthsToLabel(d.monthsToGoal.base)}</span>
             {" "}— could be as early as {monthsToLabel(d.monthsToGoal.aggressive)} or as late as {monthsToLabel(d.monthsToGoal.conservative)} depending on returns.
           </p>
