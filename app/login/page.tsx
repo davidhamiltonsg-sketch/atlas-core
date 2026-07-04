@@ -48,8 +48,8 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <BrandMark constitutionId={portfolio} className="h-16 w-16 drop-shadow-lg mb-4 float-soft" />
-          <h1 className="text-xl font-bold tracking-tight">{meta.name}</h1>
+          <BrandMark constitutionId={portfolio} className="h-16 w-16 drop-shadow-lg mb-4" />
+          <h1 className="font-display text-xl font-semibold tracking-tight">{meta.name}</h1>
           <p className="text-xs text-muted-foreground mt-1">{meta.version}</p>
         </div>
 
