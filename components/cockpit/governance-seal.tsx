@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { AnimatedNumber } from "@/components/animated-number"
 
 export interface SealDimension {
   label: string
@@ -49,12 +50,12 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
           <circle cx="52" cy="52" r={r} fill="none" stroke="currentColor"
             className="text-muted/30" strokeWidth="7" />
           <circle cx="52" cy="52" r={r} fill="none"
-            className={ringColor} strokeWidth="7" strokeLinecap="round"
+            className={cn(ringColor, "seal-ring-fill")} strokeWidth="7" strokeLinecap="round"
             strokeDasharray={circ} strokeDashoffset={offset} />
         </svg>
         <div className="absolute inset-0 grid place-items-center">
           <div className="text-center">
-            <span className={`text-2xl font-display font-black tabular-nums ${scoreColor}`}>{overall}</span>
+            <span className={`text-2xl font-display font-black tabular-nums ${scoreColor}`}><AnimatedNumber value={overall} /></span>
             <span className="block text-[9px] font-data font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
           </div>
         </div>
@@ -76,7 +77,7 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
               className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md border", dimBadgeColor(dim.status))}
               title={dim.citation}
             >
-              {dim.label.toUpperCase()} {dim.score}/{dim.maxScore}
+              {dim.label.toUpperCase()} <AnimatedNumber value={dim.score} />/{dim.maxScore}
               {dim.citation && <span className="opacity-60 ml-1">· {dim.citation}</span>}
             </span>
           ))}

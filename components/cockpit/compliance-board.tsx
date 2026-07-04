@@ -72,11 +72,11 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
       <div className="flex-1 relative h-5 bg-muted rounded-full overflow-hidden">
         {/* Hard low zone (red, left of hard floor) */}
         {hardLowX !== null && hardLowX > 0 && (
-          <div className="absolute top-0 left-0 h-full bg-red-500/20 rounded-l-full" style={{ width: `${hardLowX}%` }} />
+          <div className="absolute top-0 left-0 h-full bg-red-500/20 rounded-l-full bar-fill" style={{ width: `${hardLowX}%` }} />
         )}
         {/* Soft band (green/amber zone between soft low and soft high) */}
         <div
-          className={`absolute top-0 h-full ${softBandColor}`}
+          className={`absolute top-0 h-full bar-fill ${softBandColor}`}
           style={{ left: `${softLowX}%`, width: `${softHighX - softLowX}%` }}
         />
         {/* Hard high line */}
@@ -91,7 +91,7 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
         />
         {/* Current position marker */}
         <div
-          className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-card ${markerColor} shadow-sm transition-all`}
+          className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-card ${markerColor} shadow-sm transition-all marker-land`}
           style={{ left: `calc(${actualX}% - 6px)` }}
         />
       </div>
