@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { AtlasCoreMark, SbrMark, AtlasUniverseMark } from "@/components/brand/brand-mark"
+import { SpinningMark, SPIN_THEME } from "@/components/brand/spinning-mark"
 
 // Unauthenticated home page: the front door to the Atlas Universe. Each card is
 // self-themed via inline CSS custom properties (--brand-a/b/c, --primary) rather
@@ -28,11 +29,20 @@ export function PortfolioChooser() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-16">
       <div className="w-full max-w-3xl">
         <div className="text-center mb-10 flex flex-col items-center">
-          <AtlasUniverseMark className="h-16 w-16 drop-shadow-lg mb-5" />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600/70 dark:text-amber-400/60 mb-3">Atlas Universe</p>
-          <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight gradient-text-universe pb-1.5">
-            Two constitutions. One discipline.
+          <SpinningMark
+            Mark={AtlasUniverseMark}
+            conic={SPIN_THEME.universe.conic}
+            glowShadow={SPIN_THEME.universe.glow}
+            size="h-16 w-16"
+            ringInset="-inset-3"
+            className="mb-5"
+          />
+          <h1 className="font-display text-5xl sm:text-6xl font-semibold tracking-tight gradient-text-universe pb-1.5">
+            Atlas Universe
           </h1>
+          <p className="text-lg sm:text-xl font-medium tracking-tight text-foreground/80 mt-1">
+            Two constitutions. One discipline.
+          </p>
           <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto leading-relaxed">
             Select the portfolio you hold to sign in. Each is governed by its own written
             constitution, enforced consistently and without discretion.
@@ -57,7 +67,12 @@ export function PortfolioChooser() {
                 className="group relative rounded-3xl card-lux ring-hero overflow-hidden p-8 flex flex-col items-center text-center gap-3 transition-transform hover:-translate-y-1"
                 style={vars as React.CSSProperties}
               >
-                <Mark className="h-20 w-20 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none" />
+                <SpinningMark
+                  Mark={Mark}
+                  conic={SPIN_THEME[id].conic}
+                  glowShadow={SPIN_THEME[id].glow}
+                  className="transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none"
+                />
                 <div>
                   <p className="font-display text-lg font-semibold tracking-tight">{name}</p>
                   <p className="text-xs text-muted-foreground mt-1">{tagline}</p>

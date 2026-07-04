@@ -1,4 +1,5 @@
 import { AtlasCoreMark, SbrMark, AtlasUniverseMark } from "@/components/brand/brand-mark"
+import { SpinningMark, SPIN_THEME } from "@/components/brand/spinning-mark"
 import { getPortfolioHint } from "@/lib/session"
 
 // Branded loading splash — shown while a page's live data (prices, holdings) loads,
@@ -25,25 +26,6 @@ function SplashShell({
   )
 }
 
-function SpinningMark({ Mark, conic, glowShadow }: { Mark: typeof AtlasCoreMark; conic: string; glowShadow: string }) {
-  return (
-    <div className="relative float-soft">
-      <div
-        className="absolute -inset-4 rounded-full animate-spin"
-        style={{
-          animationDuration: "2.8s",
-          background: conic,
-          WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
-          mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
-        }}
-      />
-      <div className="relative" style={{ filter: `drop-shadow(${glowShadow})` }}>
-        <Mark className="h-20 w-20" />
-      </div>
-    </div>
-  )
-}
-
 export default async function Loading() {
   const hint = await getPortfolioHint()
 
@@ -53,11 +35,7 @@ export default async function Loading() {
         background="radial-gradient(120% 120% at 50% 0%, hsl(217 44% 9%) 0%, hsl(217 44% 5%) 60%)"
         glow="radial-gradient(circle, rgba(14,165,233,0.5), transparent 60%)"
       >
-        <SpinningMark
-          Mark={SbrMark}
-          conic="conic-gradient(from 0deg, transparent 0%, #38bdf8 20%, #3b82f6 45%, #22d3ee 60%, transparent 80%)"
-          glowShadow="0 12px 30px rgba(14,165,233,0.45)"
-        />
+        <SpinningMark Mark={SbrMark} conic={SPIN_THEME["silicon-brick-road"].conic} glowShadow={SPIN_THEME["silicon-brick-road"].glow} />
         <div className="text-center">
           <p className="font-display text-lg font-semibold tracking-tight text-white">Silicon Brick Road</p>
           <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-sky-300/70">Saving Toward Your Deposit</p>
@@ -76,11 +54,7 @@ export default async function Loading() {
         background="radial-gradient(120% 120% at 50% 0%, hsl(259 34% 9%) 0%, hsl(259 34% 5%) 60%)"
         glow="radial-gradient(circle, rgba(124,58,237,0.5), transparent 60%)"
       >
-        <SpinningMark
-          Mark={AtlasCoreMark}
-          conic="conic-gradient(from 0deg, transparent 0%, #a78bfa 20%, #c084fc 45%, #e879f9 60%, transparent 80%)"
-          glowShadow="0 12px 30px rgba(124,58,237,0.45)"
-        />
+        <SpinningMark Mark={AtlasCoreMark} conic={SPIN_THEME["atlas-core"].conic} glowShadow={SPIN_THEME["atlas-core"].glow} />
         <div className="text-center">
           <p className="font-display text-lg font-semibold tracking-tight text-white">Atlas Core</p>
           <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-violet-300/70">Investment Operating System</p>
@@ -101,11 +75,7 @@ export default async function Loading() {
       background="radial-gradient(120% 120% at 50% 0%, hsl(250 24% 8%) 0%, hsl(250 24% 5%) 60%)"
       glow="radial-gradient(60% 60% at 20% 20%, rgba(124,58,237,0.35), transparent 65%), radial-gradient(60% 60% at 80% 20%, rgba(14,165,233,0.35), transparent 65%)"
     >
-      <SpinningMark
-        Mark={AtlasUniverseMark}
-        conic="conic-gradient(from 0deg, transparent 0%, #a78bfa 20%, #dfaf4b 45%, #38bdf8 60%, transparent 80%)"
-        glowShadow="0 14px 34px rgba(223,175,75,0.35)"
-      />
+      <SpinningMark Mark={AtlasUniverseMark} conic={SPIN_THEME.universe.conic} glowShadow={SPIN_THEME.universe.glow} />
       <div className="text-center">
         <p className="font-display text-2xl font-semibold tracking-tight gradient-text-universe pb-1">Atlas Universe</p>
         <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-slate-300/70">Two Constitutions, One Discipline</p>

@@ -449,7 +449,7 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
   .ring-hero, .loadbar, .float-soft, .spin-slow, .chart-enter,
   .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red,
   .reveal-stack > *, .bar-fill, .skeleton::after, .btn-brand::after,
-  .seal-ring-fill, .marker-land {
+  .seal-ring-fill, .marker-land, .animate-spin {
     animation: none !important;
   }
   .card-lux, a.card-lux, .btn-brand, .btn-brand::after { transition: none !important; }
