@@ -34,7 +34,7 @@ export default function GlobalError({
           </div>
           <button
             onClick={reset}
-            style={{ width: "100%", padding: "10px 0", borderRadius: 8, background: "#6366f1", color: "white", border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
+            style={{ width: "100%", padding: "10px 0", borderRadius: 8, background: "#7c3aed", color: "white", border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
           >
             Try again
           </button>

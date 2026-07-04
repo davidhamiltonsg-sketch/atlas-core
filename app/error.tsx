@@ -1,6 +1,20 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { AtlasCoreMark, SbrMark, AtlasUniverseMark } from "@/components/brand/brand-mark"
+
+type Hint = "atlas-core" | "silicon-brick-road" | null
+
+// Error boundaries can't read the httpOnly session cookie server-side (this must be a
+// Client Component), so it reads the non-auth portfolio_hint cookie directly — the same
+// cookie app/loading.tsx reads server-side, just via document.cookie since it carries no
+// auth value and was always meant to be readable.
+function readPortfolioHint(): Hint {
+  if (typeof document === "undefined") return null
+  const match = document.cookie.match(/(?:^|; )portfolio_hint=([^;]+)/)
+  const value = match ? decodeURIComponent(match[1]) : null
+  return value === "atlas-core" || value === "silicon-brick-road" ? value : null
+}
 
 export default function Error({
   error,
@@ -9,6 +23,8 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const [hint] = useState<Hint>(() => readPortfolioHint())
+
   useEffect(() => {
     console.error(error)
   }, [error])
@@ -18,11 +34,14 @@ export default function Error({
     error.message?.includes("libsql") ||
     error.message?.includes("prisma")
 
+  const Mark = hint === "silicon-brick-road" ? SbrMark : hint === "atlas-core" ? AtlasCoreMark : AtlasUniverseMark
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-      <div className="max-w-md w-full space-y-4">
-        <div className="border border-red-500/30 bg-red-500/10 rounded-xl p-6">
-          <h2 className="text-red-600 dark:text-red-400 font-semibold text-lg mb-2">Something went wrong</h2>
+    <div data-theme={hint === "silicon-brick-road" ? "sbr" : hint === "atlas-core" ? "atlas-core" : undefined} className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
+      <div className="max-w-md w-full flex flex-col items-center gap-5">
+        <Mark className="h-14 w-14 drop-shadow-lg" />
+        <div className="w-full rounded-2xl card-lux p-6">
+          <h2 className="font-display text-red-600 dark:text-red-400 font-semibold text-lg mb-2">Something went wrong</h2>
           {isDbError ? (
             <div className="space-y-3 text-sm text-muted-foreground">
               <p>The database connection failed. This usually means the environment variables are not set on Vercel.</p>
@@ -43,7 +62,7 @@ export default function Error({
         </div>
         <button
           onClick={reset}
-          className="w-full py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
+          className="w-full py-2.5 rounded-lg btn-brand text-sm font-semibold"
         >
           Try again
         </button>

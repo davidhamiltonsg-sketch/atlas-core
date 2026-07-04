@@ -24,13 +24,13 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Atlas Core · v1.5",
-  description: "Investment operating system — Constitution v1.5 · GDEA",
+  title: "Atlas Universe",
+  description: "Two constitutions, one discipline — governed investment dashboards for Atlas Core and Silicon Brick Road",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Atlas Core",
+    title: "Atlas Universe",
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${fraunces.variable} ${ibmPlexMono.variable} h-full`} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#7c3aed" />
+        <meta name="theme-color" content="#dfaf4b" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className="h-full">

@@ -16,7 +16,7 @@ interface SettingsClientProps {
 
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-xl card-lux overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <h2 className="text-sm font-semibold">{title}</h2>
@@ -115,7 +115,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                   min="0"
                   required
                   defaultValue={monthlyContribution}
-                  className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+                  className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 />
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">Used in the execution plan and forecast.</p>
@@ -131,7 +131,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                   min="0"
                   required
                   defaultValue={annualLumpSum}
-                  className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+                  className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 />
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">Yearly bonus contribution for the forecast.</p>
@@ -148,7 +148,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                 max="1"
                 required
                 defaultValue={contributionGrowthRate}
-                className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+                className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">× p.a.</span>
             </div>
@@ -165,7 +165,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                 max="1"
                 required
                 defaultValue={riskFreeRate}
-                className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+                className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">p.a.</span>
             </div>
@@ -175,7 +175,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
           <button
             type="submit"
             disabled={contribPending}
-            className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg btn-brand disabled:opacity-60 text-xs font-semibold px-4 py-2"
           >
             {contribPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
             Save Contribution Settings
@@ -193,7 +193,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
           </div>
           <div>
@@ -204,7 +204,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
             <p className="text-[11px] text-muted-foreground mt-1">Used for password reset emails.</p>
           </div>
@@ -212,7 +212,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
           <button
             type="submit"
             disabled={profilePending}
-            className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg btn-brand disabled:opacity-60 text-xs font-semibold px-4 py-2"
           >
             {profilePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
             Save Profile
@@ -231,7 +231,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                 type={showPwd ? "text" : "password"}
                 required
                 autoComplete="current-password"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="••••••••"
               />
               <button
@@ -251,7 +251,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
               required
               minLength={8}
               autoComplete="new-password"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               placeholder="Min. 8 characters"
             />
           </div>
@@ -262,7 +262,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
               type={showPwd ? "text" : "password"}
               required
               autoComplete="new-password"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               placeholder="Repeat new password"
             />
           </div>
@@ -270,7 +270,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
           <button
             type="submit"
             disabled={pwdPending}
-            className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg btn-brand disabled:opacity-60 text-xs font-semibold px-4 py-2"
           >
             {pwdPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
             Change Password
@@ -285,7 +285,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
             <span className="text-xs text-muted-foreground">Role</span>
             <span className={`text-xs font-semibold capitalize px-2 py-0.5 rounded-full ${
               role === "admin"
-                ? "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400"
+                ? "bg-primary/10 text-primary"
                 : "bg-muted text-muted-foreground"
             }`}>
               {role}

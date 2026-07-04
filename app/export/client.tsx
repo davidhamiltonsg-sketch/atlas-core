@@ -10,14 +10,14 @@ const EXPORTS = [
     label: "Current Portfolio",
     description: "Latest snapshot per holding — ticker, units, price, value, target allocation.",
     icon: PieChart,
-    color: "text-violet-400",
+    color: "text-primary",
   },
   {
     type: "snapshots",
     label: "All Snapshots",
     description: "Full snapshot history for every holding, ordered by date. Use this for charting or external analysis.",
     icon: Camera,
-    color: "text-violet-400",
+    color: "text-primary",
   },
   {
     type: "trades",
@@ -49,17 +49,17 @@ export function ExportButtons({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="rounded-xl card-lux p-4">
         <p className="text-xs text-muted-foreground leading-relaxed">
           CSV exports are compatible with Excel, Google Sheets, and any analysis tool. The
           <span className="font-semibold text-foreground"> full backup</span> is a single JSON file
-          with everything — keep it somewhere safe for your 2045 horizon. Files are generated on demand.
+          with everything — keep it somewhere safe. Files are generated on demand.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {EXPORTS.map(({ type, label, description, icon: Icon, color }) => (
-          <div key={type} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3 hover:bg-accent/20 transition-colors">
+          <div key={type} className="rounded-xl card-lux p-5 flex flex-col gap-3">
             <div className="flex items-start gap-3">
               <Icon className={`h-5 w-5 shrink-0 mt-0.5 ${color}`} />
               <div className="flex-1 min-w-0">
@@ -79,9 +79,9 @@ export function ExportButtons({ isAdmin = false }: { isAdmin?: boolean }) {
       </div>
 
       {/* Full backup (JSON) */}
-      <div className="rounded-xl border border-violet-500/30 bg-violet-500/[0.04] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-xl border border-primary/30 bg-primary/[0.04] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <Archive className="h-5 w-5 shrink-0 mt-0.5 text-violet-400" />
+          <Archive className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
           <div>
             <p className="text-sm font-semibold">Full Backup (JSON)</p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Everything in one file — holdings, all snapshots, trades, contributions, dividends, behaviour log, watchlist, and the rule register.</p>
@@ -89,7 +89,7 @@ export function ExportButtons({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
         <button
           onClick={() => download("backup")}
-          className="shrink-0 flex items-center justify-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 text-violet-600 dark:text-violet-300 text-xs font-semibold px-4 py-2 transition-colors"
+          className="shrink-0 flex items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold px-4 py-2 transition-colors"
         >
           <Download className="h-3.5 w-3.5" /> Download backup
         </button>
