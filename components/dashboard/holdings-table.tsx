@@ -54,11 +54,11 @@ function BandBar({ actualPct, targetPct, toleranceBand, hardCapPct, status }: {
           <div className="absolute inset-y-0 bg-red-500/15" style={{ left: pct(hard), right: 0 }} />
         )}
         {/* healthy zone */}
-        <div className="absolute inset-y-0 bg-green-500/20" style={{ left: pct(healthyLow), width: `calc(${pct(healthyHigh)} - ${pct(healthyLow)})` }} />
+        <div className="absolute inset-y-0 bg-green-500/20 bar-fill" style={{ left: pct(healthyLow), width: `calc(${pct(healthyHigh)} - ${pct(healthyLow)})` }} />
         {/* target tick */}
         <div className="absolute inset-y-0 w-px bg-foreground/30" style={{ left: pct(targetPct) }} />
         {/* current-weight dot */}
-        <div className="absolute top-1/2 h-2 w-2 rounded-full -translate-x-1/2 -translate-y-1/2 ring-1 ring-background" style={{ left: pct(actualPct), background: dot }} />
+        <div className="absolute top-1/2 h-2 w-2 rounded-full -translate-x-1/2 -translate-y-1/2 ring-1 ring-background marker-land" style={{ left: pct(actualPct), background: dot }} />
       </div>
       <div className="mt-0.5 flex justify-between text-[9px] tabular-nums text-muted-foreground">
         <span className="font-semibold text-foreground">{actualPct.toFixed(1)}%</span>

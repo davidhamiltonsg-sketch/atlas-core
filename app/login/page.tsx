@@ -1,12 +1,35 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { Suspense, useState, useTransition } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { loginAction } from "./actions"
-import { AtlasCoreMark } from "@/components/brand/brand-mark"
+import { BrandMark } from "@/components/brand/brand-mark"
 import { Lock } from "lucide-react"
+import type { ConstitutionId } from "@/lib/constitutions"
 
-export default function LoginPage() {
+const PORTFOLIO_META: Record<ConstitutionId, { theme: string; name: string; version: string; placeholder: string; footer: string }> = {
+  "atlas-core": {
+    theme: "atlas-core",
+    name: "Atlas Core",
+    version: "v1.5 · GDEA · Sign in to continue",
+    placeholder: "admin@atlas.local",
+    footer: "Atlas Core is a private investment dashboard. Access is restricted.",
+  },
+  "silicon-brick-road": {
+    theme: "sbr",
+    name: "Silicon Brick Road",
+    version: "v2.2 · SBR · Sign in to continue",
+    placeholder: "you@example.com",
+    footer: "Silicon Brick Road is a private savings dashboard. Access is restricted.",
+  },
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const portfolio: ConstitutionId = searchParams.get("portfolio") === "silicon-brick-road" ? "silicon-brick-road" : "atlas-core"
+  const meta = PORTFOLIO_META[portfolio]
+
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -21,13 +44,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div data-theme="atlas-core" className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div data-theme={meta.theme} className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <AtlasCoreMark className="h-16 w-16 drop-shadow-lg mb-4 float-soft" />
-          <h1 className="text-xl font-bold tracking-tight">Atlas Core</h1>
-          <p className="text-xs text-muted-foreground mt-1">v1.5 · GDEA · Sign in to continue</p>
+          <BrandMark constitutionId={portfolio} className="h-16 w-16 drop-shadow-lg mb-4 float-soft" />
+          <h1 className="text-xl font-bold tracking-tight">{meta.name}</h1>
+          <p className="text-xs text-muted-foreground mt-1">{meta.version}</p>
         </div>
 
         {/* Form */}
@@ -42,8 +65,8 @@ export default function LoginPage() {
                 name="email"
                 required
                 autoComplete="email"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
-                placeholder="you@atlas.local"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                placeholder={meta.placeholder}
               />
             </div>
 
@@ -56,7 +79,7 @@ export default function LoginPage() {
                 name="password"
                 required
                 autoComplete="current-password"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -85,9 +108,17 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-[11px] text-muted-foreground mt-4">
-          Atlas Core is a private investment dashboard. Access is restricted.
+          {meta.footer}
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <LoginForm />
+    </Suspense>
   )
 }

@@ -3,7 +3,6 @@ import { TrendingUp, Activity, AlertTriangle } from "lucide-react"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
 import { getSession } from "@/lib/session"
-import { redirect } from "next/navigation"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { computePortfolioHealth } from "@/lib/health"
@@ -30,6 +29,7 @@ import { DecisionLadderCard } from "@/components/cockpit/decision-ladder-card"
 import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { CycleInstruments } from "@/components/cockpit/cycle-instruments"
 import { AnimatedNumber } from "@/components/animated-number"
+import { PortfolioChooser } from "@/components/portfolio-chooser"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -462,7 +462,7 @@ async function getDashboardData(userId: string) {
 
 export default async function Dashboard() {
   const session = await getSession()
-  if (!session) redirect("/login")
+  if (!session) return <PortfolioChooser />
 
   if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
     return <SbrDashboard userId={session.userId} name={session.name} isAdmin={session.role === "admin"} />
@@ -588,12 +588,12 @@ export default async function Dashboard() {
               <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}><AnimatedNumber value={d.health.overall} /></p>
               <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
             </div>
-            <a href="/portfolio" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${d.driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
+            <a href="/portfolio" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${d.driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
               <span className="text-xs font-medium text-muted-foreground">Drift Alerts</span>
-              <p className={`text-xl font-black tabular-nums ${d.driftAlerts > 0 ? (d.hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}>{d.driftAlerts}</p>
+              <p className={`text-xl font-black tabular-nums ${d.driftAlerts > 0 ? (d.hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}><AnimatedNumber value={d.driftAlerts} /></p>
               <p className="text-[11px] text-muted-foreground">{d.driftAlerts === 0 ? "All on target" : `${d.hardBreaches}H / ${d.softBreaches}S breach`}</p>
             </a>
-            <a href="/forecast" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${
+            <a href="/forecast" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${
               d.onTrackPct === null ? "border-border hover:border-primary/30" :
               d.onTrackPct >= 95 ? "border-green-500/30" :
               d.onTrackPct >= 80 ? "border-yellow-400/30" : "border-red-500/30"
@@ -603,7 +603,7 @@ export default async function Dashboard() {
                 d.onTrackPct === null ? "text-muted-foreground" :
                 d.onTrackPct >= 95 ? "text-green-500" :
                 d.onTrackPct >= 80 ? "text-yellow-400" : "text-red-500"
-              }`}>{d.onTrackPct !== null ? `${d.onTrackPct.toFixed(0)}%` : "—"}</p>
+              }`}>{d.onTrackPct !== null ? <AnimatedNumber value={Math.round(d.onTrackPct)} suffix="%" /> : "—"}</p>
               <p className="text-[11px] text-muted-foreground">vs 2045 plan</p>
             </a>
           </div>
