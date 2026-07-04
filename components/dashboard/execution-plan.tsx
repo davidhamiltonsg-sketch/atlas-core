@@ -261,7 +261,7 @@ export function ExecutionPlan({
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-muted-foreground w-14 shrink-0">Now</span>
                     <div className="relative flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${currentBarW}%`, backgroundColor: p.color, opacity: 0.6 }} />
+                      <div className="h-full rounded-full bar-fill" style={{ width: `${currentBarW}%`, backgroundColor: p.color, opacity: 0.6 }} />
                       <div className="absolute inset-y-0 w-0.5 bg-foreground/30" style={{ left: `${targetBarW}%` }} />
                     </div>
                     <span className="text-[10px] tabular-nums font-semibold w-10 text-right">{p.actualPct.toFixed(1)}%</span>
@@ -269,7 +269,7 @@ export function ExecutionPlan({
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-muted-foreground w-14 shrink-0">After</span>
                     <div className="relative flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${projBarW}%`, backgroundColor: p.color, opacity: 0.9 }} />
+                      <div className="h-full rounded-full bar-fill transition-all" style={{ width: `${projBarW}%`, backgroundColor: p.color, opacity: 0.9 }} />
                       <div className="absolute inset-y-0 w-0.5 bg-foreground/30" style={{ left: `${targetBarW}%` }} />
                     </div>
                     <span className="text-[10px] tabular-nums font-bold w-10 text-right">{p.projectedPct.toFixed(1)}%</span>

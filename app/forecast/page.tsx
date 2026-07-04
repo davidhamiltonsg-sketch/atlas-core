@@ -282,7 +282,7 @@ export default async function Forecast() {
               </div>
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-slate-400/50"
+                  className="h-full rounded-full bg-slate-400/50 bar-fill"
                   style={{ width: `${Math.min(100, (projected / maxProjected) * 100)}%` }}
                 />
               </div>

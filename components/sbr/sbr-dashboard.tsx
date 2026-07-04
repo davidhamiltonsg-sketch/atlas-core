@@ -412,7 +412,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                     </div>
                   </div>
                   <div className="h-1 rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${value >= 80 ? "bg-green-500" : value >= 60 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${value}%` }} />
+                    <div className={`h-full rounded-full bar-fill transition-all ${value >= 80 ? "bg-green-500" : value >= 60 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${value}%` }} />
                   </div>
                 </div>
               ))}

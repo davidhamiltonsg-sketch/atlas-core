@@ -183,7 +183,7 @@ export function ContributionsClient({ contributions: initialContributions, month
                   <span className="text-[11px] text-muted-foreground">/ {formatCurrency(monthlyTarget, currency)}</span>
                 </div>
                 <div className="h-1 bg-muted">
-                  <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-full bg-primary bar-fill transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 <div className="divide-y divide-border">
                   {items.map(c => (
