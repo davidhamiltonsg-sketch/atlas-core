@@ -15,6 +15,7 @@ import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governa
 import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
+import { AnimatedNumber } from "@/components/animated-number"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -192,12 +193,12 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Progress to target</p>
             <p className="text-2xl font-black tabular-nums mt-0.5">
-              {hasBalance ? formatCurrency(d.totalValue, "SGD") : <span className="text-muted-foreground">—</span>}
+              {hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : <span className="text-muted-foreground">—</span>}
               <span className="text-sm font-normal text-muted-foreground ml-2">of {formatCurrency(target, "SGD")}</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-black tabular-nums gradient-text">{progress}%</p>
+            <p className="text-4xl font-black tabular-nums gradient-text"><AnimatedNumber value={progress} suffix="%" /></p>
             <p className="text-xs text-muted-foreground">{d.phase.label.split("—")[0].trim()}</p>
           </div>
         </div>
@@ -212,7 +213,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             )
           })}
           {hasBalance && (
-            <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 transition-all duration-700"
+            <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 bar-fill transition-all duration-700"
               style={{ width: `${Math.min(100, valueFrac * 100)}%` }} />
           )}
         </div>
@@ -242,7 +243,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       )}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-5 min-w-0">
+        <div className="space-y-5 min-w-0 reveal-stack">
 
           {/* 1. This month — the single decision Dami needs, first on the page */}
           {hasBalance && (
@@ -366,7 +367,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         </div>
 
         {/* Right sidebar */}
-        <div className="space-y-5">
+        <div className="space-y-5 reveal-stack">
           {/* Allocation donut */}
           <div className="rounded-2xl card-lux p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Allocation</h3>

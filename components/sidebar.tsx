@@ -102,7 +102,7 @@ function NavLink({ href, label, icon: Icon, onClick, constitutionId = "atlas-cor
       href={href}
       onClick={onClick}
       className={cn(
-        "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.98]",
         active
           ? sbr
             ? "bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300"
@@ -114,7 +114,7 @@ function NavLink({ href, label, icon: Icon, onClick, constitutionId = "atlas-cor
         <span className={cn("absolute left-0 inset-y-1.5 w-0.5 rounded-full", sbr ? "bg-sky-500" : "bg-violet-500")} />
       )}
       <Icon className={cn(
-        "h-4 w-4 shrink-0 transition-colors",
+        "h-4 w-4 shrink-0 transition-all duration-200 group-hover:scale-110 motion-reduce:transform-none",
         active ? (sbr ? "text-sky-600 dark:text-sky-400" : "text-violet-600 dark:text-violet-400") : ""
       )} />
       {label}
@@ -155,7 +155,7 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-[hsl(var(--sidebar-border))]">
           <div className="flex items-center gap-3">
-            <BrandMark constitutionId={constitutionId} className="h-9 w-9 shrink-0 drop-shadow-md" />
+            <BrandMark constitutionId={constitutionId} className="h-9 w-9 shrink-0 drop-shadow-md transition-transform duration-300 hover:scale-110 hover:-rotate-2 motion-reduce:transform-none" />
             <div>
               <p className="text-sm font-bold tracking-tight leading-none">{brand.name}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">{brand.version}</p>
