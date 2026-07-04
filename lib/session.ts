@@ -59,3 +59,33 @@ export async function deleteSession() {
   const cookieStore = await cookies()
   cookieStore.delete(COOKIE)
 }
+
+// ─── Portfolio hint ─────────────────────────────────────────────────────────
+// A small, non-httpOnly cookie recording which constitution the signed-in user
+// belongs to. It carries no auth value (the real session lives in the signed
+// JWT above) — it exists purely so the loading splash can show the right
+// single brand mark instead of the "which portfolio?" dual splash once a user
+// is known, without an extra DB round trip during a Suspense fallback.
+const HINT_COOKIE = "portfolio_hint"
+
+export async function setPortfolioHint(constitutionId: "atlas-core" | "silicon-brick-road") {
+  const cookieStore = await cookies()
+  cookieStore.set(HINT_COOKIE, constitutionId, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: EXPIRES_IN,
+    path: "/",
+  })
+}
+
+export async function clearPortfolioHint() {
+  const cookieStore = await cookies()
+  cookieStore.delete(HINT_COOKIE)
+}
+
+export async function getPortfolioHint(): Promise<"atlas-core" | "silicon-brick-road" | null> {
+  const cookieStore = await cookies()
+  const value = cookieStore.get(HINT_COOKIE)?.value
+  return value === "atlas-core" || value === "silicon-brick-road" ? value : null
+}
