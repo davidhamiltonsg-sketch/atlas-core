@@ -8,6 +8,8 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { formatCurrency } from "@/lib/utils"
+import type { Currency } from "@/lib/money"
+import { AnimatedNumber } from "@/components/animated-number"
 
 interface HoldingSlice {
   ticker: string
@@ -21,9 +23,11 @@ interface HoldingSlice {
 interface Props {
   data: HoldingSlice[]
   totalValue: number
+  currency?: Currency
+  subLabel?: string
 }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: HoldingSlice }> }) {
+function CustomTooltip({ active, payload, currency }: { active?: boolean; payload?: Array<{ payload: HoldingSlice }>; currency: Currency }) {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
@@ -43,18 +47,18 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
         </div>
         <div className="flex justify-between gap-4">
           <span>Value</span>
-          <span className="tabular-nums">{formatCurrency(d.value, "USD")}</span>
+          <span className="tabular-nums">{formatCurrency(d.value, currency)}</span>
         </div>
       </div>
     </div>
   )
 }
 
-export function AllocationDonut({ data, totalValue }: Props) {
+export function AllocationDonut({ data, totalValue, currency = "SGD", subLabel }: Props) {
   return (
     <div className="flex flex-col items-center gap-0 chart-enter">
       {/* Donut */}
-      <div className="relative w-full" style={{ height: 260 }}>
+      <div className="relative w-full transition-transform duration-300 group-hover:scale-[1.03]" style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             {/* Outer ring: actual allocation */}
@@ -101,17 +105,17 @@ export function AllocationDonut({ data, totalValue }: Props) {
                 <Cell key={entry.ticker} fill={entry.color} fillOpacity={0.35} />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip currency={currency} />} />
           </PieChart>
         </ResponsiveContainer>
 
         {/* Centre label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Total</span>
-          <span className="text-xl font-black tabular-nums leading-tight">
-            {formatCurrency(totalValue, "USD")}
+          <span className="text-xl font-black tabular-nums leading-tight gradient-text">
+            <AnimatedNumber value={totalValue} currency={currency} />
           </span>
-          <span className="text-[10px] text-muted-foreground mt-0.5">USD · IBKR</span>
+          <span className="text-[10px] text-muted-foreground mt-0.5">{subLabel ?? `${currency} · Live`}</span>
         </div>
       </div>
 

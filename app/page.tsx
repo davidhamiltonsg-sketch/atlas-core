@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { TrendingUp, Activity, AlertTriangle } from "lucide-react"
 import { db } from "@/lib/db"
@@ -559,6 +560,7 @@ export default async function Dashboard() {
                 ? `${d.hardBreaches > 0 ? d.hardBreaches + " hard breach" + (d.hardBreaches > 1 ? "es" : "") + " require immediate action. " : ""}${d.softBreaches > 0 ? d.softBreaches + " position" + (d.softBreaches > 1 ? "s" : "") + " outside tolerance. " : ""}${d.hardBreaches === 0 && d.softBreaches === 0 ? "All positions within bands. " : ""}Snapshot age: ${d.snapshotAgeDays <= 1 ? "current" : d.snapshotAgeDays + " days old"}.`
                 : "No portfolio balance yet. Enter your holdings to begin tracking."
             }
+            href="/governance"
           />
 
           {/* 3. Compliance Board — position bands */}
@@ -627,11 +629,14 @@ export default async function Dashboard() {
         <div className="space-y-4 lg:sticky lg:top-4 lg:self-start reveal-stack">
 
           {/* Allocation donut */}
-          <div className="rounded-2xl card-lux p-5">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Allocation</h2>
+          <Link href="/portfolio" className="group block rounded-2xl card-lux p-5 relative overflow-hidden">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Allocation</h2>
+              <span className="text-[11px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0">View →</span>
+            </div>
             <p className="text-[11px] text-muted-foreground mb-3">Outer = actual · Inner = target</p>
-            <AllocationDonut data={d.donutData} totalValue={d.totalValue} />
-          </div>
+            <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD" />
+          </Link>
 
           {/* Value history */}
           {d.historyPoints.length >= 2 && (
