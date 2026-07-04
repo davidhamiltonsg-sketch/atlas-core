@@ -12,6 +12,7 @@ import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { ExportPdfButton } from "@/components/reports/export-pdf-button"
 import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
+import { DownloadReportCard } from "@/components/reports/download-report-card"
 import {
   ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS, ETF_WEIGHTS_AS_OF,
@@ -619,6 +620,11 @@ export default async function Reports() {
           </div>
         </div>
       )}
+
+      {/* ── BRANDED PDF REPORTS ──────────────────────────────────────────────── */}
+      <div className="no-print mb-6">
+        <DownloadReportCard endpoint="/api/reports/atlas" accent="violet" />
+      </div>
 
       {/* ── 1. KPI STRIP ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 mb-6 lg:grid-cols-4">
