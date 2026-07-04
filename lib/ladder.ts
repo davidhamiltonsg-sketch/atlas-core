@@ -226,7 +226,12 @@ export function computeLadder(
     })
   }
 
+  // §4.3 — combined QQQM+SMH ceiling. At/above the soft ceiling (below the hard ceiling
+  // handled just below), new buys of both pause — steps 2/3 must not fill or redirect into
+  // either while this holds, matching computeMarketAwareDca's same-name halt.
   const combined = combinedTechPct(positions)
+  const techHalted = combined >= COMBINED_TECH_RULE.softCeiling
+  const isTechHalted = (ticker: string) => techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(ticker)
   if (combined >= COMBINED_TECH_RULE.hardCeiling) {
     const trimTicker = smhPos ? "SMH" : "QQQM"
     steps[0].reason = `QQQM+SMH combined: ${combined.toFixed(1)}% ≥ ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling`
@@ -267,13 +272,20 @@ export function computeLadder(
   // ── Step 2: Any position below target → 100% to most underweight ────────────
   // Art. XIII v1.1 precedence rule: skip rule does NOT apply here.
   // If the most underweight position is near its 52w high, buy anyway — log an exception.
-  const underweights = positions
+  const underweightsRaw = positions
     .filter((p) =>
       p.ticker !== BITCOIN_RUNOFF_TICKER &&     // BTC is in run-off: no buy pressure
       !BUFFER_TICKERS.has(p.ticker) &&          // SGOV/AGG/CASH: handled at step 5
       p.actualPct < p.targetPct                 // strictly below exact target
     )
     .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
+  const pausedUnderweight = underweightsRaw.filter((p) => isTechHalted(p.ticker)).map((p) => p.ticker)
+  if (pausedUnderweight.length > 0) {
+    exceptions.push(
+      `${pausedUnderweight.join(" and ")} underweight but paused at step 2 — combined QQQM+SMH is ${combined.toFixed(1)}% (§4.3 tech ceiling).`
+    )
+  }
+  const underweights = underweightsRaw.filter((p) => !isTechHalted(p.ticker))
 
   if (underweights.length > 0) {
     const p = underweights[0]
@@ -325,7 +337,7 @@ export function computeLadder(
     const overSet = new Set(overweights.map((p) => p.ticker))
     // Redirect target: position with smallest positive deviation (closest to needing money)
     const redirectTarget = positions
-      .filter((p) => !overSet.has(p.ticker) && !BUFFER_TICKERS.has(p.ticker) && p.ticker !== BITCOIN_RUNOFF_TICKER)
+      .filter((p) => !overSet.has(p.ticker) && !BUFFER_TICKERS.has(p.ticker) && p.ticker !== BITCOIN_RUNOFF_TICKER && !isTechHalted(p.ticker))
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))[0]
     const to = redirectTarget?.ticker ?? "VT"
     steps[2].reason = `${over.ticker}: ${over.actualPct.toFixed(1)}% > comfortable ceiling ${(over.targetPct + over.toleranceBand).toFixed(0)}%`

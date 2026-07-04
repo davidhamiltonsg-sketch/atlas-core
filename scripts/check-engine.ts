@@ -150,5 +150,28 @@ console.log("Atlas Core — engine scenario checks\n")
     `nbm="${nbm.action}" ladder="${lad.headline}"`)
 }
 
+// 12) Combined QQQM+SMH at the 38% SOFT ceiling, with SMH individually underweight —
+//     must NOT recommend accumulating SMH or QQQM: §4.3 pauses new tech buys the moment
+//     combined tech is at/over 38%, even though SMH alone reads underweight against its
+//     own target. Both engines must fall through to the next eligible position (VT) and
+//     agree, instead of one recommending more tech while the other pauses it (regression
+//     for the "recommends QQQM/SMH while tech concentration is already paused" bug).
+{
+  const positions = [
+    pos("VT", 45, 52, 60), pos("QQQM", 30, 23, 30), pos("SMH", 8, 10, 12),
+    pos("VWO", 8, 8, 13), pos("SGOV", 9, 8, null),
+  ]
+  const nbm = computeNextBestMove(positions, 1000, { market: marketAll() })
+  const lad = computeLadder(positions, 1000, { market: {} })
+  expect("combined tech at 38% soft ceiling → next-best-move never recommends SMH/QQQM",
+    nbm.ticker !== "SMH" && nbm.ticker !== "QQQM", `got ${nbm.severity} / ${nbm.ticker} / "${nbm.action}"`)
+  expect("combined tech at 38% soft ceiling → ladder step 2 never fills SMH/QQQM",
+    lad.ticker !== "SMH" && lad.ticker !== "QQQM", `got step ${lad.firedStep} / ${lad.ticker} / "${lad.headline}"`)
+  expect("both engines fall through to VT, the next genuinely-underweight position",
+    nbm.ticker === "VT" && lad.ticker === "VT", `nbm=${nbm.ticker} ladder=${lad.ticker}`)
+  expect("ladder logs the paused-tech exception for audit",
+    lad.exceptions.some((e) => /SMH.*paused|paused.*SMH|tech ceiling/i.test(e)), `exceptions=${JSON.stringify(lad.exceptions)}`)
+}
+
 if (failures === 0) { console.log("\n  ✓ All engine scenarios behaved as specified.\n"); process.exit(0) }
 else { console.error(`\n${failures} engine scenario(s) failed.\n`); process.exit(1) }

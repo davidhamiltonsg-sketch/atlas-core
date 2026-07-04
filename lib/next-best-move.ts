@@ -355,6 +355,13 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   const market = resolveMarket(opts.market)
   const btcCap = getBtcModifier(undefined, opts.btcCyclePhase).hardHigh
 
+  // §4.3 — combined QQQM+SMH ceiling. At/above the soft ceiling, halt NEW buys of both
+  // until combined falls back below it — same gate computeMarketAwareDca already applies,
+  // so the headline recommendation never tells you to buy more of a paused position.
+  const combinedTech = combinedTechPct(positions)
+  const techHalted = combinedTech >= COMBINED_TECH_RULE.softCeiling
+  const isTechHalted = (ticker: string) => techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(ticker)
+
   // ── PRECEDENCE 1: Hard cap / concentration breach → TRIM ──────────────────
   if (hasBalance) {
     // §4 — look-through concentration is the highest law (overrides conviction). A single
@@ -372,14 +379,13 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       }
     }
     // §4.3 — combined QQQM+SMH HARD ceiling. Trim the semis tilt (SMH) first.
-    const combined = combinedTechPct(positions)
-    if (combined >= COMBINED_TECH_RULE.hardCeiling) {
+    if (combinedTech >= COMBINED_TECH_RULE.hardCeiling) {
       const smhPos = positions.find((p) => p.ticker === "SMH")
       const trimTicker = smhPos ? "SMH" : "QQQM"
       return {
         severity: "critical", ticker: trimTicker,
         action: `Trim ${trimTicker} — combined tech over cap`,
-        what: `Combined QQQM+SMH is ${combined.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${trimTicker} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
+        what: `Combined QQQM+SMH is ${combinedTech.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${trimTicker} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
         why: `${COMBINED_TECH_RULE.rationale} Combined concentration this high is the rule the system protects first.`,
         when: "At your next dealing window (respecting the 90-day hold on the most recent lots).",
         color: smhPos?.color ?? "#a78bfa",
@@ -528,7 +534,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   if (hasBalance) {
     for (const p of positions) {
       const ds = dipState(p.ticker, market)
-      if (ds !== "none" && !isOverweight(p)) {
+      if (ds !== "none" && !isOverweight(p) && !isTechHalted(p.ticker)) {
         const m = market[p.ticker]
         const fromHigh = (((m.price - m.hi52) / m.hi52) * 100).toFixed(0)
         return {
@@ -553,7 +559,8 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     const convictionUnder = positions
       .filter((p) => (CONVICTION_TICKERS as readonly string[]).includes(p.ticker)
         && p.actualPct < p.targetPct
-        && !isOverbought(p.ticker, market))
+        && !isOverbought(p.ticker, market)
+        && !isTechHalted(p.ticker))
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
     if (convictionUnder.length > 0) {
       const p = convictionUnder[0]
@@ -597,7 +604,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     const hardUnder = positions
       .filter((p) => {
         const ht = HARD_THRESHOLDS[p.ticker]
-        return ht?.low !== undefined && p.actualPct < ht.low
+        return ht?.low !== undefined && p.actualPct < ht.low && !isTechHalted(p.ticker)
       })
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
     if (hardUnder.length > 0) {
@@ -618,7 +625,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     const softUnder = positions
       .filter((p) => {
         const drift = p.actualPct - p.targetPct
-        return drift < 0 && Math.abs(drift) > p.toleranceBand
+        return drift < 0 && Math.abs(drift) > p.toleranceBand && !isTechHalted(p.ticker)
       })
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
     if (softUnder.length > 0) {
@@ -636,7 +643,19 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
 
   // ── PRECEDENCE 7: Healthy → STANDARD DCA ──────────────────────────────────
   // Even here we never leave the user guessing. We tell them what to do AND flag
-  // if anything is overbought so they don't blindly buy the top.
+  // if anything is overbought — or combined tech is paused — so they don't blindly
+  // buy the top or wonder why QQQM/SMH weren't picked despite being underweight.
+  if (techHalted) {
+    return {
+      severity: "low", ticker: null,
+      action: "Do your DCA — but pause tech",
+      what: `Invest your normal monthly amount, but skip QQQM and SMH this month. Combined QQQM+SMH is ${combinedTech.toFixed(1)}%, at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). Redirect their share to VT instead.`,
+      why: `${COMBINED_TECH_RULE.rationale} New tech buys pause until combined falls back below ${COMBINED_TECH_RULE.softCeiling - 2}%.`,
+      when: "This month, on your usual contribution date.",
+      color: "#8b5cf6",
+    }
+  }
+
   const overboughtNames = positions
     .filter((p) => isOverbought(p.ticker, market) && p.ticker !== "VT")
     .map((p) => p.ticker)
