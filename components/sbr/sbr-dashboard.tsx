@@ -216,7 +216,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       <div className="rounded-2xl card-lux p-5 mb-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Progress to target</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Progress to target</p>
             <p className="text-2xl font-black tabular-nums mt-0.5">
               {hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : <span className="text-muted-foreground">—</span>}
               <span className="text-sm font-normal text-muted-foreground ml-2">of {formatCurrency(target, "SGD")}</span>
@@ -391,7 +391,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400">Phase {d.phase.key} — Active</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Phase {d.phase.key} — Active</span>
                   <span className="text-[10px] text-muted-foreground">· {d.phase.range}</span>
                   {d.phase.selling && <span className="rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase">sells</span>}
                 </div>
@@ -435,7 +435,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           {/* Health score breakdown */}
           {hasBalance && (
             <div className="rounded-2xl card-lux p-5 space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Score breakdown</h3>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Score breakdown</h3>
               {[
                 { label: "Governance",    value: d.health.governance,    weight: "25%" },
                 { label: "Risk",          value: d.health.risk,          weight: "20%" },

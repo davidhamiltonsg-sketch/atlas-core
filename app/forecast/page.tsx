@@ -207,7 +207,7 @@ export default async function Forecast() {
           { label: "Horizon",               value: "2045", sub: "19 years remaining" },
         ].map(({ label, value, sub }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-1.5">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="text-xs font-medium text-muted-foreground">{label}</p>
             <p className="text-lg font-black tabular-nums">{value}</p>
             <p className="text-[11px] text-muted-foreground">{sub}</p>
           </div>

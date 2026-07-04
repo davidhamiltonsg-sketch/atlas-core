@@ -430,7 +430,7 @@ export default async function Governance() {
 
       {/* Rules by category — collapsible */}
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Governance Rules
         </h2>
         <span className="text-[11px] text-muted-foreground">Click a category to expand</span>

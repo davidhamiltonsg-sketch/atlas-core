@@ -388,7 +388,7 @@ export default async function Portfolio() {
             {/* Stacked allocation bar */}
             <div className="px-5 py-4 border-t border-border bg-muted/20">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Allocation</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Allocation</p>
                 <p className="text-[11px] text-muted-foreground">Target vs Actual</p>
               </div>
               {/* Actual bar */}
