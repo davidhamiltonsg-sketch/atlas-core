@@ -388,12 +388,19 @@ export function computeLadder(
   if (opts.portfolioDrawdownPct !== undefined && opts.portfolioDrawdownPct <= CRASH_DRAWDOWN_PCT) {
     const pct = Math.abs(opts.portfolioDrawdownPct).toFixed(0)
     steps[5].reason = `Portfolio down ${pct}% from all-time high`
+    // If SGOV holds dry powder above the floor, deploy half of the excess into VT now.
+    // This is the explicit deployment trigger the constitution lacked — SGOV must not
+    // sit idle as a chronic drag when the market has already fallen 25%+.
+    const sgovExcess = sgovPct - SGOV_FLOOR_PCT
+    const sgovNote = sgovExcess > 0
+      ? `SGOV has ${sgovPct.toFixed(1)}% — ${sgovExcess.toFixed(1)}% above the ${SGOV_FLOOR_PCT}% floor. Deploy 50% of that excess (about ${(sgovExcess / 2).toFixed(1)}% of portfolio) into VT immediately as pre-committed response A1. Then: `
+      : `SGOV is at the ${SGOV_FLOOR_PCT}% floor — no excess to deploy. `
     return build(6, {
       headline: "Crash protocol — keep buying",
-      instruction: `The portfolio is down ${pct}% from its all-time high. Follow the Crash Protocol (Art. XIV): continue scheduled contributions unchanged. Do not sell. Pre-committed response A2 applies.`,
-      rationale: `Sustained decline over ${Math.abs(CRASH_DRAWDOWN_PCT)}% triggers Art. XIV. The 2022 rule: keep buying during a rate-driven bear market — never redesign.`,
-      when: "Continue contributions as normal. Crash protocol remains active until the drawdown clears.",
-      ticker: null, severity: "high", citation: "Art. XIII Step 6 / Art. XIV",
+      instruction: `${sgovNote}Continue scheduled contributions unchanged into VT. Do not sell any position. Pre-committed response A2 applies.`,
+      rationale: `Sustained decline over ${Math.abs(CRASH_DRAWDOWN_PCT)}% triggers Art. XIV crash protocol. SGOV dry powder deployed first (A1), then contributions continue (A2). The 2022 rule: keep buying during a rate-driven bear market — never redesign.`,
+      when: "Deploy SGOV excess today if applicable. Continue contributions on the normal dealing window.",
+      ticker: "VT", severity: "high", citation: "Art. XIII Step 6 / Art. XIV / Art. XI",
     })
   }
 

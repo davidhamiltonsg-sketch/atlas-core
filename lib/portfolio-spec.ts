@@ -82,6 +82,17 @@ export const SBR_SPEC = {
   ],
 } as const
 
+// Phase-dependent caps for SBR — as the portfolio matures toward the property goal,
+// semiconductor and tech ceilings tighten to reduce sequencing risk. Phase I values
+// match SBR_SPEC.combined so no existing code that reads the static spec breaks.
+export const SBR_PHASE_CAPS = {
+  I:   { smhHard: 20, combinedHard: 45, combinedWarning: 40, combinedResume: 42 },
+  II:  { smhHard: 18, combinedHard: 42, combinedWarning: 38, combinedResume: 39 },
+  III: { smhHard: 16, combinedHard: 38, combinedWarning: 35, combinedResume: 36 },
+  IV:  { smhHard: 14, combinedHard: 33, combinedWarning: 30, combinedResume: 31 },
+} as const
+export type SbrPhaseKey = keyof typeof SBR_PHASE_CAPS
+
 /** The reporting currency for a constitution — the single source for "USD base vs SGD".
  *  Toward the money-boundary pillar: callers should use this instead of `isSbr ? "SGD" : "USD"`. */
 export function reportingCurrencyForConstitution(id: string): "USD" | "SGD" {

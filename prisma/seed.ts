@@ -12,9 +12,9 @@ const RISK_REGISTER_ITEMS = [
     level: "high",
     description:
       "Non-US persons are subject to US estate tax on US-sited assets above ~USD 60k. " +
-      "Art. XV: estate-tax risk begins at USD 60k (warn); UCITS migration is mandatory above USD 100k. " +
-      "Pre-committed response: migrate VT, QQQM, SMH, VWO to UCITS equivalents at the next dealing window " +
-      "once the USD 100k threshold is crossed. No action required below USD 60k.",
+      "Art. XV: estate-tax risk begins at USD 60k (warn); a mandatory REVIEW is triggered above USD 100k. " +
+      "The review must confirm migration is the correct action under current law and tax advice before executing. " +
+      "Expected outcome: migrate VT, QQQM, SMH, VWO to Irish UCITS equivalents. No action required below USD 60k.",
     preCommittedResponseId: "A1",
   },
   {
