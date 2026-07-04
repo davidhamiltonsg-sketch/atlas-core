@@ -76,8 +76,8 @@ export const SBR_SPEC = {
   skipAtHighPct: 3,
   phases: [
     { key: "I",   min: 0,      max: 72000 },
-    { key: "II",  min: 72000,  max: 102000 },
-    { key: "III", min: 102000, max: 114000 },
+    { key: "II",  min: 72000,  max: 96000  },
+    { key: "III", min: 96000,  max: 114000 },
     { key: "IV",  min: 114000, max: null },
   ],
 } as const
@@ -92,6 +92,12 @@ export const SBR_PHASE_CAPS = {
   IV:  { smhHard: 14, combinedHard: 33, combinedWarning: 30, combinedResume: 31 },
 } as const
 export type SbrPhaseKey = keyof typeof SBR_PHASE_CAPS
+
+// A35.SI trades in board lots of 1,000 units on the SGX. At ≈SGD 1.18/unit that's
+// ≈SGD 1,180 per lot. Odd-lot fills are possible but attract a wider spread; the
+// accrual engine banks SGD until a full lot can be purchased.
+export const A35_LOT_SIZE = 1000          // units per board lot
+export const A35_PRICE_APPROX_SGD = 1.18 // refresh from live price quarterly
 
 /** The reporting currency for a constitution — the single source for "USD base vs SGD".
  *  Toward the money-boundary pillar: callers should use this instead of `isSbr ? "SGD" : "USD"`. */

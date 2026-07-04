@@ -14,6 +14,7 @@ import { db } from "@/lib/db"
 import { SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import { computeSbrNextMove, sbrPhase, computeSbrHealth, type SbrPosition } from "@/lib/sbr-engine"
+import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import type { DigestItem } from "@/lib/governance-digest"
 import type { NextMove } from "@/lib/next-best-move"
 
@@ -120,6 +121,49 @@ export async function buildSbrDigest(userId: string): Promise<SbrDigest | null> 
       title: `Monthly contribution window — ${nextMove.action}`,
       detail: `${nextMove.what} Dealing window: second half of the month. ${nextMove.why}`,
     })
+  }
+
+  // Trajectory gauge (A1) — track blended growth rate monthly.
+  // If the expected blended return has been > 15% for two consecutive months,
+  // the portfolio is carrying more growth-asset risk than appropriate for a
+  // near-term property objective. Recommend reviewing the horizon or de-risking.
+  if (totalValue > 0 && positions.length > 0) {
+    const allocMap: Record<string, number> = {}
+    for (const p of positions) allocMap[p.ticker] = p.actualPct
+    const { base: blendedBase } = sbrBlendedGrowthRate(allocMap)
+    const trajectoryBand = blendedBase <= 0.12 ? "green" : blendedBase <= 0.15 ? "amber" : "red"
+
+    // Log the monthly reading (one per calendar month via upsert on month key).
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    const existingLog = await db.behaviourLog.findFirst({
+      where: { userId, type: "sbr-trajectory", note: { startsWith: `month:${monthKey}` } },
+    })
+    if (!existingLog) {
+      await db.behaviourLog.create({
+        data: {
+          userId,
+          type: "sbr-trajectory",
+          note: `month:${monthKey} band:${trajectoryBand} rate:${(blendedBase * 100).toFixed(2)}`,
+        },
+      })
+    }
+
+    // Check last two monthly readings — if both red, trigger horizon extension alert.
+    if (trajectoryBand === "red") {
+      const recentLogs = await db.behaviourLog.findMany({
+        where: { userId, type: "sbr-trajectory" },
+        orderBy: { date: "desc" },
+        take: 2,
+      })
+      const bothRed = recentLogs.length >= 2 && recentLogs.every((l) => l.note.includes("band:red"))
+      if (bothRed) {
+        items.push({
+          severity: "watch",
+          title: "Portfolio trajectory above 15% for two months — consider reviewing the horizon",
+          detail: `Your blended expected growth rate is ${(blendedBase * 100).toFixed(1)}% — above the 15% caution threshold for two consecutive months. For a property-focused portfolio this level of equity concentration may introduce sequencing risk. Consider whether your property timeline has changed, or whether to de-risk toward A35 ahead of schedule.`,
+        })
+      }
+    }
   }
 
   // Phase crossing detection — compare current phase to last logged transition.

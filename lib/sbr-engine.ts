@@ -14,7 +14,7 @@
 
 import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
 import { SILICON_BRICK_ROAD, type Constitution, type ConstitutionPhase } from "@/lib/constitutions"
-import { SBR_PHASE_CAPS } from "@/lib/portfolio-spec"
+import { SBR_PHASE_CAPS, A35_LOT_SIZE } from "@/lib/portfolio-spec"
 
 export interface SbrPosition {
   ticker: string
@@ -419,4 +419,91 @@ export function computeSbrDca(
       return { allocations: Object.values(alloc), headline: note ? "Adjusted plan — see note below" : "Standard plan — everything is on track", marketOverlayActive: !!note, overlayNote: note }
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Whole-share accrual engine (Art. VI § Execution)
+//
+// IBKR executes in whole shares. This engine converts the SGD dollar allocations
+// from computeSbrDca into a whole-share instruction, carrying any remainder forward
+// to the next month's buy. A35.SI uses SGX board lots (A35_LOT_SIZE = 1,000 units);
+// all other SBR funds are US-listed ETFs traded in whole shares (lot size = 1).
+//
+// Usage:
+//   const accrual = loadAccrualFromDb()           // { VWRA: 0, QQQM: 45.20, ... }
+//   const result  = computeWholeShareBuy(plan, prices, accrual)
+//   saveAccrualToDb(result.newAccrual)             // persist the carry-forward
+//   showUser(result.instructions)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AccrualBalance {
+  [ticker: string]: number // SGD carry-forward from previous months
+}
+
+export interface ShareBuyInstruction {
+  ticker: string
+  sharesToBuy: number     // whole shares (or whole board lots for A35)
+  lotSize: number         // 1 for US ETFs, 1000 for A35
+  costSgd: number         // sharesToBuy × lotSize × priceSgd
+  carryForward: number    // remainder banked for next month
+  priceSgd: number        // price used for the calculation
+}
+
+export interface WholeSharBuyResult {
+  instructions: ShareBuyInstruction[]
+  totalDeployed: number   // SGD actually spent this month
+  totalCarried: number    // SGD banked for future months
+  note: string | null
+}
+
+/**
+ * Convert a DcaPlan (SGD dollar allocations) into whole-share buy instructions.
+ *
+ * @param plan     Output of computeSbrDca — the SGD split for this month.
+ * @param prices   Current SGD price per share for each ticker. A35 should use
+ *                 the live SGX price in SGD (not USD). Missing tickers fall through
+ *                 and are carried entirely.
+ * @param accrual  Carry-forward balances from previous months (SGD per ticker).
+ */
+export function computeWholeShareBuy(
+  plan: DcaPlan,
+  prices: Record<string, number>,
+  accrual: AccrualBalance = {},
+): WholeSharBuyResult {
+  const instructions: ShareBuyInstruction[] = []
+  let totalDeployed = 0
+  let totalCarried = 0
+
+  for (const alloc of plan.allocations) {
+    const ticker   = alloc.ticker
+    const newSgd   = alloc.amount                // this month's contribution to this fund
+    const carried  = accrual[ticker] ?? 0        // SGD banked from prior months
+    const available = newSgd + carried
+
+    const priceSgd = prices[ticker] ?? 0
+    const lotSize  = ticker === "A35" ? A35_LOT_SIZE : 1
+
+    if (priceSgd <= 0 || available <= 0) {
+      // No price or nothing to deploy — carry everything forward
+      instructions.push({ ticker, sharesToBuy: 0, lotSize, costSgd: 0, carryForward: available, priceSgd })
+      totalCarried += available
+      continue
+    }
+
+    const lotValueSgd  = priceSgd * lotSize
+    const lotsAffordable = Math.floor(available / lotValueSgd)
+    const costSgd      = lotsAffordable * lotValueSgd
+    const carryForward = available - costSgd
+
+    instructions.push({ ticker, sharesToBuy: lotsAffordable * lotSize, lotSize, costSgd, carryForward, priceSgd })
+    totalDeployed += costSgd
+    totalCarried  += carryForward
+  }
+
+  const hasA35Accrual = instructions.some((i) => i.ticker === "A35" && i.carryForward > 0)
+  const note = hasA35Accrual
+    ? `A35 needs SGD ${(instructions.find(i => i.ticker === "A35")!.carryForward).toFixed(2)} more to fill one board lot (1,000 units). Banking it for next month.`
+    : null
+
+  return { instructions, totalDeployed, totalCarried, note }
 }

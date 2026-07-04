@@ -23,7 +23,7 @@ const MONTHLY_CONTRIB = SBR.monthlyContribution ?? 3000
 
 const PHASE_MARKS = [
   { key: "I",   label: "Phase I",   threshold: 72000  },
-  { key: "II",  label: "Phase II",  threshold: 102000 },
+  { key: "II",  label: "Phase II",  threshold: 96000  },
   { key: "III", label: "Phase III", threshold: 114000 },
   { key: "IV",  label: "Phase IV",  threshold: TARGET_VALUE },
 ]
@@ -413,15 +413,15 @@ export async function SbrReportPage({
                     })}
                   </div>
                   <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-0.5">
-                    <span>SGD 0</span><span>72k</span><span>102k</span><span>114k</span><span>120k</span>
+                    <span>SGD 0</span><span>72k</span><span>96k</span><span>114k</span><span>120k</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
                   {[
                     { key: "I",   label: "Phase I",   desc: "Grow to 72k — all contributions to highest-priority fund", end: 72000 },
-                    { key: "II",  label: "Phase II",  desc: "72k–102k — same approach, momentum builds", end: 102000 },
-                    { key: "III", label: "Phase III", desc: "102k–114k — quarterly sells to load up A35 safety floor", end: 114000 },
+                    { key: "II",  label: "Phase II",  desc: "72k–96k — same approach, momentum builds", end: 96000 },
+                    { key: "III", label: "Phase III", desc: "96k–114k — quarterly sells to load up A35 safety floor", end: 114000 },
                     { key: "IV",  label: "Phase IV",  desc: "114k–120k — all new money to A35; equity runs to close", end: TARGET_VALUE },
                   ].map((pm) => {
                     const isCurrent = pm.key === d.phase.key

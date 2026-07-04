@@ -19,13 +19,15 @@ import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockp
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { AnimatedNumber } from "@/components/animated-number"
+import { getUsdSgdRate } from "@/lib/holdings-sync"
+import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
 // Phase thresholds as fractions of the 120k target
 const PHASE_MARKS = [
   { label: "I",   endFrac: 72000  / 120000 },
-  { label: "II",  endFrac: 102000 / 120000 },
+  { label: "II",  endFrac: 96000 / 120000 },
   { label: "III", endFrac: 114000 / 120000 },
   { label: "IV",  endFrac: 1.0              },
 ]
@@ -45,12 +47,18 @@ function monthsToLabel(months: number | null): string {
   return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
 }
 
+// Annual SGD/USD reference rate used to detect currency drift (Art. VI FX policy).
+// Refresh this value annually from MAS or your brokerage's reference data.
+const FX_REFERENCE_USDSGD = 1.35
+const FX_BAND_PCT = 5 // ±5% from reference triggers a note
+
 async function getSbrData(userId: string) {
-  const [holdings, market, recentExec] = await Promise.all([
+  const [holdings, market, recentExec, usdSgdRate] = await Promise.all([
     // Filter to SBR tickers only — prevents Atlas Core holdings from bleeding into SBR views
     db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
     getRecentExecutions(userId, 1),
+    getUsdSgdRate(),
   ])
   const fundOrder = SBR.funds.map((f) => f.ticker)
   const holdingsSorted = [...holdings].sort((a, b) => fundOrder.indexOf(a.ticker) - fundOrder.indexOf(b.ticker))
@@ -145,10 +153,22 @@ async function getSbrData(userId: string) {
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
   const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
 
+  // FX strip — live rate vs annual reference
+  const fxDeviation = ((usdSgdRate - FX_REFERENCE_USDSGD) / FX_REFERENCE_USDSGD) * 100
+  const fxOutOfBand = Math.abs(fxDeviation) > FX_BAND_PCT
+
+  // Dealing window — tells Dami when she needs to act and when she's done
+  const now = new Date()
+  const dealingWindow = getDealingWindow(now)
+  const windowOpen = isInDealingWindow(now)
+  const nextWindowOpens = windowOpen ? null : getDealingWindow(new Date(now.getFullYear(), now.getMonth() + 1, 1)).opens
+
   return {
     totalValue, valueChange, phase, nextMove, dca, holdingsRows, govAlignment, health,
     marketStale: market.stale, marketAsOf: market.asOf, lastDone: recentExec[0] ?? null,
     historyPoints, complianceBands, donutData, growthRates, monthsToGoal,
+    usdSgdRate, fxDeviation, fxOutOfBand,
+    dealingWindow, windowOpen, nextWindowOpens,
   }
 }
 
@@ -227,7 +247,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           })}
         </div>
         <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-0.5 -mx-0.5">
-          <span>SGD 0</span><span>72k</span><span>102k</span><span>114k</span><span>120k</span>
+          <span>SGD 0</span><span>72k</span><span>96k</span><span>114k</span><span>120k</span>
         </div>
         {hasBalance && (
           <p className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground leading-relaxed">
@@ -237,6 +257,35 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           </p>
         )}
       </div>
+
+      {/* Terminal state — shown when the dealing window is closed (Dami is done for this month) */}
+      {hasBalance && !d.windowOpen && d.nextWindowOpens && (
+        <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
+          <p className="text-sm font-bold text-sky-400">
+            You&apos;re done for {d.dealingWindow.contributionDay.toLocaleDateString("en-SG", { month: "long" })}.
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            The road doesn&apos;t need you until{" "}
+            <span className="font-semibold text-foreground">
+              {d.nextWindowOpens.toLocaleDateString("en-SG", { day: "numeric", month: "long" })}
+            </span>
+            . Your next buying window opens then — come back and run the Decision Engine.
+          </p>
+        </div>
+      )}
+
+      {/* Dealing window open — remind Dami to act before the window closes */}
+      {hasBalance && d.windowOpen && (
+        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-5 py-4">
+          <p className="text-sm font-bold text-amber-400">
+            Buying window is open — act before{" "}
+            {d.dealingWindow.closes.toLocaleDateString("en-SG", { day: "numeric", month: "long" })}.
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Follow &ldquo;This month&rdquo; below. Once you&apos;ve bought, you&apos;re done until next month.
+          </p>
+        </div>
+      )}
 
       {/* Empty-state welcome — covers both "nothing entered yet" and "funds set but showing S$0" */}
       {!hasBalance && (
@@ -332,31 +381,30 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           {/* 3. What is held — above the fold, before compliance instrumentation */}
           {hasBalance && <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} contributionCurrency="SGD" plainEnglish />}
 
-          {/* ── COMPLIANCE DETAILS — below the fold (progressive disclosure) ── */}
-
-          {/* 4. Health score — constitution scorecard with rule-level warning */}
-          <GovernanceSeal
-            overall={d.health.overall}
-            overallLabel={d.health.overallLabel}
-            dimensions={sealDimensions}
-            constitutionLabel="Your plan — health score"
-            lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
-            narrative={
-              hasBalance
-                ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
-                : "No portfolio balance yet. Enter your holdings to begin tracking."
-            }
-            href="/governance"
-            hrefLabel="View plan →"
-          />
-
-          {/* 5. Compliance Board — position bands */}
-          {hasBalance && (
-            <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />
+          {/* ── COMPLIANCE DETAILS — admin/governance view only ── */}
+          {/* Governance instrumentation (Seal, Compliance Board, full rule checklist)    */}
+          {/* is shown only to the admin operator (David). Dami sees the plain-English    */}
+          {/* ritual surface above and the condensed health summary in the sidebar.        */}
+          {isAdmin && (
+            <>
+              <GovernanceSeal
+                overall={d.health.overall}
+                overallLabel={d.health.overallLabel}
+                dimensions={sealDimensions}
+                constitutionLabel="Your plan — health score"
+                lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
+                narrative={
+                  hasBalance
+                    ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
+                    : "No portfolio balance yet. Enter your holdings to begin tracking."
+                }
+                href="/governance"
+                hrefLabel="View plan →"
+              />
+              {hasBalance && <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />}
+              {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
+            </>
           )}
-
-          {/* 6. Governance rules checklist */}
-          {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
 
           {/* 7. Phase detail */}
           <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.04] p-5">
@@ -418,6 +466,40 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
               <PortfolioHistoryChart data={d.historyPoints} />
             </div>
           )}
+
+          {/* FX strip — SGD/USD vs annual reference rate */}
+          <div className="rounded-2xl card-lux p-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">SGD / USD Rate</h3>
+            <div className="flex items-end justify-between mb-2">
+              <div>
+                <p className="text-xl font-black tabular-nums">{d.usdSgdRate.toFixed(4)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">1 USD = {d.usdSgdRate.toFixed(4)} SGD</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-sm font-bold tabular-nums ${d.fxOutOfBand ? "text-amber-500" : "text-green-500"}`}>
+                  {d.fxDeviation >= 0 ? "+" : ""}{d.fxDeviation.toFixed(1)}%
+                </p>
+                <p className="text-[10px] text-muted-foreground">vs {FX_REFERENCE_USDSGD} ref</p>
+              </div>
+            </div>
+            {/* ±5% band bar */}
+            <div className="relative h-1.5 rounded-full bg-muted overflow-visible mb-1">
+              <div className="absolute inset-y-0 left-[calc(50%-1px)] w-0.5 bg-muted-foreground/30 rounded-full" />
+              <div className={`absolute top-0 h-full rounded-full transition-all ${d.fxOutOfBand ? "bg-amber-500" : "bg-green-500"}`}
+                style={{
+                  left: d.fxDeviation < 0 ? `${Math.max(0, 50 + d.fxDeviation * 5)}%` : "50%",
+                  width: `${Math.min(50, Math.abs(d.fxDeviation) * 5)}%`,
+                }} />
+            </div>
+            <div className="flex justify-between text-[9px] text-muted-foreground/40">
+              <span>−5%</span><span>ref {FX_REFERENCE_USDSGD}</span><span>+5%</span>
+            </div>
+            {d.fxOutOfBand && (
+              <p className="mt-2 text-[10px] text-amber-500 leading-relaxed">
+                Rate is outside the ±5% band. De-risk sale proceeds should still convert to SGD promptly per the FX policy — do not wait for a &quot;better rate&quot;.
+              </p>
+            )}
+          </div>
 
           {/* Health score breakdown */}
           {hasBalance && (
