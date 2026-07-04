@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Shell } from "@/components/shell"
-import { TrendingUp, Activity, AlertTriangle } from "lucide-react"
+import { TrendingUp, Activity, AlertTriangle, FileBarChart2 } from "lucide-react"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
 import { getSession } from "@/lib/session"
@@ -612,6 +612,18 @@ export default async function Dashboard() {
           {d.hasBalance && d.govAlignment && (
             <GovernanceAlignment data={d.govAlignment} />
           )}
+
+          {/* ── WHAT YOU OWN ─────────────────────────────────────────── */}
+          <Link href="/reports" className="group flex items-center gap-3 rounded-2xl border border-border bg-card/75 backdrop-blur-md px-5 py-4 card-elevated hover:bg-accent/40 hover:border-violet-500/30 hover:-translate-y-0.5 transition-all">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
+              <FileBarChart2 className="h-4 w-4 text-violet-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">What You Own — Full Report</p>
+              <p className="text-xs text-muted-foreground">Look-through · concentration · governance compliance · health scorecard · PDF export</p>
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-violet-500 transition-colors shrink-0">Open →</span>
+          </Link>
 
         </div>
 

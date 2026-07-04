@@ -14,6 +14,7 @@
 
 import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
 import { SILICON_BRICK_ROAD, type Constitution, type ConstitutionPhase } from "@/lib/constitutions"
+import { SBR_PHASE_CAPS } from "@/lib/portfolio-spec"
 
 export interface SbrPosition {
   ticker: string
@@ -38,6 +39,10 @@ export interface SbrEngineOpts {
 // Sourced from the constitution registry (Art. VII) — never a separate literal, so the
 // engine's floor can't silently drift from the documented/contract-checked value.
 const A35_FLOOR = SILICON_BRICK_ROAD.funds.find((f) => f.ticker === "A35")?.floor ?? 7
+
+export function getPhaseCaps(phaseKey: string): typeof SBR_PHASE_CAPS[keyof typeof SBR_PHASE_CAPS] {
+  return SBR_PHASE_CAPS[phaseKey as keyof typeof SBR_PHASE_CAPS] ?? SBR_PHASE_CAPS.I
+}
 
 export function sbrPhase(totalValue: number, c: Constitution = SILICON_BRICK_ROAD): ConstitutionPhase {
   const phases = c.phases ?? []
@@ -68,8 +73,8 @@ function nearHigh(p: SbrPosition, skipPct: number): boolean {
 
 export type SbrBranch =
   | { tag: "empty" }
-  | { tag: "smh_cap";       smhPct: number; sellSgd: number }
-  | { tag: "combined_hard"; combined: number; resume: number }
+  | { tag: "smh_cap";       smhPct: number; smhHard: number; sellSgd: number }
+  | { tag: "combined_hard"; combined: number; combinedHard: number; resume: number }
   | { tag: "combined_warn"; combined: number; warning: number }
   | { tag: "a35_floor";     a35Pct: number }
   | { tag: "phase_III";     totalValue: number; qqqmSell: number; vwraSell: number }
@@ -90,28 +95,31 @@ export function sbrRoute(
   const get = (t: string) => positions.find((p) => p.ticker === t)
   const smh = get("SMH"), qqqm = get("QQQM"), a35 = get("A35")
   const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
-  const comb = c.combined!
 
-  // 1 — SMH > 20% hard cap → mandatory sell (headline only; DCA does not send MORE money there)
-  if (smh && smh.actualPct > 20) {
-    return { tag: "smh_cap", smhPct: smh.actualPct, sellSgd: Math.round(((smh.actualPct - 15) / 100) * totalValue) }
+  // Phase and its caps must be determined early — both the mandatory-sell threshold
+  // and the precedence logic (Phase III/IV beat combined ceiling) depend on it.
+  const phase = sbrPhase(totalValue, c)
+  const phaseCaps = getPhaseCaps(phase.key)
+
+  // 1 — SMH over its phase-dependent hard cap → mandatory sell (always highest priority)
+  if (smh && smh.actualPct > phaseCaps.smhHard) {
+    return { tag: "smh_cap", smhPct: smh.actualPct, smhHard: phaseCaps.smhHard, sellSgd: Math.round(((smh.actualPct - 15) / 100) * totalValue) }
   }
 
-  // 2 — combined QQQM+SMH over hard ceiling → halt both, buy VWRA only
-  if (combined > comb.hard) return { tag: "combined_hard", combined, resume: comb.resume }
-
-  // 2b — combined in warning band → redirect to VWRA
-  if (combined >= comb.warning) return { tag: "combined_warn", combined, warning: comb.warning }
-
-  // 3 — A35 below its floor → build safety first
+  // 2 — A35 below its floor → build safety before any phase or ceiling check
   if (a35 && a35.actualPct < A35_FLOOR) return { tag: "a35_floor", a35Pct: a35.actualPct }
 
-  // 4 — phase instructions (III sells, IV halts equity)
-  const phase = sbrPhase(totalValue, c)
+  // 3 — Phase III/IV: close-to-goal rules take priority over combined ceiling checks.
+  // Routing to A35 is strictly more conservative than the ceiling's VWRA redirect, so the
+  // phase instruction wins. (The combined ceiling still fires in Phase I/II below.)
   if (phase.key === "III") {
     return { tag: "phase_III", totalValue, qqqmSell: Math.round(0.03 * totalValue), vwraSell: Math.round(0.02 * totalValue) }
   }
   if (phase.key === "IV") return { tag: "phase_IV", totalValue }
+
+  // 4 — combined ceiling checks (Phase I/II only — Phase III/IV were handled above)
+  if (combined > phaseCaps.combinedHard) return { tag: "combined_hard", combined, combinedHard: phaseCaps.combinedHard, resume: phaseCaps.combinedResume }
+  if (combined >= phaseCaps.combinedWarning) return { tag: "combined_warn", combined, warning: phaseCaps.combinedWarning }
 
   // 5 — drawdown past trigger → deploy cash reserve, then all new money to VWRA
   if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) {
@@ -155,15 +163,15 @@ export function computeSbrNextMove(
 
     case "smh_cap":
       return { severity: "critical", ticker: "SMH", action: "Sell SMH back to 15%",
-        what: `SMH is ${branch.smhPct.toFixed(1)}% of the portfolio — above its 20% hard limit. Sell about SGD ${branch.sellSgd.toLocaleString()} of SMH this month to bring it back to 15%.`,
-        why: "This is the only time you are required to sell. Semiconductor stocks can fall 30–40% in a bad year; this limit protects you from that kind of concentrated loss.",
+        what: `SMH is ${branch.smhPct.toFixed(1)}% of the portfolio — above its ${branch.smhHard}% phase cap. Sell about SGD ${branch.sellSgd.toLocaleString()} of SMH this month to bring it back to 15%.`,
+        why: "This is the only time you are required to sell. Semiconductor stocks can fall 30–40% in a bad year; this limit protects you from that kind of concentrated loss. The cap tightens as you near the goal to reduce sequencing risk.",
         when: "This month, before buying anything else.", color: "#f87171" }
 
     case "combined_hard":
-      return { severity: "critical", ticker: "VWRA", action: "Stop buying QQQM and SMH — they are over 45% together",
-        what: `QQQM + SMH combined is ${branch.combined.toFixed(1)}% — above the 45% hard limit. Put all new money into VWRA until they drop below ${branch.resume}% combined.`,
-        why: "QQQM and SMH both hold a lot of the same tech companies, so together they concentrate your risk. The limit stops them from taking over the portfolio.",
-        when: "Every month until the combined share drops below 42%.", color: fundColor(c, "VWRA") }
+      return { severity: "critical", ticker: "VWRA", action: `Stop buying QQQM and SMH — they are over ${branch.combinedHard}% together`,
+        what: `QQQM + SMH combined is ${branch.combined.toFixed(1)}% — above the ${branch.combinedHard}% hard limit for this phase. Put all new money into VWRA until they drop below ${branch.resume}% combined.`,
+        why: "QQQM and SMH both hold a lot of the same tech companies, so together they concentrate your risk. The ceiling tightens as the portfolio matures to protect your goal.",
+        when: `Every month until the combined share drops below ${branch.resume}%.`, color: fundColor(c, "VWRA") }
 
     case "combined_warn":
       return { severity: "medium", ticker: "VWRA", action: "Tech funds are getting heavy — buy VWRA only this month",
@@ -252,11 +260,12 @@ export function computeSbrHealth(
   const a35 = positions.find(p => p.ticker === "A35")
   const comb = c.combined!
   const combinedPct = positions.filter(p => comb.tickers.includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
+  const phaseCaps = getPhaseCaps(sbrPhase(totalValue, c).key)
 
-  // Risk (20%): SMH cap and combined ceiling compliance
-  const smhBreach  = (smh?.actualPct ?? 0) > (smh?.hardCap ?? 20)
-  const combBreach = combinedPct > comb.hard
-  const combWarn   = !combBreach && combinedPct >= comb.warning
+  // Risk (20%): SMH cap and combined ceiling compliance — using phase-dependent thresholds
+  const smhBreach  = (smh?.actualPct ?? 0) > phaseCaps.smhHard
+  const combBreach = combinedPct > phaseCaps.combinedHard
+  const combWarn   = !combBreach && combinedPct >= phaseCaps.combinedWarning
   const risk = Math.max(0, 100 - (smhBreach ? 40 : 0) - (combBreach ? 30 : 0) - (combWarn ? 10 : 0))
 
   // Allocation (15%): funds within comfortable ranges
@@ -371,13 +380,14 @@ export function computeSbrDca(
     // For smh_cap: SMH is above range so it's excluded by the rangeHigh filter below.
     // For skip_at_high: the high-price filter handles it.
     default: {
-      const comb = c.combined!
       const qqqm = positions.find((p) => p.ticker === "QQQM")
       const smh  = positions.find((p) => p.ticker === "SMH")
       const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
-      // smh_cap fires when SMH alone is over its hard cap — the combined-ceiling warning
+      const activePhase = sbrPhase(totalValue, c)
+      const phaseCaps = getPhaseCaps(activePhase.key)
+      // smh_cap fires when SMH alone is over its phase hard cap — the combined-ceiling warning
       // does NOT additionally apply, so guard techHalt to avoid zeroing QQQM incorrectly.
-      const techHalt = branch.tag !== "smh_cap" && combined >= comb.warning
+      const techHalt = branch.tag !== "smh_cap" && combined >= phaseCaps.combinedWarning
 
       const eligible = positions.filter((p) => {
         if (techHalt && ["QQQM", "SMH"].includes(p.ticker)) return false
@@ -401,9 +411,9 @@ export function computeSbrDca(
       for (const p of positions) {
         const a = alloc[p.ticker]
         if (a.amount > 0) { a.tag = a.amount > a.standardAmount ? "boosted" : "standard"; if (!a.reason) a.reason = a.tag === "boosted" ? "Getting extra money redirected from a paused fund." : "Standard split — on target." }
-        else { a.tag = "zeroed"; if (!a.reason) a.reason = techHalt && ["QQQM", "SMH"].includes(p.ticker) ? "Paused — tech stocks are over 40% combined." : "Skipped this month — near its yearly high price." }
+        else { a.tag = "zeroed"; if (!a.reason) a.reason = techHalt && ["QQQM", "SMH"].includes(p.ticker) ? `Paused — tech stocks are over ${phaseCaps.combinedWarning}% combined.` : "Skipped this month — near its yearly high price." }
       }
-      if (techHalt) note = `QQQM + SMH are ${combined.toFixed(1)}% combined — over the ${comb.warning}% warning level. Buys in both paused this month; money goes to VWRA instead.`
+      if (techHalt) note = `QQQM + SMH are ${combined.toFixed(1)}% combined — over the ${phaseCaps.combinedWarning}% warning level for Phase ${activePhase.key}. Buys in both paused this month; money goes to VWRA instead.`
       else if (skipped.length) note = `Skipping ${skipped.map((p) => p.ticker).join(" & ")} this month — near the highest price in the last 12 months. Money redirected to VWRA.`
 
       return { allocations: Object.values(alloc), headline: note ? "Adjusted plan — see note below" : "Standard plan — everything is on track", marketOverlayActive: !!note, overlayNote: note }

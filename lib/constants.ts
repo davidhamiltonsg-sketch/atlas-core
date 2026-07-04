@@ -277,10 +277,11 @@ export const OPERATING_ASSUMPTIONS = {
   // Emergency cash held OUTSIDE this portfolio (so SGOV stays available for deployment).
   emergencyReserveMonths: 6,
   // US estate tax bites on US-sited assets above ~USD 60k for non-US persons (estate-tax risk begins).
-  // Art. XV: migration is MANDATORY when US-sited ETF value exceeds USD 100k (UCITS mandate threshold).
-  // Two-tier: warn at 60k (estate-tax risk live), require migration at 100k.
+  // Art. XV: above USD 100k, a mandatory REVIEW is triggered — migration to Irish UCITS is the
+  // expected outcome but must be confirmed against current law, IBKR availability, and tax advice
+  // before executing. "Mandatory review" not "mandatory execution" because laws change.
   usEstateTaxTriggerUsd:    60_000,   // Art. XV: warn — estate-tax risk begins
-  ucitsMandatoryTriggerUsd: 100_000,  // Art. XV: mandate — UCITS migration required above this
+  ucitsMandatoryTriggerUsd: 100_000,  // Art. XV: mandatory review — migration to UCITS is expected but must be confirmed first
   broker: "IBKR Singapore",
   // Single-broker exposure is accepted; revisit a second custodian on a regulatory change,
   // sanctions/capital-control risk, or once the balance is a material single-point risk.
