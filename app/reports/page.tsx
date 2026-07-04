@@ -13,6 +13,7 @@ import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { ExportPdfButton } from "@/components/reports/export-pdf-button"
 import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
 import { DownloadReportCard } from "@/components/reports/download-report-card"
+import { SbrReportPage } from "@/components/reports/sbr-report-page"
 import {
   ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS, ETF_WEIGHTS_AS_OF,
@@ -358,8 +359,10 @@ function SectionHeader({ icon: Icon, title, sub, badge }: {
 export default async function Reports() {
   const session = await getSession()
   if (!session) redirect("/login")
-  // Look-through here is defined for the Atlas Core ETFs; SBR users use their own surfaces.
-  if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
+  // SBR users get their own dedicated report surface — look-through is Atlas-specific.
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
+    return <SbrReportPage userId={session.userId} userName={session.name ?? ""} isAdmin={session.role === "admin"} />
+  }
 
   const {
     totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
@@ -651,8 +654,8 @@ export default async function Reports() {
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before print-break-avoid">
         <SectionHeader
           icon={FileText}
-          title="What's Happening — Summary"
-          sub="Plain-English overview of your portfolio right now"
+          title="What's Happening — Portfolio Summary"
+          sub="Art. XXII — Plain-English overview; health score, drift status, and any active alerts"
         />
         <div className="px-5 py-4 space-y-2.5">
           {summaryPoints.map((pt, i) => (
@@ -682,7 +685,7 @@ export default async function Reports() {
         <SectionHeader
           icon={Zap}
           title="What To Do — Action Plan"
-          sub="Step-by-step actions, most urgent first"
+          sub="Art. VII / VIII / XII — drift triggers and cap breaches translated into plain-English actions"
           badge={
             <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold ${
               actions.some(a => a.urgency === "critical") ? "bg-red-500/10 text-red-600 dark:text-red-400" :
@@ -721,8 +724,8 @@ export default async function Reports() {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <SectionHeader
             icon={BarChart3}
-            title="Where Your Money Is"
-            sub={`How each holding compares to its target — biggest gap: ${formatPercent(maxDrift, 1, false)}`}
+            title="Where Your Money Is — Allocation vs Target"
+            sub={`Art. IV / VII — drift tolerances and hard caps · biggest gap: ${formatPercent(maxDrift, 1, false)}`}
           />
           <div className="divide-y divide-border">
             {positions.map((p) => {
@@ -783,7 +786,7 @@ export default async function Reports() {
         <SectionHeader
           icon={Layers}
           title="How Spread Out Is Your Portfolio?"
-          sub="Measures how evenly your money is spread — more spread = lower risk"
+          sub="Art. IX — concentration index (HHI); hard limit: single company 13%, single sector 40%"
           badge={
             <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold ${
               concentrationRating === "Concentrated" ? "bg-red-500/10 text-red-500" :
@@ -883,7 +886,7 @@ export default async function Reports() {
         <SectionHeader
           icon={Globe}
           title="Where in the World Is Your Money?"
-          sub="How much of your portfolio is in each region — across all your ETFs combined"
+          sub="Art. IX — geographic concentration look-through; US soft 70%, hard 80%"
           badge={
             geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft
               ? <span className="shrink-0 flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -992,7 +995,7 @@ export default async function Reports() {
         <SectionHeader
           icon={Layers}
           title="Do Your ETFs Own the Same Things?"
-          sub="How much each pair of ETFs shares the same underlying companies (overlap = double-counting risk)"
+          sub="Art. IX — pairwise ETF overlap; high overlap inflates concentration beyond the headline weights"
         />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -1052,7 +1055,7 @@ export default async function Reports() {
         <SectionHeader
           icon={BarChart3}
           title="How Much of Each Company Do You Own?"
-          sub="Your real exposure to individual companies through all ETFs combined — approaching limit · over limit"
+          sub="Art. IX — look-through to individual companies; single-company hard limit 13%; soft warning 10%"
           badge={
             companyAlerts > 0
               ? <span className="shrink-0 flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -1109,7 +1112,7 @@ export default async function Reports() {
         <SectionHeader
           icon={Activity}
           title="Are You Overexposed to Any Theme?"
-          sub="How much of your portfolio depends on each industry or theme — across all ETFs"
+          sub="Art. IX / XII — thematic concentration; combined tech ceiling soft 38%, hard 42%"
           badge={
             sectorAlerts > 0
               ? <span className="shrink-0 flex items-center gap-1 rounded-lg bg-amber-500/10 border border-amber-400/30 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -1187,7 +1190,7 @@ export default async function Reports() {
         <SectionHeader
           icon={BarChart3}
           title="Which ETF Drives Each Theme?"
-          sub="How much each of your ETFs contributes to each thematic exposure"
+          sub="Art. IX — per-ETF contribution to each thematic concentration; identifies which fund to reduce first"
         />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -1252,8 +1255,8 @@ export default async function Reports() {
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before">
         <SectionHeader
           icon={ShieldCheck}
-          title="Your Investment Rules"
-          sub={`${rules.length} active rules across ${ruleCategories.length} categories — these are the guardrails that protect your plan`}
+          title="Governance Compliance — Your Investment Rules"
+          sub={`Art. VII–XII — ${rules.length} active rules across ${ruleCategories.length} categories checked against your live positions`}
           badge={
             <span className="shrink-0 rounded-lg bg-violet-500/10 border border-violet-500/20 px-2.5 py-1 text-xs font-bold text-violet-600 dark:text-violet-400">
               {rules.length} rules active

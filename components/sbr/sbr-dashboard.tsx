@@ -375,7 +375,19 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </div>
           </div>
 
-          {/* 8. Download report */}
+          {/* 8. Road Report — full analysis page */}
+          <Link href="/reports" className="group flex items-center gap-3 rounded-2xl border border-border bg-card/75 backdrop-blur-md px-5 py-4 card-elevated hover:bg-accent/40 hover:border-sky-500/30 hover:-translate-y-0.5 transition-all">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10 shrink-0">
+              <TrendingUp className="h-4 w-4 text-sky-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">Road Report</p>
+              <p className="text-xs text-muted-foreground">Trajectory · phase progress · constitution checks · health scorecard</p>
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-sky-500 transition-colors shrink-0">Open →</span>
+          </Link>
+
+          {/* 9. Download report */}
           {hasBalance && <DownloadReportCard endpoint="/api/reports/sbr" accent="sky" title="Download Your Plan Report" subtitle="A premium PDF — what's happening, what's changed, what's owned, and what to do next." />}
 
         </div>
