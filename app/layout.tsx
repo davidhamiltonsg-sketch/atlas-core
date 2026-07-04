@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${fraunces.variable} ${ibmPlexMono.variable} h-full`} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#6366f1" />
+        <meta name="theme-color" content="#7c3aed" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className="h-full">

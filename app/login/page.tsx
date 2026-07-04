@@ -25,7 +25,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <AtlasCoreMark className="h-16 w-16 drop-shadow-lg mb-4" />
+          <AtlasCoreMark className="h-16 w-16 drop-shadow-lg mb-4 float-soft" />
           <h1 className="text-xl font-bold tracking-tight">Atlas Core</h1>
           <p className="text-xs text-muted-foreground mt-1">v1.5 · GDEA · Sign in to continue</p>
         </div>

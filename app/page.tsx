@@ -29,6 +29,7 @@ import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governa
 import { DecisionLadderCard } from "@/components/cockpit/decision-ladder-card"
 import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { CycleInstruments } from "@/components/cockpit/cycle-instruments"
+import { AnimatedNumber } from "@/components/animated-number"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -536,7 +537,7 @@ export default async function Dashboard() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-5 min-w-0">
+        <div className="space-y-5 min-w-0 reveal-stack">
 
           {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
           {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
@@ -573,7 +574,7 @@ export default async function Dashboard() {
                 <span className="text-xs font-medium text-muted-foreground">Portfolio</span>
                 <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <p className="text-2xl font-black tabular-nums gradient-text">{formatCurrency(d.totalValue, "SGD")}</p>
+              <p className="text-2xl font-black tabular-nums gradient-text"><AnimatedNumber value={d.totalValue} currency="SGD" /></p>
               {d.valueChange !== null ? (
                 <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>
                   {d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}
@@ -584,7 +585,7 @@ export default async function Dashboard() {
             </a>
             <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Health</span>
-              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}>{d.health.overall}</p>
+              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}><AnimatedNumber value={d.health.overall} /></p>
               <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
             </div>
             <a href="/portfolio" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 transition-colors group ${d.driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
@@ -623,7 +624,7 @@ export default async function Dashboard() {
         </div>
 
         {/* Right sidebar */}
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start reveal-stack">
 
           {/* Allocation donut */}
           <div className="rounded-2xl card-lux p-5">
@@ -659,7 +660,7 @@ export default async function Dashboard() {
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">10% p.a. · {d.yearsTo2045} yr</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bar-brand opacity-90" style={{ width: `${d.base2045 > 0 ? Math.min(100, (d.totalValue / d.base2045) * 100) : 0}%` }} />
+                <div className="h-full rounded-full bar-brand bar-fill opacity-90" style={{ width: `${d.base2045 > 0 ? Math.min(100, (d.totalValue / d.base2045) * 100) : 0}%` }} />
               </div>
             </div>
             <div className="rounded-2xl card-lux p-4">
@@ -669,7 +670,7 @@ export default async function Dashboard() {
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "SGD")}</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bar-brand opacity-90" style={{ width: `${Math.max(5, 100 - (d.daysToContribution / 31) * 100)}%` }} />
+                <div className="h-full rounded-full bar-brand bar-fill opacity-90" style={{ width: `${Math.max(5, 100 - (d.daysToContribution / 31) * 100)}%` }} />
               </div>
             </div>
           </div>

@@ -163,7 +163,7 @@ body {
   background: hsl(var(--border));
   border-radius: 99px;
 }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--brand-b) / 0.45); }
 
 /* ─── Status accents (calm-first) ─────────────────────────────────────────── */
 /* v6.5: the interface is deliberately quiet. Status is conveyed by colour + icon,
@@ -332,6 +332,73 @@ a.card-lux:hover, button.card-lux:hover { transform: translateY(-2px); }
 /* ─── Selection tint ──────────────────────────────────────────────────────── */
 ::selection { background: hsl(var(--brand-b) / 0.28); }
 
+/* ─── Motion layer — entrance choreography & tactile feedback ──────────────
+   The page doesn't pop in as one block: sections rise in sequence, hero
+   numbers roll up (AnimatedNumber), progress bars sweep from zero, buttons
+   press and shine. Everything here is decorative and fully disabled under
+   prefers-reduced-motion.                                                    */
+
+/* Staggered entrance: direct children of a .reveal-stack fade + rise in. */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal-stack > * {
+  animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.reveal-stack > *:nth-child(1)  { animation-delay: 0.04s; }
+.reveal-stack > *:nth-child(2)  { animation-delay: 0.10s; }
+.reveal-stack > *:nth-child(3)  { animation-delay: 0.16s; }
+.reveal-stack > *:nth-child(4)  { animation-delay: 0.22s; }
+.reveal-stack > *:nth-child(5)  { animation-delay: 0.28s; }
+.reveal-stack > *:nth-child(6)  { animation-delay: 0.34s; }
+.reveal-stack > *:nth-child(7)  { animation-delay: 0.40s; }
+.reveal-stack > *:nth-child(n+8) { animation-delay: 0.46s; }
+
+/* Progress fills sweep in from zero once on load (composes with .bar-brand
+   or any width-styled fill). */
+@keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bar-fill {
+  transform-origin: left center;
+  animation: bar-grow 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+}
+
+/* Tactile press on interactive cards + brand buttons. */
+a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99); }
+.btn-brand { position: relative; overflow: hidden; }
+.btn-brand:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+/* Shine sweep across the brand button on hover. */
+.btn-brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 32%, rgb(255 255 255 / 0.28) 50%, transparent 68%);
+  transform: translateX(-130%);
+}
+.btn-brand:hover:not(:disabled)::after {
+  transform: translateX(130%);
+  transition: transform 0.65s ease;
+}
+
+/* Shimmer skeleton — branded loading placeholders (app router loading.tsx). */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: hsl(var(--muted) / 0.7);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, hsl(var(--brand-b) / 0.10), transparent);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
 /* ─── Elevated card surfaces ──────────────────────────────────────────────── */
 .surface-1 { background: hsl(var(--card)); }
 .surface-2 { background: hsl(var(--muted)); }
@@ -345,10 +412,12 @@ a.card-lux:hover, button.card-lux:hover { transform: translateY(-2px); }
 /* ─── Motion respect ──────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .ring-hero, .loadbar, .float-soft, .spin-slow, .chart-enter,
-  .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red {
+  .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red,
+  .reveal-stack > *, .bar-fill, .skeleton::after, .btn-brand::after {
     animation: none !important;
   }
-  .card-lux, a.card-lux, .btn-brand { transition: none !important; }
+  .card-lux, a.card-lux, .btn-brand, .btn-brand::after { transition: none !important; }
+  .btn-brand::after { display: none; }
 }
 
 /* ─── Data label style ────────────────────────────────────────────────────── */
