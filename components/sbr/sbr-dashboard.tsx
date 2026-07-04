@@ -8,6 +8,7 @@ import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { computeSbrNextMove, computeSbrDca, computeSbrHealth, sbrPhase, type SbrPosition } from "@/lib/sbr-engine"
 import { computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_SINGLE_COMPANY_LIMIT } from "@/lib/sbr-look-through"
+import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
 import { HoldingsTable, type HoldingRow } from "@/components/dashboard/holdings-table"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 import { getRecentExecutions } from "@/lib/execution-actions"
@@ -30,6 +31,17 @@ const PHASE_MARKS = [
 
 function dimStatus(score: number): SealDimension["status"] {
   return score >= 90 ? "excellent" : score >= 75 ? "good" : score >= 55 ? "caution" : "critical"
+}
+
+// Turns a month count into a plain "Mon YYYY" label — null means the search bound (50
+// years) was hit without reaching the target; 0 means the target is already met.
+function monthsToLabel(months: number | null): string {
+  if (months === null) return "50+ years away at this rate"
+  if (months === 0) return "already there"
+  const d = new Date()
+  d.setDate(1) // avoid month rollover quirks (e.g. Jan 31 + 1 month)
+  d.setMonth(d.getMonth() + months)
+  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
 }
 
 async function getSbrData(userId: string) {
@@ -75,6 +87,18 @@ async function getSbrData(userId: string) {
   const nextMove = computeSbrNextMove(positions, totalValue, { drawdownPct })
   const dca = computeSbrDca(positions, SBR.monthlyContribution, { drawdownPct })
   const dcaByTicker = new Map(dca.allocations.map((a) => [a.ticker, a]))
+
+  // Time to goal — blended from the ACTUAL current fund mix (not target weights), so a
+  // drifted portfolio's projection reflects what's really held, same as everywhere else.
+  const allocMap: Record<string, number> = {}
+  for (const p of positions) allocMap[p.ticker] = p.actualPct
+  const growthRates = sbrBlendedGrowthRate(allocMap)
+  const target = SBR.targetValue ?? 120000
+  const monthsToGoal = {
+    conservative: monthsToTarget(totalValue, SBR.monthlyContribution, growthRates.conservative, target),
+    base:         monthsToTarget(totalValue, SBR.monthlyContribution, growthRates.base, target),
+    aggressive:   monthsToTarget(totalValue, SBR.monthlyContribution, growthRates.aggressive, target),
+  }
 
   // Governance status
   const smh = positions.find((p) => p.ticker === "SMH")
@@ -152,7 +176,7 @@ async function getSbrData(userId: string) {
   return {
     totalValue, valueChange, phase, nextMove, dca, holdingsRows, govAlignment, health,
     marketStale: market.stale, marketAsOf: market.asOf, lastDone: recentExec[0] ?? null,
-    historyPoints, complianceBands, donutData,
+    historyPoints, complianceBands, donutData, growthRates, monthsToGoal,
   }
 }
 
@@ -233,6 +257,13 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-0.5 -mx-0.5">
           <span>SGD 0</span><span>72k</span><span>102k</span><span>114k</span><span>120k</span>
         </div>
+        {hasBalance && (
+          <p className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground leading-relaxed">
+            At SGD {SBR.monthlyContribution.toLocaleString()}/month and your current fund mix ({(d.growthRates.base * 100).toFixed(1)}% growth a year, blended from what you actually hold),
+            {" "}projected to reach your goal around <span className="font-semibold text-foreground">{monthsToLabel(d.monthsToGoal.base)}</span>
+            {" "}— could be as early as {monthsToLabel(d.monthsToGoal.aggressive)} or as late as {monthsToLabel(d.monthsToGoal.conservative)} depending on returns.
+          </p>
+        )}
       </div>
 
       {/* Empty-state welcome — covers both "nothing entered yet" and "funds set but showing S$0" */}
