@@ -2,6 +2,7 @@ import { Shell } from "@/components/shell"
 import { FileText, Layers, ShieldCheck } from "lucide-react"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { formatCurrency } from "@/lib/utils"
+import { ThresholdGauge, type ThresholdGaugeRow } from "@/components/governance/threshold-gauge"
 
 const HIDDEN_EXPOSURE = [
   { label: "Single company", limit: "10%", action: "Put new contributions into other funds until it drops below 10%." },
@@ -11,10 +12,23 @@ const HIDDEN_EXPOSURE = [
   { label: "US dollar assets (total)", limit: "85%", action: "Build up A35 (SGD bonds) as you get closer to the property goal." },
 ]
 
-export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: boolean }) {
+export function SbrConstitution({ name, isAdmin, allocMap = {} }: { name: string; isAdmin: boolean; allocMap?: Record<string, number> }) {
   const rulesByCat = SBR.rules.reduce<Record<string, typeof SBR.rules>>((acc, r) => {
     (acc[r.category] ??= []).push(r); return acc
   }, {})
+
+  // Live gauge rows derived from the same fund rule numbers as the "Strategic allocation"
+  // table above — a fund with no hardCap (A35) is floor-based, so its hard "high" bound is
+  // presentational only (a wide ceiling for the bar's scale, not an enforced limit).
+  const gaugeRows: ThresholdGaugeRow[] = SBR.funds.map((f) => {
+    const hardLow = f.floor ?? 0
+    const hardHigh = f.hardCap ?? Math.max(f.rangeHigh + 10, 30)
+    return {
+      ticker: f.ticker, color: f.color, classification: f.role, target: f.target,
+      hardLow, hardHigh, softLow: hardLow, softHigh: hardHigh,
+      healthyLow: f.rangeLow, healthyHigh: f.rangeHigh,
+    }
+  })
 
   return (
     <Shell title="The Plan" subtitle={`Silicon Brick Road v${SBR.version} · ${SBR.motto}`} userName={name} isAdmin={isAdmin}>
@@ -36,7 +50,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
       </div>
 
       {/* Strategic allocation */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl card-lux overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border"><h2 className="text-sm font-semibold">How to Split Your Money</h2><p className="mt-0.5 text-xs text-muted-foreground">Four funds. When something drifts, new money fixes it. If something hits its hard limit, you must act.</p></div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs min-w-[640px]">
@@ -70,8 +84,19 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
         </div>
       </div>
 
+      {/* Live fund gauges */}
+      <div className="rounded-xl card-lux overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">Where Each Fund Stands Right Now</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Your current percentage vs the comfortable range (green), the warning zone (amber), and the hard limit (red)
+          </p>
+        </div>
+        <ThresholdGauge rows={gaugeRows} allocMap={allocMap} />
+      </div>
+
       {/* Decision engine */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl card-lux overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border"><h2 className="text-sm font-semibold">What to Do Each Month</h2><p className="mt-0.5 text-xs text-muted-foreground">Go through this checklist in order. Stop at the first step that applies. There is always one clear answer.</p></div>
         <div className="divide-y divide-border">
           {SBR.decisionLadder.map((s) => (
@@ -84,7 +109,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
       </div>
 
       {/* Phases */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl card-lux overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border flex items-center gap-2"><Layers className="h-4 w-4 text-sky-400" /><h2 className="text-sm font-semibold">The Four Phases of Your Journey</h2></div>
         <div className="divide-y divide-border">
           {(SBR.phases ?? []).map((p) => (
@@ -97,7 +122,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
       </div>
 
       {/* Hidden exposure */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
+      <div className="rounded-xl card-lux overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border"><h2 className="text-sm font-semibold">What You Actually Own (Inside the Funds)</h2><p className="mt-0.5 text-xs text-muted-foreground">VWRA, QQQM and SMH all hold many of the same companies. These limits stop you accidentally over-concentrating without realising it. Check quarterly using each fund&apos;s factsheet.</p></div>
         <div className="overflow-x-auto"><table className="w-full text-xs min-w-[560px]">
           <thead><tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30"><th className="px-5 py-2.5">Exposure type</th><th className="px-3 py-2.5 text-right">Limit</th><th className="px-5 py-2.5">What to do if over the limit</th></tr></thead>
@@ -109,7 +134,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
       <div className="mb-2"><h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">The Rules</h2></div>
       <div className="space-y-4 mb-6">
         {Object.entries(rulesByCat).map(([cat, rules]) => (
-          <div key={cat} className="rounded-xl border border-border bg-card overflow-hidden">
+          <div key={cat} className="rounded-xl card-lux overflow-hidden">
             <div className="px-5 py-2.5 border-b border-border bg-muted/30"><p className="text-[10px] font-bold uppercase tracking-wider text-sky-400">{cat}</p></div>
             <div className="divide-y divide-border">
               {rules.map((r) => (<div key={r.title} className="px-5 py-3"><p className="text-xs font-semibold">{r.title}</p><p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{r.description}</p></div>))}
@@ -119,7 +144,7 @@ export function SbrConstitution({ name, isAdmin }: { name: string; isAdmin: bool
       </div>
 
       {/* Scorecard */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl card-lux overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-sky-400" /><h2 className="text-sm font-semibold">Monthly Health Check</h2><span className="ml-auto text-[11px] text-muted-foreground">Target score ≥ 95%</span></div>
         <div className="overflow-x-auto"><table className="w-full text-xs min-w-[560px]">
           <thead><tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30"><th className="px-5 py-2.5">What we check</th><th className="px-3 py-2.5 text-right">Weight</th><th className="px-5 py-2.5">Pass condition</th></tr></thead>

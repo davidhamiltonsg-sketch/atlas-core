@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
-import { FileText, ChevronRight } from "lucide-react"
+import { FileText, ChevronRight, TrendingUp } from "lucide-react"
 import { getSbrMarketData } from "@/lib/sbr-market"
 import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
@@ -295,16 +295,19 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
           {/* 2. KPI strip — portfolio snapshot above the fold, before compliance details */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <a href="/ytd" className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
-              <p className="text-xl font-black tabular-nums">{formatCurrency(d.totalValue, "SGD")}</p>
+            <a href="/ytd" className="rounded-2xl card-lux p-4 flex flex-col gap-2 group">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
+                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <p className="text-xl font-black tabular-nums gradient-text"><AnimatedNumber value={d.totalValue} currency="SGD" /></p>
               {d.valueChange !== null
                 ? <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>{d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}</p>
                 : <p className="text-[11px] text-muted-foreground">SGD · base currency</p>}
             </a>
             <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Health Score</span>
-              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}>{d.health.overall}</p>
+              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}><AnimatedNumber value={d.health.overall} /></p>
               <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
             </div>
             <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
@@ -312,10 +315,12 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
               <p className="text-xl font-black tabular-nums text-sky-400">{d.phase.key}</p>
               <p className="text-[11px] text-muted-foreground">{d.phase.range}</p>
             </div>
-            <a href="/governance" className="rounded-2xl card-lux p-4 flex flex-col gap-2">
+            <a href="/governance" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${
+              d.govAlignment.overall === "breach" ? "border-red-500/30" : d.govAlignment.overall === "watch" ? "border-amber-400/40" : "border-border hover:border-primary/30"
+            }`}>
               <span className="text-xs font-medium text-muted-foreground">Governance</span>
               <p className={`text-xl font-black tabular-nums ${d.govAlignment.overall === "breach" ? "text-red-500" : d.govAlignment.overall === "watch" ? "text-amber-500" : "text-green-500"}`}>
-                {d.govAlignment.breaches + d.govAlignment.watches === 0 ? "OK" : `${d.govAlignment.breaches + d.govAlignment.watches}`}
+                {d.govAlignment.breaches + d.govAlignment.watches === 0 ? "OK" : <AnimatedNumber value={d.govAlignment.breaches + d.govAlignment.watches} />}
               </p>
               <p className="text-[11px] text-muted-foreground">{d.govAlignment.breaches} breach · {d.govAlignment.watches} watch</p>
             </a>

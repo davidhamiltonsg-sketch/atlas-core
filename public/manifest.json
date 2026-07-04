@@ -1,11 +1,11 @@
 {
-  "name": "Atlas Core",
+  "name": "Atlas Universe",
   "short_name": "Atlas",
-  "description": "Personal investment operating system — governed digital economy portfolio",
+  "description": "Two constitutions, one discipline — governed investment dashboards for Atlas Core and Silicon Brick Road",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f13",
-  "theme_color": "#6366f1",
+  "background_color": "#12101c",
+  "theme_color": "#dfaf4b",
   "orientation": "portrait-primary",
   "icons": [
     {
