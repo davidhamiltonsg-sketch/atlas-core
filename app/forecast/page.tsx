@@ -1,58 +1,25 @@
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
-import { TrendingUp, Landmark, Zap } from "lucide-react"
+import { Landmark, Zap } from "lucide-react"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection } from "@/lib/forecast"
 
-// Reference rates — verified Jun 2026 (update the date when you refresh these).
-const BENCHMARKS_AS_OF = "Jun 2026"
-const SINGAPORE_SAVINGS_RATE = 0.030  // SG high-yield savings / T-bill proxy, as of BENCHMARKS_AS_OF
-const VT_HISTORICAL_RATE = 0.095      // VT (Total World) long-run CAGR proxy, as of BENCHMARKS_AS_OF
-const CONE_VOL_DEFAULT = 0.15         // fallback annual vol for the P10/P90 band when history is thin
+const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
+const VT_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VT.base // VT (Total World) long-run CAGR proxy — single source with the blend
+const CONE_VOL_DEFAULT = 0.15 // fallback annual vol for the P10/P90 band when history is thin
 
-const returnScenarios = [
-  { label: "Conservative", rate: 0.05, rateLabel: "5% p.a.", color: "#a78bfa" },
-  { label: "Base Case",    rate: 0.10, rateLabel: "10% p.a.", color: "#6366f1" },
-  { label: "Aggressive",  rate: 0.15, rateLabel: "15% p.a.", color: "#22c55e" },
+const SCENARIO_META = [
+  { key: "conservative" as const, label: "Conservative", color: "#a78bfa" },
+  { key: "base" as const,         label: "Base Case",    color: "#6366f1" },
+  { key: "aggressive" as const,   label: "Aggressive",   color: "#22c55e" },
 ]
 
 const horizons = [10, 15, 19]
-
-function projectPortfolio(
-  currentValue: number,
-  monthlyContribution: number,
-  annualLumpSum: number,
-  annualRate: number,
-  years: number,
-  contributionGrowthRate: number
-): number {
-  let value = currentValue
-  const monthlyRate = annualRate / 12
-  for (let year = 0; year < years; year++) {
-    const contribution = monthlyContribution * Math.pow(1 + contributionGrowthRate, year)
-    for (let month = 0; month < 12; month++) {
-      value = value * (1 + monthlyRate) + contribution
-    }
-    value += annualLumpSum // annual top-up applied every year (incl. the first)
-  }
-  return value
-}
-
-function toReal(nominal: number, years: number, cpi = 0.025): number {
-  return nominal / Math.pow(1 + cpi, years)
-}
-
-// Log-normal P10/P90 cone around the base projection.
-// Approximation: scale base value by exp(±1.28 × σ × √n).
-// This is conservative since contributions reduce variance vs. lump-sum.
-function coneProjection(base: number, yr: number, z: number, vol: number): number {
-  if (yr === 0) return base
-  return base * Math.exp(z * vol * Math.sqrt(yr))
-}
 
 async function getForecastData(userId: string) {
   const holdings = await db.holding.findMany({
@@ -61,11 +28,18 @@ async function getForecastData(userId: string) {
   })
   // Current value = sum of each holding's latest snapshot (matches the rest of the app).
   const currentValue = holdings.reduce((sum, h) => sum + (h.snapshots[h.snapshots.length - 1]?.value ?? 0), 0)
+  // Actual current allocation — feeds the blended growth-rate assumption, so the forecast
+  // reflects what's really held (drifted or not), not the target weights.
+  const allocMap: Record<string, number> = {}
+  for (const h of holdings) {
+    const value = h.snapshots[h.snapshots.length - 1]?.value ?? 0
+    allocMap[h.ticker] = currentValue > 0 ? (value / currentValue) * 100 : 0
+  }
   // Cone vol = the portfolio's REAL annualised volatility (same method as the Risk page),
   // clamped to a sane band; fall back to the long-run equity default when history is thin.
   const realVol = annualisedVolatility(buildPortfolioTimeline(holdings))
   const coneVol = realVol === null ? CONE_VOL_DEFAULT : Math.min(0.30, Math.max(0.08, realVol))
-  return { currentValue, coneVol, volIsReal: realVol !== null }
+  return { currentValue, allocMap, coneVol, volIsReal: realVol !== null }
 }
 
 export default async function Forecast() {
@@ -79,11 +53,23 @@ export default async function Forecast() {
     getForecastData(session.userId),
     db.user.findUnique({ where: { id: session.userId } }),
   ])
-  const { currentValue, coneVol, volIsReal } = forecast
+  const { currentValue, allocMap, coneVol, volIsReal } = forecast
 
   const MONTHLY_CONTRIBUTION = user?.monthlyContribution ?? 3000
   const ANNUAL_LUMP_SUM = user?.annualLumpSum ?? 20000
   const CONTRIBUTION_GROWTH_RATE = user?.contributionGrowthRate ?? 0.05
+  const RISK_FREE_RATE = user?.riskFreeRate ?? 0.04
+
+  // Growth-rate assumptions blended from the portfolio's ACTUAL current holdings (not the
+  // target weights) — a portfolio that has drifted toward more BTC/QQQM sees that reflected
+  // here, same as every other computation in the app. The buffer (SGOV) portion uses the
+  // user's own Settings risk-free-rate assumption.
+  const rates = blendedGrowthRates(allocMap, RISK_FREE_RATE)
+  const returnScenarios = SCENARIO_META.map((s) => ({
+    ...s,
+    rate: rates[s.key],
+    rateLabel: `${(rates[s.key] * 100).toFixed(1)}% p.a.`,
+  }))
 
   const startYear = new Date().getFullYear()
 
@@ -91,15 +77,15 @@ export default async function Forecast() {
   const chartData: ExtendedForecastPoint[] = []
   for (let yr = 0; yr <= 19; yr++) {
     const year = startYear + yr
-    const conservative = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.05, yr, CONTRIBUTION_GROWTH_RATE)
-    const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
-    const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, 0.15, yr, CONTRIBUTION_GROWTH_RATE)
-    const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, SINGAPORE_SAVINGS_RATE, yr, CONTRIBUTION_GROWTH_RATE)
+    const conservative = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.conservative, yr, CONTRIBUTION_GROWTH_RATE)
+    const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
+    const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.aggressive, yr, CONTRIBUTION_GROWTH_RATE)
+    const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, yr, CONTRIBUTION_GROWTH_RATE)
     const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, VT_HISTORICAL_RATE, yr, CONTRIBUTION_GROWTH_RATE)
     const coneP10      = coneProjection(base, yr, -1.28, coneVol)
     const coneP90      = coneProjection(base, yr,  1.28, coneVol)
-    const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
-    const contribHigh  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 1.2, ANNUAL_LUMP_SUM, 0.10, yr, CONTRIBUTION_GROWTH_RATE)
+    const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
+    const contribHigh  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 1.2, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
     chartData.push({
       year,
       label: String(year),
@@ -133,7 +119,7 @@ export default async function Forecast() {
 
   const savingsValues = horizons.map((years) => ({
     years,
-    projected: projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, SINGAPORE_SAVINGS_RATE, years, CONTRIBUTION_GROWTH_RATE),
+    projected: projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, years, CONTRIBUTION_GROWTH_RATE),
   }))
 
   const maxProjected = projections[2].values[2].projected
@@ -170,12 +156,12 @@ export default async function Forecast() {
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Base Case — 2045</p>
           <p className="mt-1 text-xl font-black tabular-nums gradient-text">{fmtM(base2045)}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">10% p.a. · 19 years</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{(rates.base * 100).toFixed(1)}% p.a. · 19 years</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Aggressive — 2045</p>
           <p className="mt-1 text-xl font-black tabular-nums text-green-500">{fmtM(aggressive2045)}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">15% p.a. · 19 years</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{(rates.aggressive * 100).toFixed(1)}% p.a. · 19 years</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Base vs Bank Savings</p>
@@ -217,6 +203,7 @@ export default async function Forecast() {
           { label: "Monthly Contribution", value: `S$${MONTHLY_CONTRIBUTION.toLocaleString()}`, sub: "SGD/month" },
           { label: "Annual Lump Sum",       value: `S$${ANNUAL_LUMP_SUM.toLocaleString()}`, sub: "SGD/year" },
           { label: "Contribution Growth",   value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`, sub: "Annual increase" },
+          { label: "Base Growth Rate",      value: `${(rates.base * 100).toFixed(1)}% p.a.`, sub: `From your holdings mix, as of ${BENCHMARKS_AS_OF}` },
           { label: "Horizon",               value: "2045", sub: "19 years remaining" },
         ].map(({ label, value, sub }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-1.5">
@@ -267,10 +254,10 @@ export default async function Forecast() {
         <div className="flex items-center gap-2 mb-1">
           <Landmark className="h-3.5 w-3.5 text-muted-foreground" />
           <h3 className="text-sm font-semibold">Bank Savings Reference</h3>
-          <span className="text-xs text-muted-foreground ml-auto">{(SINGAPORE_SAVINGS_RATE * 100).toFixed(1)}% p.a.</span>
+          <span className="text-xs text-muted-foreground ml-auto">{(RISK_FREE_RATE * 100).toFixed(1)}% p.a.</span>
         </div>
         <p className="text-[11px] text-muted-foreground mb-5">
-          Singapore high-yield savings / fixed deposit rate (approximate, as of {BENCHMARKS_AS_OF}) · same contributions · SGD-denominated.
+          Your Settings risk-free-rate assumption ({(RISK_FREE_RATE * 100).toFixed(1)}% — a T-bill / high-yield savings proxy, editable on the Settings page) · same contributions · SGD-denominated.
           {" "}P10/P90 cone uses {(coneVol * 100).toFixed(0)}% annual volatility ({volIsReal ? "your portfolio's actual history" : `default — too little history yet`}).
         </p>
         <div className="space-y-4">
@@ -347,8 +334,8 @@ export default async function Forecast() {
         </div>
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
-            Bank savings rate approximates Singapore DBS/OCBC/UOB high-yield savings and fixed deposit rates as of 2025.
-            "Base vs Savings" shows how many times larger the base case portfolio becomes versus the savings reference.
+            Bank savings rate uses your own Settings risk-free-rate assumption ({(RISK_FREE_RATE * 100).toFixed(1)}%) — a T-bill / high-yield savings proxy.
+            &ldquo;Base vs Savings&rdquo; shows how many times larger the base case portfolio becomes versus the savings reference.
           </p>
         </div>
       </div>

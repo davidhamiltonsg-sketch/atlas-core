@@ -13,6 +13,7 @@
 import { SILICON_BRICK_ROAD as SBR } from "../lib/constitutions"
 import { computeSbrNextMove, computeSbrDca, type SbrPosition } from "../lib/sbr-engine"
 import { computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_SINGLE_COMPANY_LIMIT } from "../lib/sbr-look-through"
+import { sbrBlendedGrowthRate, monthsToTarget, SBR_ASSET_EXPECTED_RETURNS } from "../lib/sbr-forecast"
 
 let failures = 0
 let passes = 0
@@ -182,6 +183,27 @@ eq("heavy tilt → single-company still within limit", heavy.singleCompanyOver, 
 const onTarget = computeSbrLookThrough([{ ticker: "VWRA", actualPct: 50 }, { ticker: "QQQM", actualPct: 25 }, { ticker: "SMH", actualPct: 15 }, { ticker: "A35", actualPct: 10 }])
 eq("on-target → within technology limit", onTarget.technologyOver, false)
 eq("on-target → within single-company limit", onTarget.singleCompanyOver, false)
+
+// ── Time-to-goal forecast (lib/sbr-forecast.ts) ───────────────────────────────
+console.log("\nTime-to-goal forecast")
+{
+  const vwra = sbrBlendedGrowthRate({ VWRA: 100 })
+  eq("100% VWRA → base matches VWRA's own rate", vwra.base, SBR_ASSET_EXPECTED_RETURNS.VWRA.base)
+  const a35 = sbrBlendedGrowthRate({ A35: 100 })
+  eq("100% A35 → base matches A35's own rate", a35.base, SBR_ASSET_EXPECTED_RETURNS.A35.base)
+
+  const mix = sbrBlendedGrowthRate({ VWRA: 50, QQQM: 25, SMH: 15, A35: 10 })
+  const heldBase = ["VWRA", "QQQM", "SMH", "A35"].map((t) => SBR_ASSET_EXPECTED_RETURNS[t].base)
+  eq("on-target mix → base within [min, max] of held funds' rates",
+    mix.base >= Math.min(...heldBase) && mix.base <= Math.max(...heldBase), true)
+
+  eq("already at target → 0 months", monthsToTarget(120000, 2000, 0.07, 120000), 0)
+  eq("zero rate, exact arithmetic → 2 months for $2000 at $1000/mo", monthsToTarget(0, 1000, 0, 2000), 2)
+
+  const slow = monthsToTarget(10000, 2000, 0.03, 120000)!
+  const fast = monthsToTarget(10000, 2000, 0.12, 120000)!
+  eq("higher growth rate → fewer (or equal) months to target", fast <= slow, true)
+}
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)

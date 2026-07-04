@@ -31,31 +31,13 @@ import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockp
 import { CycleInstruments } from "@/components/cockpit/cycle-instruments"
 import { AnimatedNumber } from "@/components/animated-number"
 import { PortfolioChooser } from "@/components/portfolio-chooser"
+import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
 const DEFAULT_ANNUAL_LUMP_SUM = 20000
 const DEFAULT_GROWTH_RATE = 0.05
-
-function projectPortfolio(
-  currentValue: number,
-  monthlyContribution: number,
-  annualLumpSum: number,
-  annualRate: number,
-  years: number,
-  contributionGrowthRate: number
-): number {
-  let value = currentValue
-  const monthlyRate = annualRate / 12
-  for (let year = 0; year < years; year++) {
-    const contribution = monthlyContribution * Math.pow(1 + contributionGrowthRate, year)
-    for (let month = 0; month < 12; month++) {
-      value = value * (1 + monthlyRate) + contribution
-    }
-    value += annualLumpSum
-  }
-  return value
-}
+const DEFAULT_RISK_FREE_RATE = 0.04
 
 type ActionStatus = "healthy" | "soft" | "hard"
 
@@ -228,9 +210,17 @@ async function getDashboardData(userId: string) {
   const monthlyContribution = user?.monthlyContribution ?? DEFAULT_MONTHLY
   const annualLumpSum = user?.annualLumpSum ?? DEFAULT_ANNUAL_LUMP_SUM
   const contributionGrowthRate = user?.contributionGrowthRate ?? DEFAULT_GROWTH_RATE
+  const riskFreeRate = user?.riskFreeRate ?? DEFAULT_RISK_FREE_RATE
+
+  // Growth-rate assumption blended from the portfolio's ACTUAL current holdings (post
+  // Bitcoin-sleeve merge) — single source shared with the Forecast page, so this tile and
+  // that page can never quote a different rate for the same portfolio.
+  const allocMap: Record<string, number> = {}
+  for (const p of positions) allocMap[p.ticker] = p.actualPct
+  const rates = blendedGrowthRates(allocMap, riskFreeRate)
 
   const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
-  const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, 0.10, yearsTo2045, contributionGrowthRate)
+  const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate)
 
   const startOfYear = new Date(new Date().getFullYear(), 0, 1)
   const dayOfYear = Math.floor((Date.now() - startOfYear.getTime()) / 86_400_000)
@@ -242,7 +232,7 @@ async function getDashboardData(userId: string) {
   let targetNow: number | null = null
   if (startOfYearValue > 0 && monthsElapsed > 0) {
     let v = startOfYearValue + annualLumpSum
-    const mRate = 0.10 / 12
+    const mRate = rates.base / 12
     for (let m = 0; m < monthsElapsed; m++) v = v * (1 + mRate) + monthlyContribution
     targetNow = v
   }
@@ -450,7 +440,7 @@ async function getDashboardData(userId: string) {
     totalValue, hasBalance, positions, holdingsRows, driftAlerts, maxDrift,
     activeRules, totalRules, snapshotAgeDays, health, hardBreaches, softBreaches,
     donutData, daysSinceUpdate, latestSnapshotDate: latestSnapshotDate?.toISOString() ?? null,
-    base2045, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints,
+    base2045, baseRate: rates.base, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints,
     valueChange, monthlyContribution, annualLumpSum, usdSgdRate, onTrackPct,
     marketStale: marketSnapshot.stale,
     bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
@@ -663,7 +653,7 @@ export default async function Dashboard() {
                   ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M`
                   : `S$${(d.base2045 / 1_000).toFixed(0)}K`}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">10% p.a. · {d.yearsTo2045} yr</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{(d.baseRate * 100).toFixed(1)}% p.a. · {d.yearsTo2045} yr</p>
               <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
                 <div className="h-full rounded-full bar-brand bar-fill opacity-90" style={{ width: `${d.base2045 > 0 ? Math.min(100, (d.totalValue / d.base2045) * 100) : 0}%` }} />
               </div>
