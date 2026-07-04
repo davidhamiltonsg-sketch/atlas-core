@@ -4,7 +4,8 @@ import { redirect } from "next/navigation"
 import bcrypt from "bcryptjs"
 import { headers } from "next/headers"
 import { db } from "@/lib/db"
-import { createSession } from "@/lib/session"
+import { createSession, setPortfolioHint } from "@/lib/session"
+import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // ── Simple in-memory rate limiter ────────────────────────────────────────────
 // Tracks failed attempts per IP. Resets after WINDOW_MS.
@@ -85,6 +86,7 @@ export async function loginAction(formData: FormData) {
     name: user.name,
     role: user.role,
   })
+  await setPortfolioHint(constitutionIdForEmail(user.email))
 
   redirect("/")
 }

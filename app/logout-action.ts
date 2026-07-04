@@ -1,9 +1,10 @@
 "use server"
 
 import { redirect } from "next/navigation"
-import { deleteSession } from "@/lib/session"
+import { deleteSession, clearPortfolioHint } from "@/lib/session"
 
 export async function logoutAction() {
   await deleteSession()
-  redirect("/login")
+  await clearPortfolioHint()
+  redirect("/")
 }
