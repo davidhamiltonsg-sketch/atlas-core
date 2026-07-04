@@ -238,6 +238,18 @@ body {
   background-clip: text;
 }
 
+/* ─── Atlas Universe — the meta-brand bridging both portfolios ─────────────
+   Violet (Atlas) → gold → sky (SBR). Not arbitrary: gold is the one accent
+   both heraldic crests already share (the filigree rim, the crown, the
+   cradle, the home) — reusing it here as the bridge is what makes "Atlas
+   Universe" read as kin to both houses, not a third unrelated brand. */
+.gradient-text-universe {
+  background: linear-gradient(100deg, #a78bfa 0%, #dfaf4b 50%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* ─── Aurora mesh background — painted behind every page via the theme root ──
    The shell root carries data-theme; its ::before is a fixed, non-interactive
    layer of brand-hued radial washes. Screen only (never print).              */

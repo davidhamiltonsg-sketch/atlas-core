@@ -1,4 +1,4 @@
-import { AtlasCoreMark, SbrMark } from "@/components/brand/brand-mark"
+import { AtlasCoreMark, SbrMark, AtlasUniverseMark } from "@/components/brand/brand-mark"
 import { getPortfolioHint } from "@/lib/session"
 
 // Branded loading splash — shown while a page's live data (prices, holdings) loads,
@@ -93,31 +93,25 @@ export default async function Loading() {
     )
   }
 
-  // No hint yet (not signed in, or just logged out) — show both crests; we
-  // don't know which portfolio this visitor is headed for.
+  // No hint yet (not signed in, or just logged out) — its own brandmark: two
+  // interlocking rings, violet and sky, meeting at a gold star. "Two
+  // constitutions, one discipline" made visual, not two logos side by side.
   return (
     <SplashShell
-      background="radial-gradient(120% 120% at 50% 0%, hsl(255 28% 9%) 0%, hsl(255 28% 5%) 60%)"
-      glow="radial-gradient(circle, rgba(124,58,237,0.35), transparent 60%)"
+      background="radial-gradient(120% 120% at 50% 0%, hsl(250 24% 8%) 0%, hsl(250 24% 5%) 60%)"
+      glow="radial-gradient(60% 60% at 20% 20%, rgba(124,58,237,0.35), transparent 65%), radial-gradient(60% 60% at 80% 20%, rgba(14,165,233,0.35), transparent 65%)"
     >
-      <div className="flex items-center gap-6">
-        <SpinningMark
-          Mark={AtlasCoreMark}
-          conic="conic-gradient(from 0deg, transparent 0%, #a78bfa 20%, #c084fc 45%, #e879f9 60%, transparent 80%)"
-          glowShadow="0 12px 30px rgba(124,58,237,0.45)"
-        />
-        <SpinningMark
-          Mark={SbrMark}
-          conic="conic-gradient(from 0deg, transparent 0%, #38bdf8 20%, #3b82f6 45%, #22d3ee 60%, transparent 80%)"
-          glowShadow="0 12px 30px rgba(14,165,233,0.45)"
-        />
-      </div>
+      <SpinningMark
+        Mark={AtlasUniverseMark}
+        conic="conic-gradient(from 0deg, transparent 0%, #a78bfa 20%, #dfaf4b 45%, #38bdf8 60%, transparent 80%)"
+        glowShadow="0 14px 34px rgba(223,175,75,0.35)"
+      />
       <div className="text-center">
-        <p className="text-lg font-bold tracking-tight text-white">Atlas Universe</p>
-        <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-slate-300/70">Choose Your Portfolio</p>
+        <p className="text-2xl font-bold tracking-tight gradient-text-universe pb-1">Atlas Universe</p>
+        <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-slate-300/70">Two Constitutions, One Discipline</p>
       </div>
       <div className="h-1 w-44 overflow-hidden rounded-full bg-white/10">
-        <div className="loadbar h-full w-1/3 rounded-full bg-gradient-to-r from-violet-400 via-slate-300 to-sky-400" />
+        <div className="loadbar h-full w-1/3 rounded-full bg-gradient-to-r from-violet-400 via-amber-300 to-sky-400" />
       </div>
       <p className="text-[11px] text-slate-400/80">Loading…</p>
     </SplashShell>

@@ -184,3 +184,78 @@ export function BrandMark({
     <AtlasCoreMark className={className} />
   )
 }
+
+// Atlas Universe — the meta-brand's own mark. Same shield family as the two
+// portfolio crests (silhouette + gold filigree rim, so it reads as kin to
+// both), but its own charge: two interlocking rings — violet (Atlas) and sky
+// (Silicon Brick Road) — meeting at a single gold star where they overlap.
+// "Two constitutions, one discipline" made literal, not just stated in copy.
+export function AtlasUniverseMark({ className }: { className?: string }) {
+  const uid = useSvgId()
+  const id = (s: string) => `au${uid}${s}`
+  const url = (s: string) => `url(#${id(s)})`
+  return (
+    <svg viewBox="0 0 64 64" className={className} role="img" aria-label="Atlas Universe crest">
+      <defs>
+        <linearGradient id={id("fill")} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#1a1030" />
+          <stop offset="1" stopColor="#071a2e" />
+        </linearGradient>
+        <linearGradient id={id("edge")} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#a78bfa" />
+          <stop offset="0.5" stopColor="#dfaf4b" />
+          <stop offset="1" stopColor="#38bdf8" />
+        </linearGradient>
+        <linearGradient id={id("gold")} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f6e27a" />
+          <stop offset="0.55" stopColor="#dfaf4b" />
+          <stop offset="1" stopColor="#b07d2e" />
+        </linearGradient>
+        <linearGradient id={id("violetRing")} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#c4b5fd" />
+          <stop offset="1" stopColor="#a78bfa" />
+        </linearGradient>
+        <linearGradient id={id("skyRing")} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#7dd3fc" />
+          <stop offset="1" stopColor="#38bdf8" />
+        </linearGradient>
+      </defs>
+
+      {/* Shield */}
+      <path d={SHIELD} fill={url("fill")} stroke={url("edge")} strokeWidth="1.6" />
+      <path
+        d={SHIELD}
+        fill="none"
+        stroke={url("gold")}
+        strokeWidth="0.9"
+        opacity="0.5"
+        transform="translate(32 31.8) scale(0.9) translate(-32 -31.8)"
+      />
+      <ellipse cx="32" cy="13.5" rx="19" ry="8" fill="#ffffff" opacity="0.05" />
+
+      {/* Crown */}
+      <path
+        d="M24.5 17.5L26.8 11.2L30 15.2L32 9.5L34 15.2L37.2 11.2L39.5 17.5Z"
+        fill={url("gold")}
+      />
+
+      {/* Two interlocking rings — the two constitutions */}
+      <circle cx="26.5" cy="31.5" r="9.5" fill="none" stroke={url("violetRing")} strokeWidth="1.7" />
+      <circle cx="37.5" cy="31.5" r="9.5" fill="none" stroke={url("skyRing")} strokeWidth="1.7" />
+
+      {/* The one discipline — where they meet */}
+      <path d={STAR} transform="translate(32 31.5) scale(1.15)" fill={url("gold")} />
+
+      {/* Gold cradle — strength beneath both houses */}
+      <path
+        d="M16.5 43.2Q32 52.5 47.5 43.2"
+        fill="none"
+        stroke={url("gold")}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <circle cx="16.5" cy="43.2" r="1.15" fill={url("gold")} />
+      <circle cx="47.5" cy="43.2" r="1.15" fill={url("gold")} />
+    </svg>
+  )
+}

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { AnimatedNumber } from "@/components/animated-number"
 
@@ -18,6 +19,10 @@ interface Props {
   // Shown when the score is below 65. Defaults to the Atlas Core wording; Silicon Brick Road
   // passes a plain-English version so no Article citation / "discretionary" jargon leaks in.
   lowScoreWarning?: string
+  // When set, the whole seal becomes a click-through to the governance/rules page for
+  // whichever portfolio is rendering it (both pass "/governance" today).
+  href?: string
+  hrefLabel?: string
 }
 
 const dimBadgeColor = (status: SealDimension["status"]) => ({
@@ -29,7 +34,7 @@ const dimBadgeColor = (status: SealDimension["status"]) => ({
 
 /** Circular governance score ring with dimension breakdown. Works for Atlas Core and SBR. */
 export function GovernanceSeal({ overall, overallLabel, dimensions, constitutionLabel, narrative,
-  lowScoreWarning = "⛔ No new discretionary trade until breach resolved and logged · Art. XXII" }: Props) {
+  lowScoreWarning = "⛔ No new discretionary trade until breach resolved and logged · Art. XXII", href, hrefLabel = "View rules →" }: Props) {
   const r = 45
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - overall / 100)
@@ -42,10 +47,19 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
     overall >= 65 ? "stroke-amber-500" :
     "stroke-red-500"
 
+  const Wrapper = href ? Link : "div"
+  const wrapperProps = href ? { href } : {}
+
   return (
-    <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+    <Wrapper
+      {...(wrapperProps as { href: string })}
+      className={cn(
+        "group rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center relative",
+        href && "transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+      )}
+    >
       {/* Ring */}
-      <div className="relative shrink-0 w-24 h-24">
+      <div className={cn("relative shrink-0 w-24 h-24", href && "transition-transform duration-300 group-hover:scale-105")}>
         <svg width="96" height="96" viewBox="0 0 104 104" className="-rotate-90">
           <circle cx="52" cy="52" r={r} fill="none" stroke="currentColor"
             className="text-muted/30" strokeWidth="7" />
@@ -88,6 +102,12 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
           </p>
         )}
       </div>
-    </div>
+
+      {href && (
+        <span className="absolute top-4 right-5 text-[11px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+          {hrefLabel}
+        </span>
+      )}
+    </Wrapper>
   )
 }

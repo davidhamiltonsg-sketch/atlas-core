@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
@@ -337,6 +338,8 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
                 : "No portfolio balance yet. Enter your holdings to begin tracking."
             }
+            href="/governance"
+            hrefLabel="View plan →"
           />
 
           {/* 5. Compliance Board — position bands */}
@@ -369,11 +372,14 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         {/* Right sidebar */}
         <div className="space-y-5 reveal-stack">
           {/* Allocation donut */}
-          <div className="rounded-2xl card-lux p-5">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Allocation</h3>
+          <Link href="/portfolio" className="group block rounded-2xl card-lux p-5 relative overflow-hidden">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Allocation</h3>
+              <span className="text-[11px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0">View →</span>
+            </div>
             <p className="text-[11px] text-muted-foreground mb-3">Outer = actual · Inner = target</p>
-            <AllocationDonut data={d.donutData} totalValue={d.totalValue} />
-          </div>
+            <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD" />
+          </Link>
 
           {/* Value history */}
           {d.historyPoints.length >= 2 && (
