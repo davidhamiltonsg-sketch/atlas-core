@@ -79,6 +79,7 @@ export type SbrBranch =
   | { tag: "combined_warn";  combined: number; warning: number }
   | { tag: "a35_floor";      a35Pct: number }
   | { tag: "equity_ceiling"; equityPct: number }
+  | { tag: "phase_III_entry"; totalValue: number }
   | { tag: "phase_III";      totalValue: number; qqqmSell: number; vwraSell: number }
   | { tag: "phase_IV";       totalValue: number }
   | { tag: "drawdown";       drawdownPct: number }
@@ -120,7 +121,10 @@ export function sbrRoute(
   // 4 — Phase III/IV: close-to-goal rules take priority over combined ceiling checks.
   // Routing to A35 is strictly more conservative than the ceiling's VWRA redirect, so the
   // phase instruction wins. (The combined ceiling still fires in Phase I/II below.)
+  // Phase III is split: below SGD 102k redirect contributions only; at 102k+ add quarterly sells.
+  // The gate prevents unnecessary selling if the portfolio briefly crosses 96k on volatility.
   if (phase.key === "III") {
+    if (totalValue < 102_000) return { tag: "phase_III_entry", totalValue }
     return { tag: "phase_III", totalValue, qqqmSell: Math.round(0.03 * totalValue), vwraSell: Math.round(0.02 * totalValue) }
   }
   if (phase.key === "IV") return { tag: "phase_IV", totalValue }
@@ -198,6 +202,14 @@ export function computeSbrNextMove(
         what: `VWRA, QQQM and SMH together are ${branch.equityPct.toFixed(1)}% of the portfolio — above the ${c.totalEquityMaxPct ?? 92}% maximum. Put all new contributions into A35 this month until equities drift back below ${c.totalEquityMaxPct ?? 92}%.`,
         why: "The plan caps stock exposure at 92% to ensure you always hold some stable SGD bonds. When stocks drift too high, redirecting new money naturally corrects the balance over time — no selling needed.",
         when: `This month. Resume the normal split once equities drop back below ${c.totalEquityMaxPct ?? 92}%.`, color: fundColor(c, "A35") }
+
+    case "phase_III_entry": {
+      const gap = Math.round(102_000 - branch.totalValue)
+      return { severity: "medium", ticker: "A35", action: "Phase III — put new money into A35",
+        what: `You're in Phase III. Put all new monthly contributions into A35. Quarterly equity sells (3% of QQQM + 2% of VWRA → A35) start at S$102,000 — about S$${gap.toLocaleString()} away. No selling needed yet.`,
+        why: "You've crossed into Phase III, so new money moves to safety. The quarterly sells wait until you're solidly past the midpoint — this avoids unnecessary selling if markets briefly dip and pull the portfolio back below S$96k.",
+        when: `This month and every month until you reach S$102,000.`, color: fundColor(c, "A35") }
+    }
 
     case "phase_III": {
       const remaining = Math.round(120000 - branch.totalValue)
@@ -384,8 +396,11 @@ export function computeSbrDca(
     case "phase_IV":
       return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (above SGD 114,000 — close to the goal). All new money goes into A35 to build up your SGD cash for the property purchase.")
 
+    case "phase_III_entry":
+      return allToOne("A35", "Phase III (early) — contributions to A35 only.", "You are in early Phase III (SGD 96,000–102,000). All monthly contributions go into A35. Quarterly equity sells begin once the portfolio reaches SGD 102,000.")
+
     case "phase_III":
-      return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 96,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
+      return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
 
     case "drawdown":
       return allToOne("VWRA", "Markets are down — deploy the reserve, then buy VWRA.", `The portfolio is more than 15% below its recent high. Deploy your small cash reserve into VWRA, then send all contributions to VWRA too — a falling market is a buying opportunity early in the journey.`)

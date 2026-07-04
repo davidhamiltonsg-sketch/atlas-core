@@ -100,11 +100,17 @@ export function evaluateGovernance(input: {
     detail: `Combined ${tech.toFixed(1)}% (review at ${COMBINED_TECH_RULE.softCeiling}%, limit ${COMBINED_TECH_RULE.hardCeiling}%)`,
   })
 
-  // 5 — Shock buffer (SGOV ≥ 8%)
+  // 5 — Shock buffer (SGOV 8–12% healthy; below 8% = shortfall; above 12% = Art. XI deployment trigger)
+  const bufferOversize = bufferPct > 12
   checks.push({
-    id: "buffer", label: "Safety buffer at least 8%",
-    status: bufferPct >= 8 ? "ok" : bufferPct >= 6 ? "watch" : "breach",
-    detail: bufferPct >= 8 ? `Buffer is ${bufferPct.toFixed(1)}% — healthy`
+    id: "buffer", label: bufferOversize ? "Safety buffer above deployment trigger (12%)" : "Safety buffer at least 8%",
+    status: bufferOversize ? "watch"
+      : bufferPct >= 8 ? "ok"
+      : bufferPct >= 6 ? "watch"
+      : "breach",
+    detail: bufferOversize
+      ? `Buffer is ${bufferPct.toFixed(1)}% — above the 12% Art. XI trigger. Deploy ~${((bufferPct - 8) / 2).toFixed(1)}% (half the excess above 8%) into VT at the next dealing window.`
+      : bufferPct >= 8 ? `Buffer is ${bufferPct.toFixed(1)}% — healthy`
       : `Buffer is ${bufferPct.toFixed(1)}% — build toward 8–10% from new money`,
   })
 

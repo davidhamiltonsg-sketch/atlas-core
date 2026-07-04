@@ -119,6 +119,23 @@ export const CURRENCY_POLICY = {
   fxFallback: 1.35,    // USDSGD fallback when Yahoo Finance unavailable
 } as const
 
+// ─── Art. I — CONSTITUTIONAL AUTHORITY ───────────────────────────────────────
+// The written constitution is the governing instrument. The app implements these
+// rules mechanically but does not define or amend them. Where they conflict, the
+// written constitution controls. Constitution version is tracked in CONSTITUTION_VERSION.
+export const AUTHORITY = {
+  document: 'Atlas Core Constitution',
+  version: CONSTITUTION_VERSION,
+  principle: 'Constitution governs; app implements. Where they conflict, the written constitution controls.',
+  amendmentRequires: ['committee minute', '90-day moratorium', 'version increment'] as const,
+} as const
+
+// ─── Art. XI — BUFFER DEPLOYMENT TRIGGER ─────────────────────────────────────
+// SGOV above 12% is a chronic drag — deploy the excess, not just guard the floor.
+// Deploy half the excess above 8% into VT at the next dealing window.
+// Example: SGOV at 14% → deploy 3% into VT, leaving SGOV at 11%.
+export const SGOV_DEPLOY_TRIGGER_PCT = 12 // above this → deploy excess (Art. XI)
+
 // ─── Art. XXIV — SUCCESSION ──────────────────────────────────────────────────
 // Review triggers and schedule. Documented here; not enforced by the app.
 export const SUCCESSION = {
