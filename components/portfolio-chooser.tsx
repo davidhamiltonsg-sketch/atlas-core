@@ -28,14 +28,14 @@ export function PortfolioChooser() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-16">
       <div className="w-full max-w-3xl">
         <div className="text-center mb-10 flex flex-col items-center">
-          <AtlasUniverseMark className="h-16 w-16 drop-shadow-lg mb-4 float-soft" />
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-amber-600/80 dark:text-amber-400/70 mb-3">Atlas Universe</p>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight gradient-text-universe pb-1.5">
+          <AtlasUniverseMark className="h-16 w-16 drop-shadow-lg mb-5" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-600/70 dark:text-amber-400/60 mb-3">Atlas Universe</p>
+          <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight gradient-text-universe pb-1.5">
             Two constitutions. One discipline.
           </h1>
           <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto leading-relaxed">
-            Pick the portfolio you hold to sign in. Each runs on its own written constitution —
-            enforced the same way: calmly, consistently, without discretion.
+            Select the portfolio you hold to sign in. Each is governed by its own written
+            constitution, enforced consistently and without discretion.
           </p>
         </div>
 
@@ -59,11 +59,11 @@ export function PortfolioChooser() {
               >
                 <Mark className="h-20 w-20 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none" />
                 <div>
-                  <p className="text-lg font-bold tracking-tight">{name}</p>
+                  <p className="font-display text-lg font-semibold tracking-tight">{name}</p>
                   <p className="text-xs text-muted-foreground mt-1">{tagline}</p>
                 </div>
                 <span className="mt-1 text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                  Continue →
+                  Sign in →
                 </span>
               </Link>
             ))}

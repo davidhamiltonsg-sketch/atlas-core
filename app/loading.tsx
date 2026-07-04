@@ -59,7 +59,7 @@ export default async function Loading() {
           glowShadow="0 12px 30px rgba(14,165,233,0.45)"
         />
         <div className="text-center">
-          <p className="text-lg font-bold tracking-tight text-white">Silicon Brick Road</p>
+          <p className="font-display text-lg font-semibold tracking-tight text-white">Silicon Brick Road</p>
           <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-sky-300/70">Saving Toward Your Deposit</p>
         </div>
         <div className="h-1 w-44 overflow-hidden rounded-full bg-white/10">
@@ -82,7 +82,7 @@ export default async function Loading() {
           glowShadow="0 12px 30px rgba(124,58,237,0.45)"
         />
         <div className="text-center">
-          <p className="text-lg font-bold tracking-tight text-white">Atlas Core</p>
+          <p className="font-display text-lg font-semibold tracking-tight text-white">Atlas Core</p>
           <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-violet-300/70">Investment Operating System</p>
         </div>
         <div className="h-1 w-44 overflow-hidden rounded-full bg-white/10">
@@ -107,7 +107,7 @@ export default async function Loading() {
         glowShadow="0 14px 34px rgba(223,175,75,0.35)"
       />
       <div className="text-center">
-        <p className="text-2xl font-bold tracking-tight gradient-text-universe pb-1">Atlas Universe</p>
+        <p className="font-display text-2xl font-semibold tracking-tight gradient-text-universe pb-1">Atlas Universe</p>
         <p className="mt-0.5 text-[11px] uppercase tracking-[0.25em] text-slate-300/70">Two Constitutions, One Discipline</p>
       </div>
       <div className="h-1 w-44 overflow-hidden rounded-full bg-white/10">
