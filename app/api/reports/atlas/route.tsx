@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const data = await getAtlasReportData(session.userId, period)
   const buffer = await renderToBuffer(<AtlasReportPdf data={data} />)
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="atlas-core-${period}-report-${today()}.pdf"`,

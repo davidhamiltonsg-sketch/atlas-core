@@ -135,7 +135,9 @@ async function getYtdData(userId: string) {
       return s + wi * t.amount
     }, 0)
     const mdDenominator = startValue + mdBuys - mdSells
-    const ytdReturnPct  = ytdReturn !== null && mdDenominator > 0
+    // Suppress % when the denominator is tiny relative to current value — Modified Dietz
+    // produces misleading percentages when nearly all capital arrived very recently.
+    const ytdReturnPct  = ytdReturn !== null && mdDenominator > 0 && mdDenominator >= currentValue * 0.1
       ? (ytdReturn / mdDenominator) * 100 : null
 
     return {
@@ -193,8 +195,11 @@ async function getYtdData(userId: string) {
     return s + wi * t.amount
   }, 0)
   const mdDenominator = totalStartValue + mdBuysDenom - mdSellsDenom
-  const totalYtdPct = totalYtdReturn !== null && mdDenominator > 0
+  // Suppress % when the denominator is tiny vs current value — Modified Dietz becomes noise
+  // when nearly all capital entered very recently (low time-weight → tiny denominator).
+  const totalYtdPct = totalYtdReturn !== null && mdDenominator > 0 && mdDenominator >= totalCurrentValue * 0.1
     ? (totalYtdReturn / mdDenominator) * 100 : null
+  const ytdPctSuppressed = totalYtdReturn !== null && mdDenominator > 0 && mdDenominator < totalCurrentValue * 0.1
 
   // ── YTD Dividends ────────────────────────────────────────────────────────────
   const ytdDividends     = dividends.filter(d => new Date(d.paymentDate) >= ytdStart)
@@ -213,6 +218,7 @@ async function getYtdData(userId: string) {
     holdingsTotalCount: holdingData.filter(h => h.hasData).length,
     totalYtdReturn,
     totalYtdPct,
+    ytdPctSuppressed,
     realisedPnl: ytdSells.length > 0 ? realisedPnl : null,
     ytdDividendTotal,
     ytdContribTotal,    // USD (from BUY trades this year)
@@ -297,9 +303,15 @@ export default async function YtdPage() {
                 <p className={`text-2xl font-black tabular-nums ${data.totalYtdReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
                   {data.totalYtdReturn >= 0 ? "+" : ""}{formatCurrency(data.totalYtdReturn, "SGD")}
                 </p>
-                <p className={`text-[11px] font-semibold mt-0.5 ${data.totalYtdPct !== null && data.totalYtdPct >= 0 ? "text-green-500" : "text-red-500"}`}>
-                  {data.totalYtdPct !== null ? (data.totalYtdPct >= 0 ? "+" : "") + formatPercent(data.totalYtdPct, 2, false) : "—"}
-                </p>
+                {data.totalYtdPct !== null ? (
+                  <p className={`text-[11px] font-semibold mt-0.5 ${data.totalYtdPct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {(data.totalYtdPct >= 0 ? "+" : "") + formatPercent(data.totalYtdPct, 2, false)}
+                  </p>
+                ) : data.ytdPctSuppressed ? (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">% n/a — portfolio mostly built this year</p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">—</p>
+                )}
               </>
             ) : (
               <p className="text-2xl font-black text-muted-foreground">—</p>
@@ -503,7 +515,8 @@ export default async function YtdPage() {
           ) : (
           <div className="space-y-1.5 text-xs text-muted-foreground">
             <p>Cost basis uses the <span className="font-semibold text-foreground">weighted average cost method</span> — recalculated each time units are added. Everything here is shown in SGD; avg cost/unit is the USD price paid per share.</p>
-            <p><span className="font-semibold text-foreground">YTD Market Return</span> uses the <span className="font-semibold text-foreground">Modified Dietz method</span>: market gain = EMV − BMV − net capital deployed. The % denominator accounts for the timing of each BUY/SELL so contributions are not mistaken for returns.</p>
+            <p><span className="font-semibold text-foreground">YTD Market Return</span> uses the <span className="font-semibold text-foreground">Modified Dietz method</span>: market gain = EMV − BMV − net capital deployed. The % denominator accounts for the timing of each BUY/SELL so contributions are not mistaken for returns. The % is hidden when most capital arrived very recently — the formula produces noise in that case.</p>
+            <p><span className="font-semibold text-foreground">YTD Market Return vs Unrealised P&L use different baselines.</span> YTD measures gain from 1 January; Unrealised P&L measures against your total all-time purchase cost. A portfolio that was small on Jan 1 but grew through contributions can show a positive YTD return alongside an unrealised loss — both figures are simultaneously correct.</p>
             <p>Unrealised P&L = current SGD market value minus SGD cost basis. This reflects the gain/loss if you sold your entire position today.</p>
             <p>YTD Capital Deployed = sum of BUY trade amounts in {deployedCcy} this year. BUY trades automatically create a linked contribution record for monthly tracking.</p>
           </div>

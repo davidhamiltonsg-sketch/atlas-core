@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const data = await getSbrReportData(session.userId, period)
   const buffer = await renderToBuffer(<SbrReportPdf data={data} />)
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="silicon-brick-road-${period}-report-${today()}.pdf"`,
