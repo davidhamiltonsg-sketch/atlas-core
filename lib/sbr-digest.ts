@@ -14,8 +14,8 @@ import { db } from "@/lib/db"
 import { SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import { computeSbrNextMove, sbrPhase, computeSbrHealth, type SbrPosition } from "@/lib/sbr-engine"
-import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
-import type { DigestItem } from "@/lib/governance-digest"
+import { sbrBlendedGrowthRate, requiredAnnualReturn, monthsToTarget } from "@/lib/sbr-forecast"
+import type { DigestItem } from "@/lib/governance-status"
 import type { NextMove } from "@/lib/next-best-move"
 
 export interface SbrDigest {
@@ -123,17 +123,23 @@ export async function buildSbrDigest(userId: string): Promise<SbrDigest | null> 
     })
   }
 
-  // Trajectory gauge (A1) — track blended growth rate monthly.
-  // If the expected blended return has been > 15% for two consecutive months,
-  // the portfolio is carrying more growth-asset risk than appropriate for a
-  // near-term property objective. Recommend reviewing the horizon or de-risking.
+  // Trajectory gauge (A1) — required return to reach target in SGD.
+  // Measures what annual return the portfolio MUST earn (not what it's historically
+  // expected to earn) to hit S$120k in a rolling 36-month planning window.
+  // Red = required return > 14% (plan is running behind); amber = 9–14%; green = <9%.
+  // If two consecutive months are red: recommend extending the nominal horizon to the
+  // base-case arrival date, not de-risking (which would push the date out further).
+  const SBR_HORIZON_MONTHS = 36 // rolling planning window
+  const target120k = SILICON_BRICK_ROAD.targetValue ?? 120000
   if (totalValue > 0 && positions.length > 0) {
     const allocMap: Record<string, number> = {}
     for (const p of positions) allocMap[p.ticker] = p.actualPct
     const { base: blendedBase } = sbrBlendedGrowthRate(allocMap)
-    const trajectoryBand = blendedBase <= 0.12 ? "green" : blendedBase <= 0.15 ? "amber" : "red"
 
-    // Log the monthly reading (one per calendar month via upsert on month key).
+    const reqReturn = requiredAnnualReturn(totalValue, SILICON_BRICK_ROAD.monthlyContribution, target120k, SBR_HORIZON_MONTHS)
+    const trajectoryBand = reqReturn <= 0.09 ? "green" : reqReturn <= 0.14 ? "amber" : "red"
+
+    // Log the monthly reading (one per calendar month).
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
     const existingLog = await db.behaviourLog.findFirst({
       where: { userId, type: "sbr-trajectory", note: { startsWith: `month:${monthKey}` } },
@@ -143,12 +149,12 @@ export async function buildSbrDigest(userId: string): Promise<SbrDigest | null> 
         data: {
           userId,
           type: "sbr-trajectory",
-          note: `month:${monthKey} band:${trajectoryBand} rate:${(blendedBase * 100).toFixed(2)}`,
+          note: `month:${monthKey} band:${trajectoryBand} required:${(reqReturn * 100).toFixed(2)} blended:${(blendedBase * 100).toFixed(2)}`,
         },
       })
     }
 
-    // Check last two monthly readings — if both red, trigger horizon extension alert.
+    // Check last two monthly readings — if both red, surface the base-case arrival date.
     if (trajectoryBand === "red") {
       const recentLogs = await db.behaviourLog.findMany({
         where: { userId, type: "sbr-trajectory" },
@@ -157,10 +163,19 @@ export async function buildSbrDigest(userId: string): Promise<SbrDigest | null> 
       })
       const bothRed = recentLogs.length >= 2 && recentLogs.every((l) => l.note.includes("band:red"))
       if (bothRed) {
+        const baseMonths = monthsToTarget(totalValue, SILICON_BRICK_ROAD.monthlyContribution, blendedBase, target120k)
+        const arrivalLabel = baseMonths === null
+          ? "beyond a 50-year horizon"
+          : baseMonths === 0
+          ? "already reached"
+          : (() => {
+              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + baseMonths)
+              return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
+            })()
         items.push({
           severity: "watch",
-          title: "Portfolio trajectory above 15% for two months — consider reviewing the horizon",
-          detail: `Your blended expected growth rate is ${(blendedBase * 100).toFixed(1)}% — above the 15% caution threshold for two consecutive months. For a property-focused portfolio this level of equity concentration may introduce sequencing risk. Consider whether your property timeline has changed, or whether to de-risk toward A35 ahead of schedule.`,
+          title: "Plan is running behind a 3-year window — consider extending your horizon",
+          detail: `To reach S$${target120k.toLocaleString()} in 36 months you would need ${(reqReturn * 100).toFixed(1)}% annual returns — above what this portfolio is expected to earn. At your current blended rate (${(blendedBase * 100).toFixed(1)}%), the base-case arrival is around ${arrivalLabel}. If that timeline works for your property plan, no action is needed — continue contributing and the plan stays on track. If you need the deposit sooner, consider increasing the monthly contribution rather than de-risking the portfolio (which would push the arrival date further out).`,
         })
       }
     }

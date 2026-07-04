@@ -1,4 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
+// Shared digest item type — used by both Atlas Core and SBR governance digests.
+// Kept here (shared) so SBR modules don't need to import from Atlas-specific files.
+export interface DigestItem {
+  severity: "breach" | "watch" | "info"
+  title: string
+  detail: string
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Atlas Core — Governance Alignment
 //
 // Evaluates the live portfolio against the written rules and returns a plain-English

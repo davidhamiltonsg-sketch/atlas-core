@@ -7,9 +7,10 @@
 // Art. VI priority ladder exactly once. The two output functions are views of one
 // computation; they can't silently disagree on which branch fired.
 //
-// Priority (highest wins): SMH cap → combined ceiling → A35 floor → phase (III/IV) →
-// drawdown → underweight (drift correction) → skip-at-high → standard split.
-// Underweight outranks skip-at-high — a below-range fund is bought even near its high.
+// Priority (highest wins): SMH cap → A35 floor → equity ceiling (92%) → phase (III/IV) →
+// combined ceiling → drawdown → underweight → skip-at-high → standard split.
+// A35 floor precedes combined ceiling: a depleted safety buffer is the most urgent risk.
+// Underweight outranks skip-at-high — a below-range fund is bought even near its yearly high.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
@@ -73,16 +74,17 @@ function nearHigh(p: SbrPosition, skipPct: number): boolean {
 
 export type SbrBranch =
   | { tag: "empty" }
-  | { tag: "smh_cap";       smhPct: number; smhHard: number; sellSgd: number }
-  | { tag: "combined_hard"; combined: number; combinedHard: number; resume: number }
-  | { tag: "combined_warn"; combined: number; warning: number }
-  | { tag: "a35_floor";     a35Pct: number }
-  | { tag: "phase_III";     totalValue: number; qqqmSell: number; vwraSell: number }
-  | { tag: "phase_IV";      totalValue: number }
-  | { tag: "drawdown";      drawdownPct: number }
-  | { tag: "underweight";   fund: SbrPosition; nearItsHigh: boolean }
-  | { tag: "skip_at_high";  skipped: string[] }
-  | { tag: "standard";      phase: ConstitutionPhase }
+  | { tag: "smh_cap";        smhPct: number; smhHard: number; sellSgd: number }
+  | { tag: "combined_hard";  combined: number; combinedHard: number; resume: number }
+  | { tag: "combined_warn";  combined: number; warning: number }
+  | { tag: "a35_floor";      a35Pct: number }
+  | { tag: "equity_ceiling"; equityPct: number }
+  | { tag: "phase_III";      totalValue: number; qqqmSell: number; vwraSell: number }
+  | { tag: "phase_IV";       totalValue: number }
+  | { tag: "drawdown";       drawdownPct: number }
+  | { tag: "underweight";    fund: SbrPosition; nearItsHigh: boolean }
+  | { tag: "skip_at_high";   skipped: string[] }
+  | { tag: "standard";       phase: ConstitutionPhase }
 
 export function sbrRoute(
   positions: SbrPosition[],
@@ -109,7 +111,13 @@ export function sbrRoute(
   // 2 — A35 below its floor → build safety before any phase or ceiling check
   if (a35 && a35.actualPct < A35_FLOOR) return { tag: "a35_floor", a35Pct: a35.actualPct }
 
-  // 3 — Phase III/IV: close-to-goal rules take priority over combined ceiling checks.
+  // 3 — Total equity over 92% → redirect contributions to A35 (constitution Art. "Stock market maximum")
+  // Fires when VWRA + QQQM + SMH exceed the ceiling and a35_floor is already satisfied.
+  const vwra = get("VWRA")
+  const equityPct = (vwra?.actualPct ?? 0) + (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
+  if (equityPct > (c.totalEquityMaxPct ?? 92)) return { tag: "equity_ceiling", equityPct }
+
+  // 4 — Phase III/IV: close-to-goal rules take priority over combined ceiling checks.
   // Routing to A35 is strictly more conservative than the ceiling's VWRA redirect, so the
   // phase instruction wins. (The combined ceiling still fires in Phase I/II below.)
   if (phase.key === "III") {
@@ -117,7 +125,7 @@ export function sbrRoute(
   }
   if (phase.key === "IV") return { tag: "phase_IV", totalValue }
 
-  // 4 — combined ceiling checks (Phase I/II only — Phase III/IV were handled above)
+  // 5 — combined ceiling checks (Phase I/II only — Phase III/IV were handled above)
   if (combined > phaseCaps.combinedHard) return { tag: "combined_hard", combined, combinedHard: phaseCaps.combinedHard, resume: phaseCaps.combinedResume }
   if (combined >= phaseCaps.combinedWarning) return { tag: "combined_warn", combined, warning: phaseCaps.combinedWarning }
 
@@ -184,6 +192,12 @@ export function computeSbrNextMove(
         what: `A35 is ${branch.a35Pct.toFixed(1)}% — below its minimum 7%. Put all this month's money into A35 until it is back above 8%.`,
         why: "A35 (Singapore bonds, in SGD) is your safety net. Keeping it topped up means you always have stable local-currency savings to fall back on.",
         when: "This month, until A35 is above 8%.", color: fundColor(c, "A35") }
+
+    case "equity_ceiling":
+      return { severity: "medium", ticker: "A35", action: `Stocks are over ${c.totalEquityMaxPct ?? 92}% — redirect to A35 this month`,
+        what: `VWRA, QQQM and SMH together are ${branch.equityPct.toFixed(1)}% of the portfolio — above the ${c.totalEquityMaxPct ?? 92}% maximum. Put all new contributions into A35 this month until equities drift back below ${c.totalEquityMaxPct ?? 92}%.`,
+        why: "The plan caps stock exposure at 92% to ensure you always hold some stable SGD bonds. When stocks drift too high, redirecting new money naturally corrects the balance over time — no selling needed.",
+        when: `This month. Resume the normal split once equities drop back below ${c.totalEquityMaxPct ?? 92}%.`, color: fundColor(c, "A35") }
 
     case "phase_III": {
       const remaining = Math.round(120000 - branch.totalValue)
@@ -364,11 +378,14 @@ export function computeSbrDca(
     case "a35_floor":
       return allToOne("A35", "A35 is below its minimum — topping it up first.", "A35 is below its 7% floor — all contributions go there until it is back above 8%.")
 
+    case "equity_ceiling":
+      return allToOne("A35", `Stocks over ${branch.equityPct.toFixed(0)}% — redirecting to A35.`, `Equities (VWRA + QQQM + SMH) are ${branch.equityPct.toFixed(1)}% combined — above the 92% maximum. All contributions go to A35 this month until stocks drift back below 92%.`)
+
     case "phase_IV":
       return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (above SGD 114,000 — close to the goal). All new money goes into A35 to build up your SGD cash for the property purchase.")
 
     case "phase_III":
-      return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
+      return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 96,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
 
     case "drawdown":
       return allToOne("VWRA", "Markets are down — deploy the reserve, then buy VWRA.", `The portfolio is more than 15% below its recent high. Deploy your small cash reserve into VWRA, then send all contributions to VWRA too — a falling market is a buying opportunity early in the journey.`)

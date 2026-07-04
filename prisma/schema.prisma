@@ -39,19 +39,20 @@ model PasswordResetToken {
 }
 
 model Holding {
-  id            String     @id @default(cuid())
-  userId        String
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticker        String
-  name          String
-  targetPct     Float
-  hardCapPct    Float?
-  toleranceBand Float      @default(2.5)
-  color         String     @default("#6366f1")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  snapshots     Snapshot[]
-  dividends     Dividend[]
+  id                 String     @id @default(cuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker             String
+  name               String
+  targetPct          Float
+  hardCapPct         Float?
+  toleranceBand      Float      @default(2.5)
+  color              String     @default("#6366f1")
+  accrualBalanceSgd  Float      @default(0) // SBR whole-share accrual carry-forward (SGD)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  snapshots          Snapshot[]
+  dividends          Dividend[]
 
   @@unique([userId, ticker])
 }

@@ -9,16 +9,13 @@
 
 import { db } from "@/lib/db"
 import { computeLookThrough } from "@/lib/look-through"
-import { evaluateGovernance, type GovCheck } from "@/lib/governance-status"
+import { evaluateGovernance, type GovCheck, type DigestItem } from "@/lib/governance-status"
 import { isInScope, isUsSited } from "@/lib/approved-alternatives"
 import { getScheduledEvents } from "@/lib/finnhub"
 import { OPERATING_ASSUMPTIONS } from "@/lib/constants"
 
-export interface DigestItem {
-  severity: "breach" | "watch" | "info"
-  title: string
-  detail: string
-}
+// Re-export so existing imports of DigestItem from this file continue to work.
+export type { DigestItem }
 
 export interface GovernanceDigest {
   user: { id: string; name: string; email: string }

@@ -21,6 +21,7 @@ import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { AnimatedNumber } from "@/components/animated-number"
 import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
+import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -53,12 +54,20 @@ const FX_REFERENCE_USDSGD = 1.35
 const FX_BAND_PCT = 5 // ±5% from reference triggers a note
 
 async function getSbrData(userId: string) {
-  const [holdings, market, recentExec, usdSgdRate] = await Promise.all([
+  const [holdings, market, recentExec, usdSgdRate, recentPhaseLog, recentMinute] = await Promise.all([
     // Filter to SBR tickers only — prevents Atlas Core holdings from bleeding into SBR views
     db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
     getRecentExecutions(userId, 1),
     getUsdSgdRate(),
+    db.behaviourLog.findFirst({
+      where: { userId, type: "sbr-phase-transition", date: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+      orderBy: { date: "desc" },
+    }),
+    db.behaviourLog.findFirst({
+      where: { userId, type: "committee-minute", date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+      orderBy: { date: "desc" },
+    }),
   ])
   const fundOrder = SBR.funds.map((f) => f.ticker)
   const holdingsSorted = [...holdings].sort((a, b) => fundOrder.indexOf(a.ticker) - fundOrder.indexOf(b.ticker))
@@ -163,12 +172,28 @@ async function getSbrData(userId: string) {
   const windowOpen = isInDealingWindow(now)
   const nextWindowOpens = windowOpen ? null : getDealingWindow(new Date(now.getFullYear(), now.getMonth() + 1, 1)).opens
 
+  // Exceptional Market Event detection — portfolio down ≥30% from peak
+  const EME_THRESHOLD = -30
+  const emeActive = drawdownPct !== undefined && drawdownPct <= EME_THRESHOLD
+  const emeMinuteFiled = recentMinute !== null
+
+  // Phase crossing — fired in last 7 days by the daily digest cron
+  const phaseCrossedRecently = recentPhaseLog !== null && !recentPhaseLog.note.includes("initial phase baseline")
+  const newPhaseFromLog = recentPhaseLog?.note?.match(/from Phase ([IVX]+) to Phase ([IVX]+)/)?.[2] ?? null
+
+  // Accrual carry-forward map (SGD banked toward next whole share/lot)
+  const accrualMap: Record<string, number> = {}
+  for (const h of holdings) accrualMap[h.ticker] = h.accrualBalanceSgd ?? 0
+
   return {
     totalValue, valueChange, phase, nextMove, dca, holdingsRows, govAlignment, health,
     marketStale: market.stale, marketAsOf: market.asOf, lastDone: recentExec[0] ?? null,
     historyPoints, complianceBands, donutData, growthRates, monthsToGoal,
     usdSgdRate, fxDeviation, fxOutOfBand,
     dealingWindow, windowOpen, nextWindowOpens,
+    emeActive, emeMinuteFiled, drawdownPct,
+    phaseCrossedRecently, newPhaseFromLog,
+    accrualMap,
   }
 }
 
@@ -258,6 +283,35 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         )}
       </div>
 
+      {/* Phase crossing celebration — fires for 7 days after the cron logs a transition */}
+      {hasBalance && d.phaseCrossedRecently && d.newPhaseFromLog && (
+        <div className="mb-5 rounded-xl border border-green-500/30 bg-green-500/[0.06] px-5 py-4">
+          <p className="text-sm font-bold text-green-400">You&apos;ve entered Phase {d.newPhaseFromLog}!</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            The rules change as you move up. Check the Phase details below and the Decision Engine output — the plan updates automatically.
+          </p>
+        </div>
+      )}
+
+      {/* Exceptional Market Event — EME detected (portfolio down ≥30% from peak) */}
+      {hasBalance && d.emeActive && (
+        <div className="mb-5 rounded-xl border border-red-500/40 bg-red-500/[0.06] px-5 py-4 space-y-3">
+          <div>
+            <p className="text-sm font-bold text-red-400">
+              Exceptional Market Event — portfolio down {d.drawdownPct !== undefined ? Math.abs(d.drawdownPct).toFixed(0) : "30"}% from peak
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              The EME circuit breaker is active. The monthly contribution still follows the Decision Engine.
+              But no discretionary sell is permitted until a committee minute is filed (both parties must agree in writing).
+            </p>
+          </div>
+          {d.emeMinuteFiled
+            ? <p className="text-xs text-green-400 font-semibold">✓ Committee minute on file — circuit breaker satisfied for this period.</p>
+            : <CommitteeMinuteForm defaultArticle="EME protocol — panic circuit breaker" />
+          }
+        </div>
+      )}
+
       {/* Terminal state — shown when the dealing window is closed (Dami is done for this month) */}
       {hasBalance && !d.windowOpen && d.nextWindowOpens && (
         <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
@@ -322,16 +376,29 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 <p className="px-5 pt-3 text-[11px] text-amber-500 leading-relaxed">{d.dca.overlayNote}</p>
               )}
               <div className="divide-y divide-border/60">
-                {d.dca.allocations.map((a) => (
-                  <div key={a.ticker} className="px-5 py-3 flex items-center gap-3">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: a.color }} />
-                    <span className="font-bold text-sm w-14">{a.ticker}</span>
-                    <span className="flex-1 text-xs text-muted-foreground">{a.reason}</span>
-                    <span className={`text-sm font-bold tabular-nums ${a.amount > 0 ? "text-green-500" : "text-muted-foreground"}`}>
-                      {a.amount > 0 ? `+${formatCurrency(a.amount, "SGD")}` : formatCurrency(0, "SGD")}
-                    </span>
-                  </div>
-                ))}
+                {d.dca.allocations.map((a) => {
+                  const accrual = d.accrualMap[a.ticker] ?? 0
+                  return (
+                    <div key={a.ticker} className="px-5 py-3 flex items-center gap-3">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: a.color }} />
+                      <span className="font-bold text-sm w-14">{a.ticker}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs text-muted-foreground block">{a.reason}</span>
+                        {accrual > 0 && (
+                          <span className="text-[10px] text-sky-400 mt-0.5 block">
+                            {a.ticker === "A35"
+                              ? `Banking ${formatCurrency(accrual, "SGD")} of ~SGD 1,180 needed — buys next lot`
+                              : `Banking ${formatCurrency(accrual, "SGD")} toward next share`
+                            }
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-sm font-bold tabular-nums ${a.amount > 0 ? "text-green-500" : "text-muted-foreground"}`}>
+                        {a.amount > 0 ? `+${formatCurrency(a.amount, "SGD")}` : formatCurrency(0, "SGD")}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Why, in plain English */}
@@ -387,6 +454,17 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           {/* ritual surface above and the condensed health summary in the sidebar.        */}
           {isAdmin && (
             <>
+              {/* Committee minute — quarterly record of any rule-triggered decision */}
+              {!d.emeActive && (
+                <div className="rounded-xl border border-border bg-card/50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Decision Journal</p>
+                  <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+                    File a committee minute any time a rule-triggered decision is made (quarterly de-risk sells, rule changes, drawdown response).
+                    This is the audit trail required by the constitution.
+                  </p>
+                  <CommitteeMinuteForm />
+                </div>
+              )}
               <GovernanceSeal
                 overall={d.health.overall}
                 overallLabel={d.health.overallLabel}

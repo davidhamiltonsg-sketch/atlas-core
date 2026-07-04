@@ -259,7 +259,7 @@ export const DCA_PARAMS = {
   horizonYear:         2045,
 } as const
 
-// SGOV yield — verified 24 Jun 2026 (30-day SEC 3.55% on 17 Jun; dividend yield 3.85% on 18 Jun)
+// SGOV yield — ILLUSTRATIVE; update annually if rates move more than 1% (last verified Jun 2026)
 export const SGOV_YIELD = {
   thirtyDaySec:  0.0355,
   dividendYield: 0.0385,

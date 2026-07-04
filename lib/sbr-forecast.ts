@@ -55,6 +55,31 @@ export function sbrBlendedGrowthRate(allocPct: Record<string, number>): SbrGrowt
 const MAX_MONTHS = 600
 
 /**
+ * Required annual return (CAGR) for a portfolio to reach targetValue in exactly
+ * horizonMonths, given currentValue and a flat monthly contribution. Solved via
+ * binary search (0%–300% annual). Returns 0 if already there, or 3.0 (300%) as
+ * the ceiling if the target is unreachable in the horizon even at extreme returns.
+ */
+export function requiredAnnualReturn(
+  currentValue: number,
+  monthlyContribution: number,
+  targetValue: number,
+  horizonMonths: number,
+): number {
+  if (targetValue <= 0 || currentValue >= targetValue) return 0
+  let lo = 0, hi = 3.0
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    const mr = mid / 12
+    let value = currentValue
+    for (let m = 0; m < horizonMonths; m++) value = value * (1 + mr) + monthlyContribution
+    if (value >= targetValue) hi = mid
+    else lo = mid
+  }
+  return (lo + hi) / 2
+}
+
+/**
  * Months (rounded up to the month the target is first reached) until the projected value,
  * compounding monthly with a flat monthly contribution, reaches targetValue. Returns 0 if
  * already there, or null if it wouldn't be reached within the search bound.
