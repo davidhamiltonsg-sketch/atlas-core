@@ -127,7 +127,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       <div className="hidden md:flex flex-col items-end gap-1">
         <span className="text-xs font-semibold tabular-nums">{h.actualPct.toFixed(1)}%</span>
         <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
-          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, h.actualPct / 0.7)}%`, backgroundColor: h.color }} />
+          <div className="h-full rounded-full bar-fill transition-all" style={{ width: `${Math.min(100, h.actualPct / 0.7)}%`, backgroundColor: h.color }} />
         </div>
       </div>
 

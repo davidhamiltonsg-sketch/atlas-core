@@ -28,7 +28,7 @@ export function ShellClient({ title, subtitle, userName, isAdmin = false, consti
           userName={userName}
           constitutionId={constitutionId}
         />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:block print:h-auto print:overflow-visible print:p-0">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:block print:h-auto print:overflow-visible print:p-0 reveal-stack">{children}</main>
       </div>
     </div>
   )

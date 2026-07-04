@@ -463,7 +463,7 @@ export default async function Portfolio() {
                   </div>
                   <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="absolute inset-y-0 left-0 rounded-full transition-all"
+                      className="absolute inset-y-0 left-0 rounded-full bar-fill transition-all"
                       style={{ width: `${Math.min(100, (h.actualPct / 70) * 100)}%`, backgroundColor: driftColor }}
                     />
                     {/* Target marker */}

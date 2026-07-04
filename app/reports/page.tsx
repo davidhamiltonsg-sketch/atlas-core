@@ -730,7 +730,7 @@ export default async function Reports() {
                     </div>
                     <div className="space-y-1">
                       <div className="relative h-2 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, p.actualPct / 0.7)}%`, backgroundColor: p.color }} />
+                        <div className="h-full rounded-full bar-fill" style={{ width: `${Math.min(100, p.actualPct / 0.7)}%`, backgroundColor: p.color }} />
                       </div>
                       <div className="relative h-1 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full opacity-35" style={{ width: `${Math.min(100, p.targetPct / 0.7)}%`, backgroundColor: p.color }} />
@@ -845,7 +845,7 @@ export default async function Reports() {
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
                       <div
-                        className="h-full rounded-full"
+                        className="h-full rounded-full bar-fill"
                         style={{ width: `${share}%`, backgroundColor: p.color, opacity: 0.8 }}
                       />
                     </div>
@@ -896,7 +896,7 @@ export default async function Reports() {
                   </div>
                   <div className="relative h-3 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all"
+                      className="h-full rounded-full bar-fill transition-all"
                       style={{ width: `${Math.min(100, value)}%`, backgroundColor: color, opacity: isElevated ? 1 : 0.75 }}
                     />
                     {cap !== null && (
@@ -1135,7 +1135,7 @@ export default async function Reports() {
                 {/* Usage bar */}
                 <div className="relative h-2.5 rounded-full bg-muted overflow-hidden mb-2">
                   <div
-                    className={`h-full rounded-full ${status === "excessive" ? "bg-red-500" : status === "elevated" ? "bg-amber-500" : "bg-violet-500"}`}
+                    className={`h-full rounded-full bar-fill ${status === "excessive" ? "bg-red-500" : status === "elevated" ? "bg-amber-500" : "bg-violet-500"}`}
                     style={{ width: `${Math.min(100, (value / excessive) * 100)}%`, opacity: 0.8 }}
                   />
                   <div className="absolute inset-y-0 w-0.5 bg-amber-500/70" style={{ left: `${(elevated / excessive) * 100}%` }} />

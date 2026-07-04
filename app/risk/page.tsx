@@ -479,7 +479,7 @@ export default async function RiskPage() {
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all"
+                        className="h-full rounded-full bar-fill transition-all"
                         style={{ width: `${Math.min(w * 100, 100)}%`, background: h.color }}
                       />
                     </div>

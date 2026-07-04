@@ -42,7 +42,7 @@ export function BufferStatus({
       {/* Band bar: 0 → targetHigh, with the floor marked */}
       <div className="relative h-2 rounded-full bg-muted overflow-hidden mb-1">
         <div className="absolute inset-y-0 left-0 bg-green-500/15" style={{ left: `${(targetLow / targetHigh) * 100}%`, right: 0 }} />
-        <div className={`absolute inset-y-0 left-0 rounded-full ${inBand ? "bg-green-500" : "bg-amber-500"}`} style={{ width: `${pctOfBand}%` }} />
+        <div className={`absolute inset-y-0 left-0 rounded-full bar-fill ${inBand ? "bg-green-500" : "bg-amber-500"}`} style={{ width: `${pctOfBand}%` }} />
         <div className="absolute inset-y-0 w-0.5 bg-foreground/40" style={{ left: `${(targetLow / targetHigh) * 100}%` }} />
       </div>
 
