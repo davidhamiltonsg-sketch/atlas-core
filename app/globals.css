@@ -456,29 +456,6 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
   .btn-brand::after { display: none; }
 }
 
-/* ─── Data label style ────────────────────────────────────────────────────── */
-.label-caps {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: hsl(var(--muted-foreground));
-}
-
-/* ─── Metric display ──────────────────────────────────────────────────────── */
-.metric-xl {
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.metric-lg {
-  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  line-height: 1;
-}
-
 /* ─── Phase 6: Typography utilities ─────────────────────────────────────────
    font-display  — Fraunces optical serif, used for governance seal numbers,
                    constitution headings, and any hero metric value.
@@ -501,6 +478,13 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
 .tabular-nums {
   font-family: var(--font-ibm-plex-mono), "Courier New", monospace;
   font-feature-settings: "tnum" 1, "zero" 1;
+}
+/* .font-display must win when an element also carries .tabular-nums (e.g. a governance
+   seal number that wants Fraunces oldstyle figures, not the mono override) — a two-class
+   selector outranks either single-class rule above regardless of source order. */
+.font-display.tabular-nums {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-feature-settings: "onum" 1;
 }
 
 /* ─── Cockpit semantic colour tokens (Art. XXII palette) ───────────────────

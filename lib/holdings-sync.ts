@@ -245,15 +245,20 @@ export async function importIbkrActivityForUser(
         date: tradeDate, note: `[ibkr:${e.tradeID}]`,
       },
     })
-    if (e.buySell === "BUY") {
+    // A "contribution" is new cash put to work, not any security purchase — buying with
+    // proceeds from a same/recent sale (a rebalance) isn't new money. SELL trades create an
+    // offsetting NEGATIVE contribution so net BUY-minus-SELL is what the Contributions page
+    // totals, instead of gross BUY value alone (which double-counts every rebalance).
+    if (e.buySell === "BUY" || e.buySell === "SELL") {
+      const sign = e.buySell === "BUY" ? 1 : -1
       await db.contributionRecord.create({
         data: {
           userId,
           // SGD — the contributions view and the monthly target are SGD, so the linked
           // contribution is stored in SGD (settled amount), not the USD trade notional.
-          amount: amountSgd,
+          amount: sign * amountSgd,
           date: tradeDate,
-          note: `[trade:${trade.id}] [ibkr:${e.tradeID}] BUY ${e.quantity} ${e.symbol} @ $${e.price}`,
+          note: `[trade:${trade.id}] [ibkr:${e.tradeID}] ${e.buySell} ${e.quantity} ${e.symbol} @ $${e.price}`,
         },
       })
     }
@@ -313,31 +318,34 @@ export async function cleanupForexTrades(userId: string): Promise<number> {
 }
 
 /**
- * Ensure every governed BUY trade has a linked ContributionRecord. Idempotent: a contribution
- * is keyed to its trade by a [trade:<id>] note, so this only creates the ones that are missing.
- * Fixes the "contributions only show in the trade log" case for trades imported before the
- * auto-link, and skips forex / non-core rows so buffer-currency noise never becomes a
- * contribution. Returns the number of contributions created.
+ * Ensure every governed BUY or SELL trade has a linked ContributionRecord — positive for a
+ * BUY, negative for a SELL, so net BUY-minus-SELL is what the Contributions page totals,
+ * not gross BUY value (which would double-count every rebalance as new cash). Idempotent: a
+ * contribution is keyed to its trade by a [trade:<id>] note, so this only creates the ones
+ * that are missing. Fixes the "contributions only show in the trade log" case for trades
+ * imported before the auto-link, and skips forex / non-core rows so buffer-currency noise
+ * never becomes a contribution. Returns the number of contributions created.
  */
 export async function backfillContributionsFromTrades(userId: string): Promise<number> {
   const CORE = new Set<string>(CORE_TICKERS)
-  const buys = await db.trade.findMany({ where: { userId, type: "BUY" }, select: { id: true, ticker: true, units: true, price: true, amount: true, date: true } })
+  const trades = await db.trade.findMany({ where: { userId, type: { in: ["BUY", "SELL"] } }, select: { id: true, ticker: true, type: true, units: true, price: true, amount: true, date: true } })
   const existing = await db.contributionRecord.findMany({ where: { userId, note: { contains: "[trade:" } }, select: { note: true } })
   const linked = new Set(
     existing.map((c) => c.note?.match(/\[trade:([^\]]+)\]/)?.[1]).filter(Boolean) as string[],
   )
 
   let created = 0
-  for (const t of buys) {
+  for (const t of trades) {
     const sym = t.ticker.toUpperCase()
     if (isForexRow(sym) || !CORE.has(sym)) continue // never turn forex / non-core into a contribution
     if (linked.has(t.id)) continue
+    const sign = t.type === "BUY" ? 1 : -1
     await db.contributionRecord.create({
       data: {
         userId,
-        amount: t.amount, // SGD settled amount — matches how the Contributions view renders (S$)
+        amount: sign * t.amount, // SGD settled amount — matches how the Contributions view renders (S$)
         date: t.date,
-        note: `[trade:${t.id}] BUY ${t.units} ${sym} @ $${t.price}`,
+        note: `[trade:${t.id}] ${t.type} ${t.units} ${sym} @ $${t.price}`,
       },
     })
     created++

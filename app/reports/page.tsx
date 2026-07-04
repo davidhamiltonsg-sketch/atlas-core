@@ -12,6 +12,7 @@ import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { ExportPdfButton } from "@/components/reports/export-pdf-button"
 import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
+import { DownloadReportCard } from "@/components/reports/download-report-card"
 import {
   ETF_COMPANY_WEIGHTS, ETF_SECTOR_WEIGHTS, ETF_GEO_WEIGHTS,
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS, ETF_WEIGHTS_AS_OF,
@@ -190,15 +191,30 @@ async function getReportData(userId: string) {
     }
   }
 
+  // Concentration should treat BTC + IBIT as one economic position — same sleeve principle
+  // used for the target above, but for measuring combined exposure/dominance rather than the
+  // buy target. Splitting one ~7% bet into two rows understates HHI (looks more diversified
+  // than reality) and can misidentify the largest/dominant position.
+  const btcSleeveActualPct = positions
+    .filter((p) => p.ticker === "BTC" || p.ticker === "IBIT")
+    .reduce((s, p) => s + p.actualPct, 0)
+  const btcSleeveBase = positions.find((p) => p.ticker === "BTC") ?? positions.find((p) => p.ticker === "IBIT")
+  const concentrationRows = [
+    ...positions.filter((p) => p.ticker !== "BTC" && p.ticker !== "IBIT"),
+    ...(btcSleeveBase && btcSleeveActualPct > 0
+      ? [{ ...btcSleeveBase, ticker: "BTC + IBIT", name: "Bitcoin Sleeve", actualPct: btcSleeveActualPct }]
+      : []),
+  ]
+
   // HHI Concentration Index
-  const hhi = positions.reduce((sum, p) => sum + Math.pow(p.actualPct / 100, 2), 0)
+  const hhi = concentrationRows.reduce((sum, p) => sum + Math.pow(p.actualPct / 100, 2), 0)
   const effectiveN = hhi > 0 ? 1 / hhi : 0
   // HHI thresholds: <0.10 = diversified, 0.10–0.18 = moderate, >0.18 = concentrated
   const hhiPct = hhi * 100
   const concentrationRating = hhiPct < 10 ? "Diversified" : hhiPct < 18 ? "Moderate" : "Concentrated"
 
   // Largest position dominance
-  const topPosition = [...positions].sort((a, b) => b.actualPct - a.actualPct)[0]
+  const topPosition = [...concentrationRows].sort((a, b) => b.actualPct - a.actualPct)[0]
 
   // Metrics — drift uses the canonical §3 hard-drift triggers from lib/constants
   // (single source of truth; do not redefine a local copy — it drifts out of date).
@@ -435,10 +451,10 @@ export default async function Reports() {
     actions.push({ priority: 1, action: `${p.ticker} is at ${p.actualPct.toFixed(1)}% — above its hard limit. Do NOT buy any more ${p.ticker} until it drops back below ${p.hardCapPct}%. Consider selling a small amount if it stays elevated.`, urgency: "critical" })
   })
   positions.filter(p => p.outsideBand && p.driftPct < 0).forEach(p => {
-    actions.push({ priority: 2, action: `${p.ticker} (${p.name}) is too small in your portfolio at ${p.actualPct.toFixed(1)}% — your plan says it should be ${p.targetPct}%. Put this month's contribution into ${p.ticker} to bring it back up.`, urgency: "high" })
+    actions.push({ priority: 2, action: `${p.ticker} (${p.name}) is too small in your portfolio at ${p.actualPct.toFixed(1)}% — your plan says it should be ${p.targetPct.toFixed(1)}%. Put this month's contribution into ${p.ticker} to bring it back up.`, urgency: "high" })
   })
   positions.filter(p => p.outsideBand && p.driftPct > 0 && !p.overCap).forEach(p => {
-    actions.push({ priority: 3, action: `${p.ticker} has grown to ${p.actualPct.toFixed(1)}% — a little above its ${p.targetPct}% target. Skip buying ${p.ticker} this month and put that money into smaller positions instead.`, urgency: "high" })
+    actions.push({ priority: 3, action: `${p.ticker} has grown to ${p.actualPct.toFixed(1)}% — a little above its ${p.targetPct.toFixed(1)}% target. Skip buying ${p.ticker} this month and put that money into smaller positions instead.`, urgency: "high" })
   })
   if (excessiveCompanies.length > 0) {
     actions.push({ priority: 4, action: `You have too much tied to ${excessiveCompanies.join(", ")} through your ETFs. Stop buying QQQM and SMH for now — these are the ETFs that hold the most of those companies.`, urgency: "high" })
@@ -604,6 +620,11 @@ export default async function Reports() {
           </div>
         </div>
       )}
+
+      {/* ── BRANDED PDF REPORTS ──────────────────────────────────────────────── */}
+      <div className="no-print mb-6">
+        <DownloadReportCard endpoint="/api/reports/atlas" accent="violet" />
+      </div>
 
       {/* ── 1. KPI STRIP ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 mb-6 lg:grid-cols-4">
