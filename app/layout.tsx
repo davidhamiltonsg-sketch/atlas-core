@@ -3,6 +3,7 @@ import { Geist, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#dfaf4b" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="h-full">
         <ThemeProvider
@@ -57,6 +59,7 @@ export default function RootLayout({
         >
           {children}
           <SpeedInsights />
+          <RegisterServiceWorker />
         </ThemeProvider>
       </body>
     </html>
