@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
 
 export const metadata: Metadata = {
   title: "Atlas Universe",
@@ -31,6 +32,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="h-full">
         <ThemeProvider
@@ -42,6 +44,7 @@ export default function RootLayout({
           <ToastProvider>
             {children}
             <SpeedInsights />
+            <RegisterServiceWorker />
           </ToastProvider>
         </ThemeProvider>
       </body>
