@@ -312,12 +312,16 @@ const COPY = {
     subtitle: "AGENT DISPATCH", online: "Mission control online — awaiting dispatch",
     spinup: "▶ dispatch received — engine spinning up",
     sweepMsg: (n: number) => `━━ full governance sweep · ${n} agents dispatched ━━`,
+    codenameLabel: "CODENAME", ctx: "PORTFOLIO CONTEXT", alloc: "ALLOCATION",
+    driftText: (n: number) => `${n} drift`, showCash: true,
   },
   sbr: {
     roster: "HELPERS", log: "ACTIVITY", dispatch: "RUN", sweep: "RUN ALL",
     subtitle: "LIVE CHECKS", online: "Control room online — press run on any helper",
     spinup: "▶ running — checking now",
     sweepMsg: (n: number) => `━━ running all ${n} helpers ━━`,
+    codenameLabel: "HELPER", ctx: "YOUR FUND", alloc: "YOUR FUNDS",
+    driftText: (n: number) => `${n} to even out`, showCash: false,
   },
 } as const
 
@@ -538,7 +542,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
             <div className="mt-4 grid grid-cols-3 gap-2">
               <Telemetry mono={mono} label="STATUS" value={status[selected].toUpperCase()} color={statusColor(status[selected])} />
               <Telemetry mono={mono} label="PROGRESS" value={`${progress[selected] ?? 0}%`} color={C.blue} />
-              <Telemetry mono={mono} label="CODENAME" value={selectedAgent.codename} color={C.dim} />
+              <Telemetry mono={mono} label={copy.codenameLabel} value={selectedAgent.codename} color={C.dim} />
             </div>
           </section>
 
@@ -574,7 +578,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
 
         {/* ── Right: portfolio context ──────────────────────────────────── */}
         <aside className="flex flex-col gap-3">
-          <SectionLabel mono={mono}>PORTFOLIO CONTEXT</SectionLabel>
+          <SectionLabel mono={mono}>{copy.ctx}</SectionLabel>
 
           <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
             <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>TOTAL VALUE</p>
@@ -595,10 +599,10 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
 
           <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
             <div className="flex items-center justify-between">
-              <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>ALLOCATION</p>
+              <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>{copy.alloc}</p>
               {context.driftAlerts > 0 && (
                 <span className={`${mono} flex items-center gap-1 text-[10px]`} style={{ color: C.gold }}>
-                  <CircleDot className="h-3 w-3" /> {context.driftAlerts} drift
+                  <CircleDot className="h-3 w-3" /> {copy.driftText(context.driftAlerts)}
                 </span>
               )}
             </div>
@@ -620,15 +624,19 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
             </ul>
           </div>
 
-          <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
-            <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>CASH BUFFER</p>
-            <div className="mt-2 flex items-end justify-between">
-              <p className={`${spaceGrotesk} text-lg font-bold tabular-nums`} style={{ color: C.green }}>
-                {context.cashPct != null ? `${context.cashPct.toFixed(1)}%` : "—"}
-              </p>
-              <p className={`${mono} text-[10px]`} style={{ color: C.dim }}>floor 2.0%</p>
+          {/* Cash-buffer card is an Atlas governance concept (2% floor) — SBR has no
+              cash buffer (its floor is the SGD 46k capital goal), so hide it there. */}
+          {copy.showCash && (
+            <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
+              <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>CASH BUFFER</p>
+              <div className="mt-2 flex items-end justify-between">
+                <p className={`${spaceGrotesk} text-lg font-bold tabular-nums`} style={{ color: C.green }}>
+                  {context.cashPct != null ? `${context.cashPct.toFixed(1)}%` : "—"}
+                </p>
+                <p className={`${mono} text-[10px]`} style={{ color: C.dim }}>floor 2.0%</p>
+              </div>
             </div>
-          </div>
+          )}
         </aside>
       </div>
     </div>
