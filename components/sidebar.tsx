@@ -23,6 +23,7 @@ import {
   LineChart,
   Download,
   Landmark,
+  Radar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
@@ -41,7 +42,10 @@ const BRAND: Record<ConstitutionId, { name: string; version: string }> = {
 
 const NAV: Record<ConstitutionId, NavGroupDef[]> = {
   "atlas-core": [
-    { label: "Home", items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] },
+    { label: "Home", items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/mission-control", label: "Mission Control", icon: Radar },
+    ] },
     { label: "Plan", items: [
       { href: "/governance", label: "Rules & Caps", icon: ShieldCheck },
       { href: "/calendar", label: "Calendar & Rules", icon: CalendarDays },
