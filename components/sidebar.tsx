@@ -69,7 +69,10 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     ] },
   ],
   "silicon-brick-road": [
-    { label: "Home", items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }] },
+    { label: "Home", items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/mission-control", label: "Mission Control", icon: Radar },
+    ] },
     { label: "Constitution", items: [
       { href: "/governance", label: "The Constitution", icon: ShieldCheck },
       { href: "/behaviour", label: "Staying Calm", icon: Brain },

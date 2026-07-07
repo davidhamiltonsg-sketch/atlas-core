@@ -62,10 +62,10 @@ interface AgentDef {
   result: { status: Exclude<AgentStatus, "idle" | "active">; line: Step }
 }
 
-// The roster — one tile per real Atlas engine. Scripts reference the actual
-// domain (drift bands, the decision ladder, 13F clusters, the SBR phase gate)
-// so the feed reads like a genuine governance run.
-const AGENTS: AgentDef[] = [
+// The Atlas roster — one tile per real Atlas engine. Scripts reference the
+// actual domain (drift bands, the decision ladder, 13F clusters, the SBR phase
+// gate) so the feed reads like a genuine governance run.
+const ATLAS_AGENTS: AgentDef[] = [
   {
     id: "constitution",
     name: "Constitution Auditor",
@@ -203,6 +203,94 @@ const AGENTS: AgentDef[] = [
   },
 ]
 
+// The Silicon Brick Road roster — same console, but plain-English helpers with
+// no jargon (per the SBR constitution: no "DCA", "drift band", "look-through",
+// "FX", "dealing window"). One Mission Control, two portfolios: an SBR user sees
+// friendly helpers about bricks, the road, and the home deposit — never the
+// Atlas governance vocabulary.
+const SBR_AGENTS: AgentDef[] = [
+  {
+    id: "buys",
+    name: "This Month's Shares",
+    codename: "BUYS",
+    blurb: "Turns this month's money into whole shares",
+    icon: Coins,
+    accent: C.gold,
+    script: [
+      { t: 120, level: "info", msg: "Splitting this month's savings across your four funds" },
+      { t: 700, level: "data", msg: "Buying only whole shares · carrying the rest forward" },
+      { t: 1300, level: "data", msg: "3 × global fund · 1 × Singapore bond fund" },
+    ],
+    result: { status: "done", line: { t: 1800, level: "ok", msg: "Buy list ready — a little carries to next month" } },
+  },
+  {
+    id: "balance",
+    name: "Balance Check",
+    codename: "BALANCE",
+    blurb: "Keeps the four funds near their targets",
+    icon: Gauge,
+    accent: C.blue,
+    script: [
+      { t: 120, level: "info", msg: "Weighing each fund against its guide-rails" },
+      { t: 720, level: "data", msg: "Global 60% · bonds 20% · Nasdaq 10% · chips 10%" },
+      { t: 1320, level: "warn", msg: "Chip-maker fund sitting a little high" },
+    ],
+    result: { status: "alert", line: { t: 1800, level: "warn", msg: "One fund a bit high — even it out over the next month" } },
+  },
+  {
+    id: "road",
+    name: "Where You Are",
+    codename: "ROAD",
+    blurb: "Your place on the road to the home",
+    icon: Radar,
+    accent: C.green,
+    script: [
+      { t: 120, level: "info", msg: "Counting the months you've saved" },
+      { t: 720, level: "data", msg: "Building-up phase · still adding every month" },
+    ],
+    result: { status: "done", line: { t: 1300, level: "ok", msg: "On the road — next milestone is the halfway safety step" } },
+  },
+  {
+    id: "safety",
+    name: "Safety Steps",
+    codename: "SAFETY",
+    blurb: "Watches for the de-risking milestones",
+    icon: ShieldCheck,
+    accent: C.gold,
+    script: [
+      { t: 120, level: "info", msg: "Checking whether any safety step has started" },
+      { t: 760, level: "data", msg: "First step: move new money to safety at month 18" },
+    ],
+    result: { status: "done", line: { t: 1300, level: "ok", msg: "No safety steps yet — you're still building up" } },
+  },
+  {
+    id: "goal",
+    name: "Goal Check",
+    codename: "GOAL",
+    blurb: "Projects your pot out to the home deadline",
+    icon: TrendingUp,
+    accent: C.green,
+    script: [
+      { t: 120, level: "info", msg: "Growing your seed and monthly savings to mid-2029" },
+      { t: 780, level: "data", msg: "Steady-markets case lands around S$57.7K" },
+    ],
+    result: { status: "done", line: { t: 1300, level: "ok", msg: "On track — comfortably above your safety floor" } },
+  },
+  {
+    id: "savings",
+    name: "Savings So Far",
+    codename: "SAVINGS",
+    blurb: "Tallies what you've set aside",
+    icon: Landmark,
+    accent: C.blue,
+    script: [
+      { t: 120, level: "info", msg: "Adding up every deposit you've made" },
+      { t: 720, level: "data", msg: "Deposits landing on schedule each month" },
+    ],
+    result: { status: "done", line: { t: 1200, level: "ok", msg: "Savings on plan — keep laying one brick a month" } },
+  },
+]
+
 // ── Portfolio context (passed from the server; representative if logged out) ──
 export interface PortfolioContext {
   label: string
@@ -213,7 +301,25 @@ export interface PortfolioContext {
   holdings: { ticker: string; name: string; pct: number; color: string }[]
   driftAlerts: number
   live: boolean
+  variant: "atlas" | "sbr"
 }
+
+// Per-portfolio wording. The console is one component; only the roster and a few
+// labels change so an SBR user never meets Atlas's ops vocabulary.
+const COPY = {
+  atlas: {
+    roster: "AGENT ROSTER", log: "EXECUTION LOG", dispatch: "DISPATCH", sweep: "SWEEP ALL",
+    subtitle: "AGENT DISPATCH", online: "Mission control online — awaiting dispatch",
+    spinup: "▶ dispatch received — engine spinning up",
+    sweepMsg: (n: number) => `━━ full governance sweep · ${n} agents dispatched ━━`,
+  },
+  sbr: {
+    roster: "HELPERS", log: "ACTIVITY", dispatch: "RUN", sweep: "RUN ALL",
+    subtitle: "LIVE CHECKS", online: "Control room online — press run on any helper",
+    spinup: "▶ running — checking now",
+    sweepMsg: (n: number) => `━━ running all ${n} helpers ━━`,
+  },
+} as const
 
 interface LogLine { id: number; time: string; codename: string; accent: string; level: Level; msg: string }
 
@@ -226,11 +332,15 @@ function clockNow() {
 }
 
 export function MissionControl({ context }: { context: PortfolioContext }) {
+  const AGENTS = context.variant === "sbr" ? SBR_AGENTS : ATLAS_AGENTS
+  const copy = COPY[context.variant]
+  const brand = context.variant === "sbr" ? C.blue : C.gold
+
   const [status, setStatus] = useState<Record<string, AgentStatus>>(() =>
     Object.fromEntries(AGENTS.map(a => [a.id, "idle" as AgentStatus])))
   const [progress, setProgress] = useState<Record<string, number>>({})
   const [log, setLog] = useState<LogLine[]>([
-    { id: -1, time: "00:00:00.00", codename: "SYSTEM", accent: C.dim, level: "info", msg: "Mission control online — awaiting dispatch" },
+    { id: -1, time: "00:00:00.00", codename: "SYSTEM", accent: C.dim, level: "info", msg: copy.online },
   ])
   const [selected, setSelected] = useState<string>(AGENTS[0].id)
   const [clock, setClock] = useState("")
@@ -267,7 +377,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
     timers.current[agent.id] = []
     setStatus(s => ({ ...s, [agent.id]: "active" }))
     setProgress(p => ({ ...p, [agent.id]: 0 }))
-    push(agent.codename, agent.accent, "info", "▶ dispatch received — engine spinning up")
+    push(agent.codename, agent.accent, "info", copy.spinup)
 
     const total = agent.result.line.t
     for (const step of agent.script) {
@@ -282,12 +392,12 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
       setStatus(s => ({ ...s, [agent.id]: r.status }))
       setProgress(p => ({ ...p, [agent.id]: 100 }))
     }, agent.result.line.t))
-  }, [push])
+  }, [push, copy])
 
   const dispatchAll = useCallback(() => {
-    push("SYSTEM", C.blue, "info", `━━ full governance sweep · ${AGENTS.length} agents dispatched ━━`)
+    push("SYSTEM", C.blue, "info", copy.sweepMsg(AGENTS.length))
     AGENTS.forEach((a, i) => setTimeout(() => dispatch(a), i * 260))
-  }, [dispatch, push])
+  }, [dispatch, push, AGENTS, copy])
 
   const resetAll = useCallback(() => {
     Object.values(timers.current).flat().forEach(clearTimeout)
@@ -295,7 +405,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
     setStatus(Object.fromEntries(AGENTS.map(a => [a.id, "idle" as AgentStatus])))
     setProgress({})
     setLog([{ id: logIdRef.current++, time: clockNow(), codename: "SYSTEM", accent: C.dim, level: "info", msg: "Console cleared — standing by" }])
-  }, [])
+  }, [AGENTS])
 
   const activeCount = useMemo(() => Object.values(status).filter(s => s === "active").length, [status])
   const alertCount = useMemo(() => Object.values(status).filter(s => s === "alert").length, [status])
@@ -324,13 +434,13 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
             <ArrowLeft className="h-4 w-4" style={{ color: C.dim }} />
           </Link>
           <div className="flex items-center gap-2.5">
-            <span className="mc-live-dot" style={{ background: activeCount ? C.green : C.gold }} />
+            <span className="mc-live-dot" style={{ background: activeCount ? C.green : brand }} />
             <div>
               <h1 className={`${spaceGrotesk} text-sm font-bold tracking-wide`} style={{ color: "#F2F5FB" }}>
-                ATLAS MISSION CONTROL
+                {context.variant === "sbr" ? "SILICON BRICK ROAD" : "ATLAS MISSION CONTROL"}
               </h1>
               <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>
-                AGENT DISPATCH · {context.label.toUpperCase()}
+                {copy.subtitle} · {context.label.toUpperCase()}
               </p>
             </div>
           </div>
@@ -347,7 +457,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
         {/* ── Left: agent roster ─────────────────────────────────────────── */}
         <aside className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <SectionLabel mono={mono}>AGENT ROSTER</SectionLabel>
+            <SectionLabel mono={mono}>{copy.roster}</SectionLabel>
             <span className={`${mono} text-[10px]`} style={{ color: C.dim }}>{AGENTS.length}</span>
           </div>
           <div className="flex flex-col gap-2">
@@ -412,14 +522,14 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
                   className={`${mono} flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all active:scale-95`}
                   style={{ background: selectedAgent.accent, color: C.navy }}
                 >
-                  <Play className="h-3.5 w-3.5" /> DISPATCH
+                  <Play className="h-3.5 w-3.5" /> {copy.dispatch}
                 </button>
                 <button
                   onClick={dispatchAll}
                   className={`${mono} flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all active:scale-95`}
                   style={{ borderColor: C.line, color: C.gold }}
                 >
-                  <Zap className="h-3.5 w-3.5" /> SWEEP ALL
+                  <Zap className="h-3.5 w-3.5" /> {copy.sweep}
                 </button>
               </div>
             </div>
@@ -437,7 +547,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
             <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: C.line }}>
               <div className="flex items-center gap-2">
                 <Activity className="h-3.5 w-3.5" style={{ color: C.green }} />
-                <span className={`${mono} text-[11px] font-semibold tracking-widest`} style={{ color: C.text }}>EXECUTION LOG</span>
+                <span className={`${mono} text-[11px] font-semibold tracking-widest`} style={{ color: C.text }}>{copy.log}</span>
               </div>
               <button onClick={resetAll} className={`${mono} flex items-center gap-1 text-[10px] transition-colors hover:opacity-80`} style={{ color: C.dim }}>
                 <Square className="h-3 w-3" /> CLEAR

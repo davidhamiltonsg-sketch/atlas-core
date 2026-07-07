@@ -29,6 +29,7 @@ const SAMPLE_CONTEXT: PortfolioContext = {
   cashPct: 3.1,
   driftAlerts: 1,
   live: false,
+  variant: "atlas",
   holdings: [
     { ticker: "VT",   name: "World Equity Core",   pct: 34.0, color: "#4A9EFF" },
     { ticker: "QQQM", name: "Growth Sleeve",       pct: 23.0, color: "#C9A84C" },
@@ -40,12 +41,33 @@ const SAMPLE_CONTEXT: PortfolioContext = {
   ],
 }
 
-async function loadPortfolioContext(): Promise<PortfolioContext> {
-  try {
-    const session = await getSession()
-    if (!session) return SAMPLE_CONTEXT
+// Silicon Brick Road sample — its four funds, plain-English names, SGD.
+const SBR_SAMPLE_CONTEXT: PortfolioContext = {
+  label: "Silicon Brick Road",
+  totalValue: 18_400,
+  currency: "SGD",
+  dayChangePct: 0.31,
+  cashPct: null,
+  driftAlerts: 1,
+  live: false,
+  variant: "sbr",
+  holdings: [
+    { ticker: "VWRA", name: "Global fund",          pct: 60.0, color: "#4A9EFF" },
+    { ticker: "A35",  name: "Singapore bond fund",  pct: 20.0, color: "#2ECC9A" },
+    { ticker: "EQQQ", name: "Nasdaq fund",          pct: 10.0, color: "#C9A84C" },
+    { ticker: "SMH",  name: "Chip-maker fund",      pct: 10.0, color: "#E0913A" },
+  ],
+}
 
-    const label = constitutionIdForEmail(session.email) === "silicon-brick-road" ? "Silicon Brick Road" : "Atlas Core"
+async function loadPortfolioContext(): Promise<PortfolioContext> {
+  const session = await getSession()
+  if (!session) return SAMPLE_CONTEXT
+
+  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const label = isSbr ? "Silicon Brick Road" : "Atlas Core"
+  const fallback = isSbr ? SBR_SAMPLE_CONTEXT : SAMPLE_CONTEXT
+
+  try {
 
     const holdings = await db.holding.findMany({
       where: { userId: session.userId },
@@ -65,7 +87,7 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
       .filter(r => r.value > 0)
 
     const total = rows.reduce((s, r) => s + r.value, 0)
-    if (total <= 0) return SAMPLE_CONTEXT
+    if (total <= 0) return fallback
 
     const prevTotal = rows.reduce((s, r) => s + r.prevValue, 0)
     const dayChangePct = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : null
@@ -88,10 +110,12 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
       driftAlerts,
       live: true,
       holdings: holdingsOut,
+      variant: isSbr ? "sbr" : "atlas",
     }
   } catch {
-    // A console should never crash the app — degrade to the sample context.
-    return SAMPLE_CONTEXT
+    // A console should never crash the app — degrade to the sample context
+    // for whichever portfolio the signed-in user owns.
+    return fallback
   }
 }
 
