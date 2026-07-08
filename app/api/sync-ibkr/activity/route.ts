@@ -4,6 +4,8 @@ import { getSession } from "@/lib/session"
 import { fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { importIbkrActivityForUser } from "@/lib/holdings-sync"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
+import { constitutionIdForEmail } from "@/lib/constitutions"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 
 const CORE = new Set<string>(CORE_TICKERS)
@@ -16,10 +18,10 @@ export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
 
-  const token        = process.env.IBKR_FLEX_TOKEN
-  const activityId   = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY
-  const positionsId  = process.env.IBKR_FLEX_QUERY_ID
-  const queryId      = activityId ?? positionsId
+  // Use the signed-in user's own IBKR account — SBR has its own Flex tokens.
+  const { token, positionsQuery: positionsId, activityQuery: activityId } =
+    ibkrCredentialsFor(constitutionIdForEmail(session.email))
+  const queryId = activityId ?? positionsId
 
   console.log("[sync-ibkr/activity] token present:", !!token, "activityId:", !!activityId, "fallback positionsId:", !!positionsId)
 
