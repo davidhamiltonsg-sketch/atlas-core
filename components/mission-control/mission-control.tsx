@@ -20,10 +20,11 @@ import {
 //   text   #C7D0E4  body            red   #E05555  alert
 //
 // The "agents" are the app's real analytical engines. Dispatching one streams
-// its findings into the ops feed and flips its tile to ACTIVE. Atlas agents
-// compute live findings from real portfolio data (passed as `findings` from
-// the server); SBR agents use scripted traces (the real SBR engines live in
-// the standalone SPA). Nothing here mutates portfolio data.
+// its findings into the ops feed and flips its tile to ACTIVE. Both Atlas and
+// SBR agents compute live findings from real portfolio data (passed as
+// `findings` from the server). When findings are unavailable (logged out, no
+// session), the component falls back to scripted traces. Nothing here mutates
+// portfolio data.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const C = {
@@ -350,10 +351,9 @@ function clockNow() {
 
 export function MissionControl({ context, findings }: { context: PortfolioContext; findings?: Record<string, AgentFinding> | null }) {
   const AGENTS = useMemo(() => {
-    if (context.variant === "sbr" || !findings) {
-      return context.variant === "sbr" ? SBR_AGENTS : ATLAS_AGENTS
-    }
-    return ATLAS_AGENTS.map(a => {
+    const base = context.variant === "sbr" ? SBR_AGENTS : ATLAS_AGENTS
+    if (!findings) return base
+    return base.map(a => {
       const f = findings[a.id]
       if (!f) return a
       return { ...a, script: f.script as Step[], result: { status: f.result.status as Exclude<AgentStatus, "idle" | "active">, line: f.result.line as Step } }
