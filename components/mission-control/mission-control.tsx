@@ -19,10 +19,11 @@ import {
 //   line   #26304A  hairline        green #2ECC9A  positive signal
 //   text   #C7D0E4  body            red   #E05555  alert
 //
-// The "agents" are the app's real analytical engines. Dispatching one streams a
-// scripted execution trace into the ops feed and flips its tile to ACTIVE — a
-// visual rehearsal of the governance run, not a live backend job (no such job
-// system exists yet), so nothing here mutates portfolio data.
+// The "agents" are the app's real analytical engines. Dispatching one streams
+// its findings into the ops feed and flips its tile to ACTIVE. Atlas agents
+// compute live findings from real portfolio data (passed as `findings` from
+// the server); SBR agents use scripted traces (the real SBR engines live in
+// the standalone SPA). Nothing here mutates portfolio data.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const C = {
@@ -291,6 +292,12 @@ const SBR_AGENTS: AgentDef[] = [
   },
 ]
 
+// ── Server-computed agent findings (Atlas only — SBR uses the standalone SPA) ─
+export interface AgentFinding {
+  script: Array<{ t: number; level: Level; msg: string }>
+  result: { status: "done" | "alert"; line: { t: number; level: Level; msg: string } }
+}
+
 // ── Portfolio context (passed from the server; representative if logged out) ──
 export interface PortfolioContext {
   label: string
@@ -341,8 +348,17 @@ function clockNow() {
   return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0").slice(0, 2)
 }
 
-export function MissionControl({ context }: { context: PortfolioContext }) {
-  const AGENTS = context.variant === "sbr" ? SBR_AGENTS : ATLAS_AGENTS
+export function MissionControl({ context, findings }: { context: PortfolioContext; findings?: Record<string, AgentFinding> | null }) {
+  const AGENTS = useMemo(() => {
+    if (context.variant === "sbr" || !findings) {
+      return context.variant === "sbr" ? SBR_AGENTS : ATLAS_AGENTS
+    }
+    return ATLAS_AGENTS.map(a => {
+      const f = findings[a.id]
+      if (!f) return a
+      return { ...a, script: f.script as Step[], result: { status: f.result.status as Exclude<AgentStatus, "idle" | "active">, line: f.result.line as Step } }
+    })
+  }, [context.variant, findings])
   const copy = COPY[context.variant]
   const brand = context.variant === "sbr" ? C.blue : C.gold
 
