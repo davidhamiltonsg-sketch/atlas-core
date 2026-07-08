@@ -33,6 +33,25 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { PortfolioChooser } from "@/components/portfolio-chooser"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 
+// This is a personal, auth-gated dashboard whose server render includes live
+// date maths (dealing-window and contribution countdowns). Pin it to dynamic so
+// a countdown can never be frozen by an accidental static/edge cache.
+export const dynamic = "force-dynamic"
+
+// Calendar "today" in the portfolio's home timezone (Singapore — the app trades
+// in SGD against an SGD goal). The infra clock is UTC, so a plain `new Date()`
+// keeps reading the previous calendar day until 08:00 SGT — which made the
+// dealing-window countdown appear stuck a day behind. Anchor every day-count to
+// the Singapore wall-clock date instead.
+const APP_TZ = "Asia/Singapore"
+function sgtToday(): { y: number; m: number; d: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TZ, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date())
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value)
+  return { y: get("year"), m: get("month") - 1, d: get("day") }
+}
+
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
 const DEFAULT_ANNUAL_LUMP_SUM = 20000
@@ -57,13 +76,12 @@ async function getUsdSgdRate(): Promise<number> {
 }
 
 /** Dealing window: opens 3rd business day after the 15th, closes last business day of month. */
-function getDealingWindow(now: Date): {
+function getDealingWindow(today: { y: number; m: number; d: number }): {
   daysUntilOpen: number | null
   windowClosesLabel: string | null
   isOpen: boolean
 } {
-  const y = now.getFullYear(), m = now.getMonth()
-  const todayStr = `${y}-${m}-${now.getDate()}`
+  const { y, m, d } = today
 
   // 3rd business day after the 15th
   let count = 0
@@ -77,7 +95,7 @@ function getDealingWindow(now: Date): {
   const last = new Date(y, m + 1, 0)
   while (last.getDay() === 0 || last.getDay() === 6) last.setDate(last.getDate() - 1)
 
-  const todayMs  = new Date(y, m, now.getDate()).getTime()
+  const todayMs  = new Date(y, m, d).getTime()
   const openMs   = new Date(open.getFullYear(), open.getMonth(), open.getDate()).getTime()
   const closeMs  = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime()
 
@@ -238,12 +256,14 @@ async function getDashboardData(userId: string) {
   }
   const onTrackPct = targetNow && targetNow > 0 ? (totalValue / targetNow) * 100 : null
 
-  const now = new Date()
-  const day15ThisMonth = new Date(now.getFullYear(), now.getMonth(), 15)
-  const nextContribution = now < day15ThisMonth
+  // Contribution countdown — anchored to the Singapore calendar day (see sgtToday).
+  const today = sgtToday()
+  const todayMidnight = new Date(today.y, today.m, today.d)
+  const day15ThisMonth = new Date(today.y, today.m, 15)
+  const nextContribution = todayMidnight < day15ThisMonth
     ? day15ThisMonth
-    : new Date(now.getFullYear(), now.getMonth() + 1, 15)
-  const daysToContribution = Math.ceil((nextContribution.getTime() - now.getTime()) / 86_400_000)
+    : new Date(today.y, today.m + 1, 15)
+  const daysToContribution = Math.ceil((nextContribution.getTime() - todayMidnight.getTime()) / 86_400_000)
   const nextContributionLabel = nextContribution.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 
   const donutData = holdings.map((h) => {
@@ -429,7 +449,7 @@ async function getDashboardData(userId: string) {
   const outOfScopeTickers = positions.filter((p) => p.value > 0 && !isInScope(p.ticker)).map((p) => p.ticker.toUpperCase())
   const govAlignment = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough, usSitedValueUsd })
 
-  const dealingWindow = getDealingWindow(now)
+  const dealingWindow = getDealingWindow(today)
 
   const updateHoldings = holdings.map((h) => ({
     id: h.id, ticker: h.ticker, name: h.name,
