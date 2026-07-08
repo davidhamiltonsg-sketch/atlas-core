@@ -86,6 +86,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/dividends", label: "Dividends", icon: Coins },
     ] },
     { label: "Insights", items: [
+      { href: "/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/reports", label: "Road Report", icon: FileBarChart2 },
       { href: "/risk", label: "Risk", icon: BarChart3 },
       { href: "/ytd", label: "YTD / P&L", icon: LineChart },

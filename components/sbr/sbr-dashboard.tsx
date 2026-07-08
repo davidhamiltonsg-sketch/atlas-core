@@ -22,6 +22,8 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
+import { BrickRoad } from "@/components/sbr/brick-road"
+import { SBR_SPEC } from "@/lib/portfolio-spec"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -282,6 +284,23 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           </p>
         )}
       </div>
+
+      {/* Brick Road — visual journey progress */}
+      {hasBalance && (
+        <div className="mb-5">
+          <BrickRoad
+            totalValue={d.totalValue}
+            targetValue={target}
+            currentPhase={d.phase.key}
+            phases={SBR_SPEC.phases.map(p => ({
+              key: p.key,
+              threshold: p.max ?? target,
+              label: p.max !== null ? `< ${formatCurrency(p.max, "SGD")}` : `${formatCurrency(p.min, "SGD")}+`,
+            }))}
+            monthsToGoal={d.monthsToGoal.base}
+          />
+        </div>
+      )}
 
       {/* Phase crossing celebration — fires for 7 days after the cron logs a transition */}
       {hasBalance && d.phaseCrossedRecently && d.newPhaseFromLog && (

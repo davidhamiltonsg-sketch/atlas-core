@@ -129,11 +129,11 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
   }
 }
 
-// ── Real agent findings (Atlas only) ────────────────────────────────────────
-// Each engine runs against the live portfolio and produces timestamped log
-// messages + a final result that the client component animates verbatim.
-// When the server can't produce findings (logged out, no holdings, SBR user),
-// the client falls back to the scripted traces.
+// ── Real agent findings ────────────────────────────────────────────────────
+// Both Atlas and SBR engines run against the live database and produce
+// timestamped log messages + a final result that the client animates verbatim.
+// When the server can't produce findings (logged out, error), the client
+// falls back to the scripted traces.
 
 type Level = "info" | "data" | "ok" | "warn" | "err"
 
@@ -566,14 +566,214 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
   }
 }
 
+// ── Real SBR findings ──────────────────────────────────────────────────────
+// SBR helpers check what Dami actually has in the database. If there are no
+// holdings or trades, they say so honestly instead of playing scripted traces.
+
+async function loadSbrFindings(userId: string): Promise<Record<string, AgentFinding> | null> {
+  try {
+    const [holdings, trades] = await Promise.all([
+      db.holding.findMany({
+        where: { userId },
+        include: { snapshots: { orderBy: { date: "desc" }, take: 2 } },
+      }),
+      db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    ])
+
+    const rows = holdings
+      .map(h => ({
+        ticker: h.ticker,
+        name: h.name,
+        value: h.snapshots[0]?.value ?? 0,
+        targetPct: h.targetPct,
+      }))
+      .filter(r => r.value > 0)
+
+    const totalValue = rows.reduce((s, r) => s + r.value, 0)
+    const hasHoldings = totalValue > 0
+    const hasTrades = trades.length > 0
+    const findings: Record<string, AgentFinding> = {}
+
+    // 1. Buys — what shares to buy this month
+    {
+      const ts = spacedTimings(2)
+      if (hasHoldings) {
+        const fundCount = rows.length
+        findings.buys = {
+          script: [
+            { t: ts[0], level: "info", msg: `Checking your ${fundCount} fund${fundCount !== 1 ? "s" : ""} for this month's split` },
+            { t: ts[1], level: "data", msg: `Total value: S$${Math.round(totalValue).toLocaleString()}` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `${fundCount} fund${fundCount !== 1 ? "s" : ""} loaded — ready when you add this month's savings` } },
+        }
+      } else {
+        findings.buys = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your funds" },
+            { t: ts[1], level: "data", msg: "No holdings recorded yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No funds yet — add your first holding to get started" } },
+        }
+      }
+    }
+
+    // 2. Balance — are funds near their targets?
+    {
+      const ts = spacedTimings(2)
+      if (hasHoldings) {
+        const withPct = rows.map(r => ({ ...r, actualPct: (r.value / totalValue) * 100 }))
+        const offTarget = withPct.filter(r => r.targetPct > 0 && Math.abs(r.actualPct - r.targetPct) > 3)
+        if (offTarget.length > 0) {
+          findings.balance = {
+            script: [
+              { t: ts[0], level: "info", msg: "Weighing each fund against its guide-rails" },
+              { t: ts[1], level: "warn", msg: `${offTarget.length} fund${offTarget.length !== 1 ? "s" : ""} outside target range` },
+            ],
+            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: `${offTarget.length} fund${offTarget.length !== 1 ? "s" : ""} a bit off — even out over the next month` } },
+          }
+        } else {
+          findings.balance = {
+            script: [
+              { t: ts[0], level: "info", msg: "Weighing each fund against its guide-rails" },
+              { t: ts[1], level: "ok", msg: "All funds within their target range" },
+            ],
+            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: "Funds balanced — nothing to even out" } },
+          }
+        }
+      } else {
+        findings.balance = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for fund balances to check" },
+            { t: ts[1], level: "data", msg: "No holdings to weigh yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No funds yet — nothing to balance" } },
+        }
+      }
+    }
+
+    // 3. Road — where are you on the journey?
+    {
+      const ts = spacedTimings(2)
+      if (hasTrades) {
+        const firstTradeDate = new Date(trades[0].date)
+        const monthsSaved = Math.max(1, Math.round((Date.now() - firstTradeDate.getTime()) / (30.44 * 86_400_000)))
+        findings.road = {
+          script: [
+            { t: ts[0], level: "info", msg: "Counting the months you've been saving" },
+            { t: ts[1], level: "data", msg: `${monthsSaved} month${monthsSaved !== 1 ? "s" : ""} since your first trade` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `On the road — ${monthsSaved} month${monthsSaved !== 1 ? "s" : ""} in` } },
+        }
+      } else {
+        findings.road = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your savings history" },
+            { t: ts[1], level: "data", msg: "No trades recorded yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "The road starts when you make your first trade" } },
+        }
+      }
+    }
+
+    // 4. Safety — have any de-risking steps kicked in?
+    // SBR phases are value-based (not time-based): Phase II starts at SGD 72k.
+    {
+      const ts = spacedTimings(2)
+      const safetyThreshold = 72_000
+      if (hasHoldings) {
+        if (totalValue >= safetyThreshold) {
+          findings.safety = {
+            script: [
+              { t: ts[0], level: "info", msg: "Checking your de-risking milestones" },
+              { t: ts[1], level: "warn", msg: `S$${Math.round(totalValue).toLocaleString()} is past the S$72K safety line` },
+            ],
+            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: "Past the safety threshold — new money should start going to bonds" } },
+          }
+        } else {
+          const remaining = safetyThreshold - totalValue
+          findings.safety = {
+            script: [
+              { t: ts[0], level: "info", msg: "Checking whether any safety step has started" },
+              { t: ts[1], level: "data", msg: `S$${Math.round(remaining).toLocaleString()} to go before the first safety step` },
+            ],
+            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `Still in full-growth mode — safety kicks in at S$72K` } },
+          }
+        }
+      } else {
+        findings.safety = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your fund value" },
+            { t: ts[1], level: "data", msg: "No holdings yet — can't check milestones" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Safety steps start when your fund reaches S$72K" } },
+        }
+      }
+    }
+
+    // 5. Goal — projection towards the home deadline
+    {
+      const ts = spacedTimings(2)
+      if (hasHoldings) {
+        findings.goal = {
+          script: [
+            { t: ts[0], level: "info", msg: "Projecting your pot towards mid-2029" },
+            { t: ts[1], level: "data", msg: `Current value: S$${Math.round(totalValue).toLocaleString()}` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `S$${Math.round(totalValue).toLocaleString()} saved so far — keep going` } },
+        }
+      } else {
+        findings.goal = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your savings to project" },
+            { t: ts[1], level: "data", msg: "No holdings yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Add your first holding to see a projection" } },
+        }
+      }
+    }
+
+    // 6. Savings — tally of deposits
+    {
+      const ts = spacedTimings(2)
+      if (hasTrades) {
+        const totalBought = trades.filter(t => t.type === "BUY").reduce((s, t) => s + t.amount, 0)
+        findings.savings = {
+          script: [
+            { t: ts[0], level: "info", msg: "Adding up every deposit you've made" },
+            { t: ts[1], level: "data", msg: `${trades.length} trade${trades.length !== 1 ? "s" : ""} · S$${Math.round(totalBought).toLocaleString()} invested` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `${trades.length} trade${trades.length !== 1 ? "s" : ""} recorded — S$${Math.round(totalBought).toLocaleString()} total` } },
+        }
+      } else {
+        findings.savings = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your trade history" },
+            { t: ts[1], level: "data", msg: "No trades recorded yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No deposits yet — your first trade starts the counter" } },
+        }
+      }
+    }
+
+    return findings
+  } catch {
+    return null
+  }
+}
+
 export default async function MissionControlPage() {
   const [context, session] = await Promise.all([
     loadPortfolioContext(),
     getSession(),
   ])
 
-  const isAtlas = session && constitutionIdForEmail(session.email) !== "silicon-brick-road"
-  const findings = isAtlas ? await loadAgentFindings(session.userId) : null
+  let findings: Record<string, AgentFinding> | null = null
+  if (session) {
+    const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+    findings = isSbr
+      ? await loadSbrFindings(session.userId)
+      : await loadAgentFindings(session.userId)
+  }
 
   return (
     <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
