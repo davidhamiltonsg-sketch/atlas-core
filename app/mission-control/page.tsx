@@ -129,11 +129,11 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
   }
 }
 
-// ── Real agent findings (Atlas only) ────────────────────────────────────────
-// Each engine runs against the live portfolio and produces timestamped log
-// messages + a final result that the client component animates verbatim.
-// When the server can't produce findings (logged out, no holdings, SBR user),
-// the client falls back to the scripted traces.
+// ── Real agent findings ────────────────────────────────────────────────────
+// Both Atlas and SBR engines run against the live database and produce
+// timestamped log messages + a final result that the client animates verbatim.
+// When the server can't produce findings (logged out, error), the client
+// falls back to the scripted traces.
 
 type Level = "info" | "data" | "ok" | "warn" | "err"
 
@@ -676,36 +676,36 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
     }
 
     // 4. Safety — have any de-risking steps kicked in?
+    // SBR phases are value-based (not time-based): Phase II starts at SGD 72k.
     {
       const ts = spacedTimings(2)
-      if (hasTrades) {
-        const firstTradeDate = new Date(trades[0].date)
-        const monthsSaved = Math.max(1, Math.round((Date.now() - firstTradeDate.getTime()) / (30.44 * 86_400_000)))
-        const safetyAt = 18
-        if (monthsSaved >= safetyAt) {
+      const safetyThreshold = 72_000
+      if (hasHoldings) {
+        if (totalValue >= safetyThreshold) {
           findings.safety = {
             script: [
               { t: ts[0], level: "info", msg: "Checking your de-risking milestones" },
-              { t: ts[1], level: "warn", msg: `Month ${monthsSaved} — safety step should have started at month ${safetyAt}` },
+              { t: ts[1], level: "warn", msg: `S$${Math.round(totalValue).toLocaleString()} is past the S$72K safety line` },
             ],
-            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: "Past the first safety milestone — check if new money is going to safety" } },
+            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: "Past the safety threshold — new money should start going to bonds" } },
           }
         } else {
+          const remaining = safetyThreshold - totalValue
           findings.safety = {
             script: [
               { t: ts[0], level: "info", msg: "Checking whether any safety step has started" },
-              { t: ts[1], level: "data", msg: `First step at month ${safetyAt} — you're at month ${monthsSaved}` },
+              { t: ts[1], level: "data", msg: `S$${Math.round(remaining).toLocaleString()} to go before the first safety step` },
             ],
-            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `No safety steps yet — ${safetyAt - monthsSaved} month${safetyAt - monthsSaved !== 1 ? "s" : ""} until the first one` } },
+            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `Still in full-growth mode — safety kicks in at S$72K` } },
           }
         }
       } else {
         findings.safety = {
           script: [
-            { t: ts[0], level: "info", msg: "Looking for savings timeline" },
-            { t: ts[1], level: "data", msg: "No trades yet — can't calculate milestones" },
+            { t: ts[0], level: "info", msg: "Looking for your fund value" },
+            { t: ts[1], level: "data", msg: "No holdings yet — can't check milestones" },
           ],
-          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Safety steps start after you begin saving" } },
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Safety steps start when your fund reaches S$72K" } },
         }
       }
     }
@@ -736,7 +736,7 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
     {
       const ts = spacedTimings(2)
       if (hasTrades) {
-        const totalBought = trades.filter(t => t.type === "BUY").reduce((s, t) => s + t.units * t.price, 0)
+        const totalBought = trades.filter(t => t.type === "BUY").reduce((s, t) => s + t.amount, 0)
         findings.savings = {
           script: [
             { t: ts[0], level: "info", msg: "Adding up every deposit you've made" },
