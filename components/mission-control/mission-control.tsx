@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
   ShieldCheck, GitCompare, TrendingUp, Landmark, BarChart3, Coins, Brain,
-  Activity, Radar, Gauge, ArrowLeft, Play, Square, Zap, CircleDot,
+  Activity, Radar, Gauge, ArrowLeft, Play, Square, Zap, CircleDot, AlertTriangle,
 } from "lucide-react"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,6 +314,8 @@ const COPY = {
     sweepMsg: (n: number) => `━━ full governance sweep · ${n} agents dispatched ━━`,
     codenameLabel: "CODENAME", ctx: "PORTFOLIO CONTEXT", alloc: "ALLOCATION",
     driftText: (n: number) => `${n} drift`, showCash: true,
+    flaggedTitle: "FLAGGED — NEEDS REVIEW", historyTitle: "SWEEP HISTORY",
+    unit: "agents", flaggedWord: "flagged", noSweeps: "No sweeps yet — run one to build history.",
   },
   sbr: {
     roster: "HELPERS", log: "ACTIVITY", dispatch: "RUN", sweep: "RUN ALL",
@@ -322,10 +324,14 @@ const COPY = {
     sweepMsg: (n: number) => `━━ running all ${n} helpers ━━`,
     codenameLabel: "HELPER", ctx: "YOUR FUND", alloc: "YOUR FUNDS",
     driftText: (n: number) => `${n} to even out`, showCash: false,
+    flaggedTitle: "NEEDS A LOOK", historyTitle: "CHECK-UP HISTORY",
+    unit: "helpers", flaggedWord: "to look at", noSweeps: "No check-ups yet — press Run All.",
   },
 } as const
 
 interface LogLine { id: number; time: string; codename: string; accent: string; level: Level; msg: string }
+interface Flag { name: string; codename: string; accent: string; msg: string }
+interface SweepRun { id: number; time: string; total: number; alerts: Flag[] }
 
 const fmtMoney = (n: number, ccy: string) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: ccy, maximumFractionDigits: 0 }).format(n)
@@ -348,10 +354,12 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
   ])
   const [selected, setSelected] = useState<string>(AGENTS[0].id)
   const [clock, setClock] = useState("")
+  const [sweeps, setSweeps] = useState<SweepRun[]>([])
 
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>[]>>({})
   const logIdRef = useRef(0)
-  const logEndRef = useRef<HTMLDivElement | null>(null)
+  const sweepIdRef = useRef(0)
+  const logScrollRef = useRef<HTMLDivElement | null>(null)
 
   // Live header clock (client-only → no hydration mismatch). The first tick is
   // deferred via rAF so we never setState synchronously inside the effect body.
@@ -362,8 +370,12 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
     return () => { cancelAnimationFrame(raf); clearInterval(iv) }
   }, [])
 
-  // Keep the ops feed pinned to the newest line.
-  useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }) }, [log])
+  // Keep the ops feed pinned to its newest line — scroll the log's OWN container,
+  // never the page, so the roster, flagged panel and history stay put during a sweep.
+  useEffect(() => {
+    const el = logScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [log])
 
   // Clear every scheduled timer on unmount.
   useEffect(() => () => { Object.values(timers.current).flat().forEach(clearTimeout) }, [])
@@ -401,6 +413,11 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
   const dispatchAll = useCallback(() => {
     push("SYSTEM", C.blue, "info", copy.sweepMsg(AGENTS.length))
     AGENTS.forEach((a, i) => setTimeout(() => dispatch(a), i * 260))
+    // Record the sweep in history. Each agent's outcome is deterministic, so the
+    // set of flagged findings this run will produce is known up front.
+    const flagged: Flag[] = AGENTS.filter(a => a.result.status === "alert")
+      .map(a => ({ name: a.name, codename: a.codename, accent: a.accent, msg: a.result.line.msg }))
+    setSweeps(s => [{ id: sweepIdRef.current++, time: clockNow().slice(0, 8), total: AGENTS.length, alerts: flagged }, ...s].slice(0, 10))
   }, [dispatch, push, AGENTS, copy])
 
   const resetAll = useCallback(() => {
@@ -413,6 +430,11 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
 
   const activeCount = useMemo(() => Object.values(status).filter(s => s === "active").length, [status])
   const alertCount = useMemo(() => Object.values(status).filter(s => s === "alert").length, [status])
+  // The findings currently flagged — what each alert actually is, not just a count.
+  const liveAlerts = useMemo<Flag[]>(() =>
+    AGENTS.filter(a => status[a.id] === "alert")
+      .map(a => ({ name: a.name, codename: a.codename, accent: a.accent, msg: a.result.line.msg })),
+    [status, AGENTS])
   const selectedAgent = AGENTS.find(a => a.id === selected)!
 
   const spaceGrotesk = "font-[family-name:var(--font-space-grotesk)]"
@@ -546,6 +568,37 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
             </div>
           </section>
 
+          {/* Flagged findings — surfaces WHAT each alert is, not just the count */}
+          {liveAlerts.length > 0 && (
+            <section className="rounded-2xl border p-4" style={{ background: "rgba(224,85,85,0.06)", borderColor: "rgba(224,85,85,0.35)" }}>
+              <div className="mb-2.5 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" style={{ color: C.red }} />
+                <span className={`${mono} text-[11px] font-semibold tracking-widest`} style={{ color: C.red }}>{copy.flaggedTitle}</span>
+                <span className={`${mono} text-[11px]`} style={{ color: C.dim }}>· {liveAlerts.length}</span>
+              </div>
+              <ul className="space-y-1.5">
+                {liveAlerts.map(a => (
+                  <li key={a.codename}>
+                    <button
+                      onClick={() => setSelected(AGENTS.find(x => x.codename === a.codename)?.id ?? selected)}
+                      className="flex w-full items-start gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors hover:brightness-125"
+                      style={{ borderColor: C.line, background: "rgba(255,255,255,0.02)" }}
+                    >
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: a.accent }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-[13px] font-semibold" style={{ color: "#EAEEF6" }}>{a.name}</span>
+                          <span className={`${mono} shrink-0 text-[10px]`} style={{ color: C.dim }}>{a.codename}</span>
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-snug" style={{ color: C.text }}>{a.msg}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* Execution log — the real-time ops feed */}
           <section className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: "#070B16", borderColor: C.line }}>
             <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: C.line }}>
@@ -557,7 +610,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
                 <Square className="h-3 w-3" /> CLEAR
               </button>
             </div>
-            <div className="mc-scan flex-1 overflow-y-auto px-4 py-3">
+            <div ref={logScrollRef} className="mc-scan flex-1 overflow-y-auto px-4 py-3">
               <div className={`${mono} space-y-1 text-[12px] leading-relaxed`}>
                 {log.map(l => (
                   <div key={l.id} className="flex gap-2.5">
@@ -568,7 +621,7 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
                     </span>
                   </div>
                 ))}
-                <div ref={logEndRef} className="flex gap-2.5">
+                <div className="flex gap-2.5">
                   <span className="mc-cursor" style={{ color: C.green }}>▊</span>
                 </div>
               </div>
@@ -637,6 +690,36 @@ export function MissionControl({ context }: { context: PortfolioContext }) {
               </div>
             </div>
           )}
+
+          {/* Sweep history — a record of each full run and exactly what it flagged */}
+          <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
+            <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>{copy.historyTitle}</p>
+            {sweeps.length === 0 ? (
+              <p className="mt-2 text-xs" style={{ color: C.dim }}>{copy.noSweeps}</p>
+            ) : (
+              <ul className="mt-2.5 space-y-3">
+                {sweeps.map(sw => (
+                  <li key={sw.id}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`${mono} text-[11px] tabular-nums`} style={{ color: C.text }}>{sw.time}</span>
+                      <span className={`${mono} text-[10px]`} style={{ color: sw.alerts.length ? C.gold : C.green }}>
+                        {sw.total} {copy.unit} · {sw.alerts.length} {copy.flaggedWord}
+                      </span>
+                    </div>
+                    {sw.alerts.length > 0 && (
+                      <ul className="mt-1.5 space-y-1 border-l pl-2.5" style={{ borderColor: C.line }}>
+                        {sw.alerts.map(a => (
+                          <li key={a.codename} className="text-[11px] leading-snug" style={{ color: C.dim }}>
+                            <span className="font-semibold" style={{ color: a.accent }}>{a.name}</span> — {a.msg}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </aside>
       </div>
     </div>
