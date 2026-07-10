@@ -614,9 +614,9 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
         findings.buys = {
           script: [
             { t: ts[0], level: "info", msg: "Looking for your funds" },
-            { t: ts[1], level: "data", msg: "No holdings recorded yet" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no prices yet" : "No holdings recorded yet" },
           ],
-          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No funds yet — add your first holding to get started" } },
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: hasTrades ? "Sync prices to calculate your monthly split" : "No funds yet — add your first holding to get started" } },
         }
       }
     }
@@ -648,9 +648,9 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
         findings.balance = {
           script: [
             { t: ts[0], level: "info", msg: "Looking for fund balances to check" },
-            { t: ts[1], level: "data", msg: "No holdings to weigh yet" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no prices yet" : "No holdings to weigh yet" },
           ],
-          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No funds yet — nothing to balance" } },
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: hasTrades ? "Waiting for price sync — tap Update Holdings" : "No funds yet — nothing to balance" } },
         }
       }
     }
@@ -707,7 +707,7 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
         findings.safety = {
           script: [
             { t: ts[0], level: "info", msg: "Looking for your fund value" },
-            { t: ts[1], level: "data", msg: "No holdings yet — can't check milestones" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no price data yet" : "No holdings yet — can't check milestones" },
           ],
           result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Safety steps start when your fund reaches S$72K" } },
         }
@@ -751,9 +751,9 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
         findings.goal = {
           script: [
             { t: ts[0], level: "info", msg: "Looking for your savings to project" },
-            { t: ts[1], level: "data", msg: "No holdings yet" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no price data yet" : "No holdings yet" },
           ],
-          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Add your first holding to see a projection" } },
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: hasTrades ? "Sync prices to project your timeline" : "Add your first holding to see a projection" } },
         }
       }
     }

@@ -458,7 +458,7 @@ export default async function Portfolio() {
                       <span className="text-[11px] font-bold">{h.ticker}</span>
                     </div>
                     <span className="text-[11px] tabular-nums" style={{ color: driftColor }}>
-                      {h.actualPct.toFixed(1)}% / {h.targetPct}%
+                      {h.actualPct.toFixed(1)}% / {h.targetPct.toFixed(1)}%
                     </span>
                   </div>
                   <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
