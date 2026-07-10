@@ -235,7 +235,7 @@ async function getDashboardData(userId: string) {
   // that page can never quote a different rate for the same portfolio.
   const allocMap: Record<string, number> = {}
   for (const p of positions) allocMap[p.ticker] = p.actualPct
-  const rates = blendedGrowthRates(allocMap, riskFreeRate)
+  const { rates } = blendedGrowthRates(allocMap, riskFreeRate)
 
   const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
   const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate)

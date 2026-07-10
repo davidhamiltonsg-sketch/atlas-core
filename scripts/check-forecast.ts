@@ -22,7 +22,7 @@ console.log("Atlas Core — forecast math checks\n")
 
 // 1) 100% VT → blend equals VT's own assumption exactly, in all three scenarios.
 {
-  const rates = blendedGrowthRates({ VT: 100 }, 0.04)
+  const { rates } = blendedGrowthRates({ VT: 100 }, 0.04)
   expect("100% VT → conservative matches VT", close(rates.conservative, ASSET_EXPECTED_RETURNS.VT.conservative))
   expect("100% VT → base matches VT", close(rates.base, ASSET_EXPECTED_RETURNS.VT.base))
   expect("100% VT → aggressive matches VT", close(rates.aggressive, ASSET_EXPECTED_RETURNS.VT.aggressive))
@@ -30,7 +30,7 @@ console.log("Atlas Core — forecast math checks\n")
 
 // 2) 100% SGOV (buffer) → blend equals the user's own risk-free-rate assumption everywhere.
 {
-  const rates = blendedGrowthRates({ SGOV: 100 }, 0.045)
+  const { rates } = blendedGrowthRates({ SGOV: 100 }, 0.045)
   expect("100% SGOV → conservative = risk-free rate", close(rates.conservative, 0.045))
   expect("100% SGOV → base = risk-free rate", close(rates.base, 0.045))
   expect("100% SGOV → aggressive = risk-free rate", close(rates.aggressive, 0.045))
@@ -40,7 +40,7 @@ console.log("Atlas Core — forecast math checks\n")
 //    rates (a weighted average can never fall outside the range of its inputs).
 {
   const alloc = { VT: 52, QQQM: 23, SMH: 10, VWO: 8, BTC: 7 }
-  const rates = blendedGrowthRates(alloc, 0.04)
+  const { rates } = blendedGrowthRates(alloc, 0.04)
   for (const key of ["conservative", "base", "aggressive"] as const) {
     const heldRates = Object.keys(alloc).map((t) => ASSET_EXPECTED_RETURNS[t][key])
     const lo = Math.min(...heldRates)
@@ -53,8 +53,8 @@ console.log("Atlas Core — forecast math checks\n")
 
 // 4) Heavier BTC allocation raises the aggressive rate (BTC.aggressive > VT.aggressive).
 {
-  const lightBtc = blendedGrowthRates({ VT: 90, BTC: 10 }, 0.04)
-  const heavyBtc  = blendedGrowthRates({ VT: 60, BTC: 40 }, 0.04)
+  const { rates: lightBtc } = blendedGrowthRates({ VT: 90, BTC: 10 }, 0.04)
+  const { rates: heavyBtc }  = blendedGrowthRates({ VT: 60, BTC: 40 }, 0.04)
   expect("more BTC weight → higher aggressive rate", heavyBtc.aggressive > lightBtc.aggressive,
     `light=${lightBtc.aggressive} heavy=${heavyBtc.aggressive}`)
 }
@@ -62,8 +62,8 @@ console.log("Atlas Core — forecast math checks\n")
 // 5) Changing the risk-free rate shifts the blend proportionally to the buffer weight.
 {
   const alloc = { VT: 50, SGOV: 50 }
-  const low  = blendedGrowthRates(alloc, 0.02)
-  const high = blendedGrowthRates(alloc, 0.06)
+  const { rates: low }  = blendedGrowthRates(alloc, 0.02)
+  const { rates: high } = blendedGrowthRates(alloc, 0.06)
   const expectedDelta = 0.5 * (0.06 - 0.02) // 50% weight on the buffer bucket
   expect("risk-free-rate change shifts the blend by its buffer weight",
     close(high.base - low.base, expectedDelta, 1e-6),
@@ -73,7 +73,7 @@ console.log("Atlas Core — forecast math checks\n")
 // 6) Empty allocation (no holdings yet) → falls back to the prior static defaults
 //    (5% / 10% / 15%), so a brand-new user sees the same numbers the old static version showed.
 {
-  const rates = blendedGrowthRates({}, 0.04)
+  const { rates } = blendedGrowthRates({}, 0.04)
   expect("no holdings → conservative fallback 5%", close(rates.conservative, 0.05))
   expect("no holdings → base fallback 10%", close(rates.base, 0.10))
   expect("no holdings → aggressive fallback 15%", close(rates.aggressive, 0.15))
@@ -82,9 +82,12 @@ console.log("Atlas Core — forecast math checks\n")
 // 7) Unknown ticker is excluded, not silently zeroed — a portfolio with one recognized and
 //    one unrecognized ticker renormalizes over the known weight instead of understating it.
 {
-  const rates = blendedGrowthRates({ VT: 50, ZZZZ: 50 }, 0.04)
+  const { rates, excludedTickers } = blendedGrowthRates({ VT: 50, ZZZZ: 50 }, 0.04)
   expect("unknown ticker excluded → blend equals the known ticker's own rate",
     close(rates.base, ASSET_EXPECTED_RETURNS.VT.base), `got ${rates.base}`)
+  expect("unknown ticker reported in excludedTickers",
+    excludedTickers.length === 1 && excludedTickers[0] === "ZZZZ",
+    `got [${excludedTickers}]`)
 }
 
 // 8) projectPortfolio — no growth, no contributions: value never changes.

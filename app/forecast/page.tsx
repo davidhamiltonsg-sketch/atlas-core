@@ -280,7 +280,7 @@ export default async function Forecast() {
   // target weights) — a portfolio that has drifted toward more BTC/QQQM sees that reflected
   // here, same as every other computation in the app. The buffer (SGOV) portion uses the
   // user's own Settings risk-free-rate assumption.
-  const rates = blendedGrowthRates(allocMap, RISK_FREE_RATE)
+  const { rates } = blendedGrowthRates(allocMap, RISK_FREE_RATE)
   const returnScenarios = SCENARIO_META.map((s) => ({
     ...s,
     rate: rates[s.key],

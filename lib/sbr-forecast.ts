@@ -20,6 +20,7 @@ export interface SbrGrowthRates {
 export const SBR_ASSET_EXPECTED_RETURNS: Record<string, SbrGrowthRates> = {
   VWRA: { conservative: 0.06, base: 0.095, aggressive: 0.12 },
   QQQM: { conservative: 0.07, base: 0.115, aggressive: 0.16 },
+  EQQQ: { conservative: 0.07, base: 0.115, aggressive: 0.16 },  // same fund as QQQM, LSE listing
   SMH:  { conservative: 0.06, base: 0.13,  aggressive: 0.20 },
   A35:  { conservative: 0.01, base: 0.03,  aggressive: 0.05 },
 }

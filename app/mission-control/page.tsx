@@ -10,6 +10,7 @@ import { BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
+import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
@@ -275,7 +276,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const annualLumpSum = user?.annualLumpSum ?? 20000
     const allocMap: Record<string, number> = {}
     for (const p of positions) allocMap[p.ticker] = p.actualPct
-    const rates = blendedGrowthRates(allocMap, riskFreeRate)
+    const { rates, excludedTickers } = blendedGrowthRates(allocMap, riskFreeRate)
     const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
     const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate)
 
@@ -463,6 +464,9 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     {
       const steps: Array<{ level: Level; msg: string }> = []
       steps.push({ level: "info", msg: `Blending growth assumptions from ${positions.length} holdings` })
+      if (excludedTickers.length > 0) {
+        steps.push({ level: "warn", msg: `${excludedTickers.length} ticker${excludedTickers.length !== 1 ? "s" : ""} excluded from blend (${excludedTickers.join(", ")}) — add return assumptions` })
+      }
       steps.push({ level: "data", msg: `CAGR: conservative ${(rates.conservative * 100).toFixed(1)}% · base ${(rates.base * 100).toFixed(1)}% · aggressive ${(rates.aggressive * 100).toFixed(1)}%` })
       steps.push({ level: "data", msg: `Base-case 2045 (${yearsTo2045}yr): ${fmt(base2045)} at ${(rates.base * 100).toFixed(1)}% p.a.` })
       steps.push({ level: "ok", msg: `Monthly S$${monthlyContribution.toLocaleString()} + annual lump S$${annualLumpSum.toLocaleString()} · growth ${(contributionGrowthRate * 100).toFixed(0)}% p.a.` })
@@ -471,8 +475,8 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       findings.forecast = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
-          status: "done",
-          line: { t: resultT(ts), level: "ok", msg: `Forecast refreshed — base case ${fmt(base2045)} by 2045` },
+          status: excludedTickers.length > 0 ? "alert" : "done",
+          line: { t: resultT(ts), level: excludedTickers.length > 0 ? "warn" : "ok", msg: `Forecast refreshed — base case ${fmt(base2045)} by 2045${excludedTickers.length > 0 ? ` (${excludedTickers.length} ticker${excludedTickers.length !== 1 ? "s" : ""} excluded)` : ""}` },
         },
       }
     }
@@ -712,16 +716,38 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
 
     // 5. Goal — projection towards the home deadline
     {
-      const ts = spacedTimings(2)
       if (hasHoldings) {
+        const allocMap: Record<string, number> = {}
+        for (const r of rows) allocMap[r.ticker] = (r.value / totalValue) * 100
+        const sbrRates = sbrBlendedGrowthRate(allocMap)
+        const target = 120_000
+        const monthly = 2_000
+        const baseMonths = monthsToTarget(totalValue, monthly, sbrRates.base, target)
+        const consMonths = monthsToTarget(totalValue, monthly, sbrRates.conservative, target)
+
+        const steps: Array<{ level: Level; msg: string }> = []
+        steps.push({ level: "info", msg: `Projecting S$${Math.round(totalValue).toLocaleString()} towards S$120K target` })
+        steps.push({ level: "data", msg: `Blended CAGR: ${(sbrRates.base * 100).toFixed(1)}% base · ${(sbrRates.conservative * 100).toFixed(1)}% conservative` })
+        if (baseMonths !== null) {
+          const baseYrs = (baseMonths / 12).toFixed(1)
+          steps.push({ level: "ok", msg: `Base case: ~${baseMonths} months (${baseYrs}yr) to S$120K at S$${monthly.toLocaleString()}/mo` })
+        } else {
+          steps.push({ level: "warn", msg: "Base case does not reach S$120K within 50 years at current rate" })
+        }
+        if (consMonths !== null && consMonths !== baseMonths) {
+          steps.push({ level: "data", msg: `Conservative: ~${consMonths} months (${(consMonths / 12).toFixed(1)}yr) to S$120K` })
+        }
+
+        const ts = spacedTimings(steps.length)
+        const resultMsg = baseMonths !== null
+          ? `~${baseMonths} months to S$120K at ${(sbrRates.base * 100).toFixed(1)}% p.a.`
+          : `S$${Math.round(totalValue).toLocaleString()} saved — target distant at current rate`
         findings.goal = {
-          script: [
-            { t: ts[0], level: "info", msg: "Projecting your pot towards mid-2029" },
-            { t: ts[1], level: "data", msg: `Current value: S$${Math.round(totalValue).toLocaleString()}` },
-          ],
-          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `S$${Math.round(totalValue).toLocaleString()} saved so far — keep going` } },
+          script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
+          result: { status: "done", line: { t: resultT(ts), level: baseMonths !== null ? "ok" : "warn", msg: resultMsg } },
         }
       } else {
+        const ts = spacedTimings(2)
         findings.goal = {
           script: [
             { t: ts[0], level: "info", msg: "Looking for your savings to project" },
