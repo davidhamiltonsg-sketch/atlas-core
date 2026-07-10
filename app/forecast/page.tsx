@@ -8,9 +8,10 @@ import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } 
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection } from "@/lib/forecast"
-import { sbrBlendedGrowthRate, SBR_ASSET_EXPECTED_RETURNS, monthsToTarget } from "@/lib/sbr-forecast"
+import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
 import { sbrPhase } from "@/lib/sbr-engine"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { SBR_TARGET_RATES, SBR_ASSET_EXPECTED_RETURNS, sbrBrickRoadPhases } from "@/lib/spec-derived"
 import { EquityCurve, type ProjectionPoint } from "@/components/sbr/equity-curve"
 import { ScenarioCards, type Scenario } from "@/components/sbr/scenario-cards"
 import { BrickRoad } from "@/components/sbr/brick-road"
@@ -55,10 +56,6 @@ const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 const SBR_SEED = 10000
 const SBR_HORIZON_MONTHS = 60
 
-// Target-weighted blend of per-fund expected returns from portfolio-spec.
-const SBR_TARGET_RATES = sbrBlendedGrowthRate(
-  Object.fromEntries(SBR_SPEC.funds.filter(f => f.target > 0).map(f => [f.ticker, f.target]))
-)
 const SBR_SCENARIOS: Scenario[] = [
   { name: "Strong",       rate: SBR_TARGET_RATES.aggressive, probability: 15, color: "green", description: "All four funds beat their long-run average for three straight years." },
   { name: "Base",         rate: SBR_TARGET_RATES.base,       probability: 30, color: "sky",   description: "The most likely path — steady global growth, a few dips, recovery." },
@@ -138,11 +135,7 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
     return dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
   }
 
-  const phases = SBR_SPEC.phases.map(p => ({
-    key: p.key,
-    threshold: p.max ?? d.target,
-    label: p.max !== null ? `< ${formatCurrency(p.max, "SGD")}` : `${formatCurrency(p.min, "SGD")}+`,
-  }))
+  const phases = sbrBrickRoadPhases(d.target)
 
   return (
     <Shell title="Where the Road Leads" subtitle="Projections and scenarios for your home deposit" userName={userName} isAdmin={isAdmin}>

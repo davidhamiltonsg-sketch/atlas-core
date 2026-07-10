@@ -20,6 +20,11 @@ import {
 } from "@/lib/look-through"
 import { HARD_THRESHOLDS, applyBitcoinSleeve } from "@/lib/constants"
 import { ATLAS_SPEC } from "@/lib/portfolio-spec"
+import {
+  ATLAS_TARGET_HHI_PCT, ATLAS_TARGET_EFF_N,
+  ATLAS_HHI_THRESHOLDS, ATLAS_EFF_N_THRESHOLDS,
+  atlasConcentrationLabelPct,
+} from "@/lib/spec-derived"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
@@ -212,9 +217,9 @@ async function getReportData(userId: string) {
   const hhi = concentrationRows.reduce((sum, p) => sum + Math.pow(p.actualPct / 100, 2), 0)
   const effectiveN = hhi > 0 ? 1 / hhi : 0
   const hhiPct = hhi * 100
-  const targetHhi = ATLAS_SPEC.funds.filter(f => f.target > 0).reduce((s, f) => s + (f.target / 100) ** 2, 0) * 100
-  const targetEffN = targetHhi > 0 ? 100 / targetHhi : 0
-  const concentrationRating = hhiPct < targetHhi + 4 ? "On Target" : hhiPct < targetHhi + 10 ? "Drifting" : "Concentrated"
+  const targetHhi = ATLAS_TARGET_HHI_PCT
+  const targetEffN = ATLAS_TARGET_EFF_N
+  const concentrationRating = atlasConcentrationLabelPct(hhiPct)
 
   // Largest position dominance — uses the constitution's rangeHigh, not a hardcoded number
   const topPosition = [...concentrationRows].sort((a, b) => b.actualPct - a.actualPct)[0]

@@ -5,7 +5,7 @@ import { applyBitcoinSleeve } from "@/lib/constants"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
-import { ATLAS_SPEC } from "@/lib/portfolio-spec"
+import { ATLAS_TARGET_HHI, ATLAS_HHI_THRESHOLDS, atlasConcentrationLabel } from "@/lib/spec-derived"
 
 // ─── Risk Math ─────────────────────────────────────────────────────────────────
 
@@ -34,12 +34,10 @@ function hhi(weights: number[]): number {
   return weights.reduce((s, w) => s + w * w, 0)
 }
 
-const TARGET_HHI = ATLAS_SPEC.funds.filter(f => f.target > 0).reduce((s, f) => s + (f.target / 100) ** 2, 0)
-
 function hhiLabel(h: number): { label: string; color: string } {
-  if (h < TARGET_HHI + 0.04) return { label: "On Target", color: "text-green-500" }
-  if (h < TARGET_HHI + 0.10) return { label: "Drifting", color: "text-yellow-400" }
-  return { label: "Concentrated", color: "text-red-500" }
+  const label = atlasConcentrationLabel(h)
+  const color = label === "On Target" ? "text-green-500" : label === "Drifting" ? "text-yellow-400" : "text-red-500"
+  return { label, color }
 }
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
@@ -348,7 +346,7 @@ export default async function RiskPage() {
               {data.hhiScore.toFixed(3)}
             </p>
             <p className={`text-[11px] font-semibold mt-0.5 ${hhiInfo.color}`}>{hhiInfo.label}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Target: {TARGET_HHI.toFixed(3)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Target: {ATLAS_TARGET_HHI.toFixed(3)}</p>
           </div>
         </div>
 
@@ -489,9 +487,9 @@ export default async function RiskPage() {
                 <p className={`text-xs font-semibold mt-1 ${hhiInfo.color}`}>{hhiInfo.label}</p>
               </div>
               <div className="text-right text-xs text-muted-foreground space-y-1">
-                <p>&lt;{(TARGET_HHI + 0.04).toFixed(2)} — On Target</p>
-                <p>{(TARGET_HHI + 0.04).toFixed(2)}–{(TARGET_HHI + 0.10).toFixed(2)} — Drifting</p>
-                <p>&gt;{(TARGET_HHI + 0.10).toFixed(2)} — Concentrated</p>
+                <p>&lt;{ATLAS_HHI_THRESHOLDS.onTarget.toFixed(2)} — On Target</p>
+                <p>{ATLAS_HHI_THRESHOLDS.onTarget.toFixed(2)}–{ATLAS_HHI_THRESHOLDS.drifting.toFixed(2)} — Drifting</p>
+                <p>&gt;{ATLAS_HHI_THRESHOLDS.drifting.toFixed(2)} — Concentrated</p>
               </div>
             </div>
 

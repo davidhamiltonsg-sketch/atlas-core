@@ -23,7 +23,7 @@ import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 import { BrickRoad } from "@/components/sbr/brick-road"
-import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { sbrBrickRoadPhases } from "@/lib/spec-derived"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -292,11 +292,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             totalValue={d.totalValue}
             targetValue={target}
             currentPhase={d.phase.key}
-            phases={SBR_SPEC.phases.map(p => ({
-              key: p.key,
-              threshold: p.max ?? target,
-              label: p.max !== null ? `< ${formatCurrency(p.max, "SGD")}` : `${formatCurrency(p.min, "SGD")}+`,
-            }))}
+            phases={sbrBrickRoadPhases(target)}
             monthsToGoal={d.monthsToGoal.base}
           />
         </div>
