@@ -8,7 +8,7 @@ import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } 
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection } from "@/lib/forecast"
-import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
+import { sbrBlendedGrowthRate, SBR_ASSET_EXPECTED_RETURNS, monthsToTarget } from "@/lib/sbr-forecast"
 import { sbrPhase } from "@/lib/sbr-engine"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { EquityCurve, type ProjectionPoint } from "@/components/sbr/equity-curve"
@@ -55,11 +55,15 @@ const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 const SBR_SEED = 10000
 const SBR_HORIZON_MONTHS = 60
 
+// Target-weighted blend of per-fund expected returns from portfolio-spec.
+const SBR_TARGET_RATES = sbrBlendedGrowthRate(
+  Object.fromEntries(SBR_SPEC.funds.filter(f => f.target > 0).map(f => [f.ticker, f.target]))
+)
 const SBR_SCENARIOS: Scenario[] = [
-  { name: "Strong",       rate: 0.16,  probability: 15, color: "green", description: "All four funds beat their long-run average for three straight years." },
-  { name: "Base",         rate: 0.13,  probability: 30, color: "sky",   description: "The most likely path — steady global growth, a few dips, recovery." },
-  { name: "Conservative", rate: 0.08,  probability: 45, color: "amber", description: "Below-average returns — still clears the goal with discipline." },
-  { name: "Severe bear",  rate: null,  probability: 10, color: "red",   description: "A prolonged downturn — the floor kicks in and the purchase waits." },
+  { name: "Strong",       rate: SBR_TARGET_RATES.aggressive, probability: 15, color: "green", description: "All four funds beat their long-run average for three straight years." },
+  { name: "Base",         rate: SBR_TARGET_RATES.base,       probability: 30, color: "sky",   description: "The most likely path — steady global growth, a few dips, recovery." },
+  { name: "Conservative", rate: SBR_TARGET_RATES.conservative, probability: 45, color: "amber", description: "Below-average returns — still clears the goal with discipline." },
+  { name: "Severe bear",  rate: null,                        probability: 10, color: "red",   description: "A prolonged downturn — the floor kicks in and the purchase waits." },
 ]
 
 async function getSbrForecastData(userId: string) {
@@ -245,8 +249,8 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
         <div className="mt-4 pt-3 border-t border-border">
           <p className="text-[10px] text-muted-foreground leading-relaxed">
             Per-fund assumptions: {SBR_FUND_TICKERS.map(t => {
-              const rates = { VWRA: "6–12%", QQQM: "7–16%", SMH: "6–20%", A35: "1–5%" } as Record<string, string>
-              return `${t} ${rates[t] ?? "—"}`
+              const r = SBR_ASSET_EXPECTED_RETURNS[t]
+              return r ? `${t} ${(r.conservative * 100).toFixed(0)}–${(r.aggressive * 100).toFixed(0)}%` : t
             }).join(" · ")}
           </p>
         </div>
