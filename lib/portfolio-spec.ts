@@ -13,6 +13,12 @@
 // the numbers derived from here.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface ReturnAssumption {
+  conservative: number
+  base: number
+  aggressive: number
+}
+
 export interface AtlasFundSpec {
   ticker: string
   target: number          // Art. VI target weight (%)
@@ -20,6 +26,7 @@ export interface AtlasFundSpec {
   hardCap: number | null  // Art. VII single-position hard cap (%)
   driftLow?: number       // Art. VIII hard-underweight trigger (%)
   amberHigh?: number      // soft/amber zone upper bound below the cap (%)
+  expectedReturn?: ReturnAssumption
 }
 
 export interface SbrFundSpec {
@@ -29,6 +36,7 @@ export interface SbrFundSpec {
   rangeHigh: number       // comfortable range upper bound (%)
   hardCap: number | null  // hard cap (%)
   floor?: number          // safety floor (A35) (%)
+  expectedReturn?: ReturnAssumption
 }
 
 // ── Atlas Core (David · USD · to 2045) ───────────────────────────────────────
@@ -38,14 +46,17 @@ export const ATLAS_SPEC = {
   monthlyContribution: 3000,
   annualJanuaryBoost: 20000,
   horizonYear: 2045,
+  forecastBenchmarksAsOf: "Jun 2026",
   funds: [
-    { ticker: "VT",   target: 52, band: 6,   hardCap: 60,   driftLow: 42 },
-    { ticker: "VWO",  target: 8,  band: 3,   hardCap: 13,   driftLow: 3 },
-    { ticker: "QQQM", target: 23, band: 5,   hardCap: 30,   driftLow: 15 },
-    { ticker: "SMH",  target: 10, band: 3,   hardCap: 12,   driftLow: 5, amberHigh: 11 },
-    { ticker: "BTC",  target: 7,  band: 1,   hardCap: 8 },
-    { ticker: "IBIT", target: 0,  band: 1,   hardCap: 8 },
+    { ticker: "VT",   target: 52, band: 6,   hardCap: 60,   driftLow: 42, expectedReturn: { conservative: 0.06,  base: 0.095, aggressive: 0.12 } },
+    { ticker: "VOO",  target: 0,  band: 0,   hardCap: null,               expectedReturn: { conservative: 0.065, base: 0.10,  aggressive: 0.13 } },
+    { ticker: "VWO",  target: 8,  band: 3,   hardCap: 13,   driftLow: 3,  expectedReturn: { conservative: 0.03,  base: 0.065, aggressive: 0.10 } },
+    { ticker: "QQQM", target: 23, band: 5,   hardCap: 30,   driftLow: 15, expectedReturn: { conservative: 0.07,  base: 0.115, aggressive: 0.16 } },
+    { ticker: "SMH",  target: 10, band: 3,   hardCap: 12,   driftLow: 5, amberHigh: 11, expectedReturn: { conservative: 0.06,  base: 0.13,  aggressive: 0.20 } },
+    { ticker: "BTC",  target: 7,  band: 1,   hardCap: 8,                  expectedReturn: { conservative: -0.05, base: 0.12,  aggressive: 0.25 } },
+    { ticker: "IBIT", target: 0,  band: 1,   hardCap: 8,                  expectedReturn: { conservative: -0.05, base: 0.12,  aggressive: 0.25 } },
     { ticker: "SGOV", target: 0,  band: 2.5, hardCap: null },
+    { ticker: "A35",  target: 0,  band: 0,   hardCap: null,               expectedReturn: { conservative: 0.01,  base: 0.03,  aggressive: 0.05 } },
   ] as AtlasFundSpec[],
   // Art. XII / §4.3 combined QQQM + SMH tech ceiling (soft, hard).
   combinedTech: { tickers: ["QQQM", "SMH"], soft: 38, hard: 42 },
@@ -64,11 +75,13 @@ export const SBR_SPEC = {
   currency: "SGD",
   monthlyContribution: 2000,
   targetValue: 120000,
+  forecastBenchmarksAsOf: "Jun 2026",
   funds: [
-    { ticker: "VWRA", target: 50, rangeLow: 44, rangeHigh: 56, hardCap: 62 },
-    { ticker: "QQQM", target: 25, rangeLow: 20, rangeHigh: 30, hardCap: 30 },
-    { ticker: "SMH",  target: 15, rangeLow: 11, rangeHigh: 19, hardCap: 20 },
-    { ticker: "A35",  target: 10, rangeLow: 7,  rangeHigh: 13, hardCap: null, floor: 7 },
+    { ticker: "VWRA", target: 50, rangeLow: 44, rangeHigh: 56, hardCap: 62, expectedReturn: { conservative: 0.06, base: 0.095, aggressive: 0.12 } },
+    { ticker: "QQQM", target: 25, rangeLow: 20, rangeHigh: 30, hardCap: 30, expectedReturn: { conservative: 0.07, base: 0.115, aggressive: 0.16 } },
+    { ticker: "EQQQ", target: 0,  rangeLow: 0,  rangeHigh: 0,  hardCap: null, expectedReturn: { conservative: 0.07, base: 0.115, aggressive: 0.16 } },
+    { ticker: "SMH",  target: 15, rangeLow: 11, rangeHigh: 19, hardCap: 20, expectedReturn: { conservative: 0.06, base: 0.13,  aggressive: 0.20 } },
+    { ticker: "A35",  target: 10, rangeLow: 7,  rangeHigh: 13, hardCap: null, floor: 7, expectedReturn: { conservative: 0.01, base: 0.03,  aggressive: 0.05 } },
   ] as SbrFundSpec[],
   combined: { tickers: ["QQQM", "SMH"], warning: 40, hard: 45, resume: 42 },
   totalEquityMaxPct: 92,

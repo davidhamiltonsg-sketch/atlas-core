@@ -181,7 +181,7 @@ export default async function RebalancePage() {
                           </div>
                         </td>
                         <td className="px-5 py-3 text-right tabular-nums">{p.actualPct.toFixed(1)}%</td>
-                        <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{p.targetPct}%</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{p.targetPct.toFixed(1)}%</td>
                         <td className={`px-5 py-3 text-right tabular-nums font-semibold ${driftCls}`}>
                           <span className="flex items-center justify-end gap-1">
                             {p.driftPct > 0.1 ? <ArrowUp className="h-3 w-3" /> : p.driftPct < -0.1 ? <ArrowDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
@@ -222,7 +222,7 @@ export default async function RebalancePage() {
                     <span className="text-sm font-bold text-red-600 dark:text-red-400">{p.ticker}</span>
                     <div className="text-right">
                       <p className="text-sm font-black text-red-500">Sell {formatCurrency(p.deviation, "SGD")}</p>
-                      <p className="text-[11px] text-muted-foreground">to reach {p.targetPct}% target</p>
+                      <p className="text-[11px] text-muted-foreground">to reach {p.targetPct.toFixed(1)}% target</p>
                     </div>
                   </div>
                 ))}
@@ -243,7 +243,7 @@ export default async function RebalancePage() {
                     <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">{p.ticker}</span>
                     <div className="text-right">
                       <p className="text-sm font-black text-yellow-600 dark:text-yellow-400">Need {formatCurrency(Math.abs(p.deviation), "SGD")}</p>
-                      <p className="text-[11px] text-muted-foreground">to reach {p.targetPct}% target</p>
+                      <p className="text-[11px] text-muted-foreground">to reach {p.targetPct.toFixed(1)}% target</p>
                     </div>
                   </div>
                 ))}

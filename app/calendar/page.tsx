@@ -11,14 +11,6 @@ import { NextBestMove } from "@/components/dashboard/next-best-move"
 import { ScheduledEvents } from "@/components/calendar/scheduled-events"
 import { ShieldCheck } from "lucide-react"
 
-// The written pre-commitments currently in force (rendered against live state below).
-const RULES_IN_FORCE = [
-  "A loss is never a sell trigger — sell a conviction holding only on a broken thesis (A3).",
-  "The shock buffer is built from new contributions only — never by selling (A4, C2).",
-  "Don't buy within ~3% of a 52-week high; VT is the exempt anchor (B1).",
-  "Hard caps are inviolable — SMH ≤ 12%, BTC ≤ cycle cap, combined tech ≤ 42% (C1, §4).",
-  "One discretionary change per quarter; 72-hour cooling-off on anything not rule-mandated (D1, D2).",
-]
 
 async function getRulesNowData(userId: string) {
   const holdings = await db.holding.findMany({
@@ -91,19 +83,6 @@ export default async function CalendarPage() {
             </div>
           )}
 
-          <div className="mt-3 rounded-xl border border-border bg-card p-4">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Pre-commitments in force</p>
-            <ul className="space-y-1.5">
-              {RULES_IN_FORCE.map((r, i) => (
-                <li key={i} className="flex gap-2 text-xs text-muted-foreground leading-relaxed">
-                  <span className="text-green-500 shrink-0">✓</span>{r}
-                </li>
-              ))}
-            </ul>
-            <a href="/governance" className="mt-3 inline-block text-[11px] font-semibold text-primary hover:underline">
-              Full governance &amp; pre-commitments →
-            </a>
-          </div>
         </div>
 
         {/* F3 — Scheduled events (read-only context) */}

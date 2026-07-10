@@ -11,27 +11,17 @@
  * reasonable range of long-run outcomes — informing patience, not decisions.
  */
 
-export interface AssetReturnAssumption {
-  conservative: number
-  base: number
-  aggressive: number
-}
+import { ATLAS_SPEC, type ReturnAssumption } from "@/lib/portfolio-spec"
 
-// Per-asset-class long-run CAGR assumptions — verified Jun 2026 (update the date when
-// these are refreshed). BTC/IBIT share one entry since they're one economic sleeve
-// everywhere else in the app (applyBitcoinSleeve).
-export const FORECAST_BENCHMARKS_AS_OF = "Jun 2026"
+export type { ReturnAssumption }
+export type AssetReturnAssumption = ReturnAssumption
 
-export const ASSET_EXPECTED_RETURNS: Record<string, AssetReturnAssumption> = {
-  VT:   { conservative: 0.06,  base: 0.095, aggressive: 0.12 },  // Global total-world equity, long-run
-  VOO:  { conservative: 0.065, base: 0.10,  aggressive: 0.13 },  // S&P 500 — slightly higher base than VT
-  QQQM: { conservative: 0.07,  base: 0.115, aggressive: 0.16 },  // US large-cap tech tilt
-  SMH:  { conservative: 0.06,  base: 0.13,  aggressive: 0.20 },  // Semiconductors — cyclical, higher variance
-  VWO:  { conservative: 0.03,  base: 0.065, aggressive: 0.10 },  // Emerging markets — valuation-dependent
-  BTC:  { conservative: -0.05, base: 0.12,  aggressive: 0.25 },  // Bitcoin sleeve — genuinely wide uncertainty
-  IBIT: { conservative: -0.05, base: 0.12,  aggressive: 0.25 },
-  A35:  { conservative: 0.01,  base: 0.03,  aggressive: 0.05 },  // ABF SG Bond — safety buffer, not growth
-}
+export const FORECAST_BENCHMARKS_AS_OF = ATLAS_SPEC.forecastBenchmarksAsOf
+
+// Derived from ATLAS_SPEC.funds — the spec is the single source of truth for return assumptions.
+export const ASSET_EXPECTED_RETURNS: Record<string, AssetReturnAssumption> = Object.fromEntries(
+  ATLAS_SPEC.funds.filter(f => f.expectedReturn).map(f => [f.ticker, f.expectedReturn!])
+)
 
 // Buffer/cash-like tickers use the user's own risk-free-rate assumption (Settings),
 // not a fixed guess — it already represents "current MAS T-bill proxy" per that field's
