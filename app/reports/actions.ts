@@ -111,7 +111,7 @@ const SYMBOL_TO_COMPANY: Record<string, string> = {
   GOOG:     "Alphabet",
   AVGO:     "Broadcom",
   TSM:      "TSMC",
-  "2330.TW":"TSMC",   // Taiwan Stock Exchange listing (appears in VWO)
+  "2330.TW":"TSMC",   // Taiwan Stock Exchange listing (appears in VFEA)
 }
 
 // GICS sector keys Yahoo Finance uses → maps to our "digital economy" bucket

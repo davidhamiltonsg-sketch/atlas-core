@@ -51,7 +51,7 @@ console.log("Atlas Core — forecast math checks\n")
   }
 }
 
-// 4) Heavier BTC allocation raises the aggressive rate (BTC.aggressive > VT.aggressive).
+// 4) Heavier BTC allocation raises the aggressive rate (BTC.aggressive > VWRA.aggressive).
 {
   const { rates: lightBtc } = blendedGrowthRates({ VWRA: 90, BTC: 10 }, 0.04)
   const { rates: heavyBtc }  = blendedGrowthRates({ VWRA: 60, BTC: 40 }, 0.04)

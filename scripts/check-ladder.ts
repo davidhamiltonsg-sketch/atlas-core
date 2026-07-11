@@ -83,7 +83,7 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   expect("underweight → step 2 fires", r.firedStep === 2, `got step ${r.firedStep}`)
   expect("underweight → ticker is VWRA", r.ticker === "VWRA", r.ticker)
   expect("underweight → NOT step 7", r.firedStep !== 7)
-  // Exception should be logged because VT is near 52w high
+  // Exception should be logged because VWRA is near 52w high
   expect("underweight + at high → exception logged", r.exceptions.length > 0, "no exception logged")
   expect("step 1 passed", r.steps[0].status === "passed")
 }
@@ -145,7 +145,7 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   console.log("\nStep 1 — Look-through hard breach (NVIDIA)")
   const r = computeLadder(BASE, TOTAL, {
     market: market(),
-    lookThroughHardBreach: { label: "NVIDIA exposure", pct: 14.2, hard: 13, trimTicker: "SMH" },
+    lookThroughHardBreach: { label: "NVIDIA exposure", pct: 14.2, hard: 13, trimTicker: "SEMI" },
   })
   expect("look-through → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
   expect("look-through → severity critical", r.severity === "critical")

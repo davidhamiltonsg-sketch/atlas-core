@@ -34,7 +34,7 @@ export function FloatingCapsSection() {
         </p>
       </div>
 
-      {/* BTC + SMH interactive cards */}
+      {/* BTC + SEMI interactive cards */}
       <div className="grid gap-4 p-5 lg:grid-cols-2">
 
         {/* ── BTC halving cycle (§4.1) ── */}
