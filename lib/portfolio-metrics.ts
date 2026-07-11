@@ -44,18 +44,33 @@ function stdDev(a: number[]): number {
  * Annualised return volatility from a portfolio timeline, scaled by snapshot frequency
  * (same method as the Risk page). Returns null when there are too few points (< minPoints)
  * for a meaningful figure — callers should fall back to a sensible default.
+ *
+ * Purchases and sales contaminate value-based returns (a $5K buy on a $150K portfolio
+ * looks like a +3.3% return). We filter returns whose absolute value exceeds a
+ * gap-scaled threshold — genuine market moves on a diversified portfolio don't move
+ * 10%+ per day, but deposits routinely do.
  */
 export function annualisedVolatility(timeline: TimelinePoint[], minPoints = 6): number | null {
-  const returns: number[] = []
-  const gaps: number[] = []
+  const raw: Array<{ ret: number; gap: number }> = []
   for (let i = 1; i < timeline.length; i++) {
     const prev = timeline[i - 1], curr = timeline[i]
-    if (prev.value > 0) returns.push((curr.value - prev.value) / prev.value)
-    const days = (new Date(curr.date).getTime() - new Date(prev.date).getTime()) / 86_400_000
-    gaps.push(days)
+    if (prev.value <= 0) continue
+    const ret = (curr.value - prev.value) / prev.value
+    const gap = (new Date(curr.date).getTime() - new Date(prev.date).getTime()) / 86_400_000
+    raw.push({ ret, gap })
   }
-  if (returns.length < minPoints) return null
-  const avgGap = gaps.length ? mean(gaps) : 30
+
+  // Gap-scaled threshold: 5% per sqrt(day). 1-day → 5%, 4-day → 10%, 25-day → 25%.
+  // Anything above this on a diversified portfolio is almost certainly a cash flow.
+  const clean = raw.filter(r => {
+    const maxReturn = 0.05 * Math.sqrt(Math.max(r.gap, 1))
+    return Math.abs(r.ret) <= Math.max(maxReturn, 0.08)
+  })
+
+  if (clean.length < minPoints) return null
+  const returns = clean.map(r => r.ret)
+  const gaps = clean.map(r => r.gap)
+  const avgGap = mean(gaps)
   const periodsPerYear = 365 / Math.max(avgGap, 1)
   return stdDev(returns) * Math.sqrt(periodsPerYear)
 }

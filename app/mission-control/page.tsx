@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google"
 import { getSession } from "@/lib/session"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { constitutionIdForEmail, constitutionForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
@@ -35,7 +35,7 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jet
 const SAMPLE_CONTEXT: PortfolioContext = {
   label: "Atlas Core",
   totalValue: 284_500,
-  currency: "SGD",
+  currency: "USD",
   dayChangePct: 0.42,
   cashPct: 3.1,
   driftAlerts: 1,
@@ -74,7 +74,8 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
   const session = await getSession()
   if (!session) return SAMPLE_CONTEXT
 
-  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const constitution = constitutionForEmail(session.email)
+  const isSbr = constitution.id === "silicon-brick-road"
   const label = isSbr ? "Silicon Brick Road" : "Atlas Core"
   const fallback = isSbr ? SBR_SAMPLE_CONTEXT : SAMPLE_CONTEXT
 
@@ -115,7 +116,7 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
     return {
       label,
       totalValue: total,
-      currency: "SGD",
+      currency: constitution.currency,
       dayChangePct,
       cashPct: cashPct > 0 ? cashPct : null,
       driftAlerts,
@@ -295,7 +296,8 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const buyCount = trades.filter(t => t.type === "BUY").length
     const sellCount = trades.filter(t => t.type === "SELL").length
 
-    const fmt = (v: number) => v >= 1_000_000 ? `S$${(v / 1_000_000).toFixed(1)}M` : `S$${(v / 1_000).toFixed(0)}K`
+    const ccySymbol = "$"
+    const fmt = (v: number) => v >= 1_000_000 ? `${ccySymbol}${(v / 1_000_000).toFixed(1)}M` : `${ccySymbol}${(v / 1_000).toFixed(0)}K`
 
     // ── Build findings per agent ───────────────────────────────────────────
 
@@ -324,6 +326,11 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       }
 
       const ts = spacedTimings(steps.length)
+      const conBreachSummary = breachChecks.length === 1
+        ? `${breachChecks[0].label} breach — health ${health.overall}/100`
+        : breachChecks.length > 1
+          ? `${breachChecks.length} breaches (${breachChecks.slice(0, 2).map(c => c.label).join(", ")}) — health ${health.overall}/100`
+          : null
       findings.constitution = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -331,9 +338,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
           line: {
             t: resultT(ts),
             level: breachChecks.length > 0 ? "warn" : "ok",
-            msg: breachChecks.length > 0
-              ? `${breachChecks.length} breach${breachChecks.length > 1 ? "es" : ""} flagged — health ${health.overall}/100`
-              : `Governance clean — health ${health.overall}/100, all checks passed`,
+            msg: conBreachSummary ?? `Governance clean — health ${health.overall}/100, all checks passed`,
           },
         },
       }
@@ -356,6 +361,17 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
 
       const ts = spacedTimings(steps.length)
       const isClean = govAlignment.overall === "ok"
+      const govBreachChecks = govAlignment.checks.filter(c => c.status === "breach")
+      const govWatchChecks = govAlignment.checks.filter(c => c.status === "watch")
+      let govResultMsg: string
+      if (isClean) {
+        govResultMsg = `Governance clean — ${govAlignment.checks.length} checks, 0 breaches`
+      } else {
+        const parts: string[] = []
+        if (govBreachChecks.length > 0) parts.push(`${govBreachChecks.length} breach (${govBreachChecks.slice(0, 2).map(c => c.label).join(", ")})`)
+        if (govWatchChecks.length > 0) parts.push(`${govWatchChecks.length} watch (${govWatchChecks.slice(0, 2).map(c => c.label).join(", ")})`)
+        govResultMsg = `${parts.join(", ")} — review needed`
+      }
       findings.governance = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -363,9 +379,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
           line: {
             t: resultT(ts),
             level: isClean ? "ok" : "warn",
-            msg: isClean
-              ? `Governance clean — ${govAlignment.checks.length} checks, 0 breaches`
-              : `${govAlignment.breaches} breach${govAlignment.breaches > 1 ? "es" : ""}, ${govAlignment.watches} watch — review needed`,
+            msg: govResultMsg,
           },
         },
       }
@@ -399,6 +413,12 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       }
 
       const ts = spacedTimings(steps.length)
+      const driftSummary = drifted.length > 0
+        ? drifted.slice(0, 3).map(p => {
+            const drift = p.actualPct - p.targetPct
+            return `${p.ticker} ${drift > 0 ? "+" : ""}${drift.toFixed(1)}pp`
+          }).join(", ")
+        : null
       findings.drift = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -407,7 +427,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
             t: resultT(ts),
             level: drifted.length > 0 ? "warn" : "ok",
             msg: drifted.length > 0
-              ? `${drifted.length} position${drifted.length > 1 ? "s" : ""} outside band — rebalance candidate${drifted.length > 1 ? "s" : ""} queued`
+              ? `${drifted.length} outside band (${driftSummary}) — rebalance queued`
               : "All positions within tolerance — no rebalance needed",
           },
         },
@@ -469,7 +489,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       }
       steps.push({ level: "data", msg: `CAGR: conservative ${(rates.conservative * 100).toFixed(1)}% · base ${(rates.base * 100).toFixed(1)}% · aggressive ${(rates.aggressive * 100).toFixed(1)}%` })
       steps.push({ level: "data", msg: `Base-case 2045 (${yearsTo2045}yr): ${fmt(base2045)} at ${(rates.base * 100).toFixed(1)}% p.a.` })
-      steps.push({ level: "ok", msg: `Monthly S$${monthlyContribution.toLocaleString()} + annual lump S$${annualLumpSum.toLocaleString()} · growth ${(contributionGrowthRate * 100).toFixed(0)}% p.a.` })
+      steps.push({ level: "ok", msg: `Monthly ${ccySymbol}${monthlyContribution.toLocaleString()} + annual lump ${ccySymbol}${annualLumpSum.toLocaleString()} · growth ${(contributionGrowthRate * 100).toFixed(0)}% p.a.` })
 
       const ts = spacedTimings(steps.length)
       findings.forecast = {
@@ -510,6 +530,20 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
 
       const ts = spacedTimings(steps.length)
       const hasConcentration = companyBreaches > 0 || sectorBreaches > 0 || techCeiling.status === "hard_breach"
+      let riskResultMsg: string
+      if (hasConcentration) {
+        const breachLabels: string[] = []
+        const companyBreach = lookThrough.companies.find(c => c.status === "breach")
+        if (companyBreach) breachLabels.push(`${companyBreach.label} ${companyBreach.pct.toFixed(1)}%`)
+        const sectorBreach = lookThrough.sectors.find(s => s.status === "breach")
+        if (sectorBreach) breachLabels.push(`${sectorBreach.label} ${sectorBreach.pct.toFixed(1)}%`)
+        if (techCeiling.status === "hard_breach") breachLabels.push(`tech ${techCeiling.combinedPct.toFixed(1)}%`)
+        riskResultMsg = `Concentration issue — ${breachLabels.join(", ")}`
+      } else {
+        const volStr = vol !== null ? ` — vol ${(vol * 100).toFixed(1)}%` : ""
+        const topRisk = worstCompany ? `, top ${worstCompany.label} ${worstCompany.pct.toFixed(1)}%` : ""
+        riskResultMsg = `Risk within bounds${volStr}${topRisk}`
+      }
       findings.risk = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -517,9 +551,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
           line: {
             t: resultT(ts),
             level: hasConcentration ? "warn" : "ok",
-            msg: hasConcentration
-              ? `Concentration issue — ${companyBreaches + sectorBreaches} look-through breach${(companyBreaches + sectorBreaches) > 1 ? "es" : ""}`
-              : `Risk within bounds${vol !== null ? ` — vol ${(vol * 100).toFixed(1)}%` : ""}, no concentration breach`,
+            msg: riskResultMsg,
           },
         },
       }

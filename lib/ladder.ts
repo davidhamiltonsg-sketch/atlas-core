@@ -312,7 +312,7 @@ export function computeLadder(
 
     return build(2, {
       headline: `Fill ${p.ticker}`,
-      instruction: `Direct this month's full SGD contribution into ${p.ticker} — it is ${gap}% below its ${p.targetPct}% target.${atHigh ? " Position is near its 52-week high; buying anyway — drift correction outranks entry timing." : ""}`,
+      instruction: `Direct this month's full contribution into ${p.ticker} — it is ${gap}% below its ${p.targetPct}% target.${atHigh ? " Position is near its 52-week high; buying anyway — drift correction outranks entry timing." : ""}`,
       rationale: `${p.ticker} underweight at ${p.actualPct.toFixed(1)}% (Art. VII Step 2). The skip rule does not apply at step 2.`,
       when: "This month's contribution. Dealing window opens 3rd business day after the 15th.",
       ticker: p.ticker, severity: "medium", citation: "Art. XIII Step 2",
@@ -434,7 +434,7 @@ export function computeLadder(
   steps[6].reason = "All positions within band — healthy"
   return build(7, {
     headline: "Standard DCA",
-    instruction: `Invest this month's SGD contribution across all positions at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · Bitcoin sleeve 7%. Split by those proportions and round to nearest SGD 10.`,
+    instruction: `Invest this month's contribution across all positions at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · Bitcoin sleeve 7%. Split by those proportions and round to nearest whole unit.`,
     rationale: "All positions healthy and within their bands (Art. XIII Step 7). Discipline beats tinkering — stay the course.",
     when: "Dealing window: 3rd business day after the 15th through month-end.",
     ticker: null, severity: "none", citation: "Art. XIII Step 7",
