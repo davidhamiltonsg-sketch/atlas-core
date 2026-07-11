@@ -156,6 +156,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Production cockpit shell — the same deep-space instrument language as the approved previews. */
+.atlas-shell {
+  background:
+    radial-gradient(900px 500px at 78% -12%, hsl(var(--brand-a) / .14), transparent 62%),
+    radial-gradient(700px 420px at 8% 105%, hsl(var(--brand-c) / .08), transparent 66%),
+    hsl(var(--background));
+}
+.atlas-sidebar { box-shadow: 18px 0 55px rgb(0 0 0 / .18); }
+.atlas-sidebar nav a { min-height: 40px; border: 1px solid transparent; }
+.atlas-sidebar nav a:hover { border-color: hsl(var(--border)); background: hsl(var(--card) / .72); }
+.atlas-stage { scrollbar-gutter: stable; }
+.atlas-stage > div > section,
+.atlas-stage > div > div { position: relative; }
+.atlas-mobile-nav a {
+  display: grid; place-items: center; min-height: 46px; border-radius: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.atlas-mobile-nav a:hover,.atlas-mobile-nav a:focus-visible {
+  color: hsl(var(--foreground)); background: hsl(var(--accent)); outline: none;
+}
+.atlas-mobile-nav svg { width: 18px; height: 18px; }
+
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

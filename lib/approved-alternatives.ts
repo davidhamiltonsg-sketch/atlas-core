@@ -22,7 +22,7 @@ export const APPROVED_ALTERNATIVES: Record<string, AltVehicle> = {
 
 // Irish-UCITS alternatives (NOT US-sited → outside US estate tax). IBIT is excluded:
 // it is a US-domiciled ETF, so it still counts toward US-sited estate-tax exposure.
-export const UCITS_TICKERS = ["VWRA", "VFEA", "EQQQ", "CNDX", "SEMI"] as const
+export const UCITS_TICKERS = ["IMID", "EQAC", "SMH", "IWQU", "DTLA", "IB01", "VWRA", "VFEA", "EQQQ", "CNDX", "SEMI"] as const
 
 /** Is this ticker a US-sited asset (relevant to US estate-tax exposure)? */
 export function isUsSited(ticker: string): boolean {
@@ -43,7 +43,7 @@ export function isActuallyUsSited(exposureId: string): boolean {
 // pre-approved alternative vehicle. Anything else held in the brokerage is "out of
 // scope" — it is still imported (so the portfolio stays accurate), but flagged as an
 // action so you can decide: keep & classify it, switch to an approved fund, or exit.
-export const CORE_TICKERS = ["VWRA", "VFEA", "EQQQ", "SEMI", "BTC", "IBIT", "SGOV"] as const
+export const CORE_TICKERS = ["IMID", "EQAC", "SMH", "IWQU", "BTC"] as const
 
 // SBR-specific tickers: all UCITS/SGX from day one.
 export const SBR_TICKERS = ["VWRA", "EQQQ", "SEMI", "A35"] as const

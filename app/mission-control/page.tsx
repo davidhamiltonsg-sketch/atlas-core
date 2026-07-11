@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google"
 import { getSession } from "@/lib/session"
-import { constitutionForEmail } from "@/lib/constitutions"
+import { constitutionForEmail, type ConstitutionId } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
@@ -15,7 +15,7 @@ import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-me
 import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { getLiveMarketPositions } from "@/lib/finnhub"
-import { activePortfolioContext } from "@/lib/active-portfolio"
+import { activePortfolioContext, portfolioOwner } from "@/lib/active-portfolio"
 
 // Mission Control is a personal, auth-gated console — never statically cached.
 export const dynamic = "force-dynamic"
@@ -43,11 +43,11 @@ const SAMPLE_CONTEXT: PortfolioContext = {
   live: false,
   variant: "atlas",
   holdings: [
-    { ticker: "IMID", name: "Global equity core", pct: 67.5, color: "#4A9EFF" },
-    { ticker: "EQAC", name: "Nasdaq-100 tilt", pct: 15, color: "#C9A84C" },
-    { ticker: "SMH", name: "UCITS semiconductor tilt", pct: 7.5, color: "#8B7FE8" },
+    { ticker: "IMID", name: "Global equity core", pct: 52, color: "#4A9EFF" },
+    { ticker: "IWQU", name: "World quality core", pct: 29, color: "#6366F1" },
+    { ticker: "EQAC", name: "Nasdaq-100 tilt", pct: 10, color: "#C9A84C" },
+    { ticker: "SMH", name: "UCITS semiconductor tilt", pct: 4, color: "#8B7FE8" },
     { ticker: "BTC", name: "Bitcoin sleeve", pct: 5, color: "#E0913A" },
-    { ticker: "IB01", name: "Treasury reserve", pct: 5, color: "#3EC9C0" },
   ],
 }
 
@@ -808,9 +808,14 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
   }
 }
 
-export default async function MissionControlPage() {
+export default async function MissionControlPage({ searchParams }: { searchParams: Promise<{ portfolio?: string }> }) {
   const session = await getSession()
-  const active = session ? await activePortfolioContext(session) : null
+  const requested = (await searchParams).portfolio
+  const cookieActive = session ? await activePortfolioContext(session) : null
+  const requestedId: ConstitutionId | null = requested === "atlas-core" || requested === "silicon-brick-road" ? requested : null
+  const active = session && requestedId
+    ? { constitutionId: requestedId, owner: await portfolioOwner(requestedId) ?? cookieActive!.owner }
+    : cookieActive
   const context = await loadPortfolioContext(active ? { constitutionId: active.constitutionId, userId: active.owner.id } : undefined)
 
   let findings: Record<string, AgentFinding> | null = null
@@ -821,16 +826,19 @@ export default async function MissionControlPage() {
       : await loadAgentFindings(active?.owner.id ?? session.userId)
   }
 
+  const requiredTickers = active?.constitutionId === "silicon-brick-road"
+    ? ["IMID", "EQAC", "SMH", "IB01"]
+    : ["IMID", "EQAC", "SMH", "IWQU"]
   const requiredLookThrough = session
     ? await db.etfLookThrough.findMany({
-        where: { ticker: { in: ["IMID", "EQAC", "SMH", "IB01"] } },
+        where: { ticker: { in: requiredTickers } },
         select: { ticker: true, updatedAt: true },
       })
     : []
   // The portfolio is only as fresh as its oldest required building block.
   // Missing funds deliberately show as "never refreshed" rather than borrowing
   // a newer timestamp from another fund.
-  const lookThroughUpdatedAt = requiredLookThrough.length === 4
+  const lookThroughUpdatedAt = requiredLookThrough.length === requiredTickers.length
     ? new Date(Math.min(...requiredLookThrough.map(row => row.updatedAt.getTime())))
     : null
 

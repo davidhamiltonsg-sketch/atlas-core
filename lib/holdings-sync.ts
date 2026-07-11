@@ -29,8 +29,8 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
     const existing = await db.holding.findFirst({ where: { userId, ticker } })
     const d = CORE_DEFAULTS[ticker] ?? { name: ticker, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" }
     if (existing) {
-      if (existing.color !== d.color || existing.name !== d.name) {
-        await db.holding.update({ where: { id: existing.id }, data: { color: d.color, name: d.name } })
+      if (existing.color !== d.color || existing.name !== d.name || existing.targetPct !== d.targetPct || existing.hardCapPct !== d.hardCapPct || existing.toleranceBand !== d.toleranceBand) {
+        await db.holding.update({ where: { id: existing.id }, data: { color: d.color, name: d.name, targetPct: d.targetPct, hardCapPct: d.hardCapPct, toleranceBand: d.toleranceBand, instrumentStatus: "ACTIVE" } })
       }
       continue
     }
@@ -38,6 +38,12 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
     await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0 })
     created++
   }
+  // Former governed rows remain visible for sale/cost-basis history but must not
+  // receive new contributions under v3.1.
+  await db.holding.updateMany({
+    where: { userId, ticker: { notIn: [...CORE_TICKERS, "IBIT"] }, instrumentStatus: "ACTIVE" },
+    data: { targetPct: 0, hardCapPct: null, instrumentStatus: "LEGACY" },
+  })
   return created
 }
 

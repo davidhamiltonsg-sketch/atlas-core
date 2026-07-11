@@ -26,6 +26,10 @@ export function lookThroughWeightsAge(now: Date, staleAfterDays = 92): { ageDays
 
 // Approximate % of each ETF made up by each mega-cap (fund fact-sheet level).
 export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
+  IMID: { Nvidia: 4.3, Microsoft: 3.7, Apple: 4.0, Amazon: 2.4, Meta: 1.6, Alphabet: 2.1, Broadcom: 1.1, TSMC: 1.0 },
+  EQAC: { Nvidia: 8.0, Microsoft: 7.8, Apple: 8.5, Amazon: 5.5, Meta: 4.5, Alphabet: 5.0, Broadcom: 4.8, TSMC: 0.0 },
+  IWQU: { Nvidia: 5.2, Microsoft: 4.8, Apple: 4.2, Amazon: 2.4, Meta: 2.1, Alphabet: 3.5, Broadcom: 1.3, TSMC: 0.0 },
+  DTLA: {},
   VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
   VWRA: { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
   QQQM: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
@@ -41,6 +45,10 @@ export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
 
 // Approximate sector / geography make-up of each ETF (% of the ETF).
 export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital: number; us: number; ai: number }> = {
+  IMID: { semiconductor: 10, digital: 30.5, us: 62.8, ai: 15 },
+  EQAC: { semiconductor: 30, digital: 60, us: 97, ai: 35 },
+  IWQU: { semiconductor: 8, digital: 30, us: 70, ai: 15 },
+  DTLA: { semiconductor: 0, digital: 0, us: 100, ai: 0 },
   VT:   { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
   VWRA: { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
   QQQM: { semiconductor: 13,  digital: 65, us: 100, ai: 35 },
@@ -56,6 +64,10 @@ export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital
 
 // Geographic make-up of each ETF (% of the ETF): US / Intl-Developed / Emerging / Crypto.
 export const ETF_GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emerging: number; crypto: number }> = {
+  IMID: { us: 62.8, intlDev: 29.2, emerging: 8, crypto: 0 },
+  EQAC: { us: 97, intlDev: 3, emerging: 0, crypto: 0 },
+  IWQU: { us: 70, intlDev: 30, emerging: 0, crypto: 0 },
+  DTLA: { us: 100, intlDev: 0, emerging: 0, crypto: 0 },
   VT:   { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
   VWRA: { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
   QQQM: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },

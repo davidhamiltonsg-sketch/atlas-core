@@ -35,6 +35,7 @@ import {
   type BtcCyclePhase,
 } from "@/lib/constants"
 import { displayTicker } from "@/lib/approved-alternatives"
+import { ATLAS_SPEC } from "@/lib/portfolio-spec"
 
 export type Severity = "critical" | "high" | "medium" | "low" | "none"
 
@@ -195,6 +196,32 @@ export function computeMarketAwareDca(
 
   if (monthlyAmount <= 0 || positions.length === 0) {
     return { allocations: Object.values(result), headline: "No contribution to deploy.", marketOverlayActive: false, overlayNote: null }
+  }
+
+  // Atlas v3.1 contribution law: use cash to repair the largest target shortfall.
+  // Price-level forecasts never override constitutional weights. A combined EQAC+SMH
+  // ceiling pauses both satellites; legacy positions and zero-target rows receive no cash.
+  if (ATLAS_SPEC.funds.some((f) => f.ticker === "IWQU")) {
+    const governed = new Set(ATLAS_SPEC.funds.map((f) => f.ticker))
+    const combined = combinedTechPct(positions)
+    const techPaused = combined >= COMBINED_TECH_RULE.softCeiling
+    const eligible = positions
+      .filter((p) => governed.has(p.ticker) && p.targetPct > 0)
+      .filter((p) => !(techPaused && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)))
+      .filter((p) => p.hardCapPct === null || p.actualPct < p.hardCapPct)
+      .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
+    const selected = eligible[0] ?? positions.find((p) => p.ticker === "IMID")
+    if (selected && result[selected.ticker]) {
+      result[selected.ticker].amount = monthlyAmount
+      result[selected.ticker].tag = "boosted"
+      result[selected.ticker].reason = `${selected.ticker} is the furthest-underweight eligible constitutional holding.`
+    }
+    return {
+      allocations: Object.values(result),
+      headline: selected ? `Route this contribution to ${selected.ticker}` : "Hold contribution in the DCA cash bank",
+      marketOverlayActive: techPaused,
+      overlayNote: techPaused ? `EQAC and SMH additions are paused while their combined weight is at or above ${COMBINED_TECH_RULE.softCeiling}%.` : "Contribution-first rebalancing; no price forecast used.",
+    }
   }
 
   // §4.3 — combined EQQQ+SEMI ceiling. At/above the soft ceiling, halt NEW buys of

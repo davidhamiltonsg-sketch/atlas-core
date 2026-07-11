@@ -129,7 +129,7 @@ export function computeLadder(
   totalValue: number,
   opts: LadderOptions = {}
 ): LadderInstruction {
-  if (ATLAS_CORE.version === "2.2") {
+  if (ATLAS_CORE.version === "3.1") {
     const decision = decidePortfolio(ATLAS_CORE, rawPositions)
     const m = decision.move
     const firedStep = decision.state === "transition" ? 1 : m.severity === "critical" ? 2 : m.severity === "medium" ? 3 : 4
@@ -137,7 +137,7 @@ export function computeLadder(
     const steps: LadderStep[] = labels.map((label, i) => ({
       step: i + 1,
       label,
-      citation: `Constitution v2.2 · Article ${i + 3}`,
+      citation: `Constitution v3.1 · Article ${i + 3}`,
       status: i + 1 < firedStep ? "passed" : i + 1 === firedStep ? "fired" : "not_reached",
     }))
     return {
@@ -148,7 +148,7 @@ export function computeLadder(
       when: m.when,
       ticker: m.ticker,
       severity: m.severity,
-      citation: decision.state === "transition" ? "Constitution v2.2 · Migration protocol" : "Constitution v2.2 · Contribution and limits",
+      citation: decision.state === "transition" ? "Constitution v3.1 · Migration protocol" : "Constitution v3.1 · Contribution and limits",
       exceptions: decision.legacyTickers.length ? [`Legacy positions: ${decision.legacyTickers.join(", ")}`] : [],
       steps,
       isTerminal: m.severity === "none",
