@@ -55,11 +55,11 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amber
 // TICKER_TARGETS + HARD_THRESHOLDS + this profile — never hand-maintained — so the
 // displayed bands can never disagree with the numbers the engine enforces.
 export const POSITION_PROFILE: Record<string, { band: number; classification: string; color: string }> = {
-  VWRA: { band: 6, classification: "Global Core",              color: "#6366f1" },
-  EQQQ: { band: 5, classification: "Digital Economy Engine",   color: "#8b5cf6" },
-  SEMI: { band: 3, classification: "AI Infrastructure Tilt",   color: "#a78bfa" },
-  VFEA: { band: 3, classification: "Geographic Diversifier",   color: "#c4b5fd" },
-  BTC:  { band: 1, classification: "Bitcoin — Volatility Cap", color: "#f59e0b" },
+  IMID: { band: 5, classification: "Global Market Core",       color: "#7c3aed" },
+  IWQU: { band: 5, classification: "World Quality Core",       color: "#6366f1" },
+  EQAC: { band: 3, classification: "Nasdaq Growth Tilt",       color: "#a78bfa" },
+  SMH:  { band: 2, classification: "Semiconductor Satellite",  color: "#c026d3" },
+  BTC:  { band: 2, classification: "Bitcoin — Volatility Cap", color: "#f59e0b" },
 }
 
 export interface GovernanceBandRow {
@@ -90,7 +90,7 @@ export function getGovernanceBandRow(ticker: string): GovernanceBandRow | null {
 }
 
 export const GOVERNANCE_BAND_ROWS: GovernanceBandRow[] =
-  (["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"] as const)
+  (["IMID", "IWQU", "EQAC", "SMH", "BTC"] as const)
     .map(getGovernanceBandRow)
     .filter((r): r is GovernanceBandRow => r !== null)
 
@@ -204,11 +204,11 @@ export function getSemiSoftBand(pctFromHigh: number): SemiSoftBand {
 // ─── §4.3 — COMBINED TECH CONCENTRATION RULE ─────────────────────────────────
 // Display/governance rule. EQQQ+SEMI combined exposure as a whole-number percent.
 export const COMBINED_TECH_RULE = {
-  tickers:     ['EQQQ', 'SEMI'] as const,
+  tickers:     ['EQAC', 'SMH'] as const,
   softCeiling: ATLAS_SPEC.combinedTech.soft,  // derived from lib/portfolio-spec.ts
   hardCeiling: ATLAS_SPEC.combinedTech.hard,
   label:       'Combined Tech Concentration',
-  rationale:   'EQQQ+SEMI combined exposure. Semis overlap means individual caps understate concentration risk.',
+  rationale:   'EQAC+SMH combined exposure. Semiconductor overlap means individual caps understate concentration risk.',
   action: {
     soft: 'Flag for review. No new EQQQ or SEMI buys until combined falls below 36%.',
     hard: 'Halt all EQQQ and SEMI contributions. Review at next monthly cycle.',

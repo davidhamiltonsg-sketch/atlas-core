@@ -54,14 +54,14 @@ export const ATLAS_SPEC = {
   horizonYear: 2045,
   forecastBenchmarksAsOf: "Jun 2026",
   funds: [
-    { ticker: "IMID", target: 67.5, band: 5, hardFloor: 60, hardCap: 75, driftLow: 60, isin: "IE00B3YLTY66", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.085, aggressive: 0.12 } },
-    { ticker: "EQAC", target: 15, band: 3, hardFloor: 10, hardCap: 20, driftLow: 10, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
-    { ticker: "SMH", target: 7.5, band: 2.5, hardFloor: 3, hardCap: 10, driftLow: 3, amberHigh: 9, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
+    { ticker: "IMID", target: 52, band: 5, hardFloor: 45, hardCap: 62, driftLow: 45, isin: "IE00B3YLTY66", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.085, aggressive: 0.12 } },
+    { ticker: "EQAC", target: 10, band: 3, hardFloor: 5, hardCap: 15, driftLow: 5, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
+    { ticker: "SMH", target: 4, band: 2, hardFloor: 0, hardCap: 8, driftLow: 0, amberHigh: 7, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
+    { ticker: "IWQU", target: 29, band: 5, hardFloor: 20, hardCap: 35, driftLow: 20, isin: "IE00BP3QZ601", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.09, aggressive: 0.13 } },
     { ticker: "BTC", target: 5, band: 2, hardFloor: null, hardCap: 8, cusip: "46438F101", exchange: "NASDAQ", expectedReturn: { conservative: -0.10, base: 0.12, aggressive: 0.25 } },
-    { ticker: "IB01", target: 5, band: 2, hardFloor: 3, hardCap: 10, driftLow: 3, isin: "IE00BGSF1X88", exchange: "LSE", expectedReturn: { conservative: 0.02, base: 0.035, aggressive: 0.05 } },
   ] as AtlasFundSpec[],
-  combinedTech: { tickers: ["EQAC", "SMH"], soft: 25, hard: 25 },
-  combinedSatellites: { tickers: ["EQAC", "SMH", "BTC"], hard: 33 },
+  combinedTech: { tickers: ["EQAC", "SMH"], soft: 16, hard: 18 },
+  combinedSatellites: { tickers: ["EQAC", "SMH", "BTC"], hard: 24 },
   // §4 look-through sector caps (soft, hard).
   lookThroughSectors: {
     semiconductor: { soft: 15, hard: 20 },

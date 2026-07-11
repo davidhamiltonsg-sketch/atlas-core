@@ -16,7 +16,7 @@ export interface PortfolioDecision {
   legacyTickers: string[]
 }
 
-const LEGACY_ATLAS = new Set(["VT", "QQQM", "VWO", "SMH_US", "SMH-US", "GBTC", "BTC", "IBIT"])
+const LEGACY_ATLAS = new Set(["VT", "QQQM", "VWO", "SMH_US", "SMH-US", "GBTC", "IB01"])
 
 function move(severity: NextMove["severity"], ticker: string | null, action: string, what: string, why: string, color = "#38bdf8"): NextMove {
   return { severity, ticker, action, what, why, when: "At the next permitted dealing window.", color }

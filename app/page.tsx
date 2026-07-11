@@ -32,6 +32,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { PortfolioChooser } from "@/components/portfolio-chooser"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { activePortfolioContext } from "@/lib/active-portfolio"
+import { redirect } from "next/navigation"
 
 // This is a personal, auth-gated dashboard whose server render includes live
 // date maths (dealing-window and contribution countdowns). Pin it to dynamic so
@@ -426,9 +427,9 @@ async function getDashboardData(userId: string) {
   }
 
   // Cycle Instruments (Art. VIII, IX, XI, XIV)
-  const smhLive = marketSnapshot.positions["SEMI"]
-  const qqqmPct = positions.find(p => p.ticker === "EQQQ")?.actualPct ?? 0
-  const smhPct  = positions.find(p => p.ticker === "SEMI")?.actualPct ?? 0
+  const smhLive = marketSnapshot.positions["SMH"]
+  const qqqmPct = positions.find(p => p.ticker === "EQAC")?.actualPct ?? 0
+  const smhPct  = positions.find(p => p.ticker === "SMH")?.actualPct ?? 0
   const sgovPct = positions.filter(p => ["SGOV", "AGG", "CASH"].includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
 
   const cycleInstruments = {
@@ -475,7 +476,7 @@ async function getDashboardData(userId: string) {
 
 export default async function Dashboard() {
   const session = await getSession()
-  if (!session) return <PortfolioChooser />
+  if (!session) redirect("/login?portfolio=atlas-core")
 
   const active = await activePortfolioContext(session)
   if (active.constitutionId === "silicon-brick-road") {
@@ -497,7 +498,7 @@ export default async function Dashboard() {
   ]
 
   return (
-    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v1.5" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v3.1" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-start gap-2">

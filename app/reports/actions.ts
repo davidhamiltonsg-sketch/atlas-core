@@ -289,6 +289,7 @@ export async function refreshLookThroughAction(): Promise<{
     { ticker: "IMID", yahoo: "IMID.L", source: "https://www.ssga.com/uk/en_gb/institutional/etfs/state-street-spdr-msci-all-country-world-investable-market-ucits-etf-acc-imid-gy" },
     { ticker: "EQAC", yahoo: "EQAC.L", source: "https://www.invesco.com/uk/en/financial-products/etfs/invesco-eqqq-nasdaq-100-ucits-etf-acc.html" },
     { ticker: "SMH", yahoo: "SMH.L", source: "https://www.vaneck.com/uk/en/semiconductor-etf" },
+    { ticker: "IWQU", yahoo: "IWQU.L", source: "https://www.ishares.com/uk/individual/en/products/270054/ishares-msci-world-quality-factor-ucits-etf" },
     { ticker: "IB01", yahoo: "IB01.L", source: "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-01yr-ucits-etf" },
   ] as const
   const updated: string[] = []

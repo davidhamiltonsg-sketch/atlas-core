@@ -36,7 +36,7 @@ type NavGroupDef = { label: string; items: NavItem[] }
 // Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
 const BRAND: Record<ConstitutionId, { name: string; version: string }> = {
-  "atlas-core":         { name: "Atlas Core",         version: "v2.2 · GDEA" },
+  "atlas-core":         { name: "Atlas Core",         version: "v3.1 · GDEA" },
   "silicon-brick-road": { name: "Silicon Brick Road", version: "v3.2 · SBR" },
 }
 
@@ -106,9 +106,10 @@ function NavLink({ href, label, icon: Icon, onClick, constitutionId = "atlas-cor
   const pathname = usePathname()
   const active = pathname === href
   const sbr = constitutionId === "silicon-brick-road"
+  const resolvedHref = href === "/mission-control" ? `${href}?portfolio=${constitutionId}` : href
   return (
     <Link
-      href={href}
+      href={resolvedHref}
       onClick={onClick}
       className={cn(
         "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.98]",
@@ -156,8 +157,8 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto",
-          "bg-[hsl(var(--sidebar-bg))] border-[hsl(var(--sidebar-border))]",
+          "atlas-sidebar fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto",
+          "bg-[hsl(var(--sidebar-bg))]/95 border-[hsl(var(--sidebar-border))] backdrop-blur-xl",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
