@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Silicon Brick Road — Hidden-Exposure Look-Through (Article XVII)
 //
-// Dami's four funds overlap: VWRA, QQQM and SMH all hold the same big technology
+// Dami's four funds overlap: VWRA, EQQQ and SEMI all hold the same big technology
 // companies. This looks THROUGH the funds to the real underlying exposure, so the
 // constitution's two hidden limits — no more than 45% in technology and no more than
 // 10% in any single company — can actually be checked, not just written down.
@@ -22,15 +22,15 @@ export const SBR_SINGLE_COMPANY_LIMIT = 10  // %
 // Communication Services, the way the constitution defines "technology").
 const FUND_TECHNOLOGY_PCT: Record<string, number> = {
   VWRA: 26,   // FTSE All-World — a quarter is tech
-  QQQM: 50,   // Nasdaq-100 — half is tech
-  SMH:  100,  // Semiconductors — all tech
+  EQQQ: 50,   // Invesco NASDAQ-100 UCITS — half is tech
+  SEMI: 100,  // VanEck Semiconductor UCITS — all tech
 }
 
 // Approximate % of each fund made up by each big company (fact-sheet level).
 const FUND_COMPANY_PCT: Record<string, Record<string, number>> = {
   VWRA: { Nvidia: 4.8, Apple: 4.3, Microsoft: 4.0, Amazon: 2.6, Alphabet: 2.2, Meta: 1.7, Broadcom: 1.2, TSMC: 1.3 },
-  QQQM: { Nvidia: 8.0, Apple: 9.0, Microsoft: 8.0, Amazon: 5.5, Alphabet: 5.0, Meta: 4.5, Broadcom: 5.0, TSMC: 0.0 },
-  SMH:  { Nvidia: 20.0, Apple: 0.0, Microsoft: 0.0, Amazon: 0.0, Alphabet: 0.0, Meta: 0.0, Broadcom: 8.0, TSMC: 12.0 },
+  EQQQ: { Nvidia: 8.0, Apple: 9.0, Microsoft: 8.0, Amazon: 5.5, Alphabet: 5.0, Meta: 4.5, Broadcom: 5.0, TSMC: 0.0 },
+  SEMI: { Nvidia: 20.0, Apple: 0.0, Microsoft: 0.0, Amazon: 0.0, Alphabet: 0.0, Meta: 0.0, Broadcom: 8.0, TSMC: 12.0 },
 }
 
 export interface SbrLookThrough {

@@ -23,7 +23,7 @@ async function main() {
   console.log("Silicon Brick Road — provisioning dutszm@gmail.com\n")
   const result = await provisionDami(prisma)
   if (!result.ok) { console.error("  ✗", result.error); process.exit(1) }
-  console.log(`  ✓ password set from dami_key · SGD 2,000/mo · ${result.holdings} SBR holdings (VWRA/QQQM/SMH/A35)`)
+  console.log(`  ✓ password set from dami_key · SGD 2,000/mo · ${result.holdings} SBR holdings (VWRA/EQQQ/SEMI/A35)`)
   console.log("\nDone. Dami logs in at /login with", result.email, "and the dami_key password.")
 }
 

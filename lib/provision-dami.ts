@@ -5,7 +5,7 @@ import { SILICON_BRICK_ROAD as SBR } from "./constitutions"
 // Shared Silicon Brick Road provisioning for Dami (dutszm@gmail.com). Used by both the CLI
 // (prisma/seed-sbr.ts) and the admin route (/api/admin/provision-dami) so the two never drift.
 // Sets Dami's password from `dami_key`, switches his contribution settings to SBR, and replaces
-// his holdings with the four-fund set (QQQM/SMH units preserved). Idempotent.
+// his holdings with the four-fund set (EQQQ/SEMI units preserved). Idempotent.
 export type ProvisionResult =
   | { ok: true; holdings: number; email: string }
   | { ok: false; error: string }
@@ -24,9 +24,9 @@ export async function provisionDami(prisma: PrismaClient): Promise<ProvisionResu
     create: { email: EMAIL, name: "Dami", passwordHash, role: "user", monthlyContribution: SBR.monthlyContribution, annualLumpSum: 0, contributionGrowthRate: 0 },
   })
 
-  // Preserve QQQM / SMH units before replacing the holding set.
+  // Preserve EQQQ / SEMI units before replacing the holding set.
   const prior = await prisma.holding.findMany({
-    where: { userId: user.id, ticker: { in: ["QQQM", "SMH"] } },
+    where: { userId: user.id, ticker: { in: ["EQQQ", "SEMI"] } },
     include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
   })
   const priorByTicker = new Map(prior.map((h) => [h.ticker, h.snapshots[0]]))

@@ -15,12 +15,12 @@ export interface AltVehicle {
 }
 
 export const APPROVED_ALTERNATIVES: Record<string, AltVehicle> = {
-  VT:   { tickers: ["VWRA"],          reason: "Irish UCITS — avoids US estate tax & dividend-withholding drag" },
-  VWO:  { tickers: ["VFEA"],          reason: "Irish UCITS — same EM exposure, better tax structure" },
-  QQQM: { tickers: ["EQQQ", "CNDX"],  reason: "Irish UCITS NASDAQ-100 — avoids US estate tax (higher TER, assess first)" },
-  SMH:  { tickers: ["SEMI"],          reason: "Irish UCITS semis — verify index match before switching" },
-  BTC:  { tickers: ["IBIT"],          reason: "Held via IBIT (iShares Bitcoin Trust)" },
-  IBIT: { tickers: [],                reason: "Switch to a lower-fee / UCITS Bitcoin ETF if one becomes available" },
+  VT:   { tickers: ["VWRA"],          reason: "MIGRATED → VWRA (Irish UCITS). Lower all-in cost, no US estate tax." },
+  VWO:  { tickers: ["VFEA"],          reason: "MIGRATED → VFEA (Irish UCITS). Same EM exposure, better tax structure." },
+  QQQM: { tickers: ["EQQQ", "CNDX"],  reason: "MIGRATED → EQQQ (Irish UCITS NASDAQ-100). SBR uses EQQQ from day one." },
+  SMH:  { tickers: ["SEMI"],          reason: "MIGRATED → SEMI (Irish UCITS semis). Same index, no estate tax." },
+  BTC:  { tickers: ["IBIT"],          reason: "Held via IBIT. Phased exit: hold until BTC recovers above cost basis × 1.15, then reassess." },
+  IBIT: { tickers: [],                reason: "Hold for now. Reassess when a lower-fee or UCITS Bitcoin ETF becomes available." },
 }
 
 // Irish-UCITS alternatives (NOT US-sited → outside US estate tax). IBIT is excluded:
@@ -39,14 +39,14 @@ export function isUsSited(ticker: string): boolean {
 // action so you can decide: keep & classify it, switch to an approved fund, or exit.
 export const CORE_TICKERS = ["VT", "VWO", "QQQM", "SMH", "BTC", "IBIT", "SGOV"] as const
 
-// SBR-specific tickers: VWRA is already in APPROVED_ALTERNATIVES; A35 is SBR-only.
-export const SBR_TICKERS = ["VWRA", "QQQM", "SMH", "A35"] as const
+// SBR-specific tickers: all UCITS/SGX from day one.
+export const SBR_TICKERS = ["VWRA", "EQQQ", "SEMI", "A35"] as const
 
 export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
   ...CORE_TICKERS,
+  ...SBR_TICKERS,
   ...Object.keys(APPROVED_ALTERNATIVES),
   ...Object.values(APPROVED_ALTERNATIVES).flatMap((a) => a.tickers),
-  "A35", // ABF Singapore Bond Index Fund — SBR safety floor
 ])
 
 /** Is this ticker part of the governed policy universe (core, buffer, or approved alternative)? */

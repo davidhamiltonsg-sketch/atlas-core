@@ -1,13 +1,11 @@
 /**
  * SBR market data — live prices for the four SBR funds.
  *
- * QQQM and SMH are US-listed → Finnhub (price + 52-week high).
- * VWRA (VWRA.L, London) and A35 (A35.SI, SGX) → Yahoo Finance (price only;
- * 52-week high not reliably available without a premium API, so the skip-at-high
- * rule is disabled for VWRA and A35 until a source is wired up).
+ * All four SBR funds are non-US-listed:
+ *   VWRA (VWRA.L, London), EQQQ (EQQQ.L, London), SEMI (SEMI.L, London),
+ *   A35 (A35.SI, SGX) → all fetched via Yahoo Finance.
  */
 
-import { getLiveMarketPositions } from "@/lib/finnhub"
 import type { EngineMarket } from "@/lib/next-best-move"
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
@@ -56,28 +54,22 @@ async function fetchYahoo52wHigh(symbol: string): Promise<number> {
 export async function getSbrMarketData(): Promise<SbrMarketResult> {
   const asOf = new Date().toISOString()
 
-  // Fetch Finnhub (US funds) and Yahoo (non-US funds) in parallel.
-  const [finnhub, vwraPrice, vwra52, a35Price] = await Promise.all([
-    getLiveMarketPositions(["QQQM", "SMH"]),
+  // All four SBR funds are non-US: VWRA.L, EQQQ.L, SEMI.L (London), A35.SI (SGX).
+  const [vwraPrice, vwra52, eqqqPrice, eqqq52, semiPrice, semi52, a35Price] = await Promise.all([
     fetchYahooPrice("VWRA.L"),
     fetchYahoo52wHigh("VWRA.L"),
+    fetchYahooPrice("EQQQ.L"),
+    fetchYahoo52wHigh("EQQQ.L"),
+    fetchYahooPrice("SEMI.L"),
+    fetchYahoo52wHigh("SEMI.L"),
     fetchYahooPrice("A35.SI"),
-    // A35 52-week high: SGX data is sparse on Yahoo; we skip rather than guess.
   ])
 
   const positions: Record<string, { price: number; hi52: number }> = {}
 
-  // QQQM and SMH from Finnhub (includes 52-week high for skip-at-high engine rule)
-  for (const [ticker, data] of Object.entries(finnhub.positions as EngineMarket)) {
-    if (["QQQM", "SMH"].includes(ticker) && data) {
-      positions[ticker] = { price: data.price ?? 0, hi52: data.hi52 ?? 0 }
-    }
-  }
-
-  // VWRA.L → DB ticker VWRA (USD-priced on London exchange)
   if (vwraPrice > 0) positions["VWRA"] = { price: vwraPrice, hi52: vwra52 }
-
-  // A35.SI → DB ticker A35 (SGD-priced on SGX; no hi52 → skip-at-high never triggers)
+  if (eqqqPrice > 0) positions["EQQQ"] = { price: eqqqPrice, hi52: eqqq52 }
+  if (semiPrice > 0) positions["SEMI"] = { price: semiPrice, hi52: semi52 }
   if (a35Price > 0) positions["A35"] = { price: a35Price, hi52: 0 }
 
   const stale = Object.keys(positions).length === 0

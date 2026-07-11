@@ -96,26 +96,26 @@ export function sbrRoute(
   if (totalValue <= 0) return { tag: "empty" }
 
   const get = (t: string) => positions.find((p) => p.ticker === t)
-  const smh = get("SMH"), qqqm = get("QQQM"), a35 = get("A35")
-  const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
+  const semi = get("SEMI"), eqqq = get("EQQQ"), a35 = get("A35")
+  const combined = (eqqq?.actualPct ?? 0) + (semi?.actualPct ?? 0)
 
   // Phase and its caps must be determined early — both the mandatory-sell threshold
   // and the precedence logic (Phase III/IV beat combined ceiling) depend on it.
   const phase = sbrPhase(totalValue, c)
   const phaseCaps = getPhaseCaps(phase.key)
 
-  // 1 — SMH over its phase-dependent hard cap → mandatory sell (always highest priority)
-  if (smh && smh.actualPct > phaseCaps.smhHard) {
-    return { tag: "smh_cap", smhPct: smh.actualPct, smhHard: phaseCaps.smhHard, sellSgd: Math.round(((smh.actualPct - 15) / 100) * totalValue) }
+  // 1 — SEMI over its phase-dependent hard cap → mandatory sell (always highest priority)
+  if (semi && semi.actualPct > phaseCaps.smhHard) {
+    return { tag: "smh_cap", smhPct: semi.actualPct, smhHard: phaseCaps.smhHard, sellSgd: Math.round(((semi.actualPct - 15) / 100) * totalValue) }
   }
 
   // 2 — A35 below its floor → build safety before any phase or ceiling check
   if (a35 && a35.actualPct < A35_FLOOR) return { tag: "a35_floor", a35Pct: a35.actualPct }
 
   // 3 — Total equity over 92% → redirect contributions to A35 (constitution Art. "Stock market maximum")
-  // Fires when VWRA + QQQM + SMH exceed the ceiling and a35_floor is already satisfied.
+  // Fires when VWRA + EQQQ + SEMI exceed the ceiling and a35_floor is already satisfied.
   const vwra = get("VWRA")
-  const equityPct = (vwra?.actualPct ?? 0) + (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
+  const equityPct = (vwra?.actualPct ?? 0) + (eqqq?.actualPct ?? 0) + (semi?.actualPct ?? 0)
   if (equityPct > (c.totalEquityMaxPct ?? 92)) return { tag: "equity_ceiling", equityPct }
 
   // 4 — Phase III/IV: close-to-goal rules take priority over combined ceiling checks.
@@ -147,8 +147,8 @@ export function sbrRoute(
     return { tag: "underweight", fund: p, nearItsHigh: nearHigh(p, c.skipAtHighPct) }
   }
 
-  // 7 — QQQM or SMH in range but within 3% of 52-week high → skip, redirect to VWRA
-  const skipped = [qqqm, smh]
+  // 7 — EQQQ or SEMI in range but within 3% of 52-week high → skip, redirect to VWRA
+  const skipped = [eqqq, semi]
     .filter((p): p is SbrPosition => !!p && nearHigh(p, c.skipAtHighPct))
     .map((p) => p.ticker)
   if (skipped.length > 0) return { tag: "skip_at_high", skipped }
@@ -169,26 +169,26 @@ export function computeSbrNextMove(
   switch (branch.tag) {
     case "empty":
       return { severity: "none", ticker: "VWRA", action: "Make your first contribution",
-        what: `Invest this month's SGD ${c.monthlyContribution.toLocaleString()} at the target split: VWRA 50% · QQQM 25% · SMH 15% · A35 10%.`,
+        what: `Invest this month's SGD ${c.monthlyContribution.toLocaleString()} at the target split: VWRA 50% · EQQQ 25% · SEMI 15% · A35 10%.`,
         why: "The portfolio is empty. The first step is to start — monthly contributions are the most powerful thing you can do.",
         when: "Anytime this month.", color: fundColor(c, "VWRA") }
 
     case "smh_cap":
-      return { severity: "critical", ticker: "SMH", action: "Sell SMH back to 15%",
-        what: `SMH is ${branch.smhPct.toFixed(1)}% of the portfolio — above its ${branch.smhHard}% phase cap. Sell about SGD ${branch.sellSgd.toLocaleString()} of SMH this month to bring it back to 15%.`,
+      return { severity: "critical", ticker: "SEMI", action: "Sell SEMI back to 15%",
+        what: `SEMI is ${branch.smhPct.toFixed(1)}% of the portfolio — above its ${branch.smhHard}% phase cap. Sell about SGD ${branch.sellSgd.toLocaleString()} of SEMI this month to bring it back to 15%.`,
         why: "This is the only time you are required to sell. Semiconductor stocks can fall 30–40% in a bad year; this limit protects you from that kind of concentrated loss. The cap tightens as you near the goal to reduce sequencing risk.",
         when: "This month, before buying anything else.", color: "#f87171" }
 
     case "combined_hard":
-      return { severity: "critical", ticker: "VWRA", action: `Stop buying QQQM and SMH — they are over ${branch.combinedHard}% together`,
-        what: `QQQM + SMH combined is ${branch.combined.toFixed(1)}% — above the ${branch.combinedHard}% hard limit for this phase. Put all new money into VWRA until they drop below ${branch.resume}% combined.`,
-        why: "QQQM and SMH both hold a lot of the same tech companies, so together they concentrate your risk. The ceiling tightens as the portfolio matures to protect your goal.",
+      return { severity: "critical", ticker: "VWRA", action: `Stop buying EQQQ and SEMI — they are over ${branch.combinedHard}% together`,
+        what: `EQQQ + SEMI combined is ${branch.combined.toFixed(1)}% — above the ${branch.combinedHard}% hard limit for this phase. Put all new money into VWRA until they drop below ${branch.resume}% combined.`,
+        why: "EQQQ and SEMI both hold a lot of the same tech companies, so together they concentrate your risk. The ceiling tightens as the portfolio matures to protect your goal.",
         when: `Every month until the combined share drops below ${branch.resume}%.`, color: fundColor(c, "VWRA") }
 
     case "combined_warn":
       return { severity: "medium", ticker: "VWRA", action: "Tech funds are getting heavy — buy VWRA only this month",
-        what: `QQQM + SMH are ${branch.combined.toFixed(1)}% together — past the ${branch.warning}% warning level. Skip both this month and put all new money into VWRA instead.`,
-        why: "When tech stocks get heavy, buying global stocks (VWRA) keeps the balance. You can return to QQQM and SMH when they drop below 42% combined.",
+        what: `EQQQ + SEMI are ${branch.combined.toFixed(1)}% together — past the ${branch.warning}% warning level. Skip both this month and put all new money into VWRA instead.`,
+        why: "When tech stocks get heavy, buying global stocks (VWRA) keeps the balance. You can return to EQQQ and SEMI when they drop below 42% combined.",
         when: "This month.", color: fundColor(c, "VWRA") }
 
     case "a35_floor":
@@ -199,14 +199,14 @@ export function computeSbrNextMove(
 
     case "equity_ceiling":
       return { severity: "medium", ticker: "A35", action: `Stocks are over ${c.totalEquityMaxPct ?? 92}% — redirect to A35 this month`,
-        what: `VWRA, QQQM and SMH together are ${branch.equityPct.toFixed(1)}% of the portfolio — above the ${c.totalEquityMaxPct ?? 92}% maximum. Put all new contributions into A35 this month until equities drift back below ${c.totalEquityMaxPct ?? 92}%.`,
+        what: `VWRA, EQQQ and SEMI together are ${branch.equityPct.toFixed(1)}% of the portfolio — above the ${c.totalEquityMaxPct ?? 92}% maximum. Put all new contributions into A35 this month until equities drift back below ${c.totalEquityMaxPct ?? 92}%.`,
         why: "The plan caps stock exposure at 92% to ensure you always hold some stable SGD bonds. When stocks drift too high, redirecting new money naturally corrects the balance over time — no selling needed.",
         when: `This month. Resume the normal split once equities drop back below ${c.totalEquityMaxPct ?? 92}%.`, color: fundColor(c, "A35") }
 
     case "phase_III_entry": {
       const gap = Math.round(102_000 - branch.totalValue)
       return { severity: "medium", ticker: "A35", action: "Phase III — put new money into A35",
-        what: `You're in Phase III. Put all new monthly contributions into A35. Quarterly equity sells (3% of QQQM + 2% of VWRA → A35) start at S$102,000 — about S$${gap.toLocaleString()} away. No selling needed yet.`,
+        what: `You're in Phase III. Put all new monthly contributions into A35. Quarterly equity sells (3% of EQQQ + 2% of VWRA → A35) start at S$102,000 — about S$${gap.toLocaleString()} away. No selling needed yet.`,
         why: "You've crossed into Phase III, so new money moves to safety. The quarterly sells wait until you're solidly past the midpoint — this avoids unnecessary selling if markets briefly dip and pull the portfolio back below S$96k.",
         when: `This month and every month until you reach S$102,000.`, color: fundColor(c, "A35") }
     }
@@ -214,7 +214,7 @@ export function computeSbrNextMove(
     case "phase_III": {
       const remaining = Math.round(120000 - branch.totalValue)
       return { severity: "high", ticker: "A35", action: "Phase III — start shifting money to safety",
-        what: `Once this quarter, sell about SGD ${branch.qqqmSell.toLocaleString()} of QQQM (3% of the portfolio) and SGD ${branch.vwraSell.toLocaleString()} of VWRA (2%), and move the SGD ${(branch.qqqmSell + branch.vwraSell).toLocaleString()} into A35. Continue putting all new monthly contributions into A35 too. Leave SMH untouched for now — it stays put through Phase III and is the first fund you sell when you buy the property.`,
+        what: `Once this quarter, sell about SGD ${branch.qqqmSell.toLocaleString()} of EQQQ (3% of the portfolio) and SGD ${branch.vwraSell.toLocaleString()} of VWRA (2%), and move the SGD ${(branch.qqqmSell + branch.vwraSell).toLocaleString()} into A35. Continue putting all new monthly contributions into A35 too. Leave SEMI untouched for now — it stays put through Phase III and is the first fund you sell when you buy the property.`,
         why: `You are in Phase III — about S$${remaining.toLocaleString()} away from your goal. Gradually moving to bonds now protects those gains if markets fall at the worst time.`,
         when: "On your next monthly window. Repeat each quarter until you reach Phase IV.", color: fundColor(c, "A35") }
     }
@@ -282,17 +282,17 @@ export function computeSbrHealth(
     return { overall: 0, overallLabel: "Action required", governance: 0, risk: 0, allocation: 0, contribution: 0, behavioural: 0, liquidity: 0, documentation: 0 }
   }
 
-  const smh = positions.find(p => p.ticker === "SMH")
+  const semi = positions.find(p => p.ticker === "SEMI")
   const a35 = positions.find(p => p.ticker === "A35")
   const comb = c.combined!
   const combinedPct = positions.filter(p => comb.tickers.includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
   const phaseCaps = getPhaseCaps(sbrPhase(totalValue, c).key)
 
-  // Risk (20%): SMH cap and combined ceiling compliance — using phase-dependent thresholds
-  const smhBreach  = (smh?.actualPct ?? 0) > phaseCaps.smhHard
+  // Risk (20%): SEMI cap and combined ceiling compliance — using phase-dependent thresholds
+  const semiBreach  = (semi?.actualPct ?? 0) > phaseCaps.smhHard
   const combBreach = combinedPct > phaseCaps.combinedHard
   const combWarn   = !combBreach && combinedPct >= phaseCaps.combinedWarning
-  const risk = Math.max(0, 100 - (smhBreach ? 40 : 0) - (combBreach ? 30 : 0) - (combWarn ? 10 : 0))
+  const risk = Math.max(0, 100 - (semiBreach ? 40 : 0) - (combBreach ? 30 : 0) - (combWarn ? 10 : 0))
 
   // Allocation (15%): funds within comfortable ranges
   const outOfRange = positions.filter(p => p.actualPct < p.rangeLow || p.actualPct > p.rangeHigh)
@@ -303,7 +303,7 @@ export function computeSbrHealth(
   const liquidity = a35Pct >= 8 ? 100 : a35Pct >= 7 ? 80 : a35Pct >= 5 ? 50 : 20
 
   // Governance (25%): no breaches = full score; each hard breach costs 30pts, soft costs 10pts
-  const hardBreaches = smhBreach || combBreach ? 1 : 0
+  const hardBreaches = semiBreach || combBreach ? 1 : 0
   const softBreaches = combWarn || outOfRange.length > 0 ? 1 : 0
   const governance = Math.max(0, 100 - hardBreaches * 30 - softBreaches * 10)
 
@@ -382,16 +382,16 @@ export function computeSbrDca(
       return { allocations: Object.values(alloc), headline: "No contribution to deploy.", marketOverlayActive: false, overlayNote: null }
 
     case "combined_hard":
-      return allToOne("VWRA", "Combined QQQM+SMH over 45% — halt both, buy VWRA.", `QQQM + SMH combined is ${branch.combined.toFixed(1)}% — over the 45% hard limit. All new money goes to VWRA until they drop below ${branch.resume}% combined.`)
+      return allToOne("VWRA", "Combined EQQQ+SEMI over hard limit — halt both, buy VWRA.", `EQQQ + SEMI combined is ${branch.combined.toFixed(1)}% — over the ${branch.combinedHard}% hard limit. All new money goes to VWRA until they drop below ${branch.resume}% combined.`)
 
     case "combined_warn":
-      return allToOne("VWRA", "Tech funds over 40% combined — buy VWRA only.", `QQQM + SMH are ${branch.combined.toFixed(1)}% together — past the ${branch.warning}% warning level. Skip both this month; all new money goes to VWRA.`)
+      return allToOne("VWRA", "Tech funds over warning level — buy VWRA only.", `EQQQ + SEMI are ${branch.combined.toFixed(1)}% together — past the ${branch.warning}% warning level. Skip both this month; all new money goes to VWRA.`)
 
     case "a35_floor":
       return allToOne("A35", "A35 is below its minimum — topping it up first.", "A35 is below its 7% floor — all contributions go there until it is back above 8%.")
 
     case "equity_ceiling":
-      return allToOne("A35", `Stocks over ${branch.equityPct.toFixed(0)}% — redirecting to A35.`, `Equities (VWRA + QQQM + SMH) are ${branch.equityPct.toFixed(1)}% combined — above the 92% maximum. All contributions go to A35 this month until stocks drift back below 92%.`)
+      return allToOne("A35", `Stocks over ${branch.equityPct.toFixed(0)}% — redirecting to A35.`, `Equities (VWRA + EQQQ + SEMI) are ${branch.equityPct.toFixed(1)}% combined — above the 92% maximum. All contributions go to A35 this month until stocks drift back below 92%.`)
 
     case "phase_IV":
       return allToOne("A35", "Phase IV — no stock purchases this month.", "You are in Phase IV (above SGD 114,000 — close to the goal). All new money goes into A35 to build up your SGD cash for the property purchase.")
@@ -400,7 +400,7 @@ export function computeSbrDca(
       return allToOne("A35", "Phase III (early) — contributions to A35 only.", "You are in early Phase III (SGD 96,000–102,000). All monthly contributions go into A35. Quarterly equity sells begin once the portfolio reaches SGD 102,000.")
 
     case "phase_III":
-      return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of QQQM (about 3%) and VWRA (about 2%) and move the money to A35.")
+      return allToOne("A35", "Phase III — new money all goes to safety.", "You are in Phase III (SGD 102,000–114,000). All monthly contributions go into A35. Also, once per quarter, sell a small slice of EQQQ (about 3%) and VWRA (about 2%) and move the money to A35.")
 
     case "drawdown":
       return allToOne("VWRA", "Markets are down — deploy the reserve, then buy VWRA.", `The portfolio is more than 15% below its recent high. Deploy your small cash reserve into VWRA, then send all contributions to VWRA too — a falling market is a buying opportunity early in the journey.`)
@@ -409,23 +409,23 @@ export function computeSbrDca(
       return allToOne(branch.fund.ticker, `Below its ${branch.fund.rangeLow}% range — filling with new money.`, `${branch.fund.ticker} is under its comfortable range; the full contribution fills it.`)
 
     // "smh_cap" and "skip_at_high" and "standard": proportional split among eligible funds.
-    // For smh_cap: SMH is above range so it's excluded by the rangeHigh filter below.
+    // For smh_cap: SEMI is above range so it's excluded by the rangeHigh filter below.
     // For skip_at_high: the high-price filter handles it.
     default: {
-      const qqqm = positions.find((p) => p.ticker === "QQQM")
-      const smh  = positions.find((p) => p.ticker === "SMH")
-      const combined = (qqqm?.actualPct ?? 0) + (smh?.actualPct ?? 0)
+      const eqqq = positions.find((p) => p.ticker === "EQQQ")
+      const semi = positions.find((p) => p.ticker === "SEMI")
+      const combined = (eqqq?.actualPct ?? 0) + (semi?.actualPct ?? 0)
       const activePhase = sbrPhase(totalValue, c)
       const phaseCaps = getPhaseCaps(activePhase.key)
-      // smh_cap fires when SMH alone is over its phase hard cap — the combined-ceiling warning
-      // does NOT additionally apply, so guard techHalt to avoid zeroing QQQM incorrectly.
+      // smh_cap fires when SEMI alone is over its phase hard cap — the combined-ceiling warning
+      // does NOT additionally apply, so guard techHalt to avoid zeroing EQQQ incorrectly.
       const techHalt = branch.tag !== "smh_cap" && combined >= phaseCaps.combinedWarning
 
       const eligible = positions.filter((p) => {
-        if (techHalt && ["QQQM", "SMH"].includes(p.ticker)) return false
-        // Never send new money to a fund above its cap (e.g. SMH > 20%)
+        if (techHalt && ["EQQQ", "SEMI"].includes(p.ticker)) return false
+        // Never send new money to a fund above its cap (e.g. SEMI > 20%)
         if (p.hardCap !== null && p.actualPct > p.hardCap) return false
-        if (["QQQM", "SMH"].includes(p.ticker)) {
+        if (["EQQQ", "SEMI"].includes(p.ticker)) {
           const f = p.hi52 > 0 && p.latestPrice > 0 ? ((p.latestPrice - p.hi52) / p.hi52) * 100 : null
           if (f !== null && f >= -c.skipAtHighPct) return false
         }
@@ -443,9 +443,9 @@ export function computeSbrDca(
       for (const p of positions) {
         const a = alloc[p.ticker]
         if (a.amount > 0) { a.tag = a.amount > a.standardAmount ? "boosted" : "standard"; if (!a.reason) a.reason = a.tag === "boosted" ? "Getting extra money redirected from a paused fund." : "Standard split — on target." }
-        else { a.tag = "zeroed"; if (!a.reason) a.reason = techHalt && ["QQQM", "SMH"].includes(p.ticker) ? `Paused — tech stocks are over ${phaseCaps.combinedWarning}% combined.` : "Skipped this month — near its yearly high price." }
+        else { a.tag = "zeroed"; if (!a.reason) a.reason = techHalt && ["EQQQ", "SEMI"].includes(p.ticker) ? `Paused — tech stocks are over ${phaseCaps.combinedWarning}% combined.` : "Skipped this month — near its yearly high price." }
       }
-      if (techHalt) note = `QQQM + SMH are ${combined.toFixed(1)}% combined — over the ${phaseCaps.combinedWarning}% warning level for Phase ${activePhase.key}. Buys in both paused this month; money goes to VWRA instead.`
+      if (techHalt) note = `EQQQ + SEMI are ${combined.toFixed(1)}% combined — over the ${phaseCaps.combinedWarning}% warning level for Phase ${activePhase.key}. Buys in both paused this month; money goes to VWRA instead.`
       else if (skipped.length) note = `Skipping ${skipped.map((p) => p.ticker).join(" & ")} this month — near the highest price in the last 12 months. Money redirected to VWRA.`
 
       return { allocations: Object.values(alloc), headline: note ? "Adjusted plan — see note below" : "Standard plan — everything is on track", marketOverlayActive: !!note, overlayNote: note }

@@ -74,7 +74,7 @@ export async function updateHoldingsManually(
 // Apply screenshot-extracted holdings: update existing tickers AND create any new ones
 // (e.g. IBIT, or an out-of-scope ETF). Every row that has units & price is brought in so
 // the portfolio stays accurate — out-of-scope tickers are then flagged on the dashboard.
-const SBR_ALLOWED_TICKERS = new Set(["VWRA", "QQQM", "SMH", "A35"])
+const SBR_ALLOWED_TICKERS = new Set(["VWRA", "EQQQ", "SEMI", "A35"])
 
 export async function applyExtractedHoldings(
   rows: Array<{ ticker: string; units: number; price: number }>
