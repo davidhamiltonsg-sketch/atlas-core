@@ -52,7 +52,7 @@ const monthlySteps = [
     detail: "No limits breached, nothing too small or too large, no hidden exposure warnings active.",
     yes: null,
     no: null,
-    action: "Split this month's contribution at target weights: VWRA 52% · EQQQ 23% · SEMI 10% · VFEA 8% · Bitcoin sleeve 7% (via IBIT). Then go to Step 6.",
+    action: "Split this month's contribution at target weights: VWRA 54% · EQQQ 23% · SEMI 10% · VFEA 8% · Bitcoin sleeve 5%. Then go to Step 6.",
   },
   {
     step: 6,
@@ -144,7 +144,7 @@ export default async function Governance() {
     })
   const gaugeRows = [...thresholds, ...extraGauges].map((t) =>
     t.ticker === "BTC"
-      ? { ...t, ticker: "BTC + IBIT", classification: "Bitcoin Sleeve — 7% target, 8% cap" }
+      ? { ...t, ticker: "BTC + IBIT", classification: "Bitcoin Sleeve — 5% target, 8% cap" }
       : t
   )
 
@@ -172,7 +172,7 @@ export default async function Governance() {
         <div className="flex-1">
           <p className="text-xs font-bold text-violet-400 mb-0.5">v1.5 — Bitcoin via IBIT · monthly check-in system · live data</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they&apos;re down. BTC and IBIT count as one Bitcoin position (7% target, 8% max), with older BTC units gradually swapping into IBIT. The SGOV cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you&apos;re doing it, and when.
+            Core holdings are bought when they dip and only sold if something fundamental breaks — never just because they&apos;re down. BTC and listed Bitcoin products count as one permanent Bitcoin position (5% target, 8% max). The cash buffer grows from new contributions only — no selling to fund it. Every page ends with one clear instruction: what to do, why you&apos;re doing it, and when.
           </p>
           <a href="/command-centre" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors">
             Go to Command Centre →
@@ -216,7 +216,7 @@ export default async function Governance() {
               { ticker: "EQQQ", target: "23%", job: "The growth engine — the 100 biggest US tech companies.", color: "#8b5cf6" },
               { ticker: "SEMI", target: "10%", job: "The chip bet — semiconductor companies tied to AI and computing.", color: "#a78bfa" },
               { ticker: "VFEA", target: "8%",  job: "The geography balancer — extra exposure to emerging market economies.", color: "#c4b5fd" },
-              { ticker: "BTC",  target: "7%",  job: "The wild card — high upside, but kept deliberately small to limit damage if it falls.", color: "#f59e0b" },
+              { ticker: "BTC",  target: "5%",  job: "The wild card — high upside, but kept deliberately small to limit damage if it falls.", color: "#f59e0b" },
               { ticker: "SGOV", target: "buffer", job: "The safety buffer — short-term US government bonds, used as dry powder and a hedge.", color: "#6b7280" },
             ].map(({ ticker, target, job, color }) => (
               <tr key={ticker} className="hover:bg-accent/20">

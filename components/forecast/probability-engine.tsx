@@ -10,7 +10,7 @@ const ATLAS_ASSETS: Asset[] = [
   { n: 'EQQQ', w: 0.23, mu: [0.0682, 0.1132, 0.1582], s: 0.22 },
   { n: 'SEMI', w: 0.10, mu: [0.0596, 0.1296, 0.1996], s: 0.32 },
   { n: 'VFEA', w: 0.08, mu: [0.0286, 0.0636, 0.0986], s: 0.18 },
-  { n: 'IBIT', w: 0.07, mu: [-0.05,  0.12,   0.25  ], s: 0.70 },
+  { n: 'IBIT', w: 0.05, mu: [-0.05,  0.12,   0.25  ], s: 0.70 },
 ]
 
 // 5×5 empirical correlation matrix (VWRA/EQQQ/SEMI/VFEA/IBIT, 2014–2024)
@@ -282,7 +282,7 @@ export function ProbabilityEngine({
   const [isRunning, setIsRunning] = useState(false)
   const [hasRun, setHasRun] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const runSim = useCallback((
     _dca: number, _bonus: number, _sv: number, _si: number, _np: number
@@ -302,13 +302,15 @@ export function ProbabilityEngine({
   const scheduleRun = useCallback((
     _dca: number, _bonus: number, _sv: number, _si: number, _np: number
   ) => {
-    clearTimeout(debounceRef.current)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => runSim(_dca, _bonus, _sv, _si, _np), 350)
   }, [runSim])
 
   useEffect(() => {
     scheduleRun(dca, bonus, sv, scenario, nPaths)
-    return () => clearTimeout(debounceRef.current)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [dca, bonus, sv, scenario, nPaths, scheduleRun])
 
   useEffect(() => {
@@ -593,7 +595,7 @@ export function ProbabilityEngine({
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           <strong>Methodology:</strong> GBM with Itô-corrected drift — S(t+Δt) = S(t)·exp[(μ−σ²/2)Δt + σ√Δt·Z], monthly steps.
           Correlated normals via Cholesky decomposition of the 2014–2024 empirical 5×5 correlation matrix.
-          Asset config: VWRA 52% (σ=15%), EQQQ 23% (σ=22%), SEMI 10% (σ=32%), VFEA 8% (σ=18%), IBIT 7% (σ=70%).
+          Asset config: VWRA 54% (σ=15%), EQQQ 23% (σ=22%), SEMI 10% (σ=32%), VFEA 8% (σ=18%), Bitcoin sleeve 5% (σ=70%).
           {scenario === 0 && ' Conservative μ: blended ~7.1% p.a.'}
           {scenario === 1 && ' Base μ: blended ~10.3% p.a.'}
           {scenario === 2 && ' Aggressive μ: blended ~13.9% p.a.'}

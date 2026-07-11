@@ -19,9 +19,9 @@ import { ATLAS_SPEC } from "@/lib/portfolio-spec"
  */
 
 // Target weights (whole-number percent of NAV)
-// Bitcoin sleeve = BTC + IBIT combined = 7% (see §4.1). BTC is being transitioned into
+// Bitcoin sleeve = BTC + IBIT combined = 5% (see §4.1). BTC is being transitioned into
 // IBIT (the more tax-effective vehicle) like-for-like: as the transition proceeds the BTC
-// target steps down and IBIT steps up by the same amount, keeping the sleeve at 7%.
+// target steps down and IBIT steps up by the same amount, keeping the sleeve at 5%.
 // Derived from the single source (lib/portfolio-spec.ts) — SGOV is a buffer, not a target row.
 export const TICKER_TARGETS: Record<string, number> = Object.fromEntries(
   ATLAS_SPEC.funds.filter((f) => f.ticker !== "SGOV").map((f) => [f.ticker, f.target]),
@@ -110,15 +110,15 @@ export interface BtcCycleModifier {
 // prediction the doctrine (Art. XXV) rejects. It holds at 8% and only TIGHTENS defensively
 // (to 6%) in a deep drawdown, which is prudence, not forecasting. The post-halving-bull
 // phase holds the cap at 8%; it is retained only so the cockpit can label the phase.
-// Target is a constant 7% (matches Art. VI).
+// Target is a constant 5% (matches Art. VI).
 export const BTC_CYCLE_MODIFIERS: Record<BtcCyclePhase, BtcCycleModifier> = {
   post_halving_bull: {
-    phase: 'post_halving_bull', hardHigh: 8, target: 7, softHigh: 8,
+    phase: 'post_halving_bull', hardHigh: 8, target: 5, softHigh: 7,
     label: 'Post-Halving Bull',
     rationale: '12–24 months post-halving. Cap held at 8% — it does not widen on the cycle.',
   },
   normal: {
-    phase: 'normal', hardHigh: 8, target: 7, softHigh: 8,
+    phase: 'normal', hardHigh: 8, target: 5, softHigh: 7,
     label: 'Normal',
     rationale: 'Standard governance. No halving catalyst active.',
   },
@@ -218,9 +218,9 @@ export const COMBINED_TECH_RULE = {
 // ─── Bitcoin sleeve constants (Art. VIII) ────────────────────────────────────
 // BTC and IBIT are ONE economic exposure (Bitcoin). BTC is in run-off (held, not bought);
 // IBIT is the accumulation vehicle. New Bitcoin money always flows to IBIT.
-// Combined sleeve target 7%; cycle-aware hard cap lives in BTC_CYCLE_MODIFIERS.
+// Combined sleeve target 5%; cycle-aware hard cap lives in BTC_CYCLE_MODIFIERS.
 export const BITCOIN_TICKERS = ["BTC", "IBIT"] as const
-export const BITCOIN_SLEEVE_TARGET_PCT = 7
+export const BITCOIN_SLEEVE_TARGET_PCT = 5
 export const BITCOIN_RUNOFF_TICKER     = "BTC"   // transitioning out like-for-like
 export const BITCOIN_ACCUMULATION_TICKER = "IBIT" // accumulation vehicle
 

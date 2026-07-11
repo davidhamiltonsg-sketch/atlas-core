@@ -5,6 +5,7 @@ import { sendMonthlyReminderEmail, emailConfigured } from "@/lib/email"
 import { computeSbrNextMove, sbrPhase, type SbrPosition } from "@/lib/sbr-engine"
 import { computeLadder } from "@/lib/ladder"
 import { getDealingWindow } from "@/lib/constitution"
+import { authorizeCron } from "@/lib/cron-auth"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -18,15 +19,8 @@ export const dynamic = "force-dynamic"
 //
 // Auth: Bearer CRON_SECRET header.
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    const auth = req.headers.get("authorization")
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-  } else {
-    console.warn("[cron/monthly] CRON_SECRET not set — endpoint is unauthenticated.")
-  }
+  const authError = authorizeCron(req)
+  if (authError) return authError
 
   if (!emailConfigured()) {
     return NextResponse.json({ ran: false, reason: "RESEND_API_KEY not set" })
@@ -70,11 +64,7 @@ export async function GET(req: Request) {
           })
           .filter((p): p is SbrPosition => p !== null)
 
-        const nextMove = totalValue > 0 ? computeSbrNextMove(positions, totalValue) : {
-          severity: "none" as const, ticker: "VWRA", action: "Start investing",
-          what: "Make your first SGD 1,000 contribution.", why: "Build the habit.",
-          when: "Anytime.", color: "#38bdf8",
-        }
+        const nextMove = computeSbrNextMove(positions, totalValue)
         const phase = sbrPhase(totalValue)
 
         const r = await sendMonthlyReminderEmail(u.email, u.name, "silicon-brick-road", nextMove, { key: phase.key, label: phase.label })

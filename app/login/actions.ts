@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs"
 import { headers } from "next/headers"
 import { db } from "@/lib/db"
 import { createSession, setPortfolioHint } from "@/lib/session"
+import { setActivePortfolio } from "@/lib/active-portfolio"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 
 // ── Simple in-memory rate limiter ────────────────────────────────────────────
@@ -86,7 +87,9 @@ export async function loginAction(formData: FormData) {
     name: user.name,
     role: user.role,
   })
-  await setPortfolioHint(constitutionIdForEmail(user.email))
+  const defaultPortfolio = user.role === "admin" ? "atlas-core" : constitutionIdForEmail(user.email)
+  await setPortfolioHint(defaultPortfolio)
+  await setActivePortfolio(defaultPortfolio)
 
   redirect("/")
 }

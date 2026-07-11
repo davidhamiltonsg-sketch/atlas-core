@@ -1,42 +1,39 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Silicon Brick Road — Governance Alignment
-//
-// Evaluates the live four-fund portfolio against the written plan and returns a
-// plain-English ok / watch / breach for each rule. Extracted so the dashboard and
-// the PDF report compute the exact same checks — never two copies that could
-// silently drift apart.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
-import { computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_SINGLE_COMPANY_LIMIT } from "@/lib/sbr-look-through"
-import { sbrPhase, getPhaseCaps, type SbrPosition } from "@/lib/sbr-engine"
+import {
+  computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_TECHNOLOGY_WATCH,
+  SBR_SINGLE_COMPANY_LIMIT, SBR_SINGLE_COMPANY_WATCH, SBR_COUNTRY_LIMIT, SBR_COUNTRY_WATCH,
+  SBR_SEMICONDUCTOR_LIMIT, SBR_SEMICONDUCTOR_WATCH,
+} from "@/lib/sbr-look-through"
+import type { SbrPosition } from "@/lib/sbr-engine"
 import type { GovAlignment, Align } from "@/lib/governance-status"
 
 export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: number): GovAlignment {
   if (totalValue <= 0) return { checks: [], breaches: 0, watches: 0, overall: "ok" }
-
-  const semi = positions.find((p) => p.ticker === "SEMI")
-  const combined = positions.filter((p) => ["EQQQ", "SEMI"].includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
-  const a35 = positions.find((p) => p.ticker === "A35")
-  const equity = positions.filter((p) => ["VWRA", "EQQQ", "SEMI"].includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
-  const st = (breach: boolean, watch: boolean): Align => (breach ? "breach" : watch ? "watch" : "ok")
-  const phase = sbrPhase(totalValue)
-  const phaseCaps = getPhaseCaps(phase.key)
-
-  // Hidden exposure (Article XVII): look through the funds to real technology + single-company
-  // concentration. Without this, a breach hiding inside the funds would show "all rules met".
+  const st = (breach: boolean, watch: boolean): Align => breach ? "breach" : watch ? "watch" : "ok"
+  const actual = new Map(positions.map((p) => [p.ticker === "SMH.L" ? "SMH" : p.ticker, p.actualPct]))
+  const combined = (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
+  const equity = (actual.get("IMID") ?? 0) + (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
   const lt = computeSbrLookThrough(positions)
-
+  const rangeDrift = SBR.funds.filter((f) => {
+    const pct = actual.get(f.ticker) ?? 0
+    return pct < f.rangeLow || pct > f.rangeHigh
+  })
+  const hardHoldings = SBR.funds.filter((f) => {
+    const pct = actual.get(f.ticker) ?? 0
+    return (f.hardCap !== null && pct > f.hardCap) || (f.floor !== undefined && pct < f.floor)
+  })
   const checks: GovAlignment["checks"] = [
-    { id: "semi",    label: `Chip fund (SEMI) under its ${phaseCaps.smhHard}% cap (Phase ${phase.key})`, status: st((semi?.actualPct ?? 0) > phaseCaps.smhHard, (semi?.actualPct ?? 0) > phaseCaps.smhHard - 1), detail: `SEMI is ${(semi?.actualPct ?? 0).toFixed(1)}% (Phase ${phase.key} cap ${phaseCaps.smhHard}%, target 15%)` },
-    { id: "combined",label: `Tech funds (EQQQ + SEMI) under ${phaseCaps.combinedHard}% (Phase ${phase.key})`, status: st(combined > phaseCaps.combinedHard, combined >= phaseCaps.combinedWarning), detail: `Combined ${combined.toFixed(1)}% (Phase ${phase.key} warning ${phaseCaps.combinedWarning}%, limit ${phaseCaps.combinedHard}%)` },
-    { id: "tech-lt", label: `Technology under ${SBR_TECHNOLOGY_LIMIT}% (looking inside the funds)`, status: st(lt.technologyOver, lt.technologyPct > SBR_TECHNOLOGY_LIMIT - 3), detail: `Once you look inside the funds, technology works out to about ${lt.technologyPct.toFixed(0)}% (limit ${SBR_TECHNOLOGY_LIMIT}%)` },
-    { id: "company-lt", label: `No single company over ${SBR_SINGLE_COMPANY_LIMIT}%`, status: st(lt.singleCompanyOver, lt.topCompany.pct > SBR_SINGLE_COMPANY_LIMIT - 2), detail: `Your biggest single-company exposure is ${lt.topCompany.name} at about ${lt.topCompany.pct.toFixed(1)}% (limit ${SBR_SINGLE_COMPANY_LIMIT}%)` },
-    { id: "a35",     label: "Safety floor (A35) at least 7%",       status: st((a35?.actualPct ?? 0) < 7, (a35?.actualPct ?? 0) < 8), detail: `A35 is ${(a35?.actualPct ?? 0).toFixed(1)}% (floor 7%, target 10%)` },
-    { id: "equity",  label: "Total equity under 92%",               status: st(equity > (SBR.totalEquityMaxPct ?? 92), equity > 90), detail: `Equities ${equity.toFixed(1)}% (max ${SBR.totalEquityMaxPct}%)` },
-    { id: "ranges",  label: "Every fund within its range",          status: st(false, positions.some((p) => p.actualPct < p.rangeLow || p.actualPct > p.rangeHigh)), detail: positions.some((p) => p.actualPct < p.rangeLow || p.actualPct > p.rangeHigh) ? "A fund has drifted outside its comfortable range" : "All four funds are within range" },
+    { id: "holding-hard", label: "Each ETF respects its hard cap and floor", status: st(hardHoldings.length > 0, false), detail: hardHoldings.length ? `Outside hard limits: ${hardHoldings.map(f => f.ticker).join(", ")}` : "All holding hard limits pass" },
+    { id: "satellites", label: "EQAC + SMH stay below 20%", status: st(combined > 20, combined >= 18), detail: `Combined satellites ${combined.toFixed(1)}% (watch 18%, cap 20%)` },
+    { id: "company-lt", label: `No company reaches ${SBR_SINGLE_COMPANY_LIMIT}% look-through`, status: st(lt.topCompany.pct >= SBR_SINGLE_COMPANY_LIMIT, lt.topCompany.pct >= SBR_SINGLE_COMPANY_WATCH), detail: `${lt.topCompany.name} is ${lt.topCompany.pct.toFixed(1)}% (watch ${SBR_SINGLE_COMPANY_WATCH}%, review ${SBR_SINGLE_COMPANY_LIMIT}%)` },
+    { id: "industry-lt", label: `Technology-related industries stay below ${SBR_TECHNOLOGY_LIMIT}%`, status: st(lt.technologyPct >= SBR_TECHNOLOGY_LIMIT, lt.technologyPct >= SBR_TECHNOLOGY_WATCH), detail: `${lt.technologyPct.toFixed(1)}% (watch ${SBR_TECHNOLOGY_WATCH}%, review ${SBR_TECHNOLOGY_LIMIT}%)` },
+    { id: "semiconductor-lt", label: `Semiconductors stay below ${SBR_SEMICONDUCTOR_LIMIT}%`, status: st(lt.semiconductorPct >= SBR_SEMICONDUCTOR_LIMIT, lt.semiconductorPct >= SBR_SEMICONDUCTOR_WATCH), detail: `${lt.semiconductorPct.toFixed(1)}% (watch ${SBR_SEMICONDUCTOR_WATCH}%, review ${SBR_SEMICONDUCTOR_LIMIT}%)` },
+    { id: "country-lt", label: `No country reaches ${SBR_COUNTRY_LIMIT}%`, status: st(lt.topCountry.pct >= SBR_COUNTRY_LIMIT, lt.topCountry.pct >= SBR_COUNTRY_WATCH), detail: `${lt.topCountry.name} is ${lt.topCountry.pct.toFixed(1)}% (watch ${SBR_COUNTRY_WATCH}%, review ${SBR_COUNTRY_LIMIT}%)` },
+    { id: "asset", label: "Equity remains within the high-risk mandate", status: st(equity > 97, equity > 95), detail: `Equity ${equity.toFixed(1)}%; IB01 ${(actual.get("IB01") ?? 0).toFixed(1)}%` },
+    { id: "freshness", label: "Underlying fund data is current", status: st(lt.ageDays > 95, lt.ageDays > 35), detail: `Look-through data age ${lt.ageDays} days` },
+    { id: "ranges", label: "Each fund is inside its soft band", status: st(false, rangeDrift.length > 0), detail: rangeDrift.length ? `Contribution routing needed: ${rangeDrift.map(f => f.ticker).join(", ")}` : "All four funds are within range" },
   ]
   const breaches = checks.filter((c) => c.status === "breach").length
   const watches = checks.filter((c) => c.status === "watch").length
-  return { checks, breaches, watches, overall: breaches > 0 ? "breach" : watches > 0 ? "watch" : "ok" }
+  return { checks, breaches, watches, overall: breaches ? "breach" : watches ? "watch" : "ok" }
 }

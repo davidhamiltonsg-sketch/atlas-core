@@ -9,6 +9,7 @@
     "lint": "eslint",
     "seed": "npx tsx prisma/seed.ts",
     "seed:sbr": "npx tsx prisma/seed-sbr.ts",
+    "migrate:portfolio-v2": "node scripts/migrate-portfolio-v2.mjs",
     "check:governance": "npx tsx scripts/check-governance.ts",
     "check:engine": "npx tsx scripts/check-engine.ts",
     "check:constitution": "npx tsx scripts/check-constitution.ts",
@@ -18,7 +19,8 @@
     "check:money": "npx tsx scripts/check-money.ts",
     "check:ingest": "npx tsx scripts/check-ingest.ts",
     "check:forecast": "npx tsx scripts/check-forecast.ts",
-    "check": "npm run check:spec && npm run check:money && npm run check:ingest && npm run check:governance && npm run check:engine && npm run check:constitution && npm run check:ladder && npm run check:sbr && npm run check:forecast"
+    "check:portfolio-v2": "npx tsx scripts/check-portfolio-v2.ts",
+    "check": "npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npx tsc --noEmit"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

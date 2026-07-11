@@ -83,7 +83,7 @@ export async function buildSbrDigest(userId: string): Promise<SbrDigest | null> 
 
   const phase = sbrPhase(totalValue)
   const health = totalValue > 0 ? computeSbrHealth(positions, totalValue, snapshotAgeDays ?? 99) : null
-  const nextMove = totalValue > 0 ? computeSbrNextMove(positions, totalValue) : { severity: "none" as const, ticker: "VWRA", action: "Start investing", what: "Make your first contribution.", why: "Build the habit.", when: "Anytime.", color: "#38bdf8" }
+  const nextMove = computeSbrNextMove(positions, totalValue)
 
   if (totalValue > 0) {
     // Run constitution compliance checks.

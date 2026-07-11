@@ -1,73 +1,97 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Silicon Brick Road — Hidden-Exposure Look-Through (Article XVII)
-//
-// Dami's four funds overlap: VWRA, EQQQ and SEMI all hold the same big technology
-// companies. This looks THROUGH the funds to the real underlying exposure, so the
-// constitution's two hidden limits — no more than 45% in technology and no more than
-// 10% in any single company — can actually be checked, not just written down.
-//
-// Self-contained and isolated: no Atlas Core funds or logic. A35 (Singapore bonds)
-// has no technology or single-company exposure, so it does not appear below.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// As-of date for the hand-entered weights below (fund fact-sheet level). Refresh from the
-// latest fact sheets and bump this date; lookThroughStale() flags when it is old.
+// SBR v3.2 look-through. These fund-level coefficients are planning estimates and must
+// carry an as-of date; actual portfolio weights always come from the owner account.
 export const SBR_WEIGHTS_AS_OF = "2026-06-30"
+export const SBR_TECHNOLOGY_LIMIT = 43
+export const SBR_TECHNOLOGY_WATCH = 38
+export const SBR_SEMICONDUCTOR_LIMIT = 22
+export const SBR_SEMICONDUCTOR_WATCH = 18
+export const SBR_SINGLE_COMPANY_LIMIT = 8
+export const SBR_SINGLE_COMPANY_WATCH = 7
+export const SBR_COUNTRY_LIMIT = 72
+export const SBR_COUNTRY_WATCH = 68
 
-// Article XVII limits.
-export const SBR_TECHNOLOGY_LIMIT = 45      // %
-export const SBR_SINGLE_COMPANY_LIMIT = 10  // %
-
-// Approximate technology-sector weight of each fund (GICS Information Technology +
-// Communication Services, the way the constitution defines "technology").
-const FUND_TECHNOLOGY_PCT: Record<string, number> = {
-  VWRA: 26,   // FTSE All-World — a quarter is tech
-  EQQQ: 50,   // Invesco NASDAQ-100 UCITS — half is tech
-  SEMI: 100,  // VanEck Semiconductor UCITS — all tech
+const INDUSTRIES: Record<string, Record<string, number>> = {
+  IMID: { Technology: 30.5, Financials: 16, Industrials: 11, Consumer: 15, Healthcare: 10, Other: 17.5 },
+  EQAC: { Technology: 60, Communication: 12, Consumer: 13, Healthcare: 5, Industrials: 4, Other: 6 },
+  SMH: { Semiconductors: 100 },
+  IB01: { "Sovereign bills": 100 },
 }
-
-// Approximate % of each fund made up by each big company (fact-sheet level).
-const FUND_COMPANY_PCT: Record<string, Record<string, number>> = {
-  VWRA: { Nvidia: 4.8, Apple: 4.3, Microsoft: 4.0, Amazon: 2.6, Alphabet: 2.2, Meta: 1.7, Broadcom: 1.2, TSMC: 1.3 },
-  EQQQ: { Nvidia: 8.0, Apple: 9.0, Microsoft: 8.0, Amazon: 5.5, Alphabet: 5.0, Meta: 4.5, Broadcom: 5.0, TSMC: 0.0 },
-  SEMI: { Nvidia: 20.0, Apple: 0.0, Microsoft: 0.0, Amazon: 0.0, Alphabet: 0.0, Meta: 0.0, Broadcom: 8.0, TSMC: 12.0 },
+const COUNTRIES: Record<string, Record<string, number>> = {
+  IMID: { "United States": 62.8, Japan: 6, "United Kingdom": 4, China: 3, Canada: 3, Taiwan: 2, Other: 19.2 },
+  EQAC: { "United States": 97, Other: 3 },
+  SMH: { "United States": 65, Taiwan: 18, Netherlands: 12, Other: 5 },
+  IB01: { "United States": 100 },
 }
+const COMPANIES: Record<string, Record<string, number>> = {
+  IMID: { Nvidia: 4.3, Apple: 4.0, Microsoft: 3.7, Amazon: 2.4, Alphabet: 2.1, Meta: 1.6, Broadcom: 1.1, TSMC: 1.0 },
+  EQAC: { Nvidia: 8.0, Apple: 8.5, Microsoft: 7.8, Amazon: 5.5, Alphabet: 5.0, Meta: 4.5, Broadcom: 4.8 },
+  SMH: { Nvidia: 19, Broadcom: 9, TSMC: 12, ASML: 8, AMD: 6 },
+}
+const ASSETS: Record<string, Record<string, number>> = {
+  IMID: { Equity: 100 }, EQAC: { Equity: 100 }, SMH: { Equity: 100 }, IB01: { "Treasury bills": 100 },
+}
+const SEMICONDUCTORS: Record<string, number> = { IMID: 10, EQAC: 30, SMH: 100, IB01: 0 }
 
+export interface ExposureLine { name: string; pct: number }
 export interface SbrLookThrough {
   technologyPct: number
-  topCompany: { name: string; pct: number }
-  companies: Array<{ name: string; pct: number }>
+  semiconductorPct: number
+  topCompany: ExposureLine
+  topCountry: ExposureLine
+  topIndustry: ExposureLine
+  companies: ExposureLine[]
+  countries: ExposureLine[]
+  industries: ExposureLine[]
+  assets: ExposureLine[]
   technologyOver: boolean
   singleCompanyOver: boolean
+  countryOver: boolean
+  semiconductorOver: boolean
+  warnings: string[]
+  ageDays: number
+  stale: boolean
 }
 
-/** Look through the funds to real technology + single-company exposure. */
-export function computeSbrLookThrough(positions: Array<{ ticker: string; actualPct: number }>): SbrLookThrough {
-  let technologyPct = 0
-  const companyTotals: Record<string, number> = {}
-
+function aggregate(positions: Array<{ ticker: string; actualPct: number }>, table: Record<string, Record<string, number>>): ExposureLine[] {
+  const totals: Record<string, number> = {}
   for (const p of positions) {
-    const w = p.actualPct / 100
-    technologyPct += w * (FUND_TECHNOLOGY_PCT[p.ticker] ?? 0)
-    const cw = FUND_COMPANY_PCT[p.ticker]
-    if (cw) for (const [co, pct] of Object.entries(cw)) companyTotals[co] = (companyTotals[co] ?? 0) + w * pct
+    const ticker = p.ticker === "SMH.L" ? "SMH" : p.ticker
+    for (const [name, insidePct] of Object.entries(table[ticker] ?? {})) {
+      totals[name] = (totals[name] ?? 0) + (p.actualPct / 100) * insidePct
+    }
   }
+  return Object.entries(totals).map(([name, pct]) => ({ name, pct })).sort((a, b) => b.pct - a.pct)
+}
 
-  const companies = Object.entries(companyTotals)
-    .map(([name, pct]) => ({ name, pct }))
-    .sort((a, b) => b.pct - a.pct)
+export function computeSbrLookThrough(positions: Array<{ ticker: string; actualPct: number }>, now = new Date()): SbrLookThrough {
+  // No securities means no inferred target exposure.
+  const invested = positions.filter((p) => p.actualPct > 0)
+  const companies = aggregate(invested, COMPANIES)
+  const countries = aggregate(invested, COUNTRIES)
+  const industries = aggregate(invested, INDUSTRIES)
+  const assets = aggregate(invested, ASSETS)
+  const technologyPct = industries.filter((x) => ["Technology", "Communication", "Semiconductors"].includes(x.name)).reduce((s, x) => s + x.pct, 0)
+  const semiconductorPct = invested.reduce((sum, p) => sum + (p.actualPct / 100) * (SEMICONDUCTORS[p.ticker === "SMH.L" ? "SMH" : p.ticker] ?? 0), 0)
   const topCompany = companies[0] ?? { name: "—", pct: 0 }
-
+  const topCountry = countries[0] ?? { name: "—", pct: 0 }
+  const topIndustry = industries[0] ?? { name: "—", pct: 0 }
+  const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(SBR_WEIGHTS_AS_OF).getTime()) / 86_400_000))
+  const warnings: string[] = []
+  if (topCompany.pct >= SBR_SINGLE_COMPANY_WATCH) warnings.push(`${topCompany.name} is ${topCompany.pct.toFixed(1)}% look-through`)
+  if (technologyPct >= SBR_TECHNOLOGY_WATCH) warnings.push(`Technology-related industries are ${technologyPct.toFixed(1)}%`)
+  if (semiconductorPct >= SBR_SEMICONDUCTOR_WATCH) warnings.push(`Semiconductors are ${semiconductorPct.toFixed(1)}% look-through`)
+  if (topCountry.pct >= SBR_COUNTRY_WATCH) warnings.push(`${topCountry.name} is ${topCountry.pct.toFixed(1)}% economic exposure`)
+  if (ageDays > 95) warnings.push(`Fund holdings data is ${ageDays} days old; concentration-led trades are blocked`)
   return {
-    technologyPct,
-    topCompany,
-    companies,
-    technologyOver: technologyPct > SBR_TECHNOLOGY_LIMIT,
-    singleCompanyOver: topCompany.pct > SBR_SINGLE_COMPANY_LIMIT,
+    technologyPct, semiconductorPct, topCompany, topCountry, topIndustry, companies, countries, industries, assets,
+    technologyOver: technologyPct >= SBR_TECHNOLOGY_LIMIT,
+    singleCompanyOver: topCompany.pct >= SBR_SINGLE_COMPANY_LIMIT,
+    countryOver: topCountry.pct >= SBR_COUNTRY_LIMIT,
+    semiconductorOver: semiconductorPct >= SBR_SEMICONDUCTOR_LIMIT,
+    warnings, ageDays, stale: ageDays > 95,
   }
 }
 
-/** Whether the weight tables are older than one quarter as of `now`. */
-export function sbrWeightsStale(now: Date, staleAfterDays = 92): boolean {
-  return Math.floor((now.getTime() - new Date(SBR_WEIGHTS_AS_OF).getTime()) / 86400000) > staleAfterDays
+export function sbrWeightsStale(now: Date, staleAfterDays = 95): boolean {
+  return Math.floor((now.getTime() - new Date(SBR_WEIGHTS_AS_OF).getTime()) / 86_400_000) > staleAfterDays
 }

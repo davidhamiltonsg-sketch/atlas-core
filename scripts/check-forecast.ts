@@ -39,7 +39,7 @@ console.log("Atlas Core — forecast math checks\n")
 // 3) Mixed portfolio → each scenario's blend is bounded by the min/max of its held assets'
 //    rates (a weighted average can never fall outside the range of its inputs).
 {
-  const alloc = { VWRA: 52, EQQQ: 23, SEMI: 10, VFEA: 8, BTC: 7 }
+  const alloc = { VWRA: 54, EQQQ: 23, SEMI: 10, VFEA: 8, BTC: 5 }
   const { rates } = blendedGrowthRates(alloc, 0.04)
   for (const key of ["conservative", "base", "aggressive"] as const) {
     const heldRates = Object.keys(alloc).map((t) => ASSET_EXPECTED_RETURNS[t][key])

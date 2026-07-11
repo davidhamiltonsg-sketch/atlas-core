@@ -7,26 +7,58 @@ datasource db {
 }
 
 model User {
-  id                   String               @id @default(cuid())
-  email                String               @unique
-  name                 String
-  passwordHash         String
-  role                 String               @default("user")
-  monthlyContribution  Float                @default(3000)
-  annualLumpSum        Float                @default(20000)
-  contributionGrowthRate Float              @default(0.05)
-  riskFreeRate         Float                @default(0.04)
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  holdings             Holding[]
-  resetTokens          PasswordResetToken[]
-  behaviourLogs        BehaviourLog[]
-  trades               Trade[]
-  contributions        ContributionRecord[]
-  dividends            Dividend[]
-  watchlistItems       WatchlistItem[]
-  governanceLogs       GovernanceLog[]
-  throttleState        ThrottleState?
+  id                     String               @id @default(cuid())
+  email                  String               @unique
+  name                   String
+  passwordHash           String
+  role                   String               @default("user")
+  monthlyContribution    Float                @default(3000)
+  annualLumpSum          Float                @default(20000)
+  contributionGrowthRate Float                @default(0.05)
+  riskFreeRate           Float                @default(0.04)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  holdings               Holding[]
+  resetTokens            PasswordResetToken[]
+  behaviourLogs          BehaviourLog[]
+  trades                 Trade[]
+  contributions          ContributionRecord[]
+  dividends              Dividend[]
+  watchlistItems         WatchlistItem[]
+  governanceLogs         GovernanceLog[]
+  throttleState          ThrottleState?
+  ibkrLedgerEntries      IbkrLedgerEntry[]
+  dcaCashBanks           DcaCashBank[]
+  dcaBankEntries         DcaBankEntry[]
+}
+
+model DcaCashBank {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  constitutionId String
+  currency       String
+  balance        Float    @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, constitutionId, currency])
+}
+
+model DcaBankEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  constitutionId String
+  currency       String
+  type           String   // CONTRIBUTION | PURCHASE | COMMISSION | FX | ADJUSTMENT
+  amount         Float    // positive credit, negative debit
+  balanceAfter   Float
+  externalId     String?
+  description    String?
+  date           DateTime @default(now())
+
+  @@unique([userId, externalId])
+  @@index([userId, constitutionId, date])
 }
 
 model PasswordResetToken {
@@ -39,50 +71,92 @@ model PasswordResetToken {
 }
 
 model Holding {
-  id                 String     @id @default(cuid())
-  userId             String
-  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticker             String
-  name               String
-  targetPct          Float
-  hardCapPct         Float?
-  toleranceBand      Float      @default(2.5)
-  color              String     @default("#6366f1")
-  accrualBalanceSgd  Float      @default(0) // SBR whole-share accrual carry-forward (SGD)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  snapshots          Snapshot[]
-  dividends          Dividend[]
+  id                String     @id @default(cuid())
+  userId            String
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker            String
+  displayTicker     String?
+  instrumentKey     String?
+  isin              String?
+  cusip             String?
+  exchange          String?
+  ibkrConid         String?
+  instrumentStatus  String     @default("ACTIVE") // ACTIVE | LEGACY | CLOSED
+  name              String
+  targetPct         Float
+  hardCapPct        Float?
+  toleranceBand     Float      @default(2.5)
+  color             String     @default("#6366f1")
+  accrualBalanceSgd Float      @default(0) // SBR whole-share accrual carry-forward (SGD)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  snapshots         Snapshot[]
+  dividends         Dividend[]
 
   @@unique([userId, ticker])
+  @@index([userId, instrumentKey])
+  @@index([userId, instrumentStatus])
 }
 
 model Snapshot {
-  id        String   @id @default(cuid())
-  holdingId String
-  holding   Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
-  date      DateTime @default(now())
-  units     Float
-  price     Float
-  value     Float
-  currency  String   @default("USD")
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  holdingId     String
+  holding       Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  date          DateTime @default(now())
+  units         Float
+  price         Float
+  value         Float
+  currency      String   @default("USD")
+  costBasis     Float?
+  unrealizedPnl Float?
+  createdAt     DateTime @default(now())
 }
 
 // Trade log — record actual buy/sell transactions
 model Trade {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticker    String
-  type      String   // "BUY" | "SELL"
-  units     Float
-  price     Float    // USD per unit
-  amount    Float    // total in SGD (units * price * fxRate)
-  fxRate    Float    @default(1.35) // USDSGD at time of trade
-  date      DateTime
-  note      String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker      String
+  instrumentKey String?
+  isin        String?
+  cusip       String?
+  exchange    String?
+  ibkrConid   String?
+  type        String // "BUY" | "SELL"
+  units       Float
+  price       Float // USD per unit
+  amount      Float // total in SGD (units * price * fxRate)
+  fxRate      Float    @default(1.35) // USDSGD at time of trade
+  commission  Float    @default(0)
+  realizedPnl Float?
+  netCash     Float?
+  date        DateTime
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+// Immutable, read-only mirror of non-position IBKR Flex activity. This keeps the
+// audit trail complete without giving the app any trading authority.
+model IbkrLedgerEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalId  String
+  category    String // DEPOSIT, WITHDRAWAL, FEE, TAX, INTEREST, CORPORATE_ACTION, FX, OTHER
+  symbol      String?
+  amount      Float
+  currency    String
+  amountBase  Float?
+  fxRate      Float?
+  date        DateTime
+  description String?
+  rawType     String?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, externalId])
+  @@index([userId, date])
+  @@index([userId, category])
 }
 
 // Month-by-month contribution records
@@ -90,7 +164,7 @@ model ContributionRecord {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount    Float    // USD
+  amount    Float // USD
   date      DateTime
   note      String?
   createdAt DateTime @default(now())
@@ -98,19 +172,19 @@ model ContributionRecord {
 
 // Dividend received from ETFs
 model Dividend {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  holdingId String?
-  holding   Holding? @relation(fields: [holdingId], references: [id], onDelete: SetNull)
-  ticker    String
-  amount    Float    // SGD amount received
-  units     Float    // units held at time of dividend
-  isDrip    Boolean  @default(false)   // true = dividend reinvested as additional units
-  dripUnits Float?                     // additional units acquired via DRIP
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdingId   String?
+  holding     Holding? @relation(fields: [holdingId], references: [id], onDelete: SetNull)
+  ticker      String
+  amount      Float // SGD amount received
+  units       Float // units held at time of dividend
+  isDrip      Boolean  @default(false) // true = dividend reinvested as additional units
+  dripUnits   Float? // additional units acquired via DRIP
   paymentDate DateTime
-  note      String?
-  createdAt DateTime @default(now())
+  note        String?
+  createdAt   DateTime @default(now())
 }
 
 // Watchlist for potential future positions
@@ -118,9 +192,9 @@ model Dividend {
 model EtfLookThrough {
   id             String   @id @default(cuid())
   ticker         String   @unique
-  companyWeights String   // JSON: Record<string, number> — % per mega-cap company
-  sectorWeights  String   // JSON: {semiconductor, digital, us, ai}
-  geoWeights     String   // JSON: {us, intlDev, emerging, crypto}
+  companyWeights String // JSON: Record<string, number> — % per mega-cap company
+  sectorWeights  String // JSON: {semiconductor, digital, us, ai}
+  geoWeights     String // JSON: {us, intlDev, emerging, crypto}
   source         String   @default("yahoo_finance")
   updatedAt      DateTime @updatedAt
   createdAt      DateTime @default(now())
@@ -133,7 +207,7 @@ model WatchlistItem {
   ticker    String
   name      String
   note      String?
-  targetPct Float?   // hypothetical target if added to portfolio
+  targetPct Float? // hypothetical target if added to portfolio
   addedAt   DateTime @default(now())
 
   @@unique([userId, ticker])
@@ -163,12 +237,12 @@ model BehaviourLog {
 // sourceLinks is a JSON string (SQLite/libSQL has no array type).
 model RiskRegisterItem {
   id                     String    @id @default(cuid())
-  key                    String    @unique  // stable slug, e.g. "ucits-migration"
+  key                    String    @unique // stable slug, e.g. "ucits-migration"
   title                  String
   description            String
-  level                  String    // "high" | "medium" | "low"
+  level                  String // "high" | "medium" | "low"
   countdownDate          DateTime?
-  preCommittedResponseId String?   // e.g. "A1", "B1" — Art. XXI pre-committed response code
+  preCommittedResponseId String? // e.g. "A1", "B1" — Art. XXI pre-committed response code
   sourceLinks            String    @default("[]") // JSON: string[]
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
@@ -184,8 +258,8 @@ model GovernanceLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date      DateTime @default(now())
   event     String
-  ruleId    String?  // ladder step reference (e.g. "step-1") or GovernanceRule id
-  details   String   // plain-text description of the event
+  ruleId    String? // ladder step reference (e.g. "step-1") or GovernanceRule id
+  details   String // plain-text description of the event
   createdAt DateTime @default(now())
 }
 
@@ -195,9 +269,9 @@ model ThrottleState {
   id                     String    @id @default(cuid())
   userId                 String    @unique
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  timer72hExpiresAt      DateTime?  // null = no active cooling-off period
-  moratorium90dStartedAt DateTime?  // null = no active parameter-change moratorium
-  discretionaryChangesQ  Int        @default(0)   // discretionary changes this quarter
-  quarter                String     @default("2026-Q3")  // "YYYY-QN"
-  updatedAt              DateTime   @updatedAt
+  timer72hExpiresAt      DateTime? // null = no active cooling-off period
+  moratorium90dStartedAt DateTime? // null = no active parameter-change moratorium
+  discretionaryChangesQ  Int       @default(0) // discretionary changes this quarter
+  quarter                String    @default("2026-Q3") // "YYYY-QN"
+  updatedAt              DateTime  @updatedAt
 }

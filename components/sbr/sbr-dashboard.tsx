@@ -24,6 +24,7 @@ import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 import { BrickRoad } from "@/components/sbr/brick-road"
 import { sbrBrickRoadPhases } from "@/lib/spec-derived"
+import { computeSbrLookThrough } from "@/lib/sbr-look-through"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -56,7 +57,7 @@ const FX_REFERENCE_USDSGD = 1.35
 const FX_BAND_PCT = 5 // ±5% from reference triggers a note
 
 async function getSbrData(userId: string) {
-  const [holdings, market, recentExec, usdSgdRate, recentPhaseLog, recentMinute] = await Promise.all([
+  const [holdings, market, recentExec, usdSgdRate, recentPhaseLog, cashBank, recentMinute] = await Promise.all([
     // Filter to SBR tickers only — prevents Atlas Core holdings from bleeding into SBR views
     db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
@@ -66,6 +67,7 @@ async function getSbrData(userId: string) {
       where: { userId, type: "sbr-phase-transition", date: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
     }),
+    db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "silicon-brick-road", currency: "SGD" } } }),
     db.behaviourLog.findFirst({
       where: { userId, type: "committee-minute", date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
@@ -122,6 +124,7 @@ async function getSbrData(userId: string) {
 
   // Governance status — shared with the PDF report so both surfaces agree.
   const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue)
+  const lookThrough = computeSbrLookThrough(positions)
 
   // Holdings rows
   const statusOf = (p: SbrPosition): HoldingRow["status"] => {
@@ -195,7 +198,7 @@ async function getSbrData(userId: string) {
     dealingWindow, windowOpen, nextWindowOpens,
     emeActive, emeMinuteFiled, drawdownPct,
     phaseCrossedRecently, newPhaseFromLog,
-    accrualMap,
+    accrualMap, cashBankBalance: cashBank?.balance ?? 0, lookThrough,
   }
 }
 
@@ -218,85 +221,32 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
   ]
 
   return (
-    <Shell title="Your Plan" subtitle="Silicon Brick Road — saving toward your HDB deposit" userName={name} isAdmin={isAdmin}>
+    <Shell title="Your Plan" subtitle="Silicon Brick Road — flexible medium-term growth" userName={name} isAdmin={isAdmin}>
 
       {/* Constitution banner */}
       <a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer"
         className="rounded-xl border border-sky-500/40 bg-gradient-to-r from-sky-500/[0.10] via-blue-500/[0.07] to-cyan-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-sky-500/[0.12] transition-colors group">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/20 shrink-0"><FileText className="h-4 w-4 text-sky-400" /></div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-sky-400">Silicon Brick Road — Investment Constitution (v2.2)</p>
-          <p className="text-xs text-muted-foreground">The complete written plan — four funds, monthly decision steps, phase rules, and how to buy the property when you&apos;re ready.</p>
+          <p className="text-xs font-bold text-sky-400">Silicon Brick Road — Investment Constitution (v3.2)</p>
+          <p className="text-xs text-muted-foreground">The complete flexible-horizon plan — four funds, whole-share cash bank, concentration rules and future exit protocol.</p>
         </div>
         <span className="text-xs font-semibold text-sky-400 group-hover:text-sky-300 shrink-0">Open ↗</span>
       </a>
 
-      {/* Progress bar — the primary SBR KPI */}
+      {/* Flexible-horizon runway — no invented property target or automatic phase. */}
       <div className="rounded-2xl card-lux p-5 mb-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Progress to target</p>
-            <p className="text-2xl font-black tabular-nums mt-0.5">
-              {hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : <span className="text-muted-foreground">—</span>}
-              <span className="text-sm font-normal text-muted-foreground ml-2">of {formatCurrency(target, "SGD")}</span>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-4xl font-black tabular-nums gradient-text"><AnimatedNumber value={progress} suffix="%" /></p>
-            <p className="text-xs text-muted-foreground">{d.phase.label.split("—")[0].trim()}</p>
-          </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Where we are going</p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mt-2">
+          <div><p className="text-2xl font-black tabular-nums">{hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : "S$0 invested"}</p><p className="text-xs text-muted-foreground mt-1">Flexible medium-term compounding · no required end date</p></div>
+          <div className="text-left sm:text-right"><p className="text-xl font-black text-sky-400">9–10%</p><p className="text-[10px] text-muted-foreground">planning ambition, not a promise</p></div>
         </div>
-        <div className="relative h-4 rounded-full bg-muted overflow-hidden">
-          {PHASE_MARKS.map((pm, i) => {
-            const start = i === 0 ? 0 : PHASE_MARKS[i - 1].endFrac * 100
-            const width = pm.endFrac * 100 - start
-            const isCurrent = pm.label === d.phase.key
-            return (
-              <div key={pm.label} className={`absolute top-0 h-full border-r border-background/40 ${isCurrent ? "bg-sky-500/20" : "bg-transparent"}`}
-                style={{ left: `${start}%`, width: `${width}%` }} />
-            )
-          })}
-          {hasBalance && (
-            <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 bar-fill transition-all duration-700"
-              style={{ width: `${Math.min(100, valueFrac * 100)}%` }} />
-          )}
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">Now</p><p className="text-xs font-bold">Growth mode</p></div>
+          <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">During a fall</p><p className="text-xs font-bold">Stay invested</p></div>
+          <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">Real use appears</p><p className="text-xs font-bold">Write exit plan</p></div>
         </div>
-        <div className="flex mt-1.5">
-          {PHASE_MARKS.map((pm, i) => {
-            const start = i === 0 ? 0 : PHASE_MARKS[i - 1].endFrac * 100
-            const width = pm.endFrac * 100 - start
-            const isCurrent = pm.label === d.phase.key
-            return (
-              <div key={pm.label} className="text-center" style={{ width: `${width}%` }}>
-                <span className={`text-[10px] font-bold ${isCurrent ? "text-sky-400" : "text-muted-foreground/50"}`}>{pm.label}</span>
-              </div>
-            )
-          })}
-        </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-0.5 -mx-0.5">
-          <span>SGD 0</span><span>72k</span><span>96k</span><span>114k</span><span>120k</span>
-        </div>
-        {hasBalance && (
-          <p className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground leading-relaxed">
-            At SGD {SBR.monthlyContribution.toLocaleString()}/month and your current fund mix ({(d.growthRates.base * 100).toFixed(1)}% growth a year, blended from what you actually hold),
-            {" "}projected to reach your goal around <span className="font-semibold text-foreground">{monthsToLabel(d.monthsToGoal.base)}</span>
-            {" "}— could be as early as {monthsToLabel(d.monthsToGoal.aggressive)} or as late as {monthsToLabel(d.monthsToGoal.conservative)} depending on returns.
-          </p>
-        )}
       </div>
-
-      {/* Brick Road — visual journey progress */}
-      {hasBalance && (
-        <div className="mb-5">
-          <BrickRoad
-            totalValue={d.totalValue}
-            targetValue={target}
-            currentPhase={d.phase.key}
-            phases={sbrBrickRoadPhases(target)}
-            monthsToGoal={d.monthsToGoal.base}
-          />
-        </div>
-      )}
 
       {/* Phase crossing celebration — fires for 7 days after the cron logs a transition */}
       {hasBalance && d.phaseCrossedRecently && d.newPhaseFromLog && (
@@ -359,8 +309,8 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       {/* Empty-state welcome — covers both "nothing entered yet" and "funds set but showing S$0" */}
       {!hasBalance && (
         <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
-          <p className="text-sm font-bold text-sky-400">Your four funds are set up — let&apos;s add what you hold</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Your plan is ready (VWRA 50 · EQQQ 25 · SEMI 15 · A35 10), but the portfolio is still showing S$0. Add what you currently own on the <a href="/portfolio" className="underline font-semibold">Portfolio</a> page, and this page will tell you what to buy each month.</p>
+          <p className="text-sm font-bold text-sky-400">SBR currently holds no securities</p>
+          <p className="text-xs text-muted-foreground mt-0.5">The approved target is IMID 80 · EQAC 10 · SMH 5 · IB01 5. Current exposure remains zero until an IBKR purchase settles; the first contribution routes to IMID.</p>
         </div>
       )}
 
@@ -445,9 +395,9 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
               <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
             </div>
             <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Phase</span>
-              <p className="text-xl font-black tabular-nums text-sky-400">{d.phase.key}</p>
-              <p className="text-[11px] text-muted-foreground">{d.phase.range}</p>
+              <span className="text-xs font-medium text-muted-foreground">DCA cash bank</span>
+              <p className="text-xl font-black tabular-nums text-sky-400">{formatCurrency(d.cashBankBalance, "SGD")}</p>
+              <p className="text-[11px] text-muted-foreground">Carries forward to whole shares</p>
             </div>
             <a href="/governance" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${
               d.govAlignment.overall === "breach" ? "border-red-500/30" : d.govAlignment.overall === "watch" ? "border-amber-400/40" : "border-border hover:border-primary/30"
@@ -499,19 +449,36 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </>
           )}
 
-          {/* 7. Phase detail */}
+          {/* Portfolio-level look-through — actual holdings only, never target weights. */}
+          <div className="rounded-2xl card-lux p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div><p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Risk look-through</p><h3 className="text-base font-semibold mt-1">What SBR owns underneath</h3></div>
+              <span className={`text-[10px] rounded-full border px-2.5 py-1 ${d.lookThrough.stale ? "border-red-500/40 text-red-400" : "border-green-500/40 text-green-400"}`}>{d.lookThrough.stale ? "STALE" : `${d.lookThrough.ageDays}D OLD`}</span>
+            </div>
+            {!hasBalance ? <p className="text-xs text-muted-foreground">No securities are held, so company, country and industry exposure is not applicable. Targets are not substituted for actual holdings.</p> : <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ["Largest company", `${d.lookThrough.topCompany.name} ${d.lookThrough.topCompany.pct.toFixed(1)}%`],
+                  ["Largest country", `${d.lookThrough.topCountry.name} ${d.lookThrough.topCountry.pct.toFixed(1)}%`],
+                  ["Largest industry", `${d.lookThrough.topIndustry.name} ${d.lookThrough.topIndustry.pct.toFixed(1)}%`],
+                  ["Equity assets", `${(d.lookThrough.assets.find(x => x.name === "Equity")?.pct ?? 0).toFixed(1)}%`],
+                ].map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-muted/20 p-3"><p className="text-[10px] text-muted-foreground">{label}</p><p className="text-sm font-bold mt-1">{value}</p></div>)}
+              </div>
+              {d.lookThrough.warnings.length > 0 && <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3"><p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">Review queue</p>{d.lookThrough.warnings.map(w => <p key={w} className="text-xs text-muted-foreground">• {w}</p>)}</div>}
+            </>}
+          </div>
+
+          {/* 7. Flexible-horizon mode */}
           <div className="rounded-xl border border-sky-500/30 bg-sky-500/[0.04] p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Phase {d.phase.key} — Active</span>
-                  <span className="text-[10px] text-muted-foreground">· {d.phase.range}</span>
-                  {d.phase.selling && <span className="rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase">sells</span>}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Flexible growth mode — active</span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{d.phase.body}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">There is no automatic value phase or property deadline. De-risk only after Dami records a real SGD use, amount and date.</p>
               </div>
               <a href="/governance" className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 shrink-0">
-                All phases <ChevronRight className="h-3 w-3" />
+                Read rules <ChevronRight className="h-3 w-3" />
               </a>
             </div>
           </div>

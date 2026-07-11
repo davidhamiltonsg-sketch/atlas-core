@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { activePortfolioId } from "@/lib/active-portfolio"
 import { ShellClient } from "./shell-client"
 
 interface ShellProps {
@@ -15,7 +15,7 @@ interface ShellProps {
 // right identity and navigation without each page having to know the constitution.
 export async function Shell({ title, subtitle, userName, isAdmin = false, children }: ShellProps) {
   const session = await getSession()
-  const constitutionId = constitutionIdForEmail(session?.email)
+  const constitutionId = session ? await activePortfolioId(session) : "atlas-core"
   return (
     <ShellClient title={title} subtitle={subtitle} userName={userName} isAdmin={isAdmin} constitutionId={constitutionId}>
       {children}

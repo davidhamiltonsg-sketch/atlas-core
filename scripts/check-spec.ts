@@ -60,7 +60,7 @@ for (const f of SBR_SPEC.funds) {
     [f.target, f.rangeLow, f.rangeHigh, f.hardCap, f.floor ?? null])
 }
 eq("SBR monthly", SBR.monthlyContribution, SBR_SPEC.monthlyContribution)
-eq("SBR target value", SBR.targetValue, SBR_SPEC.targetValue)
+eq("SBR target value", SBR.targetValue, SBR_SPEC.hasFixedTarget ? SBR_SPEC.targetValue : null)
 eq("SBR currency", SBR.currency, SBR_SPEC.currency)
 eq("SBR combined", [SBR.combined?.warning, SBR.combined?.hard, SBR.combined?.resume],
   [SBR_SPEC.combined.warning, SBR_SPEC.combined.hard, SBR_SPEC.combined.resume])

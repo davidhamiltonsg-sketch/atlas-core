@@ -2,6 +2,7 @@
 
 import { Menu, LogOut, User } from "lucide-react"
 import { logoutAction } from "@/app/logout-action"
+import { selectPortfolio } from "@/app/actions/portfolio-selection"
 import type { ConstitutionId } from "@/lib/constitutions"
 
 interface TopbarProps {
@@ -38,6 +39,20 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
 
       {/* Right: user + version pill + logout */}
       <div className="shrink-0 flex items-center gap-2">
+        {userName && (
+          <form action={selectPortfolio} className="hidden sm:block">
+            <select
+              name="portfolio"
+              value={constitutionId}
+              onChange={(event) => event.currentTarget.form?.requestSubmit()}
+              aria-label="Active portfolio"
+              className="h-8 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="atlas-core">Atlas Core</option>
+              <option value="silicon-brick-road">Silicon Brick Road</option>
+            </select>
+          </form>
+        )}
         <span className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${pill.cls}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${pill.dot}`} />
           {pill.label}

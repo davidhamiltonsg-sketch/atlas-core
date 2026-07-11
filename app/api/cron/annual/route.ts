@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD, ATLAS_CORE } from "@/lib/constitutions"
 import { sendAnnualAuditEmail, emailConfigured } from "@/lib/email"
+import { authorizeCron } from "@/lib/cron-auth"
 
 export const maxDuration = 30
 export const dynamic = "force-dynamic"
@@ -11,15 +12,8 @@ export const dynamic = "force-dynamic"
 //
 // Auth: Bearer CRON_SECRET header.
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    const auth = req.headers.get("authorization")
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-  } else {
-    console.warn("[cron/annual] CRON_SECRET not set — endpoint is unauthenticated.")
-  }
+  const authError = authorizeCron(req)
+  if (authError) return authError
 
   if (!emailConfigured()) {
     return NextResponse.json({ ran: false, reason: "RESEND_API_KEY not set" })

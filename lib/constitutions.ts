@@ -83,7 +83,7 @@ export const ATLAS_CORE: Constitution = {
   id: "atlas-core",
   name: "Atlas Core — Investment Constitution",
   shortName: "Atlas Core",
-  version: "1.5",
+  version: "2.2",
   updated: "2026-07",
   motto: "Disciplina Supra Praedictio",
   objective: "A long-term retirement portfolio targeting 2045. Its job is to grow wealth by following a fixed set of rules instead of feelings, headlines, or random ideas. Not for trading or gambling — for staying invested until 2045 and letting compounding do the work.",
@@ -93,11 +93,11 @@ export const ATLAS_CORE: Constitution = {
   broker: "IBKR Singapore",
   docPath: "/atlas-core-constitution.html",
   funds: [
-    { ticker: "VWRA", name: "Vanguard FTSE All-World UCITS ETF",         role: "The big foundation — owns stocks from all over the world. Irish UCITS, no US estate tax.",                      target: 52, rangeLow: 46, rangeHigh: 58, hardCap: 60, color: "#7c3aed" },
-    { ticker: "EQQQ", name: "Invesco NASDAQ-100 UCITS ETF",              role: "The growth engine — the 100 biggest US tech companies. Irish UCITS, no US estate tax.",                          target: 23, rangeLow: 18, rangeHigh: 28, hardCap: 30, color: "#a78bfa" },
-    { ticker: "SEMI", name: "VanEck Semiconductor UCITS ETF",            role: "The chip bet — semiconductor companies tied to AI and computing. Irish UCITS, no US estate tax.",                  target: 10, rangeLow: 7,  rangeHigh: 12, hardCap: 12, color: "#c026d3" },
-    { ticker: "VFEA", name: "Vanguard FTSE Emerging Markets UCITS ETF",  role: "The geography balancer — extra exposure to emerging market economies. Irish UCITS, no US estate tax.",            target: 8,  rangeLow: 5,  rangeHigh: 11, hardCap: 13, color: "#8b5cf6" },
-    { ticker: "IBIT", name: "iShares Bitcoin Trust ETF",                  role: "The Bitcoin sleeve accumulation vehicle. BTC (original spot position) is in run-off — hold until it recovers above cost basis, then consolidate into IBIT. Combined sleeve target 7%.", target: 7, rangeLow: 6, rangeHigh: 8, hardCap: 8, color: "#f59e0b" },
+    { ticker: "IMID", name: "SPDR MSCI ACWI IMI UCITS ETF (Acc)", role: "The global core — developed, emerging and small-cap equities in one accumulating Irish UCITS fund.", target: 67.5, rangeLow: 62.5, rangeHigh: 72.5, hardCap: 75, floor: 60, color: "#7c3aed" },
+    { ticker: "EQAC", name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", role: "A measured Nasdaq-100 growth tilt, capped so it never replaces global diversification.", target: 15, rangeLow: 12, rangeHigh: 18, hardCap: 20, floor: 10, color: "#a78bfa" },
+    { ticker: "SMH", name: "VanEck Semiconductor UCITS ETF", role: "A deliberately small semiconductor satellite identified by ISIN IE00BMC38736.", target: 7.5, rangeLow: 5, rangeHigh: 9, hardCap: 10, floor: 3, color: "#c026d3" },
+    { ticker: "BTC", name: "Bitcoin sleeve", role: "All direct and listed Bitcoin products count together; price falls alone never authorise a sale.", target: 5, rangeLow: 3, rangeHigh: 7, hardCap: 8, color: "#f59e0b" },
+    { ticker: "IB01", name: "iShares $ Treasury Bond 0-1yr UCITS ETF USD (Acc)", role: "Short US Treasury reserve for liquidity and rebalancing during accumulation.", target: 5, rangeLow: 3, rangeHigh: 7, hardCap: 10, floor: 3, color: "#10b981" },
   ],
   skipAtHighPct: 3,
   decisionLadder: [],
@@ -115,10 +115,10 @@ export const ATLAS_CORE: Constitution = {
 // Presentation only — plain-English names, roles, colours, notes. Rule numbers (target,
 // range, cap, floor) come from SBR_SPEC.funds, merged in below.
 const SBR_PRESENTATION: Record<string, { name: string; role: string; color: string; note?: string }> = {
-  VWRA: { name: "Vanguard FTSE All-World UCITS ETF", role: "Stable global core — always accumulate",        color: "#38bdf8" },
-  EQQQ: { name: "Invesco NASDAQ-100 UCITS ETF",      role: "Growth tilt — US large-cap tech (Irish UCITS)", color: "#2563eb" },
-  SEMI: { name: "VanEck Semiconductor UCITS ETF",    role: "Growth tilt — semiconductors (most volatile, Irish UCITS)", color: "#818cf8", note: "Only mandatory sell in the portfolio — trim to 15% if it exceeds its phase cap (Phase I: 20%, Phase II: 18%, Phase III: 16%, Phase IV: 14%). Cap tightens as you near the goal." },
-  A35:  { name: "ABF Singapore Bond Index Fund",     role: "SGD safety buffer — your insurance policy in local currency", color: "#0891b2", note: "Below 7% → all contributions to A35. Upper range suspended in Phases III–IV." },
+  IMID: { name: "SPDR MSCI ACWI IMI UCITS ETF (Acc)", role: "The simple global core — most of the portfolio", color: "#38bdf8" },
+  EQAC: { name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", role: "A small Nasdaq-100 growth tilt", color: "#2563eb" },
+  SMH: { name: "VanEck Semiconductor UCITS ETF", role: "A small semiconductor satellite with an 8% cap", color: "#818cf8" },
+  IB01: { name: "iShares $ Treasury Bond 0-1yr UCITS ETF USD (Acc)", role: "Short Treasury reserve for rebalancing and a future transition", color: "#0891b2" },
 }
 
 const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({
@@ -136,10 +136,7 @@ const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({
 
 // Phase copy is presentation; the value bounds (min/max) are derived from SBR_SPEC.phases by key.
 const SBR_PHASE_COPY: Array<Omit<ConstitutionPhase, "min" | "max">> = [
-  { key: "I",   label: "Phase I — Full growth",        range: "Below SGD 72,000",   selling: false, body: "Standard allocation. All contributions at target weights per the Decision Engine. Maximum equity exposure — let the portfolio run.", targets: { VWRA: 50, EQQQ: 25, SEMI: 15, A35: 10 } },
-  { key: "II",  label: "Phase II — Controlled growth", range: "SGD 72,000–96,000",  selling: false, body: "No selling. Redirect new contributions only toward safety. Existing holdings unchanged.", targets: { VWRA: 55, EQQQ: 20, SEMI: 10, A35: 15 } },
-  { key: "III", label: "Phase III — Locking in gains", range: "SGD 96,000–114,000",  selling: true,  body: "Start gradually moving money to safety. Once per quarter (on your monthly window), sell a small slice of EQQQ and VWRA and put the proceeds into A35. Goal: shift from 90% stocks to roughly 80% stocks. Don't touch SEMI — it will be liquidated last when you buy the property.", targets: { VWRA: 45, EQQQ: 20, SEMI: 15, A35: 25 } },
-  { key: "IV",  label: "Phase IV — Ready to buy",      range: "Above SGD 114,000",  selling: false, body: "Stop buying stocks entirely. Every monthly contribution goes straight into A35. This builds up your SGD cash pile so you're ready to move when the right property comes up. Start planning the purchase — the money should be ready to exit within 60 days of deciding." },
+  { key: "GROWTH", label: "Flexible growth", range: "No fixed end date", selling: false, body: "Remain in growth mode until Dami records a genuine SGD use, amount and date. Market falls alone do not create an exit date.", targets: { IMID: 80, EQAC: 10, SMH: 5, IB01: 5 } },
 ]
 
 const SBR_PHASES: ConstitutionPhase[] = SBR_PHASE_COPY.map((p) => {
@@ -152,11 +149,11 @@ export const SILICON_BRICK_ROAD: Constitution = {
   id: "silicon-brick-road",
   name: "Silicon Brick Road — Investment Constitution",
   shortName: "Silicon Brick Road",
-  version: "2.3",
+  version: "3.2",
   updated: "2026-07",
   motto: "Discipline Over Prediction",
-  objective: "Save and grow your money toward a home deposit of S$120,000. The timeline is flexible — but being ready when the right property appears is not.",
-  targetValue: SBR_SPEC.targetValue,
+  objective: "Grow medium-term wealth through a simple global portfolio with no required end date. A future spending need must be written down before de-risking begins.",
+  targetValue: null,
   currency: SBR_SPEC.currency,
   monthlyContribution: SBR_SPEC.monthlyContribution,
   broker: "IBKR Singapore",

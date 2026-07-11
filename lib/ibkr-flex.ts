@@ -6,6 +6,12 @@ export interface FlexPosition {
   markPrice: number    // USD per unit (IBKR close price)
   positionValue: number // in account base currency (SGD)
   currency: string     // instrument currency, e.g. "USD"
+  costBasis: number | null       // account base currency when provided by Flex
+  unrealizedPnl: number | null   // account base currency when provided by Flex
+  isin: string
+  cusip: string
+  exchange: string
+  conid: string
 }
 
 export type FlexResult =
@@ -23,6 +29,13 @@ export interface FlexExecution {
   currency: string   // instrument currency (usually USD)
   fxRate: number     // fxRateToBase = USDSGD at execution time
   tradeDate: string  // YYYYMMDD
+  commission?: number
+  realizedPnl?: number | null
+  netCash?: number | null
+  isin?: string
+  cusip?: string
+  exchange?: string
+  conid?: string
 }
 
 export interface FlexDividend {
@@ -33,8 +46,23 @@ export interface FlexDividend {
   description: string
 }
 
+export type FlexLedgerCategory = "DEPOSIT" | "WITHDRAWAL" | "FEE" | "TAX" | "INTEREST" | "CORPORATE_ACTION" | "FX" | "OTHER"
+
+export interface FlexLedgerEntry {
+  externalId: string
+  category: FlexLedgerCategory
+  symbol: string
+  amount: number
+  currency: string
+  amountBase: number | null
+  fxRate: number | null
+  date: string
+  description: string
+  rawType: string
+}
+
 export type FlexActivityResult =
-  | { success: true; executions: FlexExecution[]; dividends: FlexDividend[]; accountId: string }
+  | { success: true; executions: FlexExecution[]; dividends: FlexDividend[]; ledger: FlexLedgerEntry[]; accountId: string }
   | { success: false; error: string }
 
 function sleep(ms: number) {
@@ -69,6 +97,8 @@ function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: stri
     const markPrice = parseFloat(attr(a, "markPrice"))
     const positionValue = parseFloat(attr(a, "positionValue"))
     const currency = attr(a, "currency")
+    const costBasisRaw = parseFloat(attr(a, "costBasisMoney") || attr(a, "costBasis") || attr(a, "fifoPnlUnrealizedCostBasis"))
+    const unrealizedRaw = parseFloat(attr(a, "fifoPnlUnrealized") || attr(a, "unrealizedPnl"))
 
     // Skip forex / cash balances — a currency position is not an investment holding.
     if (isForexRow(symbol, attr(a, "assetCategory"))) continue
@@ -81,7 +111,14 @@ function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: stri
     if (symbol && !isNaN(units) && units > 0 && hasValue) {
       const mp = isNaN(markPrice) ? (units > 0 && !isNaN(positionValue) ? positionValue / units : 0) : markPrice
       const pv = isNaN(positionValue) ? units * mp : positionValue
-      positions.push({ symbol, units, markPrice: mp, positionValue: pv, currency })
+      positions.push({
+        symbol, units, markPrice: mp, positionValue: pv, currency,
+        costBasis: Number.isFinite(costBasisRaw) ? costBasisRaw : null,
+        unrealizedPnl: Number.isFinite(unrealizedRaw) ? unrealizedRaw : null,
+        isin: attr(a, "isin"), cusip: attr(a, "cusip"),
+        exchange: attr(a, "listingExchange") || attr(a, "exchange"),
+        conid: attr(a, "conid"),
+      })
     }
   }
 
@@ -101,9 +138,21 @@ function extractError(xml: string): string {
   )
 }
 
-function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividends: FlexDividend[]; accountId: string } {
+function classifyCashType(type: string, description: string, amount: number): FlexLedgerCategory {
+  const value = `${type} ${description}`.toLowerCase()
+  if (/deposit|wire|electronic fund transfer|cash receipt/.test(value)) return amount >= 0 ? "DEPOSIT" : "WITHDRAWAL"
+  if (/withdrawal|disbursement/.test(value)) return "WITHDRAWAL"
+  if (/withholding|tax/.test(value)) return "TAX"
+  if (/commission|fee|expense/.test(value)) return "FEE"
+  if (/interest|bond interest/.test(value)) return "INTEREST"
+  if (/forex|fx translation/.test(value)) return "FX"
+  return "OTHER"
+}
+
+function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividends: FlexDividend[]; ledger: FlexLedgerEntry[]; accountId: string } {
   const executions: FlexExecution[] = []
   const dividends: FlexDividend[] = []
+  const ledger: FlexLedgerEntry[] = []
 
   // Parse executions — handles both <Execution> (Executions section) and
   // <Trade> (Trades section, Options: Execution) formats from IBKR Activity Flex
@@ -121,12 +170,22 @@ function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividend
     const currency  = attr(a, "currency")
     const fxRate    = parseFloat(attr(a, "fxRateToBase")) || 1.35
     const tradeDate = attr(a, "tradeDate") || attr(a, "dateTime")?.split(";")?.[0] || ""
+    const commission = Math.abs(parseFloat(attr(a, "ibCommission") || attr(a, "commission") || "0"))
+    const realized = parseFloat(attr(a, "fifoPnlRealized") || attr(a, "realizedPnl"))
+    const netCashRaw = parseFloat(attr(a, "netCash"))
 
     // Skip forex / cash conversions — they are not investment trades (see isForexRow).
     if (isForexRow(symbol, attr(a, "assetCategory"))) continue
 
     if (symbol && tradeID && !isNaN(quantity) && !isNaN(price)) {
-      executions.push({ tradeID, symbol, buySell, quantity: Math.abs(quantity), price, currency, fxRate, tradeDate })
+      executions.push({
+        tradeID, symbol, buySell, quantity: Math.abs(quantity), price, currency, fxRate, tradeDate,
+        commission: Number.isFinite(commission) ? commission : 0,
+        realizedPnl: Number.isFinite(realized) ? realized : null,
+        netCash: Number.isFinite(netCashRaw) ? netCashRaw : null,
+        isin: attr(a, "isin"), cusip: attr(a, "cusip"),
+        exchange: attr(a, "listingExchange") || attr(a, "exchange"), conid: attr(a, "conid"),
+      })
     }
   }
 
@@ -134,7 +193,7 @@ function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividend
   const cashRe = /<CashTransaction\s+([^>]+)\/?>/g
   while ((m = cashRe.exec(xml)) !== null) {
     const a = m[1]
-    if (attr(a, "type") !== "Dividends") continue
+    const type = attr(a, "type")
     const symbol        = attr(a, "symbol")
     const transactionID = attr(a, "transactionID")
     const amount        = parseFloat(attr(a, "amount"))
@@ -143,14 +202,47 @@ function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividend
     const rawDate = attr(a, "dateTime") || attr(a, "reportDate")
     const payDate = rawDate.split(";")[0]
 
-    if (symbol && transactionID && !isNaN(amount) && amount > 0) {
+    if (type === "Dividends" && symbol && transactionID && !isNaN(amount) && amount > 0) {
       dividends.push({ transactionID, symbol, amount, payDate, description })
+    } else if (transactionID && !isNaN(amount)) {
+      const currency = attr(a, "currency") || attr(a, "currencyPrimary")
+      const fx = parseFloat(attr(a, "fxRateToBase"))
+      const amountBaseRaw = parseFloat(attr(a, "amountInBase") || attr(a, "amountBase"))
+      ledger.push({
+        externalId: transactionID,
+        category: classifyCashType(type, description, amount),
+        symbol,
+        amount,
+        currency,
+        amountBase: Number.isFinite(amountBaseRaw) ? amountBaseRaw : null,
+        fxRate: Number.isFinite(fx) ? fx : null,
+        date: payDate,
+        description,
+        rawType: type,
+      })
     }
+  }
+
+  const actionRe = /<CorporateAction\s+([^>]+)\/?>/g
+  while ((m = actionRe.exec(xml)) !== null) {
+    const a = m[1]
+    const externalId = attr(a, "transactionID") || attr(a, "actionID")
+    if (!externalId) continue
+    const rawDate = attr(a, "dateTime") || attr(a, "reportDate")
+    const amount = parseFloat(attr(a, "proceeds") || attr(a, "amount") || "0")
+    const fx = parseFloat(attr(a, "fxRateToBase"))
+    ledger.push({
+      externalId: `ca:${externalId}`, category: "CORPORATE_ACTION", symbol: attr(a, "symbol"),
+      amount: Number.isFinite(amount) ? amount : 0, currency: attr(a, "currency"),
+      amountBase: null, fxRate: Number.isFinite(fx) ? fx : null, date: rawDate.split(";")[0],
+      description: attr(a, "description") || attr(a, "actionDescription"), rawType: attr(a, "type") || attr(a, "actionType"),
+    })
   }
 
   return {
     executions,
     dividends,
+    ledger,
     accountId: xml.match(/accountId="([^"]+)"/)?.[1] ?? "",
   }
 }
@@ -216,13 +308,13 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
       if (!getRes.ok) return { success: false, error: `IBKR GetStatement HTTP ${getRes.status}` }
       const xml = await getRes.text()
 
-      if (xml.includes("<Execution") || xml.includes("<Trade ") || xml.includes("<CashTransaction")) {
-        const { executions, dividends, accountId } = parseFlexActivity(xml)
-        return { success: true, executions, dividends, accountId }
+      if (xml.includes("<Execution") || xml.includes("<Trade ") || xml.includes("<CashTransaction") || xml.includes("<CorporateAction")) {
+        const { executions, dividends, ledger, accountId } = parseFlexActivity(xml)
+        return { success: true, executions, dividends, ledger, accountId }
       }
       // Valid FLEX report but positions-only query — return empty gracefully
       if (xml.includes("<OpenPosition") || xml.includes("<FlexStatement")) {
-        return { success: true, executions: [], dividends: [], accountId: xml.match(/accountId="([^"]+)"/)?.[1] ?? "" }
+        return { success: true, executions: [], dividends: [], ledger: [], accountId: xml.match(/accountId="([^"]+)"/)?.[1] ?? "" }
       }
       if (RETRYABLE.some(s => xml.includes(s))) continue
       return { success: false, error: extractError(xml) }

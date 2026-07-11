@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions, isForexRow } from "@/lib/ibkr-flex"
 import { db } from "@/lib/db"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 
 // Allow up to 30s for the FLEX polling loop
 export const maxDuration = 30
@@ -10,9 +11,11 @@ export const maxDuration = 30
 export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
+  const active = await activePortfolioContext(session)
+  const isSbr = active.constitutionId === "silicon-brick-road"
 
-  const token   = process.env.IBKR_FLEX_TOKEN
-  const queryId = process.env.IBKR_FLEX_QUERY_ID
+  const token = isSbr ? process.env.IBKR_SBR_FLEX_TOKEN : process.env.IBKR_FLEX_TOKEN
+  const queryId = isSbr ? process.env.IBKR_SBR_FLEX_QUERY_ID : process.env.IBKR_FLEX_QUERY_ID
 
   if (!token || !queryId) {
     return NextResponse.json(
@@ -28,7 +31,7 @@ export async function POST() {
 
   // Fetch user holdings to match symbols
   const holdings = await db.holding.findMany({
-    where: { userId: session.userId },
+    where: { userId: active.owner.id },
     include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
   })
 
@@ -43,6 +46,8 @@ export async function POST() {
       markPrice:     pos.markPrice,
       positionValue: pos.positionValue,
       currency:      pos.currency,
+      costBasis:     pos.costBasis,
+      unrealizedPnl: pos.unrealizedPnl,
       holdingId:     holding?.id ?? null,
       matched:       !!holding,
       prevUnits:     holding?.snapshots[0]?.units ?? null,
@@ -61,9 +66,10 @@ export async function POST() {
 export async function PUT(req: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
+  const active = await activePortfolioContext(session)
 
   const body = await req.json() as {
-    positions: Array<{ holdingId?: string | null; symbol?: string; units: number; markPrice: number; positionValue: number }>
+    positions: Array<{ holdingId?: string | null; symbol?: string; units: number; markPrice: number; positionValue: number; costBasis?: number | null; unrealizedPnl?: number | null }>
   }
 
   if (!body.positions?.length) {
@@ -78,18 +84,18 @@ export async function PUT(req: Request) {
     // Resolve the holding: by id, else by symbol, else CREATE it (new ticker like IBIT).
     let holdingId: string | null = null
     if (pos.holdingId) {
-      const h = await db.holding.findFirst({ where: { id: pos.holdingId, userId: session.userId } })
+      const h = await db.holding.findFirst({ where: { id: pos.holdingId, userId: active.owner.id } })
       if (h) holdingId = h.id
     }
     if (!holdingId) {
       const sym = pos.symbol?.trim().toUpperCase()
       if (!sym) continue
-      const existing = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
+      const existing = await db.holding.findFirst({ where: { userId: active.owner.id, ticker: sym } })
       if (existing) {
         holdingId = existing.id
       } else {
         const h = await db.holding.create({
-          data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
+          data: { userId: active.owner.id, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
         })
         holdingId = h.id
         created++
@@ -103,6 +109,8 @@ export async function PUT(req: Request) {
         price:     pos.markPrice,
         value:     pos.positionValue, // SGD from IBKR (base currency)
         currency:  "SGD",
+        costBasis: pos.costBasis ?? null,
+        unrealizedPnl: pos.unrealizedPnl ?? null,
         date:      new Date(),
       },
     })
