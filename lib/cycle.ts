@@ -64,7 +64,7 @@ export function getBtcPhaseCard(
   }
 }
 
-// ── SMH Buy Zone (Art. XIV) ───────────────────────────────────────────────────
+// ── SEMI Buy Zone (Art. XIV) ─────────────────────────────────────────────────
 export interface SmhBuyZone {
   phase: SmhCyclePhase
   label: string

@@ -28,10 +28,10 @@ export const TICKER_TARGETS: Record<string, number> = Object.fromEntries(
 )
 
 // Hard drift thresholds — whole-number percent. Position hard caps live in Art. VII
-// (VT 60%); the drift bands (soft/hard triggers, SMH amber zone) live in Art. VIII.
+// (VWRA 60%); the drift bands (soft/hard triggers, SEMI amber zone) live in Art. VIII.
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
 // conviction asset: accumulate on weakness toward target, never sold at a loss).
-// SMH hard cap 12% (Principle 04). SMH amberHigh=11 adds a soft amber
+// SEMI hard cap 12% (Principle 04). SEMI amberHigh=11 adds a soft amber
 // zone 11–12% (Art. VII); display shows green <11%, amber 11–12%, red ≥12%.
 // BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
 // floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
@@ -298,14 +298,14 @@ export const GOVERNANCE_UPDATED = '2026-07' as const
 // Market-condition-aware rules that complement the Section 3 drift bands with overlays
 export const COMMAND_CENTRE_RULES = {
   minHoldDays: 90,         // 3-month hold before any sale
-  smhConcentrationCap: 12, // SMH hard cap at 12% weight (§4 override)
+  smhConcentrationCap: 12, // SEMI hard cap at 12% weight (§4 override)
   shockBufferTargetPct: 10, // Target 8-10% in SGOV / short-duration
   tranche1Pct: 30,         // First entry tranche: 30% of intended capital
   tranche2Pct: 40,         // Second entry (after 3 green weeks): 40%
   tranche3Pct: 30,         // Third entry (trend confirmed): 30%
-  smhEntryLevel1: 590,     // First SMH alert level (watch)
-  smhEntryLevel2: 550,     // Second SMH alert level (deploy tranche 1)
-  smhEntryLevel3: 510,     // Third SMH alert level (deploy tranche 2)
+  smhEntryLevel1: 590,     // First SEMI alert level (watch)
+  smhEntryLevel2: 550,     // Second SEMI alert level (deploy tranche 1)
+  smhEntryLevel3: 510,     // Third SEMI alert level (deploy tranche 2)
   policyShockRecoveryDays: 42,  // Historical avg recovery: policy shocks
   macroShockRecoveryDays: 540,  // Historical avg recovery: macro cycles
 } as const
