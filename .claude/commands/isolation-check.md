@@ -15,7 +15,7 @@ And that the governance page routes SBR users to SbrConstitution, NOT the Atlas 
 
 ### 2. Atlas Core tickers must never appear in SBR data paths
 
-SBR_FUND_TICKERS should be exactly: ["VWRA", "QQQM", "SMH", "A35"]
+SBR_FUND_TICKERS should be exactly: ["VWRA", "EQQQ", "SEMI", "A35"]
 Atlas Core tickers (VT, VWO, BTC, IBIT, SGOV) must not appear in:
 - components/sbr/*.tsx
 - lib/sbr-engine.ts

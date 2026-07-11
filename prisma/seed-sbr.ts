@@ -2,8 +2,8 @@
  * Silicon Brick Road — provision Dami's account (dutszm@gmail.com) from the CLI.
  *
  * Sets Dami's password from the `dami_key` env var, switches him to the SBR contribution
- * framework (min SGD 1,000/mo), and replaces his holdings with the four-fund set (VWRA / QQQM /
- * SMH / A35), preserving QQQM/SMH units. Idempotent. The logic is shared with the admin route
+ * framework (min SGD 1,000/mo), and replaces his holdings with the four-fund set (VWRA / EQQQ /
+ * SEMI / A35), preserving EQQQ/SEMI units. Idempotent. The logic is shared with the admin route
  * (/api/admin/provision-dami) via lib/provision-dami.ts.
  *
  * Run where `dami_key` is set (local .env, or use the admin route in Vercel):

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Users, Plus, Trash2, Check, AlertCircle, Loader2, ShieldCheck, User } from "lucide-react"
+import { Users, Plus, Trash2, Check, AlertCircle, Loader2, ShieldCheck, User, RefreshCw } from "lucide-react"
 import { createUserAction, deleteUserAction } from "./actions"
 
 interface UserRow {
@@ -25,6 +25,29 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
   const [formSuccess, setFormSuccess] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [provisionState, setProvisionState] = useState<"idle" | "pending" | "ok" | "err">("idle")
+  const [provisionMsg, setProvisionMsg] = useState<string | null>(null)
+
+  async function handleProvisionSbr() {
+    if (!confirm("Re-provision Dami's SBR account? This replaces his holdings with VWRA/EQQQ/SEMI/A35 and resets his password from dami_key.")) return
+    setProvisionState("pending")
+    setProvisionMsg(null)
+    try {
+      const res = await fetch("/api/admin/provision-dami", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setProvisionState("err")
+        setProvisionMsg(data.error ?? "Provision failed")
+      } else {
+        setProvisionState("ok")
+        setProvisionMsg(`Done — ${data.holdings} holdings created for ${data.email}`)
+        setTimeout(() => { setProvisionState("idle"); setProvisionMsg(null); window.location.reload() }, 3000)
+      }
+    } catch {
+      setProvisionState("err")
+      setProvisionMsg("Network error — check console")
+    }
+  }
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -218,6 +241,29 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
         <p className="text-xs text-muted-foreground leading-relaxed">
           <span className="font-semibold text-foreground">New users</span> are created with the same portfolio structure (ETF holdings) as the admin account, with zero positions. Each user independently updates their own portfolio values and has isolated data. Admin users can access this management page.
         </p>
+      </div>
+
+      {/* SBR re-provision */}
+      <div className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold mb-0.5">Silicon Brick Road — Re-provision Dami</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Replaces Dami&apos;s holdings with VWRA / EQQQ / SEMI / A35 (UCITS tickers) and resets his password from the <code className="text-[11px] bg-muted px-1 py-0.5 rounded">dami_key</code> env var. Run this once after a UCITS migration to push the correct tickers to the database.
+          </p>
+          {provisionMsg && (
+            <p className={`mt-2 text-xs font-medium ${provisionState === "ok" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+              {provisionMsg}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={handleProvisionSbr}
+          disabled={provisionState === "pending" || provisionState === "ok"}
+          className="shrink-0 flex items-center gap-1.5 rounded-lg border border-border hover:border-violet-500 hover:text-violet-600 dark:hover:text-violet-400 text-muted-foreground px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+        >
+          {provisionState === "pending" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : provisionState === "ok" ? <Check className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          {provisionState === "ok" ? "Done" : "Re-provision SBR"}
+        </button>
       </div>
     </div>
   )
