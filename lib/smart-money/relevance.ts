@@ -1,4 +1,4 @@
-export const ATLAS_TICKERS = ['VT', 'VWRA', 'QQQM', 'SMH', 'VWO', 'VFEA', 'BTC', 'IBIT'] as const
+export const ATLAS_TICKERS = ['VWRA', 'EQQQ', 'SEMI', 'VFEA', 'BTC', 'IBIT'] as const
 export type AtlasTicker = typeof ATLAS_TICKERS[number]
 
 interface IndirectExposure {

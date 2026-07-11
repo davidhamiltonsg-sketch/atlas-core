@@ -60,7 +60,7 @@ export interface MarketSnapshot {
   note: string | null
 }
 
-const DEFAULT_MARKET_TICKERS = ["VT", "QQQM", "SMH", "VWO", "IBIT"]
+const DEFAULT_MARKET_TICKERS = ["VWRA", "EQQQ", "SEMI", "VFEA", "IBIT"]
 
 /**
  * Pull live price + 52-week high/low for the given tickers. Volatility is left at 0

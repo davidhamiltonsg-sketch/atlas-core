@@ -55,10 +55,10 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amber
 // TICKER_TARGETS + HARD_THRESHOLDS + this profile — never hand-maintained — so the
 // displayed bands can never disagree with the numbers the engine enforces.
 export const POSITION_PROFILE: Record<string, { band: number; classification: string; color: string }> = {
-  VT:   { band: 6, classification: "Global Core",              color: "#6366f1" },
-  QQQM: { band: 5, classification: "Digital Economy Engine",   color: "#8b5cf6" },
-  SMH:  { band: 3, classification: "AI Infrastructure Tilt",   color: "#a78bfa" },
-  VWO:  { band: 3, classification: "Geographic Diversifier",   color: "#c4b5fd" },
+  VWRA: { band: 6, classification: "Global Core",              color: "#6366f1" },
+  EQQQ: { band: 5, classification: "Digital Economy Engine",   color: "#8b5cf6" },
+  SEMI: { band: 3, classification: "AI Infrastructure Tilt",   color: "#a78bfa" },
+  VFEA: { band: 3, classification: "Geographic Diversifier",   color: "#c4b5fd" },
   BTC:  { band: 1, classification: "Bitcoin — Volatility Cap", color: "#f59e0b" },
 }
 
@@ -90,7 +90,7 @@ export function getGovernanceBandRow(ticker: string): GovernanceBandRow | null {
 }
 
 export const GOVERNANCE_BAND_ROWS: GovernanceBandRow[] =
-  (["VT", "QQQM", "SMH", "VWO", "BTC"] as const)
+  (["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"] as const)
     .map(getGovernanceBandRow)
     .filter((r): r is GovernanceBandRow => r !== null)
 
@@ -202,9 +202,9 @@ export function getSmhSoftBand(pctFromHigh: number): SmhSoftBand {
 }
 
 // ─── §4.3 — COMBINED TECH CONCENTRATION RULE ─────────────────────────────────
-// Display/governance rule. QQQM+SMH combined exposure as a whole-number percent.
+// Display/governance rule. EQQQ+SEMI combined exposure as a whole-number percent.
 export const COMBINED_TECH_RULE = {
-  tickers:     ['QQQM', 'SMH'] as const,
+  tickers:     ['EQQQ', 'SEMI'] as const,
   softCeiling: ATLAS_SPEC.combinedTech.soft,  // derived from lib/portfolio-spec.ts
   hardCeiling: ATLAS_SPEC.combinedTech.hard,
   label:       'Combined Tech Concentration',

@@ -425,9 +425,9 @@ async function getDashboardData(userId: string) {
   }
 
   // Cycle Instruments (Art. VIII, IX, XI, XIV)
-  const smhLive = marketSnapshot.positions["SMH"]
-  const qqqmPct = positions.find(p => p.ticker === "QQQM")?.actualPct ?? 0
-  const smhPct  = positions.find(p => p.ticker === "SMH")?.actualPct ?? 0
+  const smhLive = marketSnapshot.positions["SEMI"]
+  const qqqmPct = positions.find(p => p.ticker === "EQQQ")?.actualPct ?? 0
+  const smhPct  = positions.find(p => p.ticker === "SEMI")?.actualPct ?? 0
   const sgovPct = positions.filter(p => ["SGOV", "AGG", "CASH"].includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
 
   const cycleInstruments = {

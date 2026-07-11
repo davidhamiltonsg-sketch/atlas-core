@@ -594,7 +594,7 @@ export default async function Forecast() {
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
             <span className="font-semibold text-foreground">Sell-down order when drawing down:</span>{" "}
-            SGOV first → BTC → {displayTicker("SMH")} → {displayTicker("VWO")} → {displayTicker("QQQM")} → {displayTicker("VT")} last.
+            SGOV first → BTC → SEMI → VFEA → EQQQ → VWRA last.
             This sells the highest-concentration and highest-volatility positions first,
             keeping the broadest and cheapest holdings longest.
           </p>

@@ -15,12 +15,9 @@ export interface AltVehicle {
 }
 
 export const APPROVED_ALTERNATIVES: Record<string, AltVehicle> = {
-  VT:   { tickers: ["VWRA"],          reason: "MIGRATED → VWRA (Irish UCITS). Lower all-in cost, no US estate tax." },
-  VWO:  { tickers: ["VFEA"],          reason: "MIGRATED → VFEA (Irish UCITS). Same EM exposure, better tax structure." },
-  QQQM: { tickers: ["EQQQ", "CNDX"],  reason: "MIGRATED → EQQQ (Irish UCITS NASDAQ-100). SBR uses EQQQ from day one." },
-  SMH:  { tickers: ["SEMI"],          reason: "MIGRATED → SEMI (Irish UCITS semis). Same index, no estate tax." },
-  BTC:  { tickers: ["IBIT"],          reason: "Held via IBIT. Phased exit: hold until BTC recovers above cost basis × 1.15, then reassess." },
-  IBIT: { tickers: [],                reason: "Hold for now. Reassess when a lower-fee or UCITS Bitcoin ETF becomes available." },
+  EQQQ: { tickers: ["CNDX"],  reason: "CNDX (Cboe-listed) is an interchangeable UCITS NASDAQ-100 vehicle. Same index and domicile as EQQQ." },
+  BTC:  { tickers: ["IBIT"],  reason: "Held via IBIT. Phased exit: hold until BTC recovers above cost basis × 1.15, then reassess." },
+  IBIT: { tickers: [],        reason: "Hold for now. Reassess when a lower-fee or UCITS Bitcoin ETF becomes available." },
 }
 
 // Irish-UCITS alternatives (NOT US-sited → outside US estate tax). IBIT is excluded:
@@ -33,17 +30,12 @@ export function isUsSited(ticker: string): boolean {
 }
 
 /**
- * After UCITS migration, core exposure identifiers (VT, QQQM, SMH, VWO) no longer
- * correspond to US-sited holdings — the actual wrapper is an Irish UCITS fund.
- * Use this instead of isUsSited() when positions are stored by exposure identifier.
+ * Is this ticker actually US-sited for estate-tax purposes?
+ * UCITS ETFs (VWRA, VFEA, EQQQ, CNDX, SEMI) are Irish-domiciled — not US-sited.
+ * BTC, IBIT, and SGOV are US-sited.
  */
 export function isActuallyUsSited(exposureId: string): boolean {
-  const id = exposureId.toUpperCase()
-  if (!(UCITS_TICKERS as readonly string[]).includes(id)) {
-    const alt = APPROVED_ALTERNATIVES[id]
-    if (alt && alt.reason.startsWith("MIGRATED")) return false
-  }
-  return isUsSited(id)
+  return isUsSited(exposureId)
 }
 
 // ─── Governance universe ─────────────────────────────────────────────────────
@@ -51,7 +43,7 @@ export function isActuallyUsSited(exposureId: string): boolean {
 // pre-approved alternative vehicle. Anything else held in the brokerage is "out of
 // scope" — it is still imported (so the portfolio stays accurate), but flagged as an
 // action so you can decide: keep & classify it, switch to an approved fund, or exit.
-export const CORE_TICKERS = ["VT", "VWO", "QQQM", "SMH", "BTC", "IBIT", "SGOV"] as const
+export const CORE_TICKERS = ["VWRA", "VFEA", "EQQQ", "SEMI", "BTC", "IBIT", "SGOV"] as const
 
 // SBR-specific tickers: all UCITS/SGX from day one.
 export const SBR_TICKERS = ["VWRA", "EQQQ", "SEMI", "A35"] as const
@@ -70,11 +62,7 @@ export function isInScope(ticker: string): boolean {
 
 // Reverse map: an alternative ticker → the core position it stands in for.
 export const ALTERNATIVE_TO_CORE: Record<string, string> = {
-  VWRA: "VT",
-  VFEA: "VWO",
-  EQQQ: "QQQM",
-  CNDX: "QQQM",
-  SEMI: "SMH",
+  CNDX: "EQQQ",
   IBIT: "BTC",
 }
 
@@ -90,15 +78,9 @@ export function altLabelFor(ticker: string): string | null {
 }
 
 /**
- * The ticker the user actually holds after UCITS migration.
- * Maps exposure identifiers (VT, QQQM, SMH, VWO) to their migrated UCITS wrapper
- * for display purposes. Non-migrated tickers (BTC, IBIT, SGOV) pass through unchanged.
+ * Returns the display ticker for a given ticker. UCITS tickers pass through unchanged;
+ * alternative tickers (CNDX) resolve to their core exposure.
  */
-export function displayTicker(exposureId: string): string {
-  const id = exposureId.toUpperCase()
-  const alt = APPROVED_ALTERNATIVES[id]
-  if (alt && alt.reason.startsWith("MIGRATED") && alt.tickers.length > 0) {
-    return alt.tickers[0]
-  }
-  return id
+export function displayTicker(ticker: string): string {
+  return ticker.toUpperCase()
 }

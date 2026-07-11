@@ -135,7 +135,7 @@ export interface SkipRuleEntry {
   wouldSkip: boolean    // isNearHigh && !isExempt
 }
 
-const SKIP_EXEMPT = new Set(["VT"])
+const SKIP_EXEMPT = new Set(["VWRA"])
 
 export function getSkipRuleRadar(
   positions: ReadonlyArray<{ ticker: string; price: number; hi52: number }>,

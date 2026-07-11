@@ -20,13 +20,13 @@ export interface CoreHoldingDefault {
 // violet→purple→fuchsia family (CVD-validated vs dark + light surfaces; every mark in the
 // app is also direct-labelled by ticker). BTC/IBIT keep semantic amber, SGOV green.
 const PRESENTATION: Record<string, { name: string; color: string }> = {
-  VT:   { name: "Vanguard Total World Stock ETF",        color: "#7c3aed" },
-  VWO:  { name: "Vanguard FTSE Emerging Markets ETF",    color: "#8b5cf6" },
-  QQQM: { name: "Invesco NASDAQ 100 ETF",                color: "#a78bfa" },
-  SMH:  { name: "VanEck Semiconductor ETF",              color: "#c026d3" },
-  BTC:  { name: "Grayscale Bitcoin Mini ETF",            color: "#f59e0b" },
-  IBIT: { name: "iShares Bitcoin Trust ETF",             color: "#f59e0b" },
-  SGOV: { name: "iShares 0-3 Month Treasury Bond ETF",   color: "#10b981" },
+  VWRA: { name: "Vanguard FTSE All-World UCITS ETF",          color: "#7c3aed" },
+  VFEA: { name: "Vanguard FTSE Emerging Markets UCITS ETF",   color: "#8b5cf6" },
+  EQQQ: { name: "Invesco NASDAQ-100 UCITS ETF",               color: "#a78bfa" },
+  SEMI: { name: "VanEck Semiconductor UCITS ETF",             color: "#c026d3" },
+  BTC:  { name: "Bitcoin (run-off)",                          color: "#f59e0b" },
+  IBIT: { name: "iShares Bitcoin Trust ETF",                  color: "#f59e0b" },
+  SGOV: { name: "iShares 0-3 Month Treasury Bond ETF",        color: "#10b981" },
 }
 
 export const CORE_DEFAULTS: Record<string, CoreHoldingDefault> = Object.fromEntries(

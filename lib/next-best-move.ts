@@ -70,7 +70,7 @@ export const RULES = {
 // Held conviction assets. These may run above target (under their hard cap) and are
 // NEVER sold to fund anything; an underweight conviction asset is accumulated on
 // weakness toward target. Selling one requires a broken thesis — never a paper loss.
-export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC", "IBIT"] as const
+export const CONVICTION_TICKERS = ["EQQQ", "SEMI", "BTC", "IBIT"] as const
 
 // Re-exported from constants.ts — single source of truth for Bitcoin sleeve.
 export { BITCOIN_TICKERS, BITCOIN_SLEEVE_TARGET_PCT, BITCOIN_RUNOFF_TICKER, BITCOIN_ACCUMULATION_TICKER, applyBitcoinSleeve }
@@ -99,7 +99,7 @@ function resolveMarket(override?: EngineMarket): EngineMarket {
   return override ?? {}
 }
 
-/** Combined QQQM+SMH exposure (§4.3) as a whole-number percent of NAV. */
+/** Combined EQQQ+SEMI exposure (§4.3) as a whole-number percent of NAV. */
 export function combinedTechPct(positions: PositionInput[]): number {
   return positions
     .filter((p) => (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker))
@@ -208,7 +208,7 @@ export function computeMarketAwareDca(
   const eligible = positions.filter((p) => {
     if (ibitPresent && p.ticker === BITCOIN_RUNOFF_TICKER) return false  // BTC is in run-off — new Bitcoin money goes to IBIT
     if (isOverweight(p)) return false                 // never feed an overweight position
-    if (isOverbought(p.ticker, market) && p.ticker !== "VT") return false  // never buy the top (VT exempt — it's the anchor)
+    if (isOverbought(p.ticker, market) && p.ticker !== "VWRA") return false  // never buy the top (VWRA exempt — it's the anchor)
     if (techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)) return false // §4.3 halt
     return true
   })
@@ -225,7 +225,7 @@ export function computeMarketAwareDca(
 
   if (techHalted) {
     marketOverlayActive = true
-    overlayNote = `Combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combinedTech.toFixed(1)}% — at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). New ${displayTicker("QQQM")} and ${displayTicker("SMH")} buys are paused this month; that money is redirected until combined falls below ${COMBINED_TECH_RULE.softCeiling - 2}%.`
+    overlayNote = `Combined EQQQ+SEMI is ${combinedTech.toFixed(1)}% — at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). New EQQQ and SEMI buys are paused this month; that money is redirected until combined falls below ${COMBINED_TECH_RULE.softCeiling - 2}%.`
   }
 
   if (dipTickers.length > 0) {
@@ -245,14 +245,14 @@ export function computeMarketAwareDca(
   } else {
     // NORMAL / DEFENSIVE MODE: route by target weight among eligible positions.
     if (eligible.length === 0) {
-      // Everything is overbought or overweight — park in VT (the anchor) as the safe default.
-      const vt = positions.find((p) => p.ticker === "VT")
+      // Everything is overbought or overweight — park in VWRA (the anchor) as the safe default.
+      const vt = positions.find((p) => p.ticker === "VWRA")
       if (vt) {
-        result["VT"].amount = monthlyAmount
-        result["VT"].tag = "boosted"
-        result["VT"].reason = `All growth positions are at highs — routing to ${displayTicker("VT")}, the lowest-volatility anchor, rather than chasing tops.`
+        result["VWRA"].amount = monthlyAmount
+        result["VWRA"].tag = "boosted"
+        result["VWRA"].reason = `All growth positions are at highs — routing to VWRA, the lowest-volatility anchor, rather than chasing tops.`
         marketOverlayActive = true
-        if (!overlayNote) overlayNote = `Every growth position is near its 52-week high. This month's money goes to ${displayTicker("VT")} instead of buying at the top.`
+        if (!overlayNote) overlayNote = `Every growth position is near its 52-week high. This month's money goes to VWRA instead of buying at the top.`
       }
     } else {
       distributeByWeight(eligible, monthlyAmount, result, standard)
@@ -263,7 +263,7 @@ export function computeMarketAwareDca(
       if (someoneSkipped) {
         marketOverlayActive = true
         const skipped = positions
-          .filter((p) => !eligible.includes(p) && isOverbought(p.ticker, market) && p.ticker !== "VT")
+          .filter((p) => !eligible.includes(p) && isOverbought(p.ticker, market) && p.ticker !== "VWRA")
           .map((p) => p.ticker)
         if (skipped.length > 0 && !overlayNote) {
           overlayNote = `Skipping ${skipped.map(t => displayTicker(t)).join(" and ")} this month — ${skipped.length > 1 ? "they are" : "it is"} at a 52-week high. That money is redirected to positions with better entry points.`
@@ -346,7 +346,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     // company or sector seen through all ETFs combined is over its hard cap → trim.
     if (opts.lookThroughBreach) {
       const b = opts.lookThroughBreach
-      const ticker = b.trimTicker ?? "SMH"
+      const ticker = b.trimTicker ?? "SEMI"
       return {
         severity: "critical", ticker,
         action: `Trim ${ticker} — ${b.label} over cap`,
@@ -356,27 +356,27 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
         color: "#ef4444",
       }
     }
-    // §4.3 — combined QQQM+SMH HARD ceiling. Trim the semis tilt (SMH) first.
+    // §4.3 — combined EQQQ+SEMI HARD ceiling. Trim the semis tilt (SEMI) first.
     if (combinedTech >= COMBINED_TECH_RULE.hardCeiling) {
-      const smhPos = positions.find((p) => p.ticker === "SMH")
-      const trimTicker = smhPos ? "SMH" : "QQQM"
+      const semiPos = positions.find((p) => p.ticker === "SEMI")
+      const trimTicker = semiPos ? "SEMI" : "EQQQ"
       return {
         severity: "critical", ticker: trimTicker,
-        action: `Trim ${displayTicker(trimTicker)} — combined tech over cap`,
-        what: `Combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combinedTech.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${displayTicker(trimTicker)} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
+        action: `Trim ${trimTicker} — combined tech over cap`,
+        what: `Combined EQQQ+SEMI is ${combinedTech.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${trimTicker} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
         why: `${COMBINED_TECH_RULE.rationale} Combined concentration this high is the rule the system protects first.`,
         when: "At your next dealing window (respecting the 90-day hold on the most recent lots).",
-        color: smhPos?.color ?? "#a78bfa",
+        color: semiPos?.color ?? "#a78bfa",
       }
     }
-    // SMH concentration cap (12%) — the §4 override
-    const smh = positions.find((p) => p.ticker === "SMH")
+    // SEMI concentration cap (12%) — the §4 override
+    const smh = positions.find((p) => p.ticker === "SEMI")
     if (smh && smh.actualPct > RULES.smhConcentrationCapPct) {
       return {
-        severity: "critical", ticker: "SMH",
-        action: "Trim SMH back to 10%",
-        what: `Sell enough SMH to bring it from ${smh.actualPct.toFixed(1)}% down to about 10% of your portfolio.`,
-        why: `SMH is over its ${RULES.smhConcentrationCapPct}% hard cap. It is your single biggest risk — if it falls 25%, it would cost you more than every other position combined.`,
+        severity: "critical", ticker: "SEMI",
+        action: "Trim SEMI back to 10%",
+        what: `Sell enough SEMI to bring it from ${smh.actualPct.toFixed(1)}% down to about 10% of your portfolio.`,
+        why: `SEMI is over its ${RULES.smhConcentrationCapPct}% hard cap. It is your single biggest risk — if it falls 25%, it would cost you more than every other position combined.`,
         when: "At your next dealing window (respecting the 90-day hold on the most recent lots).",
         color: "#ef4444",
       }
@@ -468,7 +468,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       const fromHigh = ((m.price - m.hi52) / m.hi52) * 100
       if (!worst || fromHigh < worst.fromHigh) worst = { ticker: p.ticker, color: p.color, fromHigh }
     }
-    const tk = worst?.ticker ?? "VT"
+    const tk = worst?.ticker ?? "VWRA"
     return {
       severity: "high", ticker: tk,
       action: waiting ? "Policy shock — hold 14 days" : "Policy shock — deploy Tranche 1",
@@ -497,7 +497,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       const fromHigh = ((m.price - m.hi52) / m.hi52) * 100
       if (!worst || fromHigh < worst.fromHigh) worst = { ticker: p.ticker, color: p.color, fromHigh }
     }
-    const tk = worst?.ticker ?? "VT"
+    const tk = worst?.ticker ?? "VWRA"
     return {
       severity: "high", ticker: tk,
       action: "Deploy buffer — Tranche 1",
@@ -622,12 +622,12 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   // ── PRECEDENCE 7: Healthy → STANDARD DCA ──────────────────────────────────
   // Even here we never leave the user guessing. We tell them what to do AND flag
   // if anything is overbought — or combined tech is paused — so they don't blindly
-  // buy the top or wonder why QQQM/SMH weren't picked despite being underweight.
+  // buy the top or wonder why EQQQ/SEMI weren't picked despite being underweight.
   if (techHalted) {
     return {
       severity: "low", ticker: null,
       action: "Do your DCA — but pause tech",
-      what: `Invest your normal monthly amount, but skip ${displayTicker("QQQM")} and ${displayTicker("SMH")} this month. Combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combinedTech.toFixed(1)}%, at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). Redirect their share to ${displayTicker("VT")} instead.`,
+      what: `Invest your normal monthly amount, but skip EQQQ and SEMI this month. Combined EQQQ+SEMI is ${combinedTech.toFixed(1)}%, at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). Redirect their share to VWRA instead.`,
       why: `${COMBINED_TECH_RULE.rationale} New tech buys pause until combined falls back below ${COMBINED_TECH_RULE.softCeiling - 2}%.`,
       when: "This month, on your usual contribution date.",
       color: "#8b5cf6",
@@ -635,15 +635,15 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   }
 
   const overboughtNames = positions
-    .filter((p) => isOverbought(p.ticker, market) && p.ticker !== "VT")
+    .filter((p) => isOverbought(p.ticker, market) && p.ticker !== "VWRA")
     .map((p) => p.ticker)
 
   if (overboughtNames.length > 0) {
     return {
       severity: "low", ticker: overboughtNames[0],
       action: "Do your DCA — but skip the highs",
-      what: `Invest your normal monthly amount, but skip ${overboughtNames.map(t => displayTicker(t)).join(" and ")} this month (at 52-week highs) and put that share into ${displayTicker("VT")} instead.`,
-      why: `Everything is healthy, but ${overboughtNames.map(t => displayTicker(t)).join(" and ")} ${overboughtNames.length > 1 ? "are" : "is"} at the top of ${overboughtNames.length > 1 ? "their" : "its"} range. Buying ${displayTicker("VT")} instead avoids paying the highest price.`,
+      what: `Invest your normal monthly amount, but skip ${overboughtNames.join(" and ")} this month (at 52-week highs) and put that share into VWRA instead.`,
+      why: `Everything is healthy, but ${overboughtNames.join(" and ")} ${overboughtNames.length > 1 ? "are" : "is"} at the top of ${overboughtNames.length > 1 ? "their" : "its"} range. Buying VWRA instead avoids paying the highest price.`,
       when: "This month, on your usual contribution date.",
       color: "#8b5cf6",
     }

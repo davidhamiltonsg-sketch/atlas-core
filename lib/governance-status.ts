@@ -67,13 +67,13 @@ export function evaluateGovernance(input: {
       : "Every holding is within its target range",
   })
 
-  // 2 — SMH cap (≤12%)
-  const smh = pos("SMH")
+  // 2 — SEMI cap (≤12%)
+  const smh = pos("SEMI")
   if (smh) {
     checks.push({
-      id: "smh", label: `Chip fund (${displayTicker("SMH")}) under its 12% limit`,
+      id: "smh", label: `Chip fund (SEMI) under its 12% limit`,
       status: smh.actualPct > 12 ? "breach" : smh.actualPct > 11 ? "watch" : "ok",
-      detail: `${displayTicker("SMH")} is ${smh.actualPct.toFixed(1)}% of your money (limit 12%)`,
+      detail: `SEMI is ${smh.actualPct.toFixed(1)}% of your money (limit 12%)`,
     })
   }
 
@@ -89,12 +89,12 @@ export function evaluateGovernance(input: {
     })
   }
 
-  // 4 — Combined tech (QQQM + SMH)
+  // 4 — Combined tech (EQQQ + SEMI)
   const tech = positions
     .filter((p) => (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker.toUpperCase()))
     .reduce((s, p) => s + p.actualPct, 0)
   checks.push({
-    id: "tech", label: `Tech funds (${displayTicker("QQQM")} + ${displayTicker("SMH")}) under ${COMBINED_TECH_RULE.hardCeiling}%`,
+    id: "tech", label: `Tech funds (EQQQ + SEMI) under ${COMBINED_TECH_RULE.hardCeiling}%`,
     status: tech > COMBINED_TECH_RULE.hardCeiling ? "breach" : tech >= COMBINED_TECH_RULE.softCeiling ? "watch" : "ok",
     detail: `Combined ${tech.toFixed(1)}% (review at ${COMBINED_TECH_RULE.softCeiling}%, limit ${COMBINED_TECH_RULE.hardCeiling}%)`,
   })
@@ -108,7 +108,7 @@ export function evaluateGovernance(input: {
       : bufferPct >= 6 ? "watch"
       : "breach",
     detail: bufferOversize
-      ? `Buffer is ${bufferPct.toFixed(1)}% — above the 12% Art. XI trigger. Deploy ~${((bufferPct - 8) / 2).toFixed(1)}% (half the excess above 8%) into VT at the next dealing window.`
+      ? `Buffer is ${bufferPct.toFixed(1)}% — above the 12% Art. XI trigger. Deploy ~${((bufferPct - 8) / 2).toFixed(1)}% (half the excess above 8%) into VWRA at the next dealing window.`
       : bufferPct >= 8 ? `Buffer is ${bufferPct.toFixed(1)}% — healthy`
       : `Buffer is ${bufferPct.toFixed(1)}% — build toward 8–10% from new money`,
   })

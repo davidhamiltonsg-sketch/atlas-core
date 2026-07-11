@@ -42,10 +42,10 @@ const SAMPLE_CONTEXT: PortfolioContext = {
   live: false,
   variant: "atlas",
   holdings: [
-    { ticker: "VT",   name: "World Equity Core",   pct: 34.0, color: "#4A9EFF" },
-    { ticker: "QQQM", name: "Growth Sleeve",       pct: 23.0, color: "#C9A84C" },
+    { ticker: "VWRA", name: "World Equity Core",   pct: 34.0, color: "#4A9EFF" },
+    { ticker: "EQQQ", name: "Growth Sleeve",       pct: 23.0, color: "#C9A84C" },
     { ticker: "VOO",  name: "US Large Cap",         pct: 18.0, color: "#2ECC9A" },
-    { ticker: "VWO",  name: "Emerging Markets",     pct: 9.0,  color: "#8B7FE8" },
+    { ticker: "VFEA", name: "Emerging Markets",     pct: 9.0,  color: "#8B7FE8" },
     { ticker: "BTC",  name: "Bitcoin Sleeve",       pct: 7.0,  color: "#E0913A" },
     { ticker: "SGOV", name: "Cash / T-Bills",       pct: 3.1,  color: "#5A6B8C" },
     { ticker: "A35",  name: "SG Bonds",             pct: 5.9,  color: "#3EC9C0" },
@@ -281,8 +281,8 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const vol = annualisedVolatility(timeline)
 
     // Tech ceiling
-    const qqqmPct = positions.find(p => p.ticker === "QQQM")?.actualPct ?? 0
-    const smhPct = positions.find(p => p.ticker === "SMH")?.actualPct ?? 0
+    const qqqmPct = positions.find(p => p.ticker === "EQQQ")?.actualPct ?? 0
+    const smhPct = positions.find(p => p.ticker === "SEMI")?.actualPct ?? 0
     const techCeiling = getCombinedTechCeiling(qqqmPct, smhPct)
 
     // Trade counts
