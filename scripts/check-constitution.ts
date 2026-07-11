@@ -58,15 +58,15 @@ eq("CONSTITUTION_VERSION", CONSTITUTION_VERSION, "1.5")
 
 // ─── Art. VII — Hard thresholds ───────────────────────────────────────────────
 console.log("\nArt. VII — Thresholds")
-eq("VT hard cap (Art. VII)",    HARD_THRESHOLDS.VT?.high,         60)
-eq("VT hard low (Art. VII)",    HARD_THRESHOLDS.VT?.low,          42)
-eq("SMH hard cap (Art. VII)",   HARD_THRESHOLDS.SMH?.high,        12)
-eq("SMH amber trigger (Art. VII)", HARD_THRESHOLDS.SMH?.amberHigh, 11)
-eq("SMH hard low (Art. VII)",   HARD_THRESHOLDS.SMH?.low,          5)
-eq("QQQM hard cap (Art. VII)", HARD_THRESHOLDS.QQQM?.high, 30)  // matches the engines' trim line + DB seed
-eq("QQQM hard low (Art. VIII)", HARD_THRESHOLDS.QQQM?.low,        15)
-eq("VWO hard cap (Art. VII)",   HARD_THRESHOLDS.VWO?.high,        13)
-eq("VWO hard low (Art. VIII)",  HARD_THRESHOLDS.VWO?.low,          3)
+eq("VWRA hard cap (Art. VII)",    HARD_THRESHOLDS.VWRA?.high,         60)
+eq("VWRA hard low (Art. VII)",    HARD_THRESHOLDS.VWRA?.low,          42)
+eq("SEMI hard cap (Art. VII)",   HARD_THRESHOLDS.SEMI?.high,        12)
+eq("SEMI amber trigger (Art. VII)", HARD_THRESHOLDS.SEMI?.amberHigh, 11)
+eq("SEMI hard low (Art. VII)",   HARD_THRESHOLDS.SEMI?.low,          5)
+eq("EQQQ hard cap (Art. VII)", HARD_THRESHOLDS.EQQQ?.high, 30)  // matches the engines' trim line + DB seed
+eq("EQQQ hard low (Art. VIII)", HARD_THRESHOLDS.EQQQ?.low,        15)
+eq("VFEA hard cap (Art. VII)",   HARD_THRESHOLDS.VFEA?.high,        13)
+eq("VFEA hard low (Art. VIII)",  HARD_THRESHOLDS.VFEA?.low,          3)
 eq("BTC hard cap base (Art. X)", HARD_THRESHOLDS.BTC?.high,        8)
 
 // ─── Art. X — BTC cycle-phase resolver ────────────────────────────────────────

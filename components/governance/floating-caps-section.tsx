@@ -18,8 +18,8 @@ export function FloatingCapsSection() {
   const [btcPhase, setBtcPhase] = useState<BtcCyclePhase>(autoBtcPhase)
   const btc = BTC_CYCLE_MODIFIERS[btcPhase]
 
-  // SMH: slider is % below the 52-week high (-50%..0%). Stored as whole-number percent.
-  const [smhPctInt, setSmhPctInt] = useState(-2) // SMH sits near its 52w high today
+  // SEMI: slider is % below the 52-week high (-50%..0%). Stored as whole-number percent.
+  const [smhPctInt, setSmhPctInt] = useState(-2) // SEMI sits near its 52w high today
   const smhRatio = smhPctInt / 100
   const smhBand  = getSmhSoftBand(smhRatio)
   const smhPhase = getSmhCyclePhase(smhRatio)
@@ -30,7 +30,7 @@ export function FloatingCapsSection() {
         <h2 className="text-sm font-semibold">Floating Governance Caps (§4)</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Hard caps are static. Soft bands flex with the market cycle — BTC by halving phase (§4.1),
-          SMH by distance from its 52-week high (§4.2). Combined tech concentration is a new v6.1 ceiling (§4.3).
+          SEMI by distance from its 52-week high (§4.2). Combined tech concentration is a new v6.1 ceiling (§4.3).
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export function FloatingCapsSection() {
           )}
         </div>
 
-        {/* ── SMH cycle-aware soft band (§4.2) ── */}
+        {/* ── SEMI cycle-aware soft band (§4.2) ── */}
         <div className="rounded-xl border border-border bg-background/40 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Cpu className="h-4 w-4 text-violet-500" />

@@ -38,7 +38,7 @@ function InstrumentTile({
   )
 }
 
-/** Cycle Instruments panel — 4 cards: BTC phase, SMH zone, combined tech, SGOV queue. */
+/** Cycle Instruments panel — 4 cards: BTC phase, SEMI zone, combined tech, SGOV queue. */
 export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
   const btcBadgeColor =
     btc.phase === "post_halving_bull" ? "border-green-500/40 text-green-600 dark:text-green-400" :

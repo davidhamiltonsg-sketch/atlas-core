@@ -19,18 +19,18 @@ const adapter = new PrismaLibSql({ url, authToken })
 const db = new PrismaClient({ adapter })
 
 const HARDCODED_SECTOR: Record<string, { semiconductor: number; digital: number }> = {
-  VT:   { semiconductor: 8,   digital: 35  },
-  QQQM: { semiconductor: 13,  digital: 65  },
-  SMH:  { semiconductor: 100, digital: 90  },
-  VWO:  { semiconductor: 12,  digital: 30  },
+  VWRA: { semiconductor: 8,   digital: 35  },
+  EQQQ: { semiconductor: 13,  digital: 65  },
+  SEMI: { semiconductor: 100, digital: 90  },
+  VFEA: { semiconductor: 12,  digital: 30  },
   BTC:  { semiconductor: 0,   digital: 0   },
 }
 
 const HARDCODED_GEO: Record<string, { us: number }> = {
-  VT:   { us: 62  },
-  QQQM: { us: 100 },
-  SMH:  { us: 75  },
-  VWO:  { us: 0   },
+  VWRA: { us: 62  },
+  EQQQ: { us: 100 },
+  SEMI: { us: 75  },
+  VFEA: { us: 0   },
   BTC:  { us: 0   },
 }
 

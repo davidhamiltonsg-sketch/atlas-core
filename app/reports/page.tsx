@@ -92,7 +92,7 @@ async function getReportData(userId: string) {
       if (!sectorLooksBad) liveSectorWeights[lt.ticker] = dbSw
 
       // Quality-check geo weights: if hardcoded US% is significant but DB shows 0,
-      // Yahoo returned no countryWeightings (e.g. VT treated like EM-only).
+      // Yahoo returned no countryWeightings (e.g. VWRA treated like EM-only).
       const geoLooksBad = fallbackGw &&
         fallbackGw.us > 10 && (dbGw.us ?? 0) === 0
       if (!geoLooksBad) liveGeoWeights[lt.ticker] = dbGw
@@ -213,7 +213,7 @@ async function getReportData(userId: string) {
   ]
 
   // HHI Concentration Index — thresholds calibrated to the constitutional target allocation,
-  // not generic portfolio benchmarks (a 52% VT anchor makes generic HHI thresholds impossible to satisfy).
+  // not generic portfolio benchmarks (a 52% VWRA anchor makes generic HHI thresholds impossible to satisfy).
   const hhi = concentrationRows.reduce((sum, p) => sum + Math.pow(p.actualPct / 100, 2), 0)
   const effectiveN = hhi > 0 ? 1 / hhi : 0
   const hhiPct = hhi * 100

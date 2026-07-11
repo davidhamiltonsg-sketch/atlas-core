@@ -173,7 +173,7 @@ export function computeLadder(
 
   // ── Step 1: Hard cap breach → TRIM IMMEDIATELY ─────────────────────────────
   // Covers (in precedence order per Art. XVIII): look-through hard breach, BTC sleeve,
-  // SMH hard cap, QQQM hard cap, combined tech hard ceiling.
+  // SEMI hard cap, EQQQ hard cap, combined tech hard ceiling.
   // Step 1 fires → trim first, then proceed to step 8 (close the app).
 
   if (opts.lookThroughHardBreach) {
@@ -245,9 +245,9 @@ export function computeLadder(
     })
   }
 
-  // Every other single-position hard cap (VT 60%, VWO 13% — Art. VII). SMH, QQQM, and the
+  // Every other single-position hard cap (VWRA 60%, VFEA 13% — Art. VII). SEMI, EQQQ, and the
   // Bitcoin sleeve are handled above; this catches any remaining position carrying a hard cap,
-  // so a VT or VWO breach triggers the mandated trim (Art. VII) instead of falling through to
+  // so a VWRA or VFEA breach triggers the mandated trim (Art. VII) instead of falling through to
   // the step-3 soft redirect. Uses the same per-position cap as computeNextBestMove, so the two
   // engines agree on which positions must be trimmed.
   const capBreach = positions
@@ -389,7 +389,7 @@ export function computeLadder(
   if (opts.portfolioDrawdownPct !== undefined && opts.portfolioDrawdownPct <= CRASH_DRAWDOWN_PCT) {
     const pct = Math.abs(opts.portfolioDrawdownPct).toFixed(0)
     steps[5].reason = `Portfolio down ${pct}% from all-time high`
-    // If SGOV holds dry powder above the floor, deploy half of the excess into VT now.
+    // If SGOV holds dry powder above the floor, deploy half of the excess into VWRA now.
     // This is the explicit deployment trigger the constitution lacked — SGOV must not
     // sit idle as a chronic drag when the market has already fallen 25%+.
     const sgovExcess = sgovPct - SGOV_FLOOR_PCT
@@ -407,8 +407,8 @@ export function computeLadder(
 
   pass(6, `Portfolio drawdown within threshold`)
 
-  // ── Step 7: Standard DCA — skip any position near 52w high (VT exempt) ─────
-  // Skip rule applies HERE ONLY (Art. XIII v1.1). Redirect skipped money to VT.
+  // ── Step 7: Standard DCA — skip any position near 52w high (VWRA exempt) ─────
+  // Skip rule applies HERE ONLY (Art. XIII v1.1). Redirect skipped money to VWRA.
   const skipped = positions
     .filter((p) =>
       p.ticker !== "VWRA" &&

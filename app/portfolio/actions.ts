@@ -97,7 +97,7 @@ export async function applyExtractedHoldings(
     let holding = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
     if (!holding) {
       // Guard: SBR users can only have SBR tickers created. An Atlas Core screenshot
-      // uploaded by mistake must not create VT/VWO/BTC/IBIT entries in an SBR account.
+      // uploaded by mistake must not create VWRA/VFEA/BTC/IBIT entries in an SBR account.
       if (isSbr && !SBR_ALLOWED_TICKERS.has(sym)) continue
       holding = await db.holding.create({
         data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
@@ -126,7 +126,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
 
-  // Resolve constitution — only Atlas Core users get ensureCoreHoldings (which creates VT/VWO/BTC
+  // Resolve constitution — only Atlas Core users get ensureCoreHoldings (which creates VWRA/VFEA/BTC
   // placeholders). Running it for SBR users would contaminate Dami's account with Atlas Core tickers.
   const user = await db.user.findUnique({ where: { id: session.userId }, select: { email: true } })
   const constitutionId = constitutionIdForEmail(user?.email)

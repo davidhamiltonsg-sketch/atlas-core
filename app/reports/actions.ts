@@ -215,7 +215,7 @@ function deriveSectorWeights(
   let digital = 0
   for (const key of DIGITAL_GICS) digital += gics[key] ?? 0
 
-  // Semiconductor: SMH is a pure semi ETF so use its technology weight as proxy.
+  // Semiconductor: SEMI is a pure semi ETF so use its technology weight as proxy.
   // For others, derive from tracked company weights (Nvidia + Broadcom + TSMC)
   // and scale up since these 3 represent only ~35–45% of the semiconductor universe.
   let semiconductor: number

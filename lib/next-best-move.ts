@@ -169,9 +169,9 @@ function isOverbought(ticker: string, market: EngineMarket): boolean {
 //  • SKIPS buying anything that is overbought (at 52w high) even if "healthy",
 //    because adding at the top is the worst entry — UNLESS it's underweight on a
 //    hard breach (then drift wins, you must fill the gap).
-//  • REDIRECTS the skipped money toward the lowest-volatility core (VT) or a
+//  • REDIRECTS the skipped money toward the lowest-volatility core (VWRA) or a
 //    confirmed dip if one exists.
-//  • Treats VT as always safe to accumulate (lowest vol, the 2045 anchor).
+//  • Treats VWRA as always safe to accumulate (lowest vol, the 2045 anchor).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function computeMarketAwareDca(
@@ -197,7 +197,7 @@ export function computeMarketAwareDca(
     return { allocations: Object.values(result), headline: "No contribution to deploy.", marketOverlayActive: false, overlayNote: null }
   }
 
-  // §4.3 — combined QQQM+SMH ceiling. At/above the soft ceiling, halt NEW buys of
+  // §4.3 — combined EQQQ+SEMI ceiling. At/above the soft ceiling, halt NEW buys of
   // both until combined falls back below it (concentration override on contributions).
   const combinedTech = combinedTechPct(positions)
   const techHalted = combinedTech >= COMBINED_TECH_RULE.softCeiling
@@ -333,7 +333,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
   const market = resolveMarket(opts.market)
   const btcCap = getBtcModifier(undefined, opts.btcCyclePhase).hardHigh
 
-  // §4.3 — combined QQQM+SMH ceiling. At/above the soft ceiling, halt NEW buys of both
+  // §4.3 — combined EQQQ+SEMI ceiling. At/above the soft ceiling, halt NEW buys of both
   // until combined falls back below it — same gate computeMarketAwareDca already applies,
   // so the headline recommendation never tells you to buy more of a paused position.
   const combinedTech = combinedTechPct(positions)

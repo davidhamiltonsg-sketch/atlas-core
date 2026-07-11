@@ -7,8 +7,8 @@
  *
  * Exports:
  *   getBtcPhaseCard     — current BTC cycle phase, target, cap, bull window countdown
- *   getSmhBuyZone       — SMH cycle position and skip-rule status
- *   getCombinedTechCeiling — QQQM+SMH combined exposure vs Art. IX ceilings
+ *   getSmhBuyZone       — SEMI cycle position and skip-rule status
+ *   getCombinedTechCeiling — EQQQ+SEMI combined exposure vs Art. IX ceilings
  *   getSkipRuleRadar    — per-position skip-rule applicability
  *   getSgovQueueState   — months to SGOV floor at current contribution rate (Art. XIII §5)
  */
@@ -124,14 +124,14 @@ export function getCombinedTechCeiling(qqqmPct: number, smhPct: number): Combine
 
 // ── Skip-Rule Radar (Art. XIII step 7) ───────────────────────────────────────
 // Reports which positions would be skipped under Art. XIII step 7 B1.
-// VT is exempt: it is always the DCA destination and is never skipped.
+// VWRA is exempt: it is always the DCA destination and is never skipped.
 export interface SkipRuleEntry {
   ticker: string
   price: number
   hi52: number
   pctFromHigh: number
   isNearHigh: boolean   // within NEAR_HIGH_THRESHOLD of 52w high
-  isExempt: boolean     // VT is exempt — never skipped
+  isExempt: boolean     // VWRA is exempt — never skipped
   wouldSkip: boolean    // isNearHigh && !isExempt
 }
 

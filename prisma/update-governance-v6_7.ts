@@ -6,7 +6,7 @@
  *
  *   1. Resyncs the GovernanceRule register to the canonical 40-rule set (./governance-data),
  *      preserving any rule a user had toggled inactive (matched by title).
- *   2. Corrects the SMH §2 hard cap on every holding: 15% → 12%.
+ *   2. Corrects the SEMI §2 hard cap on every holding: 15% → 12%.
  *
  * Run with:  npx tsx prisma/update-governance-v6_7.ts
  */
@@ -24,12 +24,12 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   console.log("Atlas Core v6.7 — governance reconciliation\n")
 
-  // ── 1. SMH §2 hard cap: 15% → 12% (governance parameter; no money touched) ──
+  // ── 1. SEMI §2 hard cap: 15% → 12% (governance parameter; no money touched) ──
   const smh = await prisma.holding.updateMany({
-    where: { ticker: "SMH" },
+    where: { ticker: "SEMI" },
     data: { hardCapPct: 12 },
   })
-  console.log(`  SMH hard cap → 12%  (${smh.count} holding(s) updated)`)
+  console.log(`  SEMI hard cap → 12%  (${smh.count} holding(s) updated)`)
 
   // ── 2. Resync the governance rule register to the canonical 40 ──────────────
   // Preserve any inactive toggles the user set (match by title).

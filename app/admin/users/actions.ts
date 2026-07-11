@@ -40,7 +40,7 @@ export async function createUserAction(formData: FormData) {
   // We never copy from the admin — that would give SBR users Atlas Core tickers and vice versa.
   const constId = constitutionIdForEmail(email)
   if (constId === "atlas-core") {
-    // Atlas Core: ensureCoreHoldings handles the full set (VT, QQQM, SMH, VWO, BTC, IBIT, SGOV)
+    // Atlas Core: ensureCoreHoldings handles the full set (VWRA, EQQQ, SEMI, VFEA, BTC, IBIT, SGOV)
     await ensureCoreHoldings(user.id)
   } else {
     // SBR or any other constitution: seed from the constitution's own fund list

@@ -4,8 +4,8 @@ import { ATLAS_SPEC } from "@/lib/portfolio-spec"
  * Atlas Core — Governance Constants
  *
  * The raw source of record for every rule value: allocation targets, position hard caps,
- * drift bands, the BTC halving-cycle modifier (§4.1), the SMH cycle-aware soft band (§4.2),
- * and the combined QQQM+SMH tech-concentration ceiling (§4.3). Hard caps are static; only
+ * drift bands, the BTC halving-cycle modifier (§4.1), the SEMI cycle-aware soft band (§4.2),
+ * and the combined EQQQ+SEMI tech-concentration ceiling (§4.3). Hard caps are static; only
  * the soft bands float — the one exception is BTC's hard cap, which moves by cycle phase.
  *
  * UNITS — IMPORTANT:
@@ -156,7 +156,7 @@ export function getBtcModifier(
   return BTC_CYCLE_MODIFIERS[getBtcCyclePhase(btcPriceVsCycleHigh, manualOverride)]
 }
 
-// ─── §4.2 — SMH CYCLE-AWARE SOFT BAND ────────────────────────────────────────
+// ─── §4.2 — SEMI CYCLE-AWARE SOFT BAND ────────────────────────────────────────
 export type SmhCyclePhase = 'top' | 'mid' | 'bottom'
 
 export interface SmhSoftBand {
@@ -173,7 +173,7 @@ export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
   top: {
     phase: 'top', softLow: 7, softHigh: 10, healthyLow: 9, healthyHigh: 10,
     label: 'Cycle Top',
-    signal: 'SMH within 5% of 52-week high. Hold only. No new buys.',
+    signal: 'SEMI within 5% of 52-week high. Hold only. No new buys.',
   },
   mid: {
     phase: 'mid', softLow: 7, softHigh: 12, healthyLow: 7, healthyHigh: 12,
@@ -186,7 +186,7 @@ export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
     // so healthyHigh/softHigh may never exceed it. See Art. XI accumulation precedence.
     phase: 'bottom', softLow: 5, softHigh: 12, healthyLow: 7, healthyHigh: 12,
     label: 'Cycle Bottom',
-    signal: 'SMH >20% off 52-week high. Buy zone widens on the downside — accumulate toward the 12% cap.',
+    signal: 'SEMI >20% off 52-week high. Buy zone widens on the downside — accumulate toward the 12% cap.',
   },
 }
 

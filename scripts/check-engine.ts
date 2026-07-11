@@ -26,7 +26,7 @@ const mid = { price: 92, lo52: 60, hi52: 100, histVolPct: 15 }
 const high = { price: 99, lo52: 60, hi52: 100, histVolPct: 15 }
 function marketAll(over: Record<string, typeof mid> = {}): EngineMarket {
   const base: EngineMarket = {}
-  for (const t of ["VT", "QQQM", "SMH", "VWO"]) base[t] = { ...mid }
+  for (const t of ["VWRA", "EQQQ", "SEMI", "VFEA"]) base[t] = { ...mid }
   return { ...base, ...over }
 }
 
@@ -35,61 +35,61 @@ console.log("Atlas Core — engine scenario checks\n")
 // 1) Healthy, buffer built, nothing overbought → STANDARD DCA (severity none).
 {
   const positions = [
-    pos("VT", 48, 48, 60), pos("QQQM", 21, 21, 30), pos("SMH", 9, 9, 12),
-    pos("VWO", 7, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 48, 48, 60), pos("EQQQ", 21, 21, 30), pos("SEMI", 9, 9, 12),
+    pos("VFEA", 7, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
   expect("healthy → standard DCA (none)", m.severity === "none" && /standard DCA/i.test(m.action), `got ${m.severity} / "${m.action}"`)
 }
 
-// 2) SMH over its 12% hard cap → CRITICAL trim SMH.
+// 2) SEMI over its 12% hard cap → CRITICAL trim SEMI.
 {
   const positions = [
-    pos("VT", 45, 48, 60), pos("QQQM", 22, 21, 30), pos("SMH", 13, 9, 12),
-    pos("VWO", 5, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 45, 48, 60), pos("EQQQ", 22, 21, 30), pos("SEMI", 13, 9, 12),
+    pos("VFEA", 5, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
-  expect("SMH > 12% cap → critical trim SMH", m.severity === "critical" && m.ticker === "SMH" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+  expect("SEMI > 12% cap → critical trim SEMI", m.severity === "critical" && m.ticker === "SEMI" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
 }
 
 // 3) Buffer below the 8% floor (no SGOV) → HIGH build buffer.
 {
   const positions = [
-    pos("VT", 52, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
-    pos("VWO", 8, 8, 13), pos("BTC", 7, 7, 8),
+    pos("VWRA", 52, 52, 60), pos("EQQQ", 23, 23, 30), pos("SEMI", 10, 10, 12),
+    pos("VFEA", 8, 8, 13), pos("BTC", 7, 7, 8),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
   expect("buffer < 8% → high build SGOV", m.severity === "high" && m.ticker === "SGOV" && /buffer/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
 }
 
-// 4) Conviction holding (QQQM) underweight, buffer OK, not overbought → MEDIUM accumulate.
+// 4) Conviction holding (EQQQ) underweight, buffer OK, not overbought → MEDIUM accumulate.
 {
   const positions = [
-    pos("VT", 52, 50, 60), pos("QQQM", 16, 23, 30), pos("SMH", 9, 9, 12),
-    pos("VWO", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 52, 50, 60), pos("EQQQ", 16, 23, 30), pos("SEMI", 9, 9, 12),
+    pos("VFEA", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
-  expect("QQQM underweight → medium accumulate QQQM", m.severity === "medium" && m.ticker === "QQQM" && /accumulate|fill/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+  expect("EQQQ underweight → medium accumulate EQQQ", m.severity === "medium" && m.ticker === "EQQQ" && /accumulate|fill/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
 }
 
-// 5) Combined QQQM+SMH over the 42% hard ceiling → CRITICAL trim SMH first.
+// 5) Combined EQQQ+SEMI over the 42% hard ceiling → CRITICAL trim SEMI first.
 {
   const positions = [
-    pos("VT", 38, 48, 60), pos("QQQM", 30, 23, 30), pos("SMH", 13, 9, 12),
-    pos("VWO", 4, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 38, 48, 60), pos("EQQQ", 30, 23, 30), pos("SEMI", 13, 9, 12),
+    pos("VFEA", 4, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
-  expect("QQQM+SMH > 42% → critical trim SMH", m.severity === "critical" && m.ticker === "SMH", `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+  expect("EQQQ+SEMI > 42% → critical trim SEMI", m.severity === "critical" && m.ticker === "SEMI", `got ${m.severity} / ${m.ticker} / "${m.action}"`)
 }
 
-// 6) Everything healthy but SMH at its 52-week high → LOW "skip the highs".
+// 6) Everything healthy but SEMI at its 52-week high → LOW "skip the highs".
 {
   const positions = [
-    pos("VT", 48, 48, 60), pos("QQQM", 21, 21, 30), pos("SMH", 9, 9, 12),
-    pos("VWO", 7, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 48, 48, 60), pos("EQQQ", 21, 21, 30), pos("SEMI", 9, 9, 12),
+    pos("VFEA", 7, 7, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
-  const m = computeNextBestMove(positions, 1000, { market: marketAll({ SMH: { ...high } }) })
-  expect("SMH overbought → low skip-the-highs", m.severity === "low" && /skip|high/i.test(m.action), `got ${m.severity} / "${m.action}"`)
+  const m = computeNextBestMove(positions, 1000, { market: marketAll({ SEMI: { ...high } }) })
+  expect("SEMI overbought → low skip-the-highs", m.severity === "low" && /skip|high/i.test(m.action), `got ${m.severity} / "${m.action}"`)
 }
 
 // 7) Empty portfolio (no balance) → never throws, returns an action.
@@ -98,36 +98,36 @@ console.log("Atlas Core — engine scenario checks\n")
   expect("empty portfolio → returns a safe action", typeof m.action === "string" && m.action.length > 0, `got "${m.action}"`)
 }
 
-// 8) VT over its 60% hard cap → CRITICAL trim VT (Art. VII).
+// 8) VWRA over its 60% hard cap → CRITICAL trim VWRA (Art. VII).
 {
   const positions = [
-    pos("VT", 62, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
-    pos("VWO", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 62, 52, 60), pos("EQQQ", 23, 23, 30), pos("SEMI", 10, 10, 12),
+    pos("VFEA", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
-  expect("VT > 60% cap → critical trim VT", m.severity === "critical" && m.ticker === "VT" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+  expect("VWRA > 60% cap → critical trim VWRA", m.severity === "critical" && m.ticker === "VWRA" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
 }
 
-// 9) VWO over its 13% hard cap → CRITICAL trim VWO (Art. VII).
+// 9) VFEA over its 13% hard cap → CRITICAL trim VFEA (Art. VII).
 {
   const positions = [
-    pos("VT", 52, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
-    pos("VWO", 14, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 52, 52, 60), pos("EQQQ", 23, 23, 30), pos("SEMI", 10, 10, 12),
+    pos("VFEA", 14, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const m = computeNextBestMove(positions, 1000, { market: marketAll() })
-  expect("VWO > 13% cap → critical trim VWO", m.severity === "critical" && m.ticker === "VWO" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
+  expect("VFEA > 13% cap → critical trim VFEA", m.severity === "critical" && m.ticker === "VFEA" && /trim/i.test(m.action), `got ${m.severity} / ${m.ticker} / "${m.action}"`)
 }
 
 // 10) Cross-engine agreement: the ladder (dashboard) and next-best-move (calendar) must
 //     trim the SAME ticker on a hard-cap breach — this is the invariant that was broken
-//     when only next-best-move enforced the VT/VWO caps.
+//     when only next-best-move enforced the VWRA/VFEA caps.
 {
   const ladderMarket: Record<string, LiveMarketPos> = {}
-  for (const [ticker, over] of [["VT", 62], ["VWO", 14]] as const) {
+  for (const [ticker, over] of [["VWRA", 62], ["VFEA", 14]] as const) {
     const positions = [
-      pos("VT",   ticker === "VT"  ? over : 52, 52, 60),
-      pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
-      pos("VWO",  ticker === "VWO" ? over : 8,  8, 13),
+      pos("VWRA",   ticker === "VWRA"  ? over : 52, 52, 60),
+      pos("EQQQ", 23, 23, 30), pos("SEMI", 10, 10, 12),
+      pos("VFEA",  ticker === "VFEA" ? over : 8,  8, 13),
       pos("BTC",  7, 7, 8), pos("SGOV", 8, 8, null),
     ]
     const nbm = computeNextBestMove(positions, 1000, { market: marketAll() })
@@ -140,8 +140,8 @@ console.log("Atlas Core — engine scenario checks\n")
 //     make BOTH engines say "keep buying" (A2), never contradictory advice.
 {
   const positions = [
-    pos("VT", 52, 52, 60), pos("QQQM", 23, 23, 30), pos("SMH", 10, 10, 12),
-    pos("VWO", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
+    pos("VWRA", 52, 52, 60), pos("EQQQ", 23, 23, 30), pos("SEMI", 10, 10, 12),
+    pos("VFEA", 8, 8, 13), pos("BTC", 7, 7, 8), pos("SGOV", 8, 8, null),
   ]
   const nbm = computeNextBestMove(positions, 1000, { market: marketAll(), portfolioDrawdownPct: -30 })
   const lad = computeLadder(positions, 1000, { market: {}, portfolioDrawdownPct: -30 })
@@ -150,27 +150,27 @@ console.log("Atlas Core — engine scenario checks\n")
     `nbm="${nbm.action}" ladder="${lad.headline}"`)
 }
 
-// 12) Combined QQQM+SMH at the 38% SOFT ceiling, with SMH individually underweight —
-//     must NOT recommend accumulating SMH or QQQM: §4.3 pauses new tech buys the moment
-//     combined tech is at/over 38%, even though SMH alone reads underweight against its
-//     own target. Both engines must fall through to the next eligible position (VT) and
+// 12) Combined EQQQ+SEMI at the 38% SOFT ceiling, with SEMI individually underweight —
+//     must NOT recommend accumulating SEMI or EQQQ: §4.3 pauses new tech buys the moment
+//     combined tech is at/over 38%, even though SEMI alone reads underweight against its
+//     own target. Both engines must fall through to the next eligible position (VWRA) and
 //     agree, instead of one recommending more tech while the other pauses it (regression
-//     for the "recommends QQQM/SMH while tech concentration is already paused" bug).
+//     for the "recommends EQQQ/SEMI while tech concentration is already paused" bug).
 {
   const positions = [
-    pos("VT", 45, 52, 60), pos("QQQM", 30, 23, 30), pos("SMH", 8, 10, 12),
-    pos("VWO", 8, 8, 13), pos("SGOV", 9, 8, null),
+    pos("VWRA", 45, 52, 60), pos("EQQQ", 30, 23, 30), pos("SEMI", 8, 10, 12),
+    pos("VFEA", 8, 8, 13), pos("SGOV", 9, 8, null),
   ]
   const nbm = computeNextBestMove(positions, 1000, { market: marketAll() })
   const lad = computeLadder(positions, 1000, { market: {} })
-  expect("combined tech at 38% soft ceiling → next-best-move never recommends SMH/QQQM",
-    nbm.ticker !== "SMH" && nbm.ticker !== "QQQM", `got ${nbm.severity} / ${nbm.ticker} / "${nbm.action}"`)
-  expect("combined tech at 38% soft ceiling → ladder step 2 never fills SMH/QQQM",
-    lad.ticker !== "SMH" && lad.ticker !== "QQQM", `got step ${lad.firedStep} / ${lad.ticker} / "${lad.headline}"`)
-  expect("both engines fall through to VT, the next genuinely-underweight position",
-    nbm.ticker === "VT" && lad.ticker === "VT", `nbm=${nbm.ticker} ladder=${lad.ticker}`)
+  expect("combined tech at 38% soft ceiling → next-best-move never recommends SEMI/EQQQ",
+    nbm.ticker !== "SEMI" && nbm.ticker !== "EQQQ", `got ${nbm.severity} / ${nbm.ticker} / "${nbm.action}"`)
+  expect("combined tech at 38% soft ceiling → ladder step 2 never fills SEMI/EQQQ",
+    lad.ticker !== "SEMI" && lad.ticker !== "EQQQ", `got step ${lad.firedStep} / ${lad.ticker} / "${lad.headline}"`)
+  expect("both engines fall through to VWRA, the next genuinely-underweight position",
+    nbm.ticker === "VWRA" && lad.ticker === "VWRA", `nbm=${nbm.ticker} ladder=${lad.ticker}`)
   expect("ladder logs the paused-tech exception for audit",
-    lad.exceptions.some((e) => /SMH.*paused|paused.*SMH|tech ceiling/i.test(e)), `exceptions=${JSON.stringify(lad.exceptions)}`)
+    lad.exceptions.some((e) => /SEMI.*paused|paused.*SEMI|tech ceiling/i.test(e)), `exceptions=${JSON.stringify(lad.exceptions)}`)
 }
 
 if (failures === 0) { console.log("\n  ✓ All engine scenarios behaved as specified.\n"); process.exit(0) }
