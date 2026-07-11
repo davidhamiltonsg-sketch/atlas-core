@@ -6,7 +6,7 @@ import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
 import { computeLadder } from "@/lib/ladder"
-import { BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
+import { BITCOIN_SLEEVE_TARGET_PCT, applyBitcoinSleeve } from "@/lib/next-best-move"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
@@ -66,7 +66,7 @@ const SBR_SAMPLE_CONTEXT: PortfolioContext = {
     { ticker: "VWRA", name: "Global fund",          pct: 60.0, color: "#4A9EFF" },
     { ticker: "A35",  name: "Singapore bond fund",   pct: 20.0, color: "#2ECC9A" },
     { ticker: "EQQQ", name: "Nasdaq fund",           pct: 10.0, color: "#C9A84C" },
-    { ticker: "SMH",  name: "Chip-maker fund",       pct: 10.0, color: "#E0913A" },
+    { ticker: "SEMI", name: "Chip-maker fund",       pct: 10.0, color: "#E0913A" },
   ],
 }
 
@@ -166,7 +166,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     if (totalValue <= 0) return null
 
     // Build position inputs (same pattern as the dashboard)
-    const positions = holdings
+    let positions = holdings
       .map(h => {
         const value = h.snapshots[0]?.value ?? 0
         const actualPct = (value / totalValue) * 100
@@ -184,14 +184,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       })
       .filter(p => p.value > 0)
 
-    // Bitcoin sleeve consolidation — BTC in run-off, IBIT is accumulation
-    const btcPos = positions.find(p => p.ticker === "BTC")
-    const ibitPos = positions.find(p => p.ticker === "IBIT")
-    if (btcPos && ibitPos) {
-      btcPos.targetPct = btcPos.actualPct
-      const ibitTarget = Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btcPos.actualPct)
-      ibitPos.targetPct = ibitTarget
-    }
+    positions = applyBitcoinSleeve(positions)
 
     // Run engines
     const lookThrough = computeLookThrough(positions)
@@ -200,7 +193,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const ltBreach = worstLookThroughBreach(lookThrough)
     const ltApproach = worstLookThroughApproach(lookThrough)
 
-    const sgovPct = positions.find(p => ["SGOV", "CASH", "SGD", "AGG"].includes(p.ticker.toUpperCase()))?.actualPct ?? 0
+    const sgovPct = positions.filter(p => ["SGOV", "CASH", "SGD", "AGG"].includes(p.ticker.toUpperCase())).reduce((s, p) => s + p.actualPct, 0)
     const govAlignment = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough })
 
     const hardBreaches = positions.filter(p => {

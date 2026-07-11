@@ -15,8 +15,7 @@ export interface DigestItem {
 // so the user sees in one place whether they are inside the rules.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { HARD_THRESHOLDS, COMBINED_TECH_RULE, getBtcModifier, OPERATING_ASSUMPTIONS } from "@/lib/constants"
-import { BITCOIN_TICKERS } from "@/lib/next-best-move"
+import { HARD_THRESHOLDS, COMBINED_TECH_RULE, getBtcModifier, OPERATING_ASSUMPTIONS, BITCOIN_TICKERS } from "@/lib/constants"
 import { isInScope } from "@/lib/approved-alternatives"
 import type { LookThroughResult } from "@/lib/look-through"
 

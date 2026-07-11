@@ -32,6 +32,20 @@ export function isUsSited(ticker: string): boolean {
   return !(UCITS_TICKERS as readonly string[]).includes(ticker.toUpperCase())
 }
 
+/**
+ * After UCITS migration, core exposure identifiers (VT, QQQM, SMH, VWO) no longer
+ * correspond to US-sited holdings — the actual wrapper is an Irish UCITS fund.
+ * Use this instead of isUsSited() when positions are stored by exposure identifier.
+ */
+export function isActuallyUsSited(exposureId: string): boolean {
+  const id = exposureId.toUpperCase()
+  if (!(UCITS_TICKERS as readonly string[]).includes(id)) {
+    const alt = APPROVED_ALTERNATIVES[id]
+    if (alt && alt.reason.startsWith("MIGRATED")) return false
+  }
+  return isUsSited(id)
+}
+
 // ─── Governance universe ─────────────────────────────────────────────────────
 // Every ticker the policy knows about: the core positions, the cash buffer, and each
 // pre-approved alternative vehicle. Anything else held in the brokerage is "out of
@@ -73,4 +87,18 @@ export function coreExposureOf(ticker: string): string {
 export function altLabelFor(ticker: string): string | null {
   const core = ALTERNATIVE_TO_CORE[ticker.toUpperCase()]
   return core ? `alternative to ${core}` : null
+}
+
+/**
+ * The ticker the user actually holds after UCITS migration.
+ * Maps exposure identifiers (VT, QQQM, SMH, VWO) to their migrated UCITS wrapper
+ * for display purposes. Non-migrated tickers (BTC, IBIT, SGOV) pass through unchanged.
+ */
+export function displayTicker(exposureId: string): string {
+  const id = exposureId.toUpperCase()
+  const alt = APPROVED_ALTERNATIVES[id]
+  if (alt && alt.reason.startsWith("MIGRATED") && alt.tickers.length > 0) {
+    return alt.tickers[0]
+  }
+  return id
 }

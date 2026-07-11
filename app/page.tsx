@@ -17,7 +17,7 @@ import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
-import { isUsSited, isInScope } from "@/lib/approved-alternatives"
+import { isActuallyUsSited, isInScope } from "@/lib/approved-alternatives"
 import { getRecentExecutions } from "@/lib/execution-actions"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
@@ -428,7 +428,7 @@ async function getDashboardData(userId: string) {
   const smhLive = marketSnapshot.positions["SMH"]
   const qqqmPct = positions.find(p => p.ticker === "QQQM")?.actualPct ?? 0
   const smhPct  = positions.find(p => p.ticker === "SMH")?.actualPct ?? 0
-  const sgovPct = positions.find(p => ["SGOV", "AGG", "CASH"].includes(p.ticker))?.actualPct ?? 0
+  const sgovPct = positions.filter(p => ["SGOV", "AGG", "CASH"].includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
 
   const cycleInstruments = {
     btc:  getBtcPhaseCard(),
@@ -444,7 +444,7 @@ async function getDashboardData(userId: string) {
   const bufferMonthsToBand = bufferNeeded > 0 && monthlyContribution > 0 ? Math.ceil(bufferNeeded / monthlyContribution) : 0
 
   const usSitedValueUsd = usdSgdRate > 0
-    ? positions.filter(p => isUsSited(p.ticker)).reduce((s, p) => s + p.value / usdSgdRate, 0)
+    ? positions.filter(p => isActuallyUsSited(p.ticker)).reduce((s, p) => s + p.value / usdSgdRate, 0)
     : 0
   const outOfScopeTickers = positions.filter((p) => p.value > 0 && !isInScope(p.ticker)).map((p) => p.ticker.toUpperCase())
   const govAlignment = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough, usSitedValueUsd })

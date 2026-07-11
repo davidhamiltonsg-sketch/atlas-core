@@ -1,3 +1,5 @@
+import { displayTicker } from "@/lib/approved-alternatives"
+
 export interface ThresholdGaugeRow {
   ticker: string
   color: string
@@ -41,7 +43,7 @@ export function ThresholdGauge({ rows, allocMap }: { rows: ThresholdGaugeRow[]; 
               <div className="flex items-center gap-2.5">
                 <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
                 <div>
-                  <span className="text-sm font-bold">{t.ticker}</span>
+                  <span className="text-sm font-bold">{displayTicker(t.ticker)}</span>
                   <span className="text-xs text-muted-foreground ml-2">{t.classification}</span>
                 </div>
               </div>

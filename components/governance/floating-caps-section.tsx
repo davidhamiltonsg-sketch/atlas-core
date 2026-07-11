@@ -8,6 +8,7 @@ import {
   COMBINED_TECH_RULE,
 } from "@/lib/constants"
 import { Bitcoin, Cpu, Layers, Info } from "lucide-react"
+import { displayTicker } from "@/lib/approved-alternatives"
 
 const BTC_PHASES: BtcCyclePhase[] = ["post_halving_bull", "normal", "bear"]
 
@@ -84,7 +85,7 @@ export function FloatingCapsSection() {
         <div className="rounded-xl border border-border bg-background/40 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Cpu className="h-4 w-4 text-violet-500" />
-            <h3 className="text-sm font-bold">SMH — Cycle-Aware Soft Band</h3>
+            <h3 className="text-sm font-bold">{displayTicker("SMH")} — Cycle-Aware Soft Band</h3>
             <span className="ml-auto text-[10px] font-semibold text-muted-foreground">§4.2</span>
           </div>
 
@@ -126,7 +127,7 @@ export function FloatingCapsSection() {
         <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">{COMBINED_TECH_RULE.rationale}</p>
         <div className="flex flex-wrap gap-4">
           <div>
-            <p className="text-[10px] text-muted-foreground">{COMBINED_TECH_RULE.tickers.join(" + ")} soft ceiling</p>
+            <p className="text-[10px] text-muted-foreground">{COMBINED_TECH_RULE.tickers.map(displayTicker).join(" + ")} soft ceiling</p>
             <p className="text-lg font-black tabular-nums text-amber-500">{COMBINED_TECH_RULE.softCeiling}%</p>
             <p className="text-[10px] text-muted-foreground">{COMBINED_TECH_RULE.action.soft}</p>
           </div>
@@ -160,7 +161,7 @@ export function FloatingCapsSection() {
                 if (tk === "SMH") cycleCell = `${smhBand.label}: soft ${smhBand.softLow}%–${smhBand.softHigh}%`
                 return (
                   <tr key={tk} className="hover:bg-accent/20 transition-colors">
-                    <td className="px-4 py-3 font-bold">{tk}</td>
+                    <td className="px-4 py-3 font-bold">{displayTicker(tk)}</td>
                     <td className="px-4 py-3 tabular-nums">{target}%</td>
                     <td className="px-4 py-3 tabular-nums text-red-400">
                       {hard.low !== undefined ? `${hard.low}%–${hard.high}%` : `≤ ${hard.high}%`}
@@ -172,7 +173,7 @@ export function FloatingCapsSection() {
                 )
               })}
               <tr className="bg-violet-500/[0.04]">
-                <td className="px-4 py-3 font-bold">QQQM+SMH</td>
+                <td className="px-4 py-3 font-bold">{displayTicker("QQQM")}+{displayTicker("SMH")}</td>
                 <td className="px-4 py-3 tabular-nums text-muted-foreground">—</td>
                 <td className="px-4 py-3 tabular-nums text-red-400">≤ {COMBINED_TECH_RULE.hardCeiling}%</td>
                 <td className="px-4 py-3 text-violet-600 dark:text-violet-300 font-medium">Combined tech: soft {COMBINED_TECH_RULE.softCeiling}% · hard {COMBINED_TECH_RULE.hardCeiling}%</td>
@@ -181,7 +182,7 @@ export function FloatingCapsSection() {
           </table>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1.5">
-          <Info className="h-3 w-3" /> Static hard caps (VT 62%, QQQM 31%, SMH 12%, VWO 13%) are unchanged. Only BTC&apos;s hard cap floats by cycle phase; SMH&apos;s soft band flexes while its 12% hard cap holds.
+          <Info className="h-3 w-3" /> Static hard caps (VWRA 62%, EQQQ 31%, SEMI 12%, VFEA 13%) are unchanged. Only BTC&apos;s hard cap floats by cycle phase; SEMI&apos;s soft band flexes while its 12% hard cap holds.
         </p>
       </div>
     </div>

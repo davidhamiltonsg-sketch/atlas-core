@@ -28,7 +28,13 @@
 // conservatively (no positions near their 52w high unless live data confirms).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getBtcModifier, COMBINED_TECH_RULE, HARD_THRESHOLDS, CRASH_DRAWDOWN_PCT, type BtcCyclePhase } from "@/lib/constants"
+import {
+  getBtcModifier, COMBINED_TECH_RULE, HARD_THRESHOLDS, CRASH_DRAWDOWN_PCT,
+  BITCOIN_TICKERS, BITCOIN_SLEEVE_TARGET_PCT, BITCOIN_RUNOFF_TICKER, BITCOIN_ACCUMULATION_TICKER,
+  applyBitcoinSleeve,
+  type BtcCyclePhase,
+} from "@/lib/constants"
+import { displayTicker } from "@/lib/approved-alternatives"
 
 export type Severity = "critical" | "high" | "medium" | "low" | "none"
 
@@ -66,36 +72,8 @@ export const RULES = {
 // weakness toward target. Selling one requires a broken thesis — never a paper loss.
 export const CONVICTION_TICKERS = ["QQQM", "SMH", "BTC", "IBIT"] as const
 
-// The Bitcoin sleeve. BTC and IBIT are the SAME economic exposure (Bitcoin); IBIT is
-// the more tax-effective vehicle and BTC is being transitioned into it like-for-like.
-// They are governed as ONE sleeve: combined target 7%, combined cycle-aware cap (§4.1).
-export const BITCOIN_TICKERS = ["BTC", "IBIT"] as const
-
-// Combined sleeve target (§4.1). BTC is in RUN-OFF — held, never bought, never force-sold
-// (a paper loss is not a sell signal). IBIT is the ACCUMULATION vehicle: all new Bitcoin
-// money flows here as BTC transitions out like-for-like.
-export const BITCOIN_SLEEVE_TARGET_PCT = 7
-export const BITCOIN_RUNOFF_TICKER = "BTC"
-export const BITCOIN_ACCUMULATION_TICKER = "IBIT"
-
-/**
- * Apply the Bitcoin-sleeve transition model, returning a NEW positions array with effective
- * targets so the whole app treats BTC + IBIT as ONE sleeve:
- *   • BTC (run-off): effective target = its current weight → zero buy/sell pressure.
- *   • IBIT (accumulation): effective target = max(0, sleeveTarget − BTC weight) → it reads as
- *     underweight while the sleeve is below 7%, so new money routes here, not to BTC.
- * Only transforms when BOTH are present; otherwise returns the positions unchanged.
- */
-export function applyBitcoinSleeve<T extends { ticker: string; actualPct: number; targetPct: number }>(positions: T[]): T[] {
-  const btc = positions.find((p) => p.ticker === BITCOIN_RUNOFF_TICKER)
-  const ibit = positions.find((p) => p.ticker === BITCOIN_ACCUMULATION_TICKER)
-  if (!btc || !ibit) return positions
-  return positions.map((p) => {
-    if (p.ticker === BITCOIN_RUNOFF_TICKER) return { ...p, targetPct: p.actualPct }
-    if (p.ticker === BITCOIN_ACCUMULATION_TICKER) return { ...p, targetPct: Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btc.actualPct) }
-    return p
-  })
-}
+// Re-exported from constants.ts — single source of truth for Bitcoin sleeve.
+export { BITCOIN_TICKERS, BITCOIN_SLEEVE_TARGET_PCT, BITCOIN_RUNOFF_TICKER, BITCOIN_ACCUMULATION_TICKER, applyBitcoinSleeve }
 
 // ─── LIVE MARKET OVERLAY (Finnhub, §F1) ──────────────────────────────────────
 // A live overlay can replace price / 52-week levels for the recommendation logic.
@@ -247,7 +225,7 @@ export function computeMarketAwareDca(
 
   if (techHalted) {
     marketOverlayActive = true
-    overlayNote = `Combined QQQM+SMH is ${combinedTech.toFixed(1)}% — at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). New QQQM and SMH buys are paused this month; that money is redirected until combined falls below ${COMBINED_TECH_RULE.softCeiling - 2}%.`
+    overlayNote = `Combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combinedTech.toFixed(1)}% — at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). New ${displayTicker("QQQM")} and ${displayTicker("SMH")} buys are paused this month; that money is redirected until combined falls below ${COMBINED_TECH_RULE.softCeiling - 2}%.`
   }
 
   if (dipTickers.length > 0) {
@@ -259,7 +237,7 @@ export function computeMarketAwareDca(
     result[dipTicker].amount += dipBudget
     result[dipTicker].tag = "dip-buy"
     result[dipTicker].reason = `Confirmed dip — deploying Tranche 1 (30%) into the opportunity.`
-    if (!overlayNote) overlayNote = `${dipTicker} has dropped into a buy zone. Deploying 30% now (Tranche 1); hold the rest for Tranches 2–3 as the recovery confirms.`
+    if (!overlayNote) overlayNote = `${displayTicker(dipTicker)} has dropped into a buy zone. Deploying 30% now (Tranche 1); hold the rest for Tranches 2–3 as the recovery confirms.`
 
     // Remaining money goes to the eligible set by target weight.
     const remaining = monthlyAmount - dipBudget
@@ -272,9 +250,9 @@ export function computeMarketAwareDca(
       if (vt) {
         result["VT"].amount = monthlyAmount
         result["VT"].tag = "boosted"
-        result["VT"].reason = "All growth positions are at highs — routing to VT, the lowest-volatility anchor, rather than chasing tops."
+        result["VT"].reason = `All growth positions are at highs — routing to ${displayTicker("VT")}, the lowest-volatility anchor, rather than chasing tops.`
         marketOverlayActive = true
-        if (!overlayNote) overlayNote = "Every growth position is near its 52-week high. This month's money goes to VT instead of buying at the top."
+        if (!overlayNote) overlayNote = `Every growth position is near its 52-week high. This month's money goes to ${displayTicker("VT")} instead of buying at the top.`
       }
     } else {
       distributeByWeight(eligible, monthlyAmount, result, standard)
@@ -288,7 +266,7 @@ export function computeMarketAwareDca(
           .filter((p) => !eligible.includes(p) && isOverbought(p.ticker, market) && p.ticker !== "VT")
           .map((p) => p.ticker)
         if (skipped.length > 0 && !overlayNote) {
-          overlayNote = `Skipping ${skipped.join(" and ")} this month — ${skipped.length > 1 ? "they are" : "it is"} at a 52-week high. That money is redirected to positions with better entry points.`
+          overlayNote = `Skipping ${skipped.map(t => displayTicker(t)).join(" and ")} this month — ${skipped.length > 1 ? "they are" : "it is"} at a 52-week high. That money is redirected to positions with better entry points.`
         }
       }
     }
@@ -384,8 +362,8 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       const trimTicker = smhPos ? "SMH" : "QQQM"
       return {
         severity: "critical", ticker: trimTicker,
-        action: `Trim ${trimTicker} — combined tech over cap`,
-        what: `Combined QQQM+SMH is ${combinedTech.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${trimTicker} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
+        action: `Trim ${displayTicker(trimTicker)} — combined tech over cap`,
+        what: `Combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combinedTech.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling (§4.3). Trim ${displayTicker(trimTicker)} until combined is back under ${COMBINED_TECH_RULE.softCeiling}%.`,
         why: `${COMBINED_TECH_RULE.rationale} Combined concentration this high is the rule the system protects first.`,
         when: "At your next dealing window (respecting the 90-day hold on the most recent lots).",
         color: smhPos?.color ?? "#a78bfa",
@@ -425,9 +403,9 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       if (p.hardCapPct !== null && p.actualPct > p.hardCapPct) {
         return {
           severity: "critical", ticker: p.ticker,
-          action: `Trim ${p.ticker} — over its cap`,
-          what: `Sell enough ${p.ticker} to bring it from ${p.actualPct.toFixed(1)}% back to its ${p.targetPct}% target.`,
-          why: `${p.ticker} has breached its ${p.hardCapPct}% hard cap. Concentration this high is the rule the system protects against first.`,
+          action: `Trim ${displayTicker(p.ticker)} — over its cap`,
+          what: `Sell enough ${displayTicker(p.ticker)} to bring it from ${p.actualPct.toFixed(1)}% back to its ${p.targetPct}% target.`,
+          why: `${displayTicker(p.ticker)} has breached its ${p.hardCapPct}% hard cap. Concentration this high is the rule the system protects against first.`,
           when: "At your next dealing window.",
           color: p.color,
         }
@@ -496,7 +474,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       action: waiting ? "Policy shock — hold 14 days" : "Policy shock — deploy Tranche 1",
       what: waiting
         ? `The portfolio is down ${Math.abs(opts.portfolioDrawdownPct).toFixed(0)}% in a sharp, event-driven drop. Per pre-committed response A1, take NO action for 14 calendar days (day ${opts.drawdownDays ?? 0} of 14). Sell nothing. Keep scheduled contributions running.`
-        : `The 14-day A1 cooling-off has elapsed. Deploy the SGOV buffer in three tranches (30% → 40% → 30%) into ${tk}, the most beaten-down quality holding. Sell nothing.`,
+        : `The 14-day A1 cooling-off has elapsed. Deploy the SGOV buffer in three tranches (30% → 40% → 30%) into ${displayTicker(tk)}, the most beaten-down quality holding. Sell nothing.`,
       why: `A1 is written while calm: sharp shocks recover, and acting inside the first 14 days is where judgement fails. The buffer exists precisely to deploy into this — not to sit out the fear.`,
       when: waiting ? "Reassess after the 14-day window." : "At your next dealing window. Hold Tranches 2–3 for the recovery.",
       color: worst?.color ?? "#10b981",
@@ -523,7 +501,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     return {
       severity: "high", ticker: tk,
       action: "Deploy buffer — Tranche 1",
-      what: `The portfolio is down ${Math.abs(opts.portfolioDrawdownPct).toFixed(0)}% over ${opts.drawdownDays}+ days — a slow grind, not a sudden shock. Deploy Tranche 1 (30% of SGOV) into ${tk}, the most beaten-down quality holding. Hold the rest.`,
+      what: `The portfolio is down ${Math.abs(opts.portfolioDrawdownPct).toFixed(0)}% over ${opts.drawdownDays}+ days — a slow grind, not a sudden shock. Deploy Tranche 1 (30% of SGOV) into ${displayTicker(tk)}, the most beaten-down quality holding. Hold the rest.`,
       why: `A sustained decline with no V-shaped bounce is the second buffer-deployment trigger (§1.2). Averaging in over tranches beats waiting for a bottom you can't time — and the buffer is what it's for.`,
       when: "At your next dealing window. Hold Tranches 2–3 for the recovery.",
       color: worst?.color ?? "#10b981",
@@ -539,9 +517,9 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
         const fromHigh = (((m.price - m.hi52) / m.hi52) * 100).toFixed(0)
         return {
           severity: "high", ticker: p.ticker,
-          action: `Buy the ${p.ticker} dip`,
-          what: `${p.ticker} has dropped ${fromHigh}% from its high. Deploy Tranche 1 (30% of your intended ${p.ticker} budget) now; hold Tranches 2 and 3 for the recovery.`,
-          why: `A confirmed dip in a quality position is the best entry you get. Every prior ${p.ticker} dip of this size in the last 5 years recovered to new highs.`,
+          action: `Buy the ${displayTicker(p.ticker)} dip`,
+          what: `${displayTicker(p.ticker)} has dropped ${fromHigh}% from its high. Deploy Tranche 1 (30% of your intended ${displayTicker(p.ticker)} budget) now; hold Tranches 2 and 3 for the recovery.`,
+          why: `A confirmed dip in a quality position is the best entry you get. Every prior ${displayTicker(p.ticker)} dip of this size in the last 5 years recovered to new highs.`,
           when: "Now for Tranche 1. Tranche 2 after 3 green weeks. Tranche 3 once the uptrend is clear.",
           color: p.color,
         }
@@ -586,13 +564,13 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       const mkt = market[p.ticker]
       const offHigh = mkt && mkt.hi52 > 0 ? ((mkt.price - mkt.hi52) / mkt.hi52) * 100 : 0
       const reviewLine = offHigh <= -50
-        ? ` ${p.ticker} is ${Math.abs(offHigh).toFixed(0)}% below its high — log a documented thesis review (Art. XXI A5): a review, not a sell. Keep accumulating unless the structural criteria are met.`
+        ? ` ${displayTicker(p.ticker)} is ${Math.abs(offHigh).toFixed(0)}% below its high — log a documented thesis review (Art. XXI A5): a review, not a sell. Keep accumulating unless the structural criteria are met.`
         : ""
       return {
         severity: "medium", ticker: p.ticker,
-        action: `Accumulate ${p.ticker} toward ${p.targetPct}%`,
-        what: `${p.ticker} is underweight at ${p.actualPct.toFixed(1)}% versus its ${p.targetPct}% target. Direct this month's contribution into it to accumulate on weakness toward target.${capLine}${reviewLine}`,
-        why: `${p.ticker} is a held conviction position. What matters is today's price, not any past loss: at a lower weight you are adding toward target at a better cost basis. A red number is a sunk cost — never a reason to sell.`,
+        action: `Accumulate ${displayTicker(p.ticker)} toward ${p.targetPct}%`,
+        what: `${displayTicker(p.ticker)} is underweight at ${p.actualPct.toFixed(1)}% versus its ${p.targetPct}% target. Direct this month's contribution into it to accumulate on weakness toward target.${capLine}${reviewLine}`,
+        why: `${displayTicker(p.ticker)} is a held conviction position. What matters is today's price, not any past loss: at a lower weight you are adding toward target at a better cost basis. A red number is a sunk cost — never a reason to sell.`,
         when: "With this month's contribution, while it stays below target.",
         color: p.color,
       }
@@ -611,9 +589,9 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       const p = hardUnder[0]
       return {
         severity: "medium", ticker: p.ticker,
-        action: `Fill up ${p.ticker}`,
-        what: `Put all of this month's contribution into ${p.ticker} until it is back near its ${p.targetPct}% target.`,
-        why: `${p.ticker} is well below target at ${p.actualPct.toFixed(1)}%. Filling the biggest gap first is how the engine keeps you balanced without selling.`,
+        action: `Fill up ${displayTicker(p.ticker)}`,
+        what: `Put all of this month's contribution into ${displayTicker(p.ticker)} until it is back near its ${p.targetPct}% target.`,
+        why: `${displayTicker(p.ticker)} is well below target at ${p.actualPct.toFixed(1)}%. Filling the biggest gap first is how the engine keeps you balanced without selling.`,
         when: "With this month's contribution.",
         color: p.color,
       }
@@ -632,9 +610,9 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       const p = softUnder[0]
       return {
         severity: "low", ticker: p.ticker,
-        action: `Lean into ${p.ticker}`,
-        what: `Direct this month's contribution toward ${p.ticker} to nudge it back toward its ${p.targetPct}% target.`,
-        why: `${p.ticker} has drifted a little low at ${p.actualPct.toFixed(1)}%. A gentle redirect fixes it — no selling needed.`,
+        action: `Lean into ${displayTicker(p.ticker)}`,
+        what: `Direct this month's contribution toward ${displayTicker(p.ticker)} to nudge it back toward its ${p.targetPct}% target.`,
+        why: `${displayTicker(p.ticker)} has drifted a little low at ${p.actualPct.toFixed(1)}%. A gentle redirect fixes it — no selling needed.`,
         when: "With this month's contribution.",
         color: p.color,
       }
@@ -649,7 +627,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     return {
       severity: "low", ticker: null,
       action: "Do your DCA — but pause tech",
-      what: `Invest your normal monthly amount, but skip QQQM and SMH this month. Combined QQQM+SMH is ${combinedTech.toFixed(1)}%, at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). Redirect their share to VT instead.`,
+      what: `Invest your normal monthly amount, but skip ${displayTicker("QQQM")} and ${displayTicker("SMH")} this month. Combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combinedTech.toFixed(1)}%, at/over the ${COMBINED_TECH_RULE.softCeiling}% tech-concentration ceiling (§4.3). Redirect their share to ${displayTicker("VT")} instead.`,
       why: `${COMBINED_TECH_RULE.rationale} New tech buys pause until combined falls back below ${COMBINED_TECH_RULE.softCeiling - 2}%.`,
       when: "This month, on your usual contribution date.",
       color: "#8b5cf6",
@@ -664,8 +642,8 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
     return {
       severity: "low", ticker: overboughtNames[0],
       action: "Do your DCA — but skip the highs",
-      what: `Invest your normal monthly amount, but skip ${overboughtNames.join(" and ")} this month (at 52-week highs) and put that share into VT instead.`,
-      why: `Everything is healthy, but ${overboughtNames.join(" and ")} ${overboughtNames.length > 1 ? "are" : "is"} at the top of ${overboughtNames.length > 1 ? "their" : "its"} range. Buying VT instead avoids paying the highest price.`,
+      what: `Invest your normal monthly amount, but skip ${overboughtNames.map(t => displayTicker(t)).join(" and ")} this month (at 52-week highs) and put that share into ${displayTicker("VT")} instead.`,
+      why: `Everything is healthy, but ${overboughtNames.map(t => displayTicker(t)).join(" and ")} ${overboughtNames.length > 1 ? "are" : "is"} at the top of ${overboughtNames.length > 1 ? "their" : "its"} range. Buying ${displayTicker("VT")} instead avoids paying the highest price.`,
       when: "This month, on your usual contribution date.",
       color: "#8b5cf6",
     }

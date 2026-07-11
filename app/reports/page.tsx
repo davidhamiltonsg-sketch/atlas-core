@@ -26,6 +26,7 @@ import {
   atlasConcentrationLabelPct,
 } from "@/lib/spec-derived"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { displayTicker } from "@/lib/approved-alternatives"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -329,12 +330,12 @@ function StatusBadge({ status, size = "sm", tip }: { status: string; size?: "sm"
     </span>
   )
   if (status === "elevated") return (
-    <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/25`} title={tip ?? "Approaching the warning limit — keep an eye on this. Redirect next contributions to VT or VWO."}>
+    <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/25`} title={tip ?? `Approaching the warning limit — keep an eye on this. Redirect next contributions to ${displayTicker("VT")} or ${displayTicker("VWO")}.`}>
       <AlertTriangle className="h-2.5 w-2.5" /> Elevated
     </span>
   )
   return (
-    <span className={`${base} bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20`} title={tip ?? "Within normal limits — no action needed."}>
+    <span className={`${base} bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20`} title={tip ?? `Within normal limits — no action needed.`}>
       <CheckCircle2 className="h-2.5 w-2.5" /> Healthy
     </span>
   )
@@ -450,9 +451,9 @@ export default async function Reports() {
   // Executive summary — auto-generated, plain English
   const summaryPoints: { text: string; severity: "ok" | "warn" | "critical" }[] = []
   if (hardBreaches > 0) summaryPoints.push({ text: `${hardBreaches} holding${hardBreaches > 1 ? "s have" : " has"} drifted far outside its target range — you need to act before your next investment date. See the action plan below.`, severity: "critical" })
-  if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to QQQM and SMH until this resolves.`, severity: "warn" })
+  if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to ${displayTicker("QQQM")} and ${displayTicker("SMH")} until this resolves.`, severity: "warn" })
   if (sectorAlerts > 0) summaryPoints.push({ text: `Your portfolio is overexposed to ${sectorAlerts} theme${sectorAlerts > 1 ? "s" : ""} (e.g. semiconductors or tech). Put your next contributions into ${bestAlternatives(elevatedSectors, positions)} instead.`, severity: "warn" })
-  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward VT and VWO to re-balance.`, severity: "warn" })
+  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward ${displayTicker("VT")} and ${displayTicker("VWO")} to re-balance.`, severity: "warn" })
   if (hhiPct > targetHhi + 10) summaryPoints.push({ text: `Your portfolio is more concentrated than it looks — it behaves like you own only ${effectiveN.toFixed(1)} equally-sized positions. Consider spreading contributions more evenly.`, severity: "warn" })
   if (summaryPoints.length === 0) summaryPoints.push({ text: "Everything looks good — all holdings are within their target ranges and no limits have been breached. Keep following your standard monthly plan.", severity: "ok" })
   summaryPoints.push({ text: `Overall health score: ${healthScore}/100 (${healthLabel}). Last prices recorded: ${snapshotDate}.`, severity: healthScore >= 80 ? "ok" : healthScore >= 60 ? "warn" : "critical" })
@@ -1084,7 +1085,7 @@ export default async function Reports() {
             const responses: Record<string, string> = {
               healthy:   "All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
               elevated:  `Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
-              excessive: `Over the limit — stop buying the ETFs that drive this theme (QQQM and/or SMH) until this comes down. Redirect contributions to ${alt}.`,
+              excessive: `Over the limit — stop buying the ETFs that drive this theme (${displayTicker("QQQM")} and/or ${displayTicker("SMH")}) until this comes down. Redirect contributions to ${alt}.`,
             }
             // Contribution by ETF for this sector
             const contribs = positions.map(p => {

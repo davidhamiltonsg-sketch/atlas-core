@@ -10,7 +10,7 @@
 import { db } from "@/lib/db"
 import { computeLookThrough } from "@/lib/look-through"
 import { evaluateGovernance, type GovCheck, type DigestItem } from "@/lib/governance-status"
-import { isInScope, isUsSited } from "@/lib/approved-alternatives"
+import { isInScope, isActuallyUsSited } from "@/lib/approved-alternatives"
 import { getScheduledEvents } from "@/lib/finnhub"
 import { OPERATING_ASSUMPTIONS } from "@/lib/constants"
 
@@ -95,7 +95,7 @@ export async function buildGovernanceDigest(userId: string): Promise<GovernanceD
     // Compute US-sited ETF value in USD for the UCITS estate-tax check.
     // Atlas positions store value in SGD; divide by 1.35 fallback rate.
     const usSitedValueUsd = positions
-      .filter((p) => isUsSited(p.ticker))
+      .filter((p) => isActuallyUsSited(p.ticker))
       .reduce((s, p) => s + (p.value ?? 0), 0) / 1.35
 
     const gov = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough, usSitedValueUsd })
