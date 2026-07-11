@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
 import {
   ShieldCheck, GitCompare, TrendingUp, Landmark, BarChart3, Coins, Brain,
   Activity, Radar, Gauge, ArrowLeft, Play, Square, Zap, CircleDot, AlertTriangle,
@@ -29,15 +30,15 @@ import {
 
 const C = {
   navy: "#0A0F1E",
-  terminal: "${C.terminal}",
+  terminal: "#060C18",
   card: "#1A2035",
   cardHi: "#212a45",
   line: "#26304A",
-  timestamp: "${C.timestamp}",
+  timestamp: "#3A4D6A",
   dim: "#7C89A8",
   text: "#C7D0E4",
-  label: "${C.label}",
-  bright: "${C.bright}",
+  label: "#EAEEF6",
+  bright: "#F5F7FF",
   gold: "#C9A84C",
   blue: "#4A9EFF",
   green: "#2ECC9A",
@@ -353,7 +354,27 @@ function clockNow() {
   return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0").slice(0, 2)
 }
 
-export function MissionControl({ context, findings }: { context: PortfolioContext; findings?: Record<string, AgentFinding> | null }) {
+const FUND_BUILDING_BLOCKS = [
+  { fund: "IMID · MSCI ACWI IMI", us: "62.8%", tech: "30.5%", semis: "~10%*", note: "SSGA fund page / factsheet", href: "https://www.ssga.com/uk/en_gb/institutional/etfs/state-street-spdr-msci-all-country-world-investable-market-ucits-etf-acc-imid-gy" },
+  { fund: "EQAC · Nasdaq-100", us: "~97%", tech: "~60%*", semis: "~30%*", note: "Invesco fund page / index composition", href: "https://www.invesco.com/uk/en/financial-products/etfs/invesco-eqqq-nasdaq-100-ucits-etf-acc.html" },
+  { fund: "SMH · Semiconductor UCITS", us: "~65%*", tech: "100%", semis: "100%", note: "VanEck holdings / factsheet", href: "https://www.vaneck.com/uk/en/semiconductor-etf" },
+  { fund: "IB01 · US T-bills 0–1y", us: "100%", tech: "0%", semis: "0%", note: "iShares holdings / factsheet", href: "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-01yr-ucits-etf" },
+] as const
+
+function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" | "sbr"; mono: string; lastUpdated: Date | null }) {
+  const rules = variant === "atlas"
+    ? [["US country", "65%", "70%"], ["Info technology", "40%", "45%"], ["Semiconductors", "20%", "25%"], ["Single company", "7%", "8%"]]
+    : [["US country", "68%", "72%"], ["Info technology", "38%", "43%"], ["Semiconductors", "18%", "22%"], ["Single company", "7%", "8%"]]
+  return <section className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-3"><div><SectionLabel mono={mono}>LOOK-THROUGH BASIS</SectionLabel><h2 className="text-sm font-semibold mt-1" style={{ color: C.text }}>Fund building blocks used</h2></div><RefreshLookThroughButton lastUpdated={lastUpdated} compact /></div>
+    <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-[11px]"><thead><tr style={{ color: C.dim, borderBottom: `1px solid ${C.line}` }}><th className="py-2">Fund</th><th>US %</th><th>Info-tech %</th><th>Semis %</th><th>Source / note</th></tr></thead><tbody>{FUND_BUILDING_BLOCKS.map(r=><tr key={r.fund} style={{ borderBottom: `1px solid ${C.line}` }}><td className="py-2 font-semibold">{r.fund}</td><td>{r.us}</td><td>{r.tech}</td><td>{r.semis}</td><td><a href={r.href} target="_blank" rel="noreferrer" className="underline underline-offset-2" style={{ color: C.blue }}>{r.note} ↗</a></td></tr>)}</tbody></table></div>
+    <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>* Estimated from index composition rather than a published single figure. IMID semiconductors are modelled at 8–11% (10% base). SMH US exposure reflects large non-US holdings including TSMC and ASML. Figures move with markets.</p>
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{rules.map(([lens,watch,review])=><div key={lens} className="rounded-lg border p-2" style={{ borderColor:C.line, background:C.navy }}><p className="text-[9px]" style={{color:C.dim}}>{lens}</p><p className={`${mono} mt-1 text-[10px]`}>WATCH {watch} · REVIEW {review}</p></div>)}</div>
+    <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Data older than 95 days blocks concentration-led trades.</p>
+  </section>
+}
+
+export function MissionControl({ context, findings, lookThroughUpdatedAt = null }: { context: PortfolioContext; findings?: Record<string, AgentFinding> | null; lookThroughUpdatedAt?: Date | null }) {
   const AGENTS = useMemo(() => {
     const base = context.variant === "sbr" ? SBR_AGENTS : ATLAS_AGENTS
     if (!findings) return base
@@ -482,7 +503,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
           <div className="flex items-center gap-2.5">
             <span className="mc-live-dot" style={{ background: activeCount ? C.green : brand }} />
             <div>
-              <h1 className={`${spaceGrotesk} text-sm font-bold tracking-wide`} style={{ color: "${C.bright}" }}>
+              <h1 className={`${spaceGrotesk} text-sm font-bold tracking-wide`} style={{ color: C.bright }}>
                 {context.variant === "sbr" ? "SILICON BRICK ROAD" : "ATLAS MISSION CONTROL"}
               </h1>
               <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>
@@ -530,7 +551,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[13px] font-semibold" style={{ color: "${C.label}" }}>{agent.name}</span>
+                      <span className="truncate text-[13px] font-semibold" style={{ color: C.label }}>{agent.name}</span>
                       <StatusDot status={st} />
                     </span>
                     <span className={`${mono} mt-0.5 block truncate text-[10px] tracking-wide`} style={{ color: C.dim }}>
@@ -550,6 +571,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
 
         {/* ── Centre: active mission + execution log ─────────────────────── */}
         <main className="flex min-w-0 flex-col gap-4">
+          <BuildingBlockBasis variant={context.variant} mono={mono} lastUpdated={lookThroughUpdatedAt} />
           {/* Active mission card */}
           <section className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -558,7 +580,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
                   <selectedAgent.icon className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className={`${spaceGrotesk} text-lg font-bold`} style={{ color: "${C.bright}" }}>{selectedAgent.name}</h2>
+                  <h2 className={`${spaceGrotesk} text-lg font-bold`} style={{ color: C.bright }}>{selectedAgent.name}</h2>
                   <p className="text-xs" style={{ color: C.dim }}>{selectedAgent.blurb}</p>
                 </div>
               </div>
@@ -607,7 +629,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
                       <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: a.accent }} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-semibold" style={{ color: "${C.label}" }}>{a.name}</span>
+                          <span className="text-[13px] font-semibold" style={{ color: C.label }}>{a.name}</span>
                           <span className={`${mono} shrink-0 text-[10px]`} style={{ color: C.dim }}>{a.codename}</span>
                         </span>
                         <span className="mt-0.5 block text-xs leading-snug" style={{ color: C.text }}>{a.msg}</span>
@@ -620,7 +642,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
           )}
 
           {/* Execution log — the real-time ops feed */}
-          <section className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: "${C.terminal}", borderColor: C.line }}>
+          <section className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: C.terminal, borderColor: C.line }}>
             <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: C.line }}>
               <div className="flex items-center gap-2">
                 <Activity className="h-3.5 w-3.5" style={{ color: C.green }} />
@@ -634,7 +656,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
               <div className={`${mono} space-y-1 text-[12px] leading-relaxed`}>
                 {log.map(l => (
                   <div key={l.id} className="flex gap-2.5">
-                    <span className="shrink-0 tabular-nums" style={{ color: "${C.timestamp}" }}>{l.time}</span>
+                    <span className="shrink-0 tabular-nums" style={{ color: C.timestamp }}>{l.time}</span>
                     <span className="w-[86px] shrink-0 truncate" style={{ color: l.accent }}>{l.codename}</span>
                     <span className="min-w-0 flex-1" style={{ color: LEVEL_COLOR[l.level] }}>
                       {l.msg}
@@ -655,7 +677,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
 
           <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
             <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>TOTAL VALUE</p>
-            <p className={`${spaceGrotesk} mt-1 text-2xl font-bold tabular-nums`} style={{ color: "${C.bright}" }}>
+            <p className={`${spaceGrotesk} mt-1 text-2xl font-bold tabular-nums`} style={{ color: C.bright }}>
               {fmtMoney(context.totalValue, context.currency)}
             </p>
             <div className="mt-1 flex items-center gap-2">
@@ -689,7 +711,7 @@ export function MissionControl({ context, findings }: { context: PortfolioContex
               {context.holdings.map(h => (
                 <li key={h.ticker} className="flex items-center gap-2.5 text-xs">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: h.color }} />
-                  <span className={`${mono} w-14 shrink-0 font-semibold`} style={{ color: "${C.label}" }}>{h.ticker}</span>
+                  <span className={`${mono} w-14 shrink-0 font-semibold`} style={{ color: C.label }}>{h.ticker}</span>
                   <span className="min-w-0 flex-1 truncate" style={{ color: C.dim }}>{h.name}</span>
                   <span className={`${mono} shrink-0 tabular-nums`} style={{ color: C.text }}>{h.pct.toFixed(1)}%</span>
                 </li>

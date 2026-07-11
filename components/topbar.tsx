@@ -2,6 +2,7 @@
 
 import { Menu, LogOut, User } from "lucide-react"
 import { logoutAction } from "@/app/logout-action"
+import { selectPortfolio } from "@/app/actions/portfolio-selection"
 import type { ConstitutionId } from "@/lib/constitutions"
 
 interface TopbarProps {
@@ -14,7 +15,7 @@ interface TopbarProps {
 
 const VERSION_PILL: Record<ConstitutionId, { label: string; cls: string; dot: string }> = {
   "atlas-core":         { label: "v1.5", cls: "border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400", dot: "bg-violet-500" },
-  "silicon-brick-road": { label: "v2.2", cls: "border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
+  "silicon-brick-road": { label: "v3.2", cls: "border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
 }
 
 export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId = "atlas-core" }: TopbarProps) {
@@ -38,6 +39,20 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
 
       {/* Right: user + version pill + logout */}
       <div className="shrink-0 flex items-center gap-2">
+        {userName && (
+          <form action={selectPortfolio} className="hidden sm:block">
+            <select
+              name="portfolio"
+              value={constitutionId}
+              onChange={(event) => event.currentTarget.form?.requestSubmit()}
+              aria-label="Active portfolio"
+              className="h-8 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="atlas-core">Atlas Core</option>
+              <option value="silicon-brick-road">Silicon Brick Road</option>
+            </select>
+          </form>
+        )}
         <span className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${pill.cls}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${pill.dot}`} />
           {pill.label}

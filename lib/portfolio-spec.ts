@@ -27,6 +27,10 @@ export interface AtlasFundSpec {
   driftLow?: number       // Art. VIII hard-underweight trigger (%)
   amberHigh?: number      // soft/amber zone upper bound below the cap (%)
   expectedReturn?: ReturnAssumption
+  hardFloor?: number | null
+  isin?: string
+  cusip?: string
+  exchange?: string
 }
 
 export interface SbrFundSpec {
@@ -37,6 +41,8 @@ export interface SbrFundSpec {
   hardCap: number | null  // hard cap (%)
   floor?: number          // safety floor (A35) (%)
   expectedReturn?: ReturnAssumption
+  isin?: string
+  exchange?: string
 }
 
 // ── Atlas Core (David · USD · to 2045) ───────────────────────────────────────
@@ -48,60 +54,50 @@ export const ATLAS_SPEC = {
   horizonYear: 2045,
   forecastBenchmarksAsOf: "Jun 2026",
   funds: [
-    { ticker: "VWRA", target: 52, band: 6,   hardCap: 60,   driftLow: 42, expectedReturn: { conservative: 0.06,  base: 0.095, aggressive: 0.12 } },
-    { ticker: "VOO",  target: 0,  band: 0,   hardCap: null,               expectedReturn: { conservative: 0.065, base: 0.10,  aggressive: 0.13 } },
-    { ticker: "VFEA", target: 8,  band: 3,   hardCap: 13,   driftLow: 3,  expectedReturn: { conservative: 0.03,  base: 0.065, aggressive: 0.10 } },
-    { ticker: "EQQQ", target: 23, band: 5,   hardCap: 30,   driftLow: 15, expectedReturn: { conservative: 0.07,  base: 0.115, aggressive: 0.16 } },
-    { ticker: "SEMI", target: 10, band: 3,   hardCap: 12,   driftLow: 5, amberHigh: 11, expectedReturn: { conservative: 0.06,  base: 0.13,  aggressive: 0.20 } },
-    { ticker: "BTC",  target: 7,  band: 1,   hardCap: 8,                  expectedReturn: { conservative: -0.05, base: 0.12,  aggressive: 0.25 } },
-    { ticker: "IBIT", target: 0,  band: 1,   hardCap: 8,                  expectedReturn: { conservative: -0.05, base: 0.12,  aggressive: 0.25 } },
-    { ticker: "SGOV", target: 0,  band: 2.5, hardCap: null },
-    { ticker: "A35",  target: 0,  band: 0,   hardCap: null,               expectedReturn: { conservative: 0.01,  base: 0.03,  aggressive: 0.05 } },
+    { ticker: "IMID", target: 67.5, band: 5, hardFloor: 60, hardCap: 75, driftLow: 60, isin: "IE00B3YLTY66", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.085, aggressive: 0.12 } },
+    { ticker: "EQAC", target: 15, band: 3, hardFloor: 10, hardCap: 20, driftLow: 10, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
+    { ticker: "SMH", target: 7.5, band: 2.5, hardFloor: 3, hardCap: 10, driftLow: 3, amberHigh: 9, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
+    { ticker: "BTC", target: 5, band: 2, hardFloor: null, hardCap: 8, cusip: "46438F101", exchange: "NASDAQ", expectedReturn: { conservative: -0.10, base: 0.12, aggressive: 0.25 } },
+    { ticker: "IB01", target: 5, band: 2, hardFloor: 3, hardCap: 10, driftLow: 3, isin: "IE00BGSF1X88", exchange: "LSE", expectedReturn: { conservative: 0.02, base: 0.035, aggressive: 0.05 } },
   ] as AtlasFundSpec[],
-  // Art. XII / §4.3 combined EQQQ + SEMI tech ceiling (soft, hard).
-  combinedTech: { tickers: ["EQQQ", "SEMI"], soft: 38, hard: 42 },
+  combinedTech: { tickers: ["EQAC", "SMH"], soft: 25, hard: 25 },
+  combinedSatellites: { tickers: ["EQAC", "SMH", "BTC"], hard: 33 },
   // §4 look-through sector caps (soft, hard).
   lookThroughSectors: {
-    semiconductor: { soft: 16, hard: 20 },
-    digital:       { soft: 48, hard: 54 },
-    us:            { soft: 66, hard: 70 },
-    ai:            { soft: 38, hard: 46 },
+    semiconductor: { soft: 15, hard: 20 },
+    digital:       { soft: 40, hard: 45 },
+    us:            { soft: 65, hard: 70 },
+    ai:            { soft: 30, hard: 38 },
   },
 } as const
 
-// ── Silicon Brick Road (Dami · SGD · to a S$120k deposit) ────────────────────
+// ── Silicon Brick Road (Dami · SGD · flexible medium-term growth) ────────────
 export const SBR_SPEC = {
   id: "silicon-brick-road",
   currency: "SGD",
   monthlyContribution: 1000,
-  targetValue: 120000,
+  targetValue: 0,
+  hasFixedTarget: false,
+  planningHorizonMonths: 120,
   forecastBenchmarksAsOf: "Jun 2026",
   funds: [
-    { ticker: "VWRA", target: 50, rangeLow: 44, rangeHigh: 56, hardCap: 62, expectedReturn: { conservative: 0.06, base: 0.095, aggressive: 0.12 } },
-    { ticker: "EQQQ", target: 25, rangeLow: 20, rangeHigh: 30, hardCap: 30, expectedReturn: { conservative: 0.07, base: 0.115, aggressive: 0.16 } },
-    { ticker: "SEMI", target: 15, rangeLow: 11, rangeHigh: 19, hardCap: 20, expectedReturn: { conservative: 0.06, base: 0.13,  aggressive: 0.20 } },
-    { ticker: "A35",  target: 10, rangeLow: 7,  rangeHigh: 13, hardCap: null, floor: 7, expectedReturn: { conservative: 0.01, base: 0.03,  aggressive: 0.05 } },
+    { ticker: "IMID", target: 80, rangeLow: 75, rangeHigh: 85, floor: 70, hardCap: 90, isin: "IE00B3YLTY66", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.085, aggressive: 0.12 } },
+    { ticker: "EQAC", target: 10, rangeLow: 7, rangeHigh: 13, floor: 5, hardCap: 15, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
+    { ticker: "SMH", target: 5, rangeLow: 3, rangeHigh: 7, floor: 0, hardCap: 8, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
+    { ticker: "IB01", target: 5, rangeLow: 3, rangeHigh: 8, floor: 3, hardCap: 10, isin: "IE00BGSF1X88", exchange: "LSE", expectedReturn: { conservative: 0.02, base: 0.035, aggressive: 0.05 } },
   ] as SbrFundSpec[],
-  combined: { tickers: ["EQQQ", "SEMI"], warning: 40, hard: 45, resume: 42 },
-  totalEquityMaxPct: 92,
-  drawdownTriggerPct: 15,
-  skipAtHighPct: 3,
-  phases: [
-    { key: "I",   min: 0,      max: 72000 },
-    { key: "II",  min: 72000,  max: 96000  },
-    { key: "III", min: 96000,  max: 114000 },
-    { key: "IV",  min: 114000, max: null },
-  ],
+  combined: { tickers: ["EQAC", "SMH"], warning: 18, hard: 20, resume: 17 },
+  totalEquityMaxPct: 97,
+  drawdownTriggerPct: 30,
+  skipAtHighPct: 0,
+  phases: [{ key: "GROWTH", min: 0, max: null }],
 } as const
 
 // Phase-dependent caps for SBR — as the portfolio matures toward the property goal,
 // semiconductor and tech ceilings tighten to reduce sequencing risk. Phase I values
 // match SBR_SPEC.combined so no existing code that reads the static spec breaks.
 export const SBR_PHASE_CAPS = {
-  I:   { smhHard: 20, combinedHard: 45, combinedWarning: 40, combinedResume: 42 },
-  II:  { smhHard: 18, combinedHard: 42, combinedWarning: 38, combinedResume: 39 },
-  III: { smhHard: 16, combinedHard: 38, combinedWarning: 35, combinedResume: 36 },
-  IV:  { smhHard: 14, combinedHard: 33, combinedWarning: 30, combinedResume: 31 },
+  GROWTH: { smhHard: 8, combinedHard: 20, combinedWarning: 18, combinedResume: 17 },
 } as const
 export type SbrPhaseKey = keyof typeof SBR_PHASE_CAPS
 

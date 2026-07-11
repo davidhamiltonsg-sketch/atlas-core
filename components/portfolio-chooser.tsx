@@ -18,7 +18,7 @@ const PANELS = [
   {
     id: "silicon-brick-road",
     name: "Silicon Brick Road",
-    tagline: "Saving toward your HDB deposit",
+    tagline: "Flexible medium-term wealth growth",
     Mark: SbrMark,
     vars: { "--brand-a": "199 95% 46%", "--brand-b": "221 88% 55%", "--brand-c": "189 94% 40%", "--primary": "212 92% 48%" },
   },

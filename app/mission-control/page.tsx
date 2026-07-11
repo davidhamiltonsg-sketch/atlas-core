@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google"
 import { getSession } from "@/lib/session"
-import { constitutionIdForEmail, constitutionForEmail } from "@/lib/constitutions"
+import { constitutionForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
@@ -15,6 +15,7 @@ import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-me
 import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { getLiveMarketPositions } from "@/lib/finnhub"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 
 // Mission Control is a personal, auth-gated console — never statically cached.
 export const dynamic = "force-dynamic"
@@ -42,39 +43,34 @@ const SAMPLE_CONTEXT: PortfolioContext = {
   live: false,
   variant: "atlas",
   holdings: [
-    { ticker: "VWRA", name: "World Equity Core",   pct: 34.0, color: "#4A9EFF" },
-    { ticker: "EQQQ", name: "Growth Sleeve",       pct: 23.0, color: "#C9A84C" },
-    { ticker: "VOO",  name: "US Large Cap",         pct: 18.0, color: "#2ECC9A" },
-    { ticker: "VFEA", name: "Emerging Markets",     pct: 9.0,  color: "#8B7FE8" },
-    { ticker: "BTC",  name: "Bitcoin Sleeve",       pct: 7.0,  color: "#E0913A" },
-    { ticker: "SGOV", name: "Cash / T-Bills",       pct: 3.1,  color: "#5A6B8C" },
-    { ticker: "A35",  name: "SG Bonds",             pct: 5.9,  color: "#3EC9C0" },
+    { ticker: "IMID", name: "Global equity core", pct: 67.5, color: "#4A9EFF" },
+    { ticker: "EQAC", name: "Nasdaq-100 tilt", pct: 15, color: "#C9A84C" },
+    { ticker: "SMH", name: "UCITS semiconductor tilt", pct: 7.5, color: "#8B7FE8" },
+    { ticker: "BTC", name: "Bitcoin sleeve", pct: 5, color: "#E0913A" },
+    { ticker: "IB01", name: "Treasury reserve", pct: 5, color: "#3EC9C0" },
   ],
 }
 
 // Silicon Brick Road sample — its four funds, plain-English names, SGD.
 const SBR_SAMPLE_CONTEXT: PortfolioContext = {
   label: "Silicon Brick Road",
-  totalValue: 18_400,
+  totalValue: 0,
   currency: "SGD",
   dayChangePct: 0.31,
   cashPct: null,
-  driftAlerts: 1,
+  driftAlerts: 0,
   live: false,
   variant: "sbr",
-  holdings: [
-    { ticker: "VWRA", name: "Global fund",          pct: 60.0, color: "#4A9EFF" },
-    { ticker: "A35",  name: "Singapore bond fund",   pct: 20.0, color: "#2ECC9A" },
-    { ticker: "EQQQ", name: "Nasdaq fund",           pct: 10.0, color: "#C9A84C" },
-    { ticker: "SEMI", name: "Chip-maker fund",       pct: 10.0, color: "#E0913A" },
-  ],
+  holdings: [],
 }
 
-async function loadPortfolioContext(): Promise<PortfolioContext> {
+async function loadPortfolioContext(active?: { constitutionId: "atlas-core" | "silicon-brick-road"; userId: string }): Promise<PortfolioContext> {
   const session = await getSession()
   if (!session) return SAMPLE_CONTEXT
 
-  const constitution = constitutionForEmail(session.email)
+  const constitution = active
+    ? (active.constitutionId === "silicon-brick-road" ? constitutionForEmail("dutszm@gmail.com") : constitutionForEmail(null))
+    : constitutionForEmail(session.email)
   const isSbr = constitution.id === "silicon-brick-road"
   const label = isSbr ? "Silicon Brick Road" : "Atlas Core"
   const fallback = isSbr ? SBR_SAMPLE_CONTEXT : SAMPLE_CONTEXT
@@ -82,7 +78,7 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
   try {
 
     const holdings = await db.holding.findMany({
-      where: { userId: session.userId },
+      where: { userId: active?.userId ?? session.userId },
       include: { snapshots: { orderBy: { date: "desc" }, take: 2 } },
     })
 
@@ -813,22 +809,34 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
 }
 
 export default async function MissionControlPage() {
-  const [context, session] = await Promise.all([
-    loadPortfolioContext(),
-    getSession(),
-  ])
+  const session = await getSession()
+  const active = session ? await activePortfolioContext(session) : null
+  const context = await loadPortfolioContext(active ? { constitutionId: active.constitutionId, userId: active.owner.id } : undefined)
 
   let findings: Record<string, AgentFinding> | null = null
   if (session) {
-    const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+    const isSbr = active?.constitutionId === "silicon-brick-road"
     findings = isSbr
-      ? await loadSbrFindings(session.userId)
-      : await loadAgentFindings(session.userId)
+      ? await loadSbrFindings(active?.owner.id ?? session.userId)
+      : await loadAgentFindings(active?.owner.id ?? session.userId)
   }
+
+  const requiredLookThrough = session
+    ? await db.etfLookThrough.findMany({
+        where: { ticker: { in: ["IMID", "EQAC", "SMH", "IB01"] } },
+        select: { ticker: true, updatedAt: true },
+      })
+    : []
+  // The portfolio is only as fresh as its oldest required building block.
+  // Missing funds deliberately show as "never refreshed" rather than borrowing
+  // a newer timestamp from another fund.
+  const lookThroughUpdatedAt = requiredLookThrough.length === 4
+    ? new Date(Math.min(...requiredLookThrough.map(row => row.updatedAt.getTime())))
+    : null
 
   return (
     <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <MissionControl context={context} findings={findings} />
+      <MissionControl context={context} findings={findings} lookThroughUpdatedAt={lookThroughUpdatedAt} />
     </div>
   )
 }

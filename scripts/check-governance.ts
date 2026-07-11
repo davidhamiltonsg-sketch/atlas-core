@@ -33,7 +33,7 @@ eq("target VWRA", TICKER_TARGETS.VWRA, 52)
 eq("target EQQQ", TICKER_TARGETS.EQQQ, 23)
 eq("target SEMI", TICKER_TARGETS.SEMI, 10)
 eq("target VFEA", TICKER_TARGETS.VFEA, 8)
-eq("target BTC",  TICKER_TARGETS.BTC,  7)
+eq("target BTC",  TICKER_TARGETS.BTC,  5)
 
 // ── Art. VII hard-drift triggers (v1.1) ──────────────────────────────────────
 eq("hard VWRA", HARD_THRESHOLDS.VWRA, { low: 42, high: 60 })                    // Art. VII: cap 60%
@@ -44,8 +44,8 @@ eq("hard BTC",  HARD_THRESHOLDS.BTC,  { high: 8 })
 
 // ── §4.1 BTC halving-cycle caps ──────────────────────────────────────────────
 // The bull phase holds the cap at 8% (target 7, soft 8), same as normal — it does not widen on the cycle.
-eq("BTC bull  target/soft/hard", [BTC_CYCLE_MODIFIERS.post_halving_bull.target, BTC_CYCLE_MODIFIERS.post_halving_bull.softHigh, BTC_CYCLE_MODIFIERS.post_halving_bull.hardHigh], [7, 8, 8])
-eq("BTC normal target/soft/hard", [BTC_CYCLE_MODIFIERS.normal.target, BTC_CYCLE_MODIFIERS.normal.softHigh, BTC_CYCLE_MODIFIERS.normal.hardHigh], [7, 8, 8])
+eq("BTC bull  target/soft/hard", [BTC_CYCLE_MODIFIERS.post_halving_bull.target, BTC_CYCLE_MODIFIERS.post_halving_bull.softHigh, BTC_CYCLE_MODIFIERS.post_halving_bull.hardHigh], [5, 7, 8])
+eq("BTC normal target/soft/hard", [BTC_CYCLE_MODIFIERS.normal.target, BTC_CYCLE_MODIFIERS.normal.softHigh, BTC_CYCLE_MODIFIERS.normal.hardHigh], [5, 7, 8])
 eq("BTC bear  target/hard", [BTC_CYCLE_MODIFIERS.bear.target, BTC_CYCLE_MODIFIERS.bear.hardHigh], [5, 6])
 
 // ── §4.3 combined tech ceiling ───────────────────────────────────────────────

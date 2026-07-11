@@ -4,10 +4,10 @@ import { getSession } from "@/lib/session"
 import { fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { importIbkrActivityForUser } from "@/lib/holdings-sync"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
-
-const CORE = new Set<string>(CORE_TICKERS)
-const inScope = (sym: string) => CORE.has(sym.trim().toUpperCase())
+import { activePortfolioContext } from "@/lib/active-portfolio"
+import { CONSTITUTIONS } from "@/lib/constitutions"
 
 export const maxDuration = 30
 
@@ -15,11 +15,18 @@ export const maxDuration = 30
 export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
+  const active = await activePortfolioContext(session)
+  const allowed = new Set<string>([
+    ...CORE_TICKERS,
+    ...CONSTITUTIONS[active.constitutionId].funds.map((f) => f.ticker),
+  ])
+  const inScope = (sym: string) => allowed.has(sym.trim().toUpperCase())
 
-  const token        = process.env.IBKR_FLEX_TOKEN
-  const activityId   = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY
-  const positionsId  = process.env.IBKR_FLEX_QUERY_ID
-  const queryId      = activityId ?? positionsId
+  // Use the active portfolio owner's IBKR account so either authorised login can
+  // switch portfolios without silently syncing the wrong broker account.
+  const { token, positionsQuery: positionsId, activityQuery: activityId } =
+    ibkrCredentialsFor(active.constitutionId)
+  const queryId = activityId ?? positionsId
 
   console.log("[sync-ibkr/activity] token present:", !!token, "activityId:", !!activityId, "fallback positionsId:", !!positionsId)
 
@@ -44,7 +51,7 @@ export async function POST() {
 
   // Fetch existing trade ibkr IDs to mark already-imported rows
   const existingTrades = await db.trade.findMany({
-    where: { userId: session.userId, note: { contains: "[ibkr:" } },
+    where: { userId: active.owner.id, note: { contains: "[ibkr:" } },
     select: { note: true },
   })
   const importedTradeIds = new Set(
@@ -55,7 +62,7 @@ export async function POST() {
 
   // Fetch existing dividend ibkr IDs
   const existingDivs = await db.dividend.findMany({
-    where: { userId: session.userId, note: { contains: "[ibkr:" } },
+    where: { userId: active.owner.id, note: { contains: "[ibkr:" } },
     select: { note: true },
   })
   const importedDivIds = new Set(
@@ -66,7 +73,7 @@ export async function POST() {
 
   // Get portfolio holdings for symbol matching
   const holdings = await db.holding.findMany({
-    where: { userId: session.userId },
+    where: { userId: active.owner.id },
     select: { id: true, ticker: true },
   })
   const holdingMap = new Map(holdings.map(h => [h.ticker.toUpperCase(), h.id]))
@@ -93,9 +100,11 @@ export async function POST() {
   return NextResponse.json({
     executions,
     dividends,
+    ledger: result.ledger,
     accountId: result.accountId,
     newTrades: executions.filter(e => !e.alreadyImported).length,
     newDividends: dividends.filter(d => !d.alreadyImported).length,
+    newLedgerEntries: result.ledger.length,
   })
 }
 
@@ -103,6 +112,7 @@ export async function POST() {
 export async function PUT(req: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
+  const active = await activePortfolioContext(session)
 
   const body = await req.json() as {
     executions: Array<{
@@ -113,12 +123,16 @@ export async function PUT(req: Request) {
       transactionID: string; symbol: string; amount: number
       payDate: string; description: string; holdingId: string | null
     }>
+    ledger?: Array<{
+      externalId: string; category: string; symbol: string; amount: number; currency: string
+      amountBase: number | null; fxRate: number | null; date: string; description: string; rawType: string
+    }>
   }
 
   // Reuse the shared importer (same dedupe-by-id + holding-sync the cron uses), so the manual
   // and automated paths can never diverge. Forex rows are filtered inside the importer.
-  const { trades: tradesImported, dividends: dividendsImported, tickers } =
-    await importIbkrActivityForUser(session.userId, body.executions ?? [], body.dividends ?? [])
+  const { trades: tradesImported, dividends: dividendsImported, ledger: ledgerImported, contributions: contributionsImported, tickers } =
+    await importIbkrActivityForUser(active.owner.id, body.executions ?? [], body.dividends ?? [], body.ledger ?? [])
 
   if (tickers.length > 0) {
     for (const p of ["/", "/trades", "/contributions", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
@@ -126,5 +140,5 @@ export async function PUT(req: Request) {
     }
   }
 
-  return NextResponse.json({ tradesImported, dividendsImported })
+  return NextResponse.json({ tradesImported, dividendsImported, ledgerImported, contributionsImported })
 }

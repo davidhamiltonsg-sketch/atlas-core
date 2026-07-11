@@ -391,7 +391,7 @@ export function computeNextBestMove(positions: PositionInput[], totalValue: numb
       return {
         severity: "critical", ticker: trim.ticker,
         action: `Trim Bitcoin back to target`,
-        what: `${sleeveLabel} is at ${bitcoinPct.toFixed(1)}%, over its ${btcCap}% cap. Trim ${trim.ticker} to bring the sleeve back toward 7%.`,
+        what: `${sleeveLabel} is at ${bitcoinPct.toFixed(1)}%, over its ${btcCap}% cap. Trim ${trim.ticker} to bring the sleeve back toward ${BITCOIN_SLEEVE_TARGET_PCT}%.`,
         why: `Bitcoin is over its ${btcCap}% cycle-aware hard cap (${getBtcModifier(undefined, opts.btcCyclePhase).label} phase, §4.1). The cap applies to BTC and IBIT combined — it is the concentration the system protects first.`,
         when: "At your next dealing window (respecting the 90-day hold).",
         color: trim.color,

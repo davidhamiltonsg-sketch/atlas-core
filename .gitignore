@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# local databases and portfolio data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
 # next.js
 /.next/
 /out/

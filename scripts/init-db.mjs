@@ -118,7 +118,40 @@ async function main() {
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS IbkrLedgerEntry (
+      id          TEXT PRIMARY KEY,
+      userId      TEXT NOT NULL,
+      externalId  TEXT NOT NULL,
+      category    TEXT NOT NULL,
+      symbol      TEXT,
+      amount      REAL NOT NULL,
+      currency    TEXT NOT NULL,
+      amountBase  REAL,
+      fxRate      REAL,
+      date        DATETIME NOT NULL,
+      description TEXT,
+      rawType     TEXT,
+      createdAt   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE,
+      UNIQUE (userId, externalId)
+    );
+    CREATE INDEX IF NOT EXISTS IbkrLedgerEntry_userId_date_idx ON IbkrLedgerEntry(userId, date);
+    CREATE INDEX IF NOT EXISTS IbkrLedgerEntry_userId_category_idx ON IbkrLedgerEntry(userId, category);
   `)
+
+  // SQLite has no portable ADD COLUMN IF NOT EXISTS. Inspect first so startup remains
+  // idempotent on both old Railway volumes and newly-created databases.
+  function ensureColumn(table, column, definition) {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all().map((row) => row.name)
+    if (columns.length === 0) return
+    if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  }
+  ensureColumn("Snapshot", "costBasis", "REAL")
+  ensureColumn("Snapshot", "unrealizedPnl", "REAL")
+  ensureColumn("Trade", "commission", "REAL NOT NULL DEFAULT 0")
+  ensureColumn("Trade", "realizedPnl", "REAL")
+  ensureColumn("Trade", "netCash", "REAL")
 
   console.log("[init-db] Schema ready.")
 
@@ -132,9 +165,16 @@ async function main() {
 
   console.log("[init-db] No users found — seeding initial data...")
 
-  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@atlas.local"
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "atlas2025"
+  const adminEmail = process.env.ADMIN_EMAIL
+  const adminPassword = process.env.ADMIN_PASSWORD
   const adminName = process.env.ADMIN_NAME ?? "Portfolio Owner"
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD are required when seeding a new database")
+  }
+  if (adminPassword.length < 14) {
+    throw new Error("ADMIN_PASSWORD must be at least 14 characters")
+  }
 
   const passwordHash = await hashPassword(adminPassword)
   const adminId = cuid()
@@ -151,7 +191,7 @@ async function main() {
     { ticker: "EQQQ", name: "Invesco Nasdaq-100 UCITS ETF",           targetPct: 23, hardCapPct: 31, toleranceBand: 4, color: "#8b5cf6", units: 63,   price: 295.02, value: 23792.85 },
     { ticker: "SEMI", name: "VanEck Semiconductor UCITS ETF",         targetPct: 10, hardCapPct: 15, toleranceBand: 2, color: "#a78bfa", units: 24,   price: 573.79, value: 17628.63 },
     { ticker: "VFEA", name: "Vanguard FTSE Emerging Markets UCITS ETF", targetPct: 8,  hardCapPct: 12, toleranceBand: 2, color: "#c4b5fd", units: 109,  price: 58.94,  value: 8223.72  },
-    { ticker: "BTC",  name: "Grayscale Bitcoin Mini ETF",            targetPct: 7,  hardCapPct: 8,  toleranceBand: 1, color: "#f59e0b", units: 154,  price: 33.58,  value: 6620.85  },
+    { ticker: "BTC",  name: "Bitcoin exposure",                       targetPct: 5,  hardCapPct: 8,  toleranceBand: 1, color: "#f59e0b", units: 154,  price: 33.58,  value: 6620.85  },
   ]
 
   for (const h of holdings) {
@@ -180,7 +220,7 @@ async function main() {
     ["SEMI — Healthy Range 8–12%", "SEMI target 10%. Healthy range 8–12%. Soft drift above 12% — halt accumulation. Hard drift above 15% — selectively trim.", "SEMI Governance"],
     ["SEMI — AI Infrastructure Tilt Identity Rule", "SEMI is a targeted AI infrastructure tilt, not the portfolio foundation. Semiconductor concentration must never become the dominant portfolio risk factor.", "SEMI Governance"],
     ["VFEA — Healthy Range 6–10%", "VFEA target 8%. Healthy range 6–10%. Soft drift below 6% or above 10%. Hard drift below 4% or above 12%.", "VFEA Governance"],
-    ["BTC — Healthy Range 5–8%", "BTC target 7%. Healthy range 5–8%. Soft drift above 8%. Hard drift above 8% — trim toward 7% target.", "BTC Governance"],
+    ["BTC — Healthy Range 4–7%", "Bitcoin sleeve target 5%. Healthy range 4–7%. Hard drift above 8% — first redirect contributions, then trim toward 5% only if the breach persists.", "BTC Governance"],
     ["BTC — Optionality Overlay Identity Rule", "BTC is asymmetric optionality — not defensive capital, not retirement infrastructure. Must never become the largest or second-largest holding.", "BTC Governance"],
     ["Semiconductor Dependency — Cap 16%/20%", "Total semiconductor exposure must remain below 16%. Elevated 16–20%: pause SEMI accumulation. Excessive above 20%: halt SEMI; redirect to VWRA.", "Overlap & Concentration"],
     ["Digital Economy Dependency — Cap 48%/54%", "Combined digital economy exposure must remain below 48%. Elevated 48–54%: increase VWRA/VFEA. Excessive above 54%: halt EQQQ and SEMI.", "Overlap & Concentration"],

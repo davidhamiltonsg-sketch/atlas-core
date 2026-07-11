@@ -16,6 +16,7 @@
 import type { NextMove, DcaPlan, DcaAllocation } from "@/lib/next-best-move"
 import { SILICON_BRICK_ROAD, type Constitution, type ConstitutionPhase } from "@/lib/constitutions"
 import { SBR_PHASE_CAPS, A35_LOT_SIZE } from "@/lib/portfolio-spec"
+import { decidePortfolio } from "@/lib/portfolio-engine-v2"
 
 export interface SbrPosition {
   ticker: string
@@ -42,7 +43,7 @@ export interface SbrEngineOpts {
 const A35_FLOOR = SILICON_BRICK_ROAD.funds.find((f) => f.ticker === "A35")?.floor ?? 7
 
 export function getPhaseCaps(phaseKey: string): typeof SBR_PHASE_CAPS[keyof typeof SBR_PHASE_CAPS] {
-  return SBR_PHASE_CAPS[phaseKey as keyof typeof SBR_PHASE_CAPS] ?? SBR_PHASE_CAPS.I
+  return SBR_PHASE_CAPS[phaseKey as keyof typeof SBR_PHASE_CAPS] ?? SBR_PHASE_CAPS.GROWTH
 }
 
 export function sbrPhase(totalValue: number, c: Constitution = SILICON_BRICK_ROAD): ConstitutionPhase {
@@ -165,6 +166,10 @@ export function computeSbrNextMove(
   opts: SbrEngineOpts = {},
   c: Constitution = SILICON_BRICK_ROAD,
 ): NextMove {
+  if (c.version === "3.2") return decidePortfolio(c, positions, c.monthlyContribution).move
+  /* Legacy v2.3 implementation retained temporarily below for migration diff history.
+     It is unreachable and will be removed after the v3.2 production soak. */
+  // eslint-disable-next-line no-unreachable
   const branch = sbrRoute(positions, totalValue, opts, c)
 
   switch (branch.tag) {
@@ -347,6 +352,8 @@ export function computeSbrDca(
   opts: SbrEngineOpts = {},
   c: Constitution = SILICON_BRICK_ROAD,
 ): DcaPlan {
+  if (c.version === "3.2") return decidePortfolio(c, positions, monthly).contribution
+  // eslint-disable-next-line no-unreachable
   const alloc: Record<string, DcaAllocation> = {}
   const phase = sbrPhase(Math.max(0, positions.reduce((s, p) => s + p.value, 0)), c)
   const targets = phase.targets ?? Object.fromEntries(c.funds.map((f) => [f.ticker, f.target]))

@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { buildGovernanceDigest } from "@/lib/governance-digest"
 import { buildSbrDigest } from "@/lib/sbr-digest"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { authorizeCron } from "@/lib/cron-auth"
 import {
   sendGovernanceDigestEmail,
   sendSbrDigestEmail,
@@ -23,15 +24,8 @@ export const dynamic = "force-dynamic"
 // Auth: Bearer CRON_SECRET header (sent automatically by Vercel Cron; set manually
 // in Railway cron configuration).
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    const auth = req.headers.get("authorization")
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-  } else {
-    console.warn("[cron/daily] CRON_SECRET not set — endpoint is unauthenticated.")
-  }
+  const authError = authorizeCron(req)
+  if (authError) return authError
 
   const users = await db.user.findMany({ select: { id: true, email: true } })
   const results: Array<{

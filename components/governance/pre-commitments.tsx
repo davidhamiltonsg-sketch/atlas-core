@@ -27,7 +27,7 @@ const GROUPS: Group[] = [
     rules: [
       { id: "B1", name: "Don't buy the top", body: "Do not add to any position within ~3% of its 52-week high. The broad-market anchor (VWRA) is exempt. Redirect skipped money to the anchor or hold it." },
       { id: "B2", name: "Three-tranche entry", body: "Never deploy full intended capital on the first signal. Split 30% / 40% / 30%: 30% on the first dip, 40% after three green weeks from the trough, 30% once the uptrend confirms." },
-      { id: "B3", name: "Accumulate conviction on weakness", body: "An underweight conviction holding (e.g. BTC below its 7% target) is accumulated on weakness toward target, under its cap — never exited for being down." },
+      { id: "B3", name: "Accumulate conviction on weakness", body: "An underweight conviction holding (e.g. the Bitcoin sleeve below its 5% target) is accumulated toward target, under its cap — never exited merely for being down." },
     ],
   },
   {

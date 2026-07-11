@@ -25,6 +25,8 @@ import {
   type BtcCyclePhase,
 } from "@/lib/constitution"
 import { displayTicker } from "@/lib/approved-alternatives"
+import { ATLAS_CORE } from "@/lib/constitutions"
+import { decidePortfolio } from "@/lib/portfolio-engine-v2"
 
 // ─── Input types ─────────────────────────────────────────────────────────────
 
@@ -127,6 +129,31 @@ export function computeLadder(
   totalValue: number,
   opts: LadderOptions = {}
 ): LadderInstruction {
+  if (ATLAS_CORE.version === "2.2") {
+    const decision = decidePortfolio(ATLAS_CORE, rawPositions)
+    const m = decision.move
+    const firedStep = decision.state === "transition" ? 1 : m.severity === "critical" ? 2 : m.severity === "medium" ? 3 : 4
+    const labels = ["Legacy migration", "Hard limits", "Contribution routing", "Hold course"]
+    const steps: LadderStep[] = labels.map((label, i) => ({
+      step: i + 1,
+      label,
+      citation: `Constitution v2.2 · Article ${i + 3}`,
+      status: i + 1 < firedStep ? "passed" : i + 1 === firedStep ? "fired" : "not_reached",
+    }))
+    return {
+      firedStep,
+      headline: m.action,
+      instruction: m.what,
+      rationale: m.why,
+      when: m.when,
+      ticker: m.ticker,
+      severity: m.severity,
+      citation: decision.state === "transition" ? "Constitution v2.2 · Migration protocol" : "Constitution v2.2 · Contribution and limits",
+      exceptions: decision.legacyTickers.length ? [`Legacy positions: ${decision.legacyTickers.join(", ")}`] : [],
+      steps,
+      isTerminal: m.severity === "none",
+    }
+  }
   const hasBalance = totalValue > 0
   const positions   = applyBitcoinSleeve(rawPositions)
   const market      = opts.market ?? {}
@@ -435,7 +462,7 @@ export function computeLadder(
   steps[6].reason = "All positions within band — healthy"
   return build(7, {
     headline: "Standard DCA",
-    instruction: `Invest this month's contribution at target weights: VWRA 52% · EQQQ 23% · SEMI 10% · VFEA 8% · Bitcoin sleeve 7%. Split by those proportions and round to nearest whole unit.`,
+    instruction: `Invest this month's contribution at target weights: VWRA 54% · EQQQ 23% · SEMI 10% · VFEA 8% · Bitcoin sleeve 5%. Split by those proportions and round to nearest whole unit.`,
     rationale: "All positions healthy and within their bands (Art. XIII Step 7). Discipline beats tinkering — stay the course.",
     when: "Dealing window: 3rd business day after the 15th through month-end.",
     ticker: null, severity: "none", citation: "Art. XIII Step 7",

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { RefreshCw, Check, AlertCircle } from "lucide-react"
 import { refreshLookThroughAction } from "@/app/reports/actions"
 
-export function RefreshLookThroughButton({ lastUpdated }: { lastUpdated: Date | null }) {
+export function RefreshLookThroughButton({ lastUpdated, compact = false }: { lastUpdated: Date | null; compact?: boolean }) {
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
@@ -30,10 +30,10 @@ export function RefreshLookThroughButton({ lastUpdated }: { lastUpdated: Date | 
       <button
         onClick={handleRefresh}
         disabled={isPending}
-        className="no-print inline-flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/[0.06] hover:bg-violet-500/10 text-violet-500 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60"
+        className={`no-print inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${compact ? "border-cyan-400/30 bg-cyan-400/[0.07] text-cyan-300 hover:bg-cyan-400/10" : "border-violet-500/30 bg-violet-500/[0.06] text-violet-500 hover:bg-violet-500/10"}`}
       >
         <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
-        {isPending ? "Fetching holdings…" : "Refresh Holdings Data"}
+        {isPending ? "Checking sources…" : compact ? "Refresh source data" : "Refresh Holdings Data"}
       </button>
       <p className="text-[11px] text-muted-foreground">{ageLabel}</p>
       {result && (

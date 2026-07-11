@@ -27,6 +27,19 @@ interface Dividend {
   holdingKnown: boolean
 }
 
+interface LedgerEntry {
+  externalId: string
+  category: string
+  symbol: string
+  amount: number
+  currency: string
+  amountBase: number | null
+  fxRate: number | null
+  date: string
+  description: string
+  rawType: string
+}
+
 interface IBKRActivityImportProps {
   onClose: () => void
   onImported: () => void
@@ -45,9 +58,10 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
   const [state, setState] = useState<"idle" | "fetching" | "preview" | "error">("idle")
   const [executions, setExecutions] = useState<Execution[]>([])
   const [dividends, setDividends] = useState<Dividend[]>([])
+  const [ledger, setLedger] = useState<LedgerEntry[]>([])
   const [accountId, setAccountId] = useState("")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [importResult, setImportResult] = useState<{ tradesImported: number; dividendsImported: number } | null>(null)
+  const [importResult, setImportResult] = useState<{ tradesImported: number; dividendsImported: number; ledgerImported?: number; contributionsImported?: number } | null>(null)
   const [isPending, startTransition] = useTransition()
 
   // Toggle selection
@@ -68,6 +82,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
       }
       setExecutions(data.executions)
       setDividends(data.dividends)
+      setLedger(data.ledger ?? [])
       setAccountId(data.accountId)
       // Pre-select all new importable items. New tickers (not yet in the portfolio) ARE
       // included — importing them creates the holding so they populate the whole app.
@@ -96,7 +111,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
       const res = await fetch("/api/sync-ibkr/activity", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ executions: tradesToImport, dividends: divsToImport }),
+        body: JSON.stringify({ executions: tradesToImport, dividends: divsToImport, ledger }),
       })
       if (res.ok) {
         const result = await res.json()
@@ -111,7 +126,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
 
   const newTrades = executions.filter(e => !e.alreadyImported)
   const newDivs = dividends.filter(d => !d.alreadyImported)
-  const totalNew = selectedTrades.size + selectedDivs.size
+  const totalNew = selectedTrades.size + selectedDivs.size + ledger.length
 
   // Units reconciliation: aggregate net unit changes for selected trades
   const sellSummary = useMemo(() => {
@@ -198,7 +213,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
           {importResult && (
             <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 px-4 py-3 text-xs font-medium text-green-700 dark:text-green-400">
               <Check className="h-4 w-4 shrink-0" />
-              Imported {importResult.tradesImported} trade{importResult.tradesImported !== 1 ? "s" : ""} and {importResult.dividendsImported} dividend{importResult.dividendsImported !== 1 ? "s" : ""}
+              Imported {importResult.tradesImported} trade{importResult.tradesImported !== 1 ? "s" : ""}, {importResult.dividendsImported} dividend{importResult.dividendsImported !== 1 ? "s" : ""}, and {importResult.ledgerImported ?? 0} cash/adjustment entr{(importResult.ledgerImported ?? 0) === 1 ? "y" : "ies"}
             </div>
           )}
 
@@ -341,6 +356,34 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                         </label>
                       )
                     })}
+                  </div>
+                )}
+              </div>
+
+              {/* Cash movements, fees, taxes, interest and corporate actions */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    Cash &amp; adjustments ({ledger.length})
+                  </h3>
+                  {ledger.length > 0 && <span className="text-[10px] text-violet-500 font-semibold">deduplicated automatically</span>}
+                </div>
+                {ledger.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No deposits, withdrawals, fees, taxes, interest or corporate actions were returned. Include Cash Transactions and Corporate Actions in the Flex query.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {ledger.map(entry => (
+                      <div key={entry.externalId} className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+                        <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-bold text-muted-foreground">{entry.category.replaceAll("_", " ")}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11px] font-medium">{entry.description || entry.rawType}</p>
+                          <p className="text-[10px] text-muted-foreground">{entry.symbol || entry.currency} · {formatFlexDate(entry.date)}</p>
+                        </div>
+                        <span className={`text-[11px] font-semibold tabular-nums ${entry.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {entry.amount >= 0 ? "+" : ""}{entry.amount.toLocaleString("en-SG", { maximumFractionDigits: 2 })} {entry.currency}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

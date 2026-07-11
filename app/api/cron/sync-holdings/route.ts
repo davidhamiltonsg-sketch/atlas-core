@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { syncIbkrSnapshotsAllUsers, syncIbkrActivityAllUsers } from "@/lib/holdings-sync"
+import { authorizeCron } from "@/lib/cron-auth"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -9,14 +10,8 @@ export const dynamic = "force-dynamic"
 // Flex so the portfolio stays fresh even when the owner forgets to update it manually.
 // No-op when IBKR isn't configured. Guarded by CRON_SECRET (same scheme as cron/daily).
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    if (req.headers.get("authorization") !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-  } else {
-    console.warn("[cron/sync-holdings] CRON_SECRET not set — endpoint is unauthenticated. Set CRON_SECRET in your env.")
-  }
+  const authError = authorizeCron(req)
+  if (authError) return authError
 
   // 1) Refresh position snapshots (units/value). 2) Import any new trades + contributions +
   // dividends so monthly activity is captured automatically instead of only on a manual import.

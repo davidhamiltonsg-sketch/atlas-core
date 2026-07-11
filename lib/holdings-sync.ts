@@ -3,6 +3,8 @@ import { CORE_TICKERS } from "@/lib/approved-alternatives"
 import { fetchFlexPositions, fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
+import { instrumentIdentity } from "@/lib/instrument-identity"
+import { recordDcaBankMovement } from "@/lib/dca-bank-service"
 import {
   parseFlexDate, naturalKey, executionNaturalKey,
   selectExecutionsToImport, selectStaleDuplicateTrades, type ExistingTradeRow,
@@ -64,7 +66,7 @@ const YF = "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=
  */
 export async function upsertSnapshotToday(
   holdingId: string,
-  data: { units: number; price: number; value: number },
+  data: { units: number; price: number; value: number; costBasis?: number | null; unrealizedPnl?: number | null },
 ): Promise<void> {
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
@@ -93,26 +95,48 @@ export interface IbkrSyncResult { ok: boolean; reason?: string; users: number; s
  * Only matched tickers are updated; it never creates or removes holdings.
  */
 export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
-  const token = process.env.IBKR_FLEX_TOKEN
-  const queryId = process.env.IBKR_FLEX_QUERY_ID
-  if (!token || !queryId) return { ok: false, reason: "IBKR not configured", users: 0, snapshots: 0 }
-
-  const result = await fetchFlexPositions(token, queryId)
-  if (!result.success) return { ok: false, reason: result.error, users: 0, snapshots: 0 }
-
-  const bySymbol = new Map(result.positions.map((p) => [p.symbol.toUpperCase(), p]))
-  const users = await db.user.findMany({ select: { id: true } })
+  const users = await db.user.findMany({ select: { id: true, email: true } })
+  const reports = new Map<string, Awaited<ReturnType<typeof fetchFlexPositions>>>()
   let snapshots = 0
+  let usersSynced = 0
+  const errors: string[] = []
   for (const u of users) {
+    const isSbr = constitutionIdForEmail(u.email) === "silicon-brick-road"
+    const token = isSbr ? process.env.IBKR_SBR_FLEX_TOKEN : process.env.IBKR_FLEX_TOKEN
+    const queryId = isSbr ? process.env.IBKR_SBR_FLEX_QUERY_ID : process.env.IBKR_FLEX_QUERY_ID
+    if (!token || !queryId) continue
+    const reportKey = `${isSbr ? "sbr" : "atlas"}:${queryId}`
+    let result = reports.get(reportKey)
+    if (!result) {
+      result = await fetchFlexPositions(token, queryId)
+      reports.set(reportKey, result)
+    }
+    if (!result.success) {
+      errors.push(`${isSbr ? "SBR" : "Atlas"}: ${result.error}`)
+      continue
+    }
+    const identified = result.positions.map((p) => ({ p, identity: instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid }) }))
+    const bySymbol = new Map(identified.flatMap((x) => [[x.identity.ticker, x], [x.identity.displayTicker, x]]))
     const holdings = await db.holding.findMany({ where: { userId: u.id } })
     for (const h of holdings) {
-      const pos = bySymbol.get(h.ticker.toUpperCase())
-      if (!pos) continue
-      await upsertSnapshotToday(h.id, { units: pos.units, price: pos.markPrice, value: pos.positionValue })
+      const matched = bySymbol.get(h.ticker.toUpperCase())
+      if (!matched) continue
+      const { p: pos, identity } = matched
+      await db.holding.update({ where: { id: h.id }, data: {
+        displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
+        isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
+        instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",
+      } })
+      await upsertSnapshotToday(h.id, {
+        units: pos.units, price: pos.markPrice, value: pos.positionValue,
+        costBasis: pos.costBasis, unrealizedPnl: pos.unrealizedPnl,
+      })
       snapshots++
     }
+    usersSynced++
   }
-  return { ok: true, users: users.length, snapshots }
+  if (usersSynced === 0) return { ok: false, reason: errors.join("; ") || "IBKR not configured", users: 0, snapshots: 0 }
+  return { ok: true, reason: errors.length ? errors.join("; ") : undefined, users: usersSynced, snapshots }
 }
 
 export async function getUsdSgdRate(): Promise<number> {
@@ -162,12 +186,18 @@ export async function syncHoldingFromTrades(userId: string, ticker: string, fxRa
 export interface FlexExecution {
   tradeID: string; symbol: string; buySell: "BUY" | "SELL"
   quantity: number; price: number; fxRate: number; tradeDate: string
+  commission?: number; realizedPnl?: number | null; netCash?: number | null
+  isin?: string; cusip?: string; exchange?: string; conid?: string
 }
 export interface FlexDividend {
   transactionID: string; symbol: string; amount: number
   payDate: string; description: string; holdingId?: string | null
 }
-export interface ActivityImportResult { trades: number; dividends: number; tickers: string[] }
+export interface FlexLedgerEntry {
+  externalId: string; category: string; symbol: string; amount: number; currency: string
+  amountBase: number | null; fxRate: number | null; date: string; description: string; rawType: string
+}
+export interface ActivityImportResult { trades: number; dividends: number; ledger: number; contributions: number; tickers: string[] }
 
 /**
  * Write a set of IBKR executions + dividends to ONE user's trade/contribution/dividend log,
@@ -180,15 +210,22 @@ export async function importIbkrActivityForUser(
   userId: string,
   executions: FlexExecution[],
   dividends: FlexDividend[] = [],
+  ledgerEntries: FlexLedgerEntry[] = [],
 ): Promise<ActivityImportResult> {
+  const hasAuthoritativeCash = ledgerEntries.some((e) => e.category === "DEPOSIT" || e.category === "WITHDRAWAL")
   const holdings = await db.holding.findMany({ where: { userId }, select: { id: true, ticker: true } })
   const holdingMap = new Map(holdings.map((h) => [h.ticker.toUpperCase(), h.id]))
 
   // Only ingest the Atlas Core governed universe. The IBKR account can also hold currency
   // conversions (e.g. SGD.HKD) and other instruments that are not part of the plan; importing
   // those pollutes the trade log, invents bogus contributions, and adds ghost holdings.
-  const CORE = new Set<string>(CORE_TICKERS)
-  const inScope = (sym: string) => CORE.has(sym.trim().toUpperCase())
+  const owner = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
+  const constitutionId = owner ? constitutionIdForEmail(owner.email) : "atlas-core"
+  const governed = constitutionId === "silicon-brick-road"
+    ? SILICON_BRICK_ROAD.funds.map((f) => f.ticker)
+    : CORE_TICKERS
+  const ALLOWED = new Set<string>([...governed, ...holdingMap.keys()])
+  const inScope = (sym: string) => ALLOWED.has(sym.trim().toUpperCase())
 
   // Load the existing trade log ONCE and dedup in memory: by IBKR tradeID (normal re-run) AND by
   // natural key with multiplicity (safe when IBKR reissues tradeIDs for the same executions — see
@@ -213,6 +250,8 @@ export async function importIbkrActivityForUser(
 
   let trades = 0
   let divs = 0
+  let ledgerImported = 0
+  let contributionsImported = 0
   const affected = new Set<string>()
 
   // Heal any already-doubled trades using this report as the source of truth (removes the
@@ -235,21 +274,35 @@ export async function importIbkrActivityForUser(
   }
 
   for (const e of toImport) {
-    affected.add(e.symbol.toUpperCase())
+    const identity = instrumentIdentity({ symbol: e.symbol, isin: e.isin, cusip: e.cusip, exchange: e.exchange, conid: e.conid })
+    affected.add(identity.ticker)
     const tradeDate = parseFlexDate(e.tradeDate)
     const amountSgd = e.quantity * e.price * e.fxRate
     const trade = await db.trade.create({
       data: {
-        userId, ticker: e.symbol.toUpperCase(), type: e.buySell,
+        userId, ticker: identity.ticker, type: e.buySell,
+        instrumentKey: identity.instrumentKey, isin: identity.isin, cusip: identity.cusip,
+        exchange: identity.exchange, ibkrConid: identity.ibkrConid,
         units: e.quantity, price: e.price, amount: amountSgd, fxRate: e.fxRate,
+        commission: e.commission ?? 0,
+        realizedPnl: e.realizedPnl ?? null,
+        netCash: e.netCash ?? null,
         date: tradeDate, note: `[ibkr:${e.tradeID}]`,
       },
+    })
+    const signedBankMovement = e.buySell === "BUY"
+      ? -(amountSgd + (e.commission ?? 0) * e.fxRate)
+      : Math.max(0, amountSgd - (e.commission ?? 0) * e.fxRate)
+    await recordDcaBankMovement({
+      userId, constitutionId, currency: "SGD", type: e.buySell === "BUY" ? "PURCHASE" : "ADJUSTMENT",
+      amount: signedBankMovement, externalId: `ibkr-trade:${e.tradeID}`,
+      description: `${e.buySell} ${e.quantity} ${identity.displayTicker}`, date: tradeDate,
     })
     // A "contribution" is new cash put to work, not any security purchase — buying with
     // proceeds from a same/recent sale (a rebalance) isn't new money. SELL trades create an
     // offsetting NEGATIVE contribution so net BUY-minus-SELL is what the Contributions page
     // totals, instead of gross BUY value alone (which double-counts every rebalance).
-    if (e.buySell === "BUY" || e.buySell === "SELL") {
+    if (!hasAuthoritativeCash && (e.buySell === "BUY" || e.buySell === "SELL")) {
       const sign = e.buySell === "BUY" ? 1 : -1
       await db.contributionRecord.create({
         data: {
@@ -286,6 +339,40 @@ export async function importIbkrActivityForUser(
     divs++
   }
 
+  // Cash movements and adjustments are a separate immutable ledger. Actual deposits and
+  // withdrawals—not security purchases—are the authoritative contribution source.
+  for (const entry of ledgerEntries) {
+    const exists = await db.ibkrLedgerEntry.findUnique({
+      where: { userId_externalId: { userId, externalId: entry.externalId } },
+    })
+    if (exists) continue
+    const amountBase = entry.amountBase ?? (entry.fxRate ? entry.amount * entry.fxRate : null)
+    await db.ibkrLedgerEntry.create({
+      data: {
+        userId, externalId: entry.externalId, category: entry.category,
+        symbol: entry.symbol || null, amount: entry.amount, currency: entry.currency || "",
+        amountBase, fxRate: entry.fxRate, date: parseFlexDate(entry.date),
+        description: entry.description || null, rawType: entry.rawType || null,
+      },
+    })
+    ledgerImported++
+    if (entry.category === "DEPOSIT" || entry.category === "WITHDRAWAL") {
+      const signed = entry.category === "WITHDRAWAL" ? -Math.abs(amountBase ?? entry.amount) : Math.abs(amountBase ?? entry.amount)
+      await db.contributionRecord.create({
+        data: {
+          userId, amount: signed, date: parseFlexDate(entry.date),
+          note: `[ibkr-cash:${entry.externalId}] ${entry.description || entry.category}`,
+        },
+      })
+      contributionsImported++
+      await recordDcaBankMovement({
+        userId, constitutionId, currency: "SGD", type: "CONTRIBUTION", amount: signed,
+        externalId: `ibkr-cash:${entry.externalId}`, description: entry.description || entry.category,
+        date: parseFlexDate(entry.date),
+      })
+    }
+  }
+
   if (affected.size > 0) {
     const fx = await getUsdSgdRate()
     for (const t of affected) await syncHoldingFromTrades(userId, t, fx)
@@ -294,8 +381,8 @@ export async function importIbkrActivityForUser(
   // then heal any BUY trades that never got a linked contribution — so the trade log and the
   // Contributions page are both correct after an import, not just going forward.
   await cleanupForexTrades(userId)
-  await backfillContributionsFromTrades(userId)
-  return { trades, dividends: divs, tickers: [...affected] }
+  if (!hasAuthoritativeCash) await backfillContributionsFromTrades(userId)
+  return { trades, dividends: divs, ledger: ledgerImported, contributions: contributionsImported, tickers: [...affected] }
 }
 
 /**
@@ -353,7 +440,7 @@ export async function backfillContributionsFromTrades(userId: string): Promise<n
   return created
 }
 
-export interface IbkrActivitySyncResult { ok: boolean; reason?: string; users: number; trades: number; dividends: number }
+export interface IbkrActivitySyncResult { ok: boolean; reason?: string; users: number; trades: number; dividends: number; ledger: number; contributions: number }
 
 /**
  * Automated activity refresh from IBKR Flex — for the scheduled cron, so monthly trades and
@@ -363,23 +450,38 @@ export interface IbkrActivitySyncResult { ok: boolean; reason?: string; users: n
  * activity query isn't configured.
  */
 export async function syncIbkrActivityAllUsers(): Promise<IbkrActivitySyncResult> {
-  const token = process.env.IBKR_FLEX_TOKEN
-  const activityId = process.env.IBKR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_FLEX_QUERY_ID
-  if (!token || !activityId) return { ok: false, reason: "IBKR activity not configured", users: 0, trades: 0, dividends: 0 }
-
-  const result = await fetchFlexActivity(token, activityId)
-  if (!result.success) return { ok: false, reason: result.error, users: 0, trades: 0, dividends: 0 }
-
   const users = await db.user.findMany({ select: { id: true, email: true } })
+  const reports = new Map<string, Awaited<ReturnType<typeof fetchFlexActivity>>>()
   let trades = 0
   let dividends = 0
+  let ledger = 0
+  let contributions = 0
   let touched = 0
+  const errors: string[] = []
   for (const u of users) {
-    if (constitutionIdForEmail(u.email) !== "atlas-core") continue // never write IBKR equity to SBR
-    const r = await importIbkrActivityForUser(u.id, result.executions, result.dividends)
+    const isSbr = constitutionIdForEmail(u.email) === "silicon-brick-road"
+    const token = isSbr ? process.env.IBKR_SBR_FLEX_TOKEN : process.env.IBKR_FLEX_TOKEN
+    const activityId = isSbr
+      ? (process.env.IBKR_SBR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_SBR_FLEX_QUERY_ID)
+      : (process.env.IBKR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_FLEX_QUERY_ID)
+    if (!token || !activityId) continue
+    const reportKey = `${isSbr ? "sbr" : "atlas"}:${activityId}`
+    let result = reports.get(reportKey)
+    if (!result) {
+      result = await fetchFlexActivity(token, activityId)
+      reports.set(reportKey, result)
+    }
+    if (!result.success) {
+      errors.push(`${isSbr ? "SBR" : "Atlas"}: ${result.error}`)
+      continue
+    }
+    const r = await importIbkrActivityForUser(u.id, result.executions, result.dividends, result.ledger)
     trades += r.trades
     dividends += r.dividends
+    ledger += r.ledger
+    contributions += r.contributions
     touched++
   }
-  return { ok: true, users: touched, trades, dividends }
+  if (touched === 0) return { ok: false, reason: errors.join("; ") || "IBKR activity not configured", users: 0, trades: 0, dividends: 0, ledger: 0, contributions: 0 }
+  return { ok: true, reason: errors.length ? errors.join("; ") : undefined, users: touched, trades, dividends, ledger, contributions }
 }

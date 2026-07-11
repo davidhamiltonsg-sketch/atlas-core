@@ -219,7 +219,7 @@ function deriveSectorWeights(
   // For others, derive from tracked company weights (Nvidia + Broadcom + TSMC)
   // and scale up since these 3 represent only ~35–45% of the semiconductor universe.
   let semiconductor: number
-  if (ticker === "SEMI") {
+  if (ticker === "SMH") {
     semiconductor = Math.round(gics["technology"] ?? 90)
   } else {
     const semiCompanies = (companyWeights.Nvidia ?? 0) +
@@ -245,7 +245,7 @@ function deriveGeoWeights(
   countryWeightings: Array<Record<string, number>>
 ): { us: number; intlDev: number; emerging: number; crypto: number } {
   // Pure-US ETFs have no country weightings in Yahoo's response
-  if (ticker === "EQQQ") return { us: 100, intlDev: 0, emerging: 0, crypto: 0 }
+  if (ticker === "EQAC") return { us: 97, intlDev: 3, emerging: 0, crypto: 0 }
 
   let us = 0
   let emerging = 0
@@ -260,8 +260,8 @@ function deriveGeoWeights(
   }
 
   // If no country data came back (common for pure-US ETFs), use known values
-  if (countryWeightings.length === 0 && ticker === "SEMI") {
-    us = 75; emerging = 12  // TSMC in Taiwan is EM
+  if (countryWeightings.length === 0 && ticker === "SMH") {
+    us = 65; emerging = 8
   }
 
   const intlDev = Math.max(0, 100 - us - emerging)
@@ -285,26 +285,31 @@ export async function refreshLookThroughAction(): Promise<{
   if (!session) return { error: "Unauthenticated." }
   // Any authenticated user can refresh (it's read-only data from Yahoo)
 
-  const TICKERS = ["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"]
+  const SOURCES = [
+    { ticker: "IMID", yahoo: "IMID.L", source: "https://www.ssga.com/uk/en_gb/institutional/etfs/state-street-spdr-msci-all-country-world-investable-market-ucits-etf-acc-imid-gy" },
+    { ticker: "EQAC", yahoo: "EQAC.L", source: "https://www.invesco.com/uk/en/financial-products/etfs/invesco-eqqq-nasdaq-100-ucits-etf-acc.html" },
+    { ticker: "SMH", yahoo: "SMH.L", source: "https://www.vaneck.com/uk/en/semiconductor-etf" },
+    { ticker: "IB01", yahoo: "IB01.L", source: "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-01yr-ucits-etf" },
+  ] as const
   const updated: string[] = []
   const errors:  string[] = []
 
-  for (const ticker of TICKERS) {
+  for (const { ticker, yahoo, source } of SOURCES) {
     try {
       let data: EtfData
 
-      if (ticker === "BTC") {
-        // Grayscale Bitcoin Mini Trust has no equity holdings
+      if (ticker === "IB01") {
+        // The official mandate is exclusively short-dated US Treasury securities.
         data = {
           companyWeights: {
             Nvidia: 0, Microsoft: 0, Apple: 0, Amazon: 0,
             Meta: 0, Alphabet: 0, Broadcom: 0, TSMC: 0,
           },
           sectorWeights:  { semiconductor: 0, digital: 0, us: 0, ai: 0 },
-          geoWeights:     { us: 0, intlDev: 0, emerging: 0, crypto: 100 },
+          geoWeights:     { us: 100, intlDev: 0, emerging: 0, crypto: 0 },
         }
       } else {
-        const result = await fetchYFHoldings(ticker)
+        const result = await fetchYFHoldings(yahoo)
         if (!result) {
           errors.push(`${ticker}: no data returned from Yahoo Finance`)
           continue
@@ -340,6 +345,7 @@ export async function refreshLookThroughAction(): Promise<{
             companyWeights: JSON.stringify(data.companyWeights),
             sectorWeights:  JSON.stringify(data.sectorWeights),
             geoWeights:     JSON.stringify(data.geoWeights),
+            source:         `yahoo_finance|${source}`,
           },
         })
       } else {
@@ -350,6 +356,7 @@ export async function refreshLookThroughAction(): Promise<{
             companyWeights: JSON.stringify(data.companyWeights),
             sectorWeights:  JSON.stringify(data.sectorWeights),
             geoWeights:     JSON.stringify(data.geoWeights),
+            source:         `yahoo_finance|${source}`,
           },
         })
       }
@@ -361,6 +368,8 @@ export async function refreshLookThroughAction(): Promise<{
   }
 
   revalidatePath("/reports")
+  revalidatePath("/mission-control")
+  revalidatePath("/")
 
   if (updated.length === 0) {
     return { error: `Refresh failed for all tickers. ${errors.join("; ")}` }

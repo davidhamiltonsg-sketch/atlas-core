@@ -11,7 +11,7 @@ import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { computeLadder } from "@/lib/ladder"
-import { getBtcPhaseCard, getSmhBuyZone, getCombinedTechCeiling, getSgovQueueState } from "@/lib/cycle"
+import { getBtcPhaseCard, getSemiBuyZone, getCombinedTechCeiling, getSgovQueueState } from "@/lib/cycle"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
 import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
@@ -22,7 +22,6 @@ import { getRecentExecutions } from "@/lib/execution-actions"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
 import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
-import { constitutionIdForEmail } from "@/lib/constitutions"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { SbrDashboard } from "@/components/sbr/sbr-dashboard"
 import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
@@ -32,6 +31,7 @@ import { CycleInstruments } from "@/components/cockpit/cycle-instruments"
 import { AnimatedNumber } from "@/components/animated-number"
 import { PortfolioChooser } from "@/components/portfolio-chooser"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 
 // This is a personal, auth-gated dashboard whose server render includes live
 // date maths (dealing-window and contribution countdowns). Pin it to dynamic so
@@ -116,7 +116,7 @@ function getDealingWindow(today: { y: number; m: number; d: number }): {
 }
 
 async function getDashboardData(userId: string) {
-  const [user, holdings, usdSgdRate, trades] = await Promise.all([
+  const [user, holdings, usdSgdRate, trades, cashBank] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.holding.findMany({
       where: { userId },
@@ -124,6 +124,7 @@ async function getDashboardData(userId: string) {
     }),
     getUsdSgdRate(),
     db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "atlas-core", currency: "SGD" } } }),
   ])
 
   // Weighted-average cost basis per ticker from trades
@@ -432,7 +433,7 @@ async function getDashboardData(userId: string) {
 
   const cycleInstruments = {
     btc:  getBtcPhaseCard(),
-    smh:  getSmhBuyZone(smhLive?.price ?? 0, smhLive?.hi52 ?? 0),
+    smh:  getSemiBuyZone(smhLive?.price ?? 0, smhLive?.hi52 ?? 0),
     tech: getCombinedTechCeiling(qqqmPct, smhPct),
     sgov: getSgovQueueState({ currentPct: sgovPct, portfolioValueSgd: totalValue, monthlyContributionSgd: monthlyContribution }),
   }
@@ -468,6 +469,7 @@ async function getDashboardData(userId: string) {
     govAlignment, outOfScopeTickers, updateHoldings,
     complianceBands, cycleInstruments, ladder, dealingWindow,
     lastDone: recentExecutions[0] ?? null,
+    cashBankBalance: cashBank?.balance ?? 0,
   }
 }
 
@@ -475,11 +477,12 @@ export default async function Dashboard() {
   const session = await getSession()
   if (!session) return <PortfolioChooser />
 
-  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
-    return <SbrDashboard userId={session.userId} name={session.name} isAdmin={session.role === "admin"} />
+  const active = await activePortfolioContext(session)
+  if (active.constitutionId === "silicon-brick-road") {
+    return <SbrDashboard userId={active.owner.id} name={session.name} isAdmin={session.role === "admin"} />
   }
 
-  const d = await getDashboardData(session.userId)
+  const d = await getDashboardData(active.owner.id)
 
   // Build SealDimension array for GovernanceSeal. Each dimension's raw score is 0–100;
   // the badge shows its WEIGHTED contribution (rawScore/100 × weight) out of that weight,
@@ -605,19 +608,11 @@ export default async function Dashboard() {
               <p className={`text-xl font-black tabular-nums ${d.driftAlerts > 0 ? (d.hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}><AnimatedNumber value={d.driftAlerts} /></p>
               <p className="text-[11px] text-muted-foreground">{d.driftAlerts === 0 ? "All on target" : `${d.hardBreaches}H / ${d.softBreaches}S breach`}</p>
             </a>
-            <a href="/forecast" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${
-              d.onTrackPct === null ? "border-border hover:border-primary/30" :
-              d.onTrackPct >= 95 ? "border-green-500/30" :
-              d.onTrackPct >= 80 ? "border-yellow-400/30" : "border-red-500/30"
-            }`}>
-              <span className="text-xs font-medium text-muted-foreground">On Track</span>
-              <p className={`text-xl font-black tabular-nums ${
-                d.onTrackPct === null ? "text-muted-foreground" :
-                d.onTrackPct >= 95 ? "text-green-500" :
-                d.onTrackPct >= 80 ? "text-yellow-400" : "text-red-500"
-              }`}>{d.onTrackPct !== null ? <AnimatedNumber value={Math.round(d.onTrackPct)} suffix="%" /> : "—"}</p>
-              <p className="text-[11px] text-muted-foreground">vs 2045 plan</p>
-            </a>
+            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
+              <span className="text-xs font-medium text-muted-foreground">DCA cash bank</span>
+              <p className="text-xl font-black tabular-nums text-emerald-500">{formatCurrency(d.cashBankBalance, "SGD")}</p>
+              <p className="text-[11px] text-muted-foreground">Unused cash carried to whole shares</p>
+            </div>
           </div>
 
           {/* ── WHAT IS HELD ─────────────────────────────────────────── */}
