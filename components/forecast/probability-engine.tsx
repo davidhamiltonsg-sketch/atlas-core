@@ -21,6 +21,9 @@ const CORR_5: number[][] = [
   [0.82, 0.72, 0.68, 1.00, 0.14],
   [0.18, 0.22, 0.24, 0.14, 1.00],
 ]
+// CIDX maps both UCITS tickers (VWRA/EQQQ/SEMI/VFEA) and their legacy US equivalents
+// (VT/QQQM/SMH/VWO) to the same correlation column — kept for backward data compatibility
+// so historical snapshots with old tickers still resolve to the correct matrix index.
 const CIDX: Record<string, number> = {
   VWRA: 0, VT: 0, EQQQ: 1, QQQM: 1, SEMI: 2, SMH: 2, VFEA: 3, VWO: 3, IBIT: 4, BTC: 4,
 }

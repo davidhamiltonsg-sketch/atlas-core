@@ -48,18 +48,18 @@ export const ATLAS_SPEC = {
   horizonYear: 2045,
   forecastBenchmarksAsOf: "Jun 2026",
   funds: [
-    { ticker: "VT",   target: 52, band: 6,   hardCap: 60,   driftLow: 42, expectedReturn: { conservative: 0.06,  base: 0.095, aggressive: 0.12 } },
+    { ticker: "VWRA", target: 52, band: 6,   hardCap: 60,   driftLow: 42, expectedReturn: { conservative: 0.06,  base: 0.095, aggressive: 0.12 } },
     { ticker: "VOO",  target: 0,  band: 0,   hardCap: null,               expectedReturn: { conservative: 0.065, base: 0.10,  aggressive: 0.13 } },
-    { ticker: "VWO",  target: 8,  band: 3,   hardCap: 13,   driftLow: 3,  expectedReturn: { conservative: 0.03,  base: 0.065, aggressive: 0.10 } },
-    { ticker: "QQQM", target: 23, band: 5,   hardCap: 30,   driftLow: 15, expectedReturn: { conservative: 0.07,  base: 0.115, aggressive: 0.16 } },
-    { ticker: "SMH",  target: 10, band: 3,   hardCap: 12,   driftLow: 5, amberHigh: 11, expectedReturn: { conservative: 0.06,  base: 0.13,  aggressive: 0.20 } },
+    { ticker: "VFEA", target: 8,  band: 3,   hardCap: 13,   driftLow: 3,  expectedReturn: { conservative: 0.03,  base: 0.065, aggressive: 0.10 } },
+    { ticker: "EQQQ", target: 23, band: 5,   hardCap: 30,   driftLow: 15, expectedReturn: { conservative: 0.07,  base: 0.115, aggressive: 0.16 } },
+    { ticker: "SEMI", target: 10, band: 3,   hardCap: 12,   driftLow: 5, amberHigh: 11, expectedReturn: { conservative: 0.06,  base: 0.13,  aggressive: 0.20 } },
     { ticker: "BTC",  target: 7,  band: 1,   hardCap: 8,                  expectedReturn: { conservative: -0.05, base: 0.12,  aggressive: 0.25 } },
     { ticker: "IBIT", target: 0,  band: 1,   hardCap: 8,                  expectedReturn: { conservative: -0.05, base: 0.12,  aggressive: 0.25 } },
     { ticker: "SGOV", target: 0,  band: 2.5, hardCap: null },
     { ticker: "A35",  target: 0,  band: 0,   hardCap: null,               expectedReturn: { conservative: 0.01,  base: 0.03,  aggressive: 0.05 } },
   ] as AtlasFundSpec[],
-  // Art. XII / §4.3 combined QQQM + SMH tech ceiling (soft, hard).
-  combinedTech: { tickers: ["QQQM", "SMH"], soft: 38, hard: 42 },
+  // Art. XII / §4.3 combined EQQQ + SEMI tech ceiling (soft, hard).
+  combinedTech: { tickers: ["EQQQ", "SEMI"], soft: 38, hard: 42 },
   // §4 look-through sector caps (soft, hard).
   lookThroughSectors: {
     semiconductor: { soft: 16, hard: 20 },

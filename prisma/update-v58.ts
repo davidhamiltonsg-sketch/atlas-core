@@ -15,10 +15,10 @@ const prisma = new PrismaClient({ adapter })
 
 // V5.8 updated parameters (Section 2 hard caps, Section 3.1 soft bands)
 const V58: Record<string, { hardCapPct: number; toleranceBand: number }> = {
-  VT:   { hardCapPct: 60, toleranceBand: 6 }, // was 62 / 5
-  QQQM: { hardCapPct: 30, toleranceBand: 5 }, // was 31 / 4
-  SMH:  { hardCapPct: 15, toleranceBand: 3 }, // was 15 / 2
-  VWO:  { hardCapPct: 13, toleranceBand: 3 }, // was 12 / 2
+  VWRA: { hardCapPct: 60, toleranceBand: 6 }, // was 62 / 5
+  EQQQ: { hardCapPct: 30, toleranceBand: 5 }, // was 31 / 4
+  SEMI: { hardCapPct: 15, toleranceBand: 3 }, // was 15 / 2
+  VFEA: { hardCapPct: 13, toleranceBand: 3 }, // was 12 / 2
   BTC:  { hardCapPct: 8,  toleranceBand: 1 }, // unchanged
 }
 

@@ -20,12 +20,12 @@ function close(a: number, b: number, eps = 1e-9) {
 
 console.log("Atlas Core — forecast math checks\n")
 
-// 1) 100% VT → blend equals VT's own assumption exactly, in all three scenarios.
+// 1) 100% VWRA → blend equals VWRA's own assumption exactly, in all three scenarios.
 {
-  const { rates } = blendedGrowthRates({ VT: 100 }, 0.04)
-  expect("100% VT → conservative matches VT", close(rates.conservative, ASSET_EXPECTED_RETURNS.VT.conservative))
-  expect("100% VT → base matches VT", close(rates.base, ASSET_EXPECTED_RETURNS.VT.base))
-  expect("100% VT → aggressive matches VT", close(rates.aggressive, ASSET_EXPECTED_RETURNS.VT.aggressive))
+  const { rates } = blendedGrowthRates({ VWRA: 100 }, 0.04)
+  expect("100% VWRA → conservative matches VWRA", close(rates.conservative, ASSET_EXPECTED_RETURNS.VWRA.conservative))
+  expect("100% VWRA → base matches VWRA", close(rates.base, ASSET_EXPECTED_RETURNS.VWRA.base))
+  expect("100% VWRA → aggressive matches VWRA", close(rates.aggressive, ASSET_EXPECTED_RETURNS.VWRA.aggressive))
 }
 
 // 2) 100% SGOV (buffer) → blend equals the user's own risk-free-rate assumption everywhere.
@@ -39,7 +39,7 @@ console.log("Atlas Core — forecast math checks\n")
 // 3) Mixed portfolio → each scenario's blend is bounded by the min/max of its held assets'
 //    rates (a weighted average can never fall outside the range of its inputs).
 {
-  const alloc = { VT: 52, QQQM: 23, SMH: 10, VWO: 8, BTC: 7 }
+  const alloc = { VWRA: 52, EQQQ: 23, SEMI: 10, VFEA: 8, BTC: 7 }
   const { rates } = blendedGrowthRates(alloc, 0.04)
   for (const key of ["conservative", "base", "aggressive"] as const) {
     const heldRates = Object.keys(alloc).map((t) => ASSET_EXPECTED_RETURNS[t][key])
@@ -51,17 +51,17 @@ console.log("Atlas Core — forecast math checks\n")
   }
 }
 
-// 4) Heavier BTC allocation raises the aggressive rate (BTC.aggressive > VT.aggressive).
+// 4) Heavier BTC allocation raises the aggressive rate (BTC.aggressive > VWRA.aggressive).
 {
-  const { rates: lightBtc } = blendedGrowthRates({ VT: 90, BTC: 10 }, 0.04)
-  const { rates: heavyBtc }  = blendedGrowthRates({ VT: 60, BTC: 40 }, 0.04)
+  const { rates: lightBtc } = blendedGrowthRates({ VWRA: 90, BTC: 10 }, 0.04)
+  const { rates: heavyBtc }  = blendedGrowthRates({ VWRA: 60, BTC: 40 }, 0.04)
   expect("more BTC weight → higher aggressive rate", heavyBtc.aggressive > lightBtc.aggressive,
     `light=${lightBtc.aggressive} heavy=${heavyBtc.aggressive}`)
 }
 
 // 5) Changing the risk-free rate shifts the blend proportionally to the buffer weight.
 {
-  const alloc = { VT: 50, SGOV: 50 }
+  const alloc = { VWRA: 50, SGOV: 50 }
   const { rates: low }  = blendedGrowthRates(alloc, 0.02)
   const { rates: high } = blendedGrowthRates(alloc, 0.06)
   const expectedDelta = 0.5 * (0.06 - 0.02) // 50% weight on the buffer bucket
@@ -82,9 +82,9 @@ console.log("Atlas Core — forecast math checks\n")
 // 7) Unknown ticker is excluded, not silently zeroed — a portfolio with one recognized and
 //    one unrecognized ticker renormalizes over the known weight instead of understating it.
 {
-  const { rates, excludedTickers } = blendedGrowthRates({ VT: 50, ZZZZ: 50 }, 0.04)
+  const { rates, excludedTickers } = blendedGrowthRates({ VWRA: 50, ZZZZ: 50 }, 0.04)
   expect("unknown ticker excluded → blend equals the known ticker's own rate",
-    close(rates.base, ASSET_EXPECTED_RETURNS.VT.base), `got ${rates.base}`)
+    close(rates.base, ASSET_EXPECTED_RETURNS.VWRA.base), `got ${rates.base}`)
   expect("unknown ticker reported in excludedTickers",
     excludedTickers.length === 1 && excludedTickers[0] === "ZZZZ",
     `got [${excludedTickers}]`)

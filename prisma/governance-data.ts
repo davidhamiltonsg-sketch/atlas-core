@@ -32,8 +32,8 @@ export interface SeedRule {
 // is added separately by the migrations that introduced it.
 export const HOLDINGS_SEED: SeedHolding[] = [
   {
-    ticker: "VT",
-    name: "Vanguard Total World Stock ETF",
+    ticker: "VWRA",
+    name: "Vanguard FTSE All-World UCITS ETF",
     targetPct: 52,
     hardCapPct: 60,
     toleranceBand: 6,
@@ -41,8 +41,8 @@ export const HOLDINGS_SEED: SeedHolding[] = [
     snapshot: { units: 428, price: 155.52, value: 85209.84 },
   },
   {
-    ticker: "QQQM",
-    name: "Invesco NASDAQ 100 ETF",
+    ticker: "EQQQ",
+    name: "Invesco Nasdaq-100 UCITS ETF",
     targetPct: 23,
     hardCapPct: 30,
     toleranceBand: 5,
@@ -50,8 +50,8 @@ export const HOLDINGS_SEED: SeedHolding[] = [
     snapshot: { units: 63, price: 295.02, value: 23792.85 },
   },
   {
-    ticker: "SMH",
-    name: "VanEck Semiconductor ETF",
+    ticker: "SEMI",
+    name: "VanEck Semiconductor UCITS ETF",
     targetPct: 10,
     hardCapPct: 12, // §2 — cap tightened 15% → 12% (v6.x)
     toleranceBand: 3,
@@ -59,8 +59,8 @@ export const HOLDINGS_SEED: SeedHolding[] = [
     snapshot: { units: 24, price: 573.79, value: 17628.63 },
   },
   {
-    ticker: "VWO",
-    name: "Vanguard FTSE Emerging Markets ETF",
+    ticker: "VFEA",
+    name: "Vanguard FTSE Emerging Markets UCITS ETF",
     targetPct: 8,
     hardCapPct: 13,
     toleranceBand: 3,
@@ -92,86 +92,86 @@ export const HOLDINGS_SEED: SeedHolding[] = [
 
 // §11 — the 40-rule register (10 categories). Mirrors GOVERNANCE-v6.7.
 export const GOVERNANCE_RULES: SeedRule[] = [
-  // VT Governance · 4
+  // VWRA Governance · 4
   {
-    title: "VT — Healthy Range 46–58%",
-    description: "VT target 52%. Healthy range 46–58%. Soft drift below 46% or above 58% — redirect contributions. Hard drift below 42% or above 60% — rebalance review required. (Art. VII v1.1: hard cap reduced from 62% to 60%.)",
-    category: "VT Governance",
+    title: "VWRA — Healthy Range 46–58%",
+    description: "VWRA target 52%. Healthy range 46–58%. Soft drift below 46% or above 58% — redirect contributions. Hard drift below 42% or above 60% — rebalance review required. (Art. VII v1.1: hard cap reduced from 62% to 60%.)",
+    category: "VWRA Governance",
     active: true,
   },
   {
-    title: "VT — Diversification Anchor",
-    description: "VT is the diversification anchor, behavioural stabiliser, and anti-fragility layer. It provides broad global ownership and prevents excessive thematic concentration, US-only dependency, and emotional portfolio fragility.",
-    category: "VT Governance",
+    title: "VWRA — Diversification Anchor",
+    description: "VWRA is the diversification anchor, behavioural stabiliser, and anti-fragility layer. It provides broad global ownership and prevents excessive thematic concentration, US-only dependency, and emotional portfolio fragility.",
+    category: "VWRA Governance",
     active: true,
   },
   {
-    title: "VT Underweight Response",
-    description: "Portfolio is becoming excessively thematic, concentrated, or behaviourally fragile. Redirect all contributions toward VT until restored to healthy range.",
-    category: "VT Governance",
+    title: "VWRA Underweight Response",
+    description: "Portfolio is becoming excessively thematic, concentrated, or behaviourally fragile. Redirect all contributions toward VWRA until restored to healthy range.",
+    category: "VWRA Governance",
     active: true,
   },
   {
-    title: "VT Overweight Response",
-    description: "Portfolio is becoming excessively defensive and diluted from its intended growth profile. Redirect contributions toward QQQM to restore balance.",
-    category: "VT Governance",
+    title: "VWRA Overweight Response",
+    description: "Portfolio is becoming excessively defensive and diluted from its intended growth profile. Redirect contributions toward EQQQ to restore balance.",
+    category: "VWRA Governance",
     active: true,
   },
-  // QQQM Governance · 4
+  // EQQQ Governance · 4
   {
-    title: "QQQM — Healthy Range 18–28%",
-    description: "QQQM target 23%. Healthy range 18–28%. Soft drift below 18% or above 28%. Hard cap 30% (trim on breach); hard drift below 15%.",
-    category: "QQQM Governance",
-    active: true,
-  },
-  {
-    title: "QQQM — Digital Economy Engine",
-    description: "QQQM is the portfolio's dominant long-term growth engine — software systems, cloud infrastructure, hyperscaler ecosystems, platform economies, AI monetisation, and enterprise digitisation.",
-    category: "QQQM Governance",
+    title: "EQQQ — Healthy Range 18–28%",
+    description: "EQQQ target 23%. Healthy range 18–28%. Soft drift below 18% or above 28%. Hard cap 30% (trim on breach); hard drift below 15%.",
+    category: "EQQQ Governance",
     active: true,
   },
   {
-    title: "QQQM Underweight Response",
-    description: "Portfolio is becoming underexposed to digital expansion and insufficiently growth-oriented. Increase contributions to QQQM.",
-    category: "QQQM Governance",
+    title: "EQQQ — Digital Economy Engine",
+    description: "EQQQ is the portfolio's dominant long-term growth engine — software systems, cloud infrastructure, hyperscaler ecosystems, platform economies, AI monetisation, and enterprise digitisation.",
+    category: "EQQQ Governance",
     active: true,
   },
   {
-    title: "QQQM Overweight Response",
-    description: "Portfolio is becoming excessively dependent on US mega-cap technology and more valuation-sensitive. Pause incremental QQQM accumulation.",
-    category: "QQQM Governance",
-    active: true,
-  },
-  // SMH Governance · 2
-  {
-    title: "SMH — Healthy Range 7–11%",
-    description: "SMH target 10%. Healthy range 7–11% (green). Amber zone 11–12% — no new buys. Hard cap 12% — trim back to target. (Art. VII v1.1: amber zone 11–12% added; green ceiling lowered from 12% to 11%.)",
-    category: "SMH Governance",
+    title: "EQQQ Underweight Response",
+    description: "Portfolio is becoming underexposed to digital expansion and insufficiently growth-oriented. Increase contributions to EQQQ.",
+    category: "EQQQ Governance",
     active: true,
   },
   {
-    title: "SMH — AI Infrastructure Tilt Identity Rule",
-    description: "SMH is a targeted AI infrastructure tilt, not the portfolio foundation. Semiconductor concentration must never become the dominant portfolio risk factor. If underweight, resume controlled accumulation. If overweight, halt accumulation above 12%; selectively trim back to the 10% target once over the 12% hard cap.",
-    category: "SMH Governance",
+    title: "EQQQ Overweight Response",
+    description: "Portfolio is becoming excessively dependent on US mega-cap technology and more valuation-sensitive. Pause incremental EQQQ accumulation.",
+    category: "EQQQ Governance",
     active: true,
   },
-  // VWO Governance · 3
+  // SEMI Governance · 2
   {
-    title: "VWO — Identity & Thesis",
-    description: "Geographic Diversifier. VWO's job is long-run exposure to the demographic and productivity convergence story across emerging markets — principally EM Asia (China, India, Taiwan, South Korea). It is not a tactical trade on any single country or commodity cycle. It reduces structural US-and-Europe dependency and adds a second long-run growth engine with low correlation to QQQM/SMH in non-risk-on environments. Broken-thesis criteria: thesis breaks only if EM equity markets structurally de-couple from global growth for 5+ years AND the demographic convergence thesis is falsified by sustained productivity stagnation across EM Asia broadly. Capital controls in a single major EM economy do not break the thesis.",
-    category: "VWO Governance",
-    active: true,
-  },
-  {
-    title: "VWO — Healthy Range 5–11%",
-    description: "VWO target 8%. Healthy range 5–11%. Soft drift below 5% or above 11%. Hard drift below 3% or above 13%. If underweight, resume modest accumulation. If overweight, pause accumulation.",
-    category: "VWO Governance",
+    title: "SEMI — Healthy Range 7–11%",
+    description: "SEMI target 10%. Healthy range 7–11% (green). Amber zone 11–12% — no new buys. Hard cap 12% — trim back to target. (Art. VII v1.1: amber zone 11–12% added; green ceiling lowered from 12% to 11%.)",
+    category: "SEMI Governance",
     active: true,
   },
   {
-    title: "VWO — Response Rules",
-    description: "Underweight (below 5%): redirect a portion of monthly contributions to VWO until restored to the healthy band. Overweight (above 11%): pause VWO contributions and redirect to VT or QQQM. Hard breach (above 13%): assess a selective trim at the next dealing window.",
-    category: "VWO Governance",
+    title: "SEMI — AI Infrastructure Tilt Identity Rule",
+    description: "SEMI is a targeted AI infrastructure tilt, not the portfolio foundation. Semiconductor concentration must never become the dominant portfolio risk factor. If underweight, resume controlled accumulation. If overweight, halt accumulation above 12%; selectively trim back to the 10% target once over the 12% hard cap.",
+    category: "SEMI Governance",
+    active: true,
+  },
+  // VFEA Governance · 3
+  {
+    title: "VFEA — Identity & Thesis",
+    description: "Geographic Diversifier. VFEA's job is long-run exposure to the demographic and productivity convergence story across emerging markets — principally EM Asia (China, India, Taiwan, South Korea). It is not a tactical trade on any single country or commodity cycle. It reduces structural US-and-Europe dependency and adds a second long-run growth engine with low correlation to EQQQ/SEMI in non-risk-on environments. Broken-thesis criteria: thesis breaks only if EM equity markets structurally de-couple from global growth for 5+ years AND the demographic convergence thesis is falsified by sustained productivity stagnation across EM Asia broadly. Capital controls in a single major EM economy do not break the thesis.",
+    category: "VFEA Governance",
+    active: true,
+  },
+  {
+    title: "VFEA — Healthy Range 5–11%",
+    description: "VFEA target 8%. Healthy range 5–11%. Soft drift below 5% or above 11%. Hard drift below 3% or above 13%. If underweight, resume modest accumulation. If overweight, pause accumulation.",
+    category: "VFEA Governance",
+    active: true,
+  },
+  {
+    title: "VFEA — Response Rules",
+    description: "Underweight (below 5%): redirect a portion of monthly contributions to VFEA until restored to the healthy band. Overweight (above 11%): pause VFEA contributions and redirect to VWRA or EQQQ. Hard breach (above 13%): assess a selective trim at the next dealing window.",
+    category: "VFEA Governance",
     active: true,
   },
   // BTC Governance · 2
@@ -209,61 +209,61 @@ export const GOVERNANCE_RULES: SeedRule[] = [
   // Overlap & Concentration (§4) · 11
   {
     title: "Semiconductor Dependency — Cap 16%/20%",
-    description: "Total semiconductor exposure must remain below 16%. Elevated 16–20%: pause SMH accumulation. Excessive above 20%: halt SMH; redirect contributions to VT.",
+    description: "Total semiconductor exposure must remain below 16%. Elevated 16–20%: pause SEMI accumulation. Excessive above 20%: halt SEMI; redirect contributions to VWRA.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Digital Economy Dependency — Cap 48%/54%",
-    description: "Combined digital economy exposure must remain below 48%. Elevated 48–54%: increase VT and VWO contributions. Excessive above 54%: halt QQQM and SMH accumulation.",
+    description: "Combined digital economy exposure must remain below 48%. Elevated 48–54%: increase VWRA and VFEA contributions. Excessive above 54%: halt EQQQ and SEMI accumulation.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "US Market Dependency — Cap 70%/78%",
-    description: "Total effective US exposure must remain below 70%. Elevated 70–78%: prioritise VT and VWO contributions. Excessive above 78%: pause all technology concentration increases.",
+    description: "Total effective US exposure must remain below 70%. Elevated 70–78%: prioritise VWRA and VFEA contributions. Excessive above 78%: pause all technology concentration increases.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "AI Infrastructure Cluster — Cap 38%/46%",
-    description: "Combined AI infrastructure exposure must remain below 38%. Elevated 38–46%: reduce SMH additions; favour VT. Excessive above 46%: halt SMH; reduce QQQM additions.",
+    description: "Combined AI infrastructure exposure must remain below 38%. Elevated 38–46%: reduce SEMI additions; favour VWRA. Excessive above 46%: halt SEMI; reduce EQQQ additions.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Nvidia Exposure Cap — Soft 10%, Hard 13%",
-    description: "Effective Nvidia look-through exposure across VT, QQQM, and SMH: soft cap 10%, hard cap 13%. Soft breach: redirect contributions to VT and VWO. Hard breach: pause all SMH and QQQM accumulation; assess selective trim. Monitor quarterly.",
+    description: "Effective Nvidia look-through exposure across VWRA, EQQQ, and SEMI: soft cap 10%, hard cap 13%. Soft breach: redirect contributions to VWRA and VFEA. Hard breach: pause all SEMI and EQQQ accumulation; assess selective trim. Monitor quarterly.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Microsoft Exposure Cap — Soft 10%, Hard 13%",
-    description: "Effective Microsoft look-through exposure across VT and QQQM: soft cap 10%, hard cap 13%. Soft breach: monitor and warn. Hard breach: pause QQQM accumulation; redirect to VT. Monitor quarterly.",
+    description: "Effective Microsoft look-through exposure across VWRA and EQQQ: soft cap 10%, hard cap 13%. Soft breach: monitor and warn. Hard breach: pause EQQQ accumulation; redirect to VWRA. Monitor quarterly.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Apple Exposure Cap — Soft 8%, Hard 11%",
-    description: "Effective Apple look-through exposure: soft cap 8%, hard cap 11%. Soft breach: monitor. Hard breach: pause QQQM; redirect to VT or VWO.",
+    description: "Effective Apple look-through exposure: soft cap 8%, hard cap 11%. Soft breach: monitor. Hard breach: pause EQQQ; redirect to VWRA or VFEA.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Amazon Exposure Cap — Soft 7%, Hard 9%",
-    description: "Effective Amazon look-through exposure: soft cap 7%, hard cap 9%. Soft breach: monitor. Hard breach: pause QQQM accumulation.",
+    description: "Effective Amazon look-through exposure: soft cap 7%, hard cap 9%. Soft breach: monitor. Hard breach: pause EQQQ accumulation.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Meta & Alphabet Exposure Cap — Soft 6%, Hard 8%",
-    description: "Effective Meta and Alphabet look-through exposure: soft cap 6% each, hard cap 8% each. Soft breach: monitor. Hard breach: redirect future QQQM contributions to VT.",
+    description: "Effective Meta and Alphabet look-through exposure: soft cap 6% each, hard cap 8% each. Soft breach: monitor. Hard breach: redirect future EQQQ contributions to VWRA.",
     category: "Overlap & Concentration",
     active: true,
   },
   {
     title: "Broadcom & TSMC Exposure Cap — Soft 5%, Hard 7%",
-    description: "Effective Broadcom and TSMC look-through exposure: soft cap 5% each, hard cap 7% each. Soft breach: monitor. Hard breach: halt SMH accumulation.",
+    description: "Effective Broadcom and TSMC look-through exposure: soft cap 5% each, hard cap 7% each. Soft breach: monitor. Hard breach: halt SEMI accumulation.",
     category: "Overlap & Concentration",
     active: true,
   },

@@ -3,7 +3,7 @@
  *
  * Removes any Atlas Core tickers (VT, VWO, BTC, IBIT, SGOV, etc.) that were
  * accidentally added to Dami's account by ensureCoreHoldings() during a
- * refreshLivePrices() call. Leaves VWRA, QQQM, SMH, A35 intact.
+ * refreshLivePrices() call. Leaves VWRA, EQQQ, SEMI, A35 intact.
  *
  * Run: npx tsx prisma/fix-sbr-holdings.ts
  */

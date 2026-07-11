@@ -14,7 +14,7 @@ const RISK_REGISTER_ITEMS = [
       "Non-US persons are subject to US estate tax on US-sited assets above ~USD 60k. " +
       "Art. XV: estate-tax risk begins at USD 60k (warn); a mandatory REVIEW is triggered above USD 100k. " +
       "The review must confirm migration is the correct action under current law and tax advice before executing. " +
-      "Expected outcome: migrate VT, QQQM, SMH, VWO to Irish UCITS equivalents. No action required below USD 60k.",
+      "Expected outcome: migrate VWRA, EQQQ, SEMI, VFEA to Irish UCITS equivalents. No action required below USD 60k.",
     preCommittedResponseId: "A1",
   },
   {
@@ -35,7 +35,7 @@ const RISK_REGISTER_ITEMS = [
     description:
       "Portfolio base currency is SGD but the majority of assets are priced in USD. " +
       "Structural FX mismatch: USD weakness (or SGD strength) reduces portfolio NAV in SGD terms. " +
-      "Mitigated by VT's diversified global exposure and the portfolio's long 20-year horizon. " +
+      "Mitigated by VWRA's diversified global exposure and the portfolio's long 20-year horizon. " +
       "No active hedging — currency drag is accepted as the cost of global diversification.",
   },
   {
@@ -43,9 +43,9 @@ const RISK_REGISTER_ITEMS = [
     title: "Tech Sector Concentration",
     level: "medium",
     description:
-      "QQQM and SMH hold overlapping semiconductor and mega-cap tech exposure. Combined QQQM+SMH " +
+      "EQQQ and SEMI hold overlapping semiconductor and mega-cap tech exposure. Combined EQQQ+SEMI " +
       "position must stay below the soft ceiling of 38% (Art. IX) and hard ceiling of 42%. " +
-      "Individual caps (QQQM 30%, SMH 12%) understate the true sector concentration risk due to " +
+      "Individual caps (EQQQ 30%, SEMI 12%) understate the true sector concentration risk due to " +
       "their overlap. The combined tech rule is the binding constraint when both are elevated.",
   },
 ] as const

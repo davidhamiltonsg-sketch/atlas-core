@@ -16,11 +16,10 @@ import { EquityCurve, type ProjectionPoint } from "@/components/sbr/equity-curve
 import { ScenarioCards, type Scenario } from "@/components/sbr/scenario-cards"
 import { BrickRoad } from "@/components/sbr/brick-road"
 import { AnimatedNumber } from "@/components/animated-number"
-import { displayTicker } from "@/lib/approved-alternatives"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
-const VT_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VT.base // VT (Total World) long-run CAGR proxy — single source with the blend
+const VT_HISTORICAL_RATE = (ASSET_EXPECTED_RETURNS.VWRA ?? ASSET_EXPECTED_RETURNS.VT)?.base ?? 0.095 // VWRA/VT (Total World) long-run CAGR proxy
 const CONE_VOL_DEFAULT = 0.15 // fallback annual vol for the P10/P90 band when history is thin
 
 const SCENARIO_META = [
@@ -577,8 +576,8 @@ export default async function Forecast() {
               {[
                 { year: "2040", maxEquity: "90%", action: "Complete the 2040 portfolio review. Write a Distribution Plan — a document that says how you will draw money down from the portfolio in retirement." },
                 { year: "2041", maxEquity: "85%", action: "Reduce Bitcoin toward 4% of the portfolio. Rebuild your safety buffer (SGOV / cash) to at least 15%." },
-                { year: "2042", maxEquity: "80%", action: `Reduce semiconductors (${displayTicker("SMH")}) toward 6%. Start moving some money into bonds — target 5–8% in bonds by end of year.` },
-                { year: "2043", maxEquity: "75%", action: `Bring ${displayTicker("QQQM")} down toward 18% and emerging markets toward 5%. Move bonds and cash combined to 15–20%.` },
+                { year: "2042", maxEquity: "80%", action: "Reduce semiconductors (SEMI) toward 6%. Start moving some money into bonds — target 5–8% in bonds by end of year." },
+                { year: "2043", maxEquity: "75%", action: "Bring EQQQ down toward 18% and emerging markets toward 5%. Move bonds and cash combined to 15–20%." },
                 { year: "2044", maxEquity: "70%", action: "Final year of building the portfolio. Shift the focus from growth to keeping what you have safe and generating income." },
                 { year: "2045", maxEquity: "Per 2040 Review", action: "Retirement drawdown begins. Follow the Distribution Plan written in 2040." },
               ].map(({ year, maxEquity, action }) => (
@@ -594,7 +593,7 @@ export default async function Forecast() {
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
             <span className="font-semibold text-foreground">Sell-down order when drawing down:</span>{" "}
-            SGOV first → BTC → {displayTicker("SMH")} → {displayTicker("VWO")} → {displayTicker("QQQM")} → {displayTicker("VT")} last.
+            SGOV first → BTC → SEMI → VFEA → EQQQ → VWRA last.
             This sells the highest-concentration and highest-volatility positions first,
             keeping the broadest and cheapest holdings longest.
           </p>

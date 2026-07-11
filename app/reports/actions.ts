@@ -111,7 +111,7 @@ const SYMBOL_TO_COMPANY: Record<string, string> = {
   GOOG:     "Alphabet",
   AVGO:     "Broadcom",
   TSM:      "TSMC",
-  "2330.TW":"TSMC",   // Taiwan Stock Exchange listing (appears in VWO)
+  "2330.TW":"TSMC",   // Taiwan Stock Exchange listing (appears in VFEA)
 }
 
 // GICS sector keys Yahoo Finance uses → maps to our "digital economy" bucket
@@ -215,11 +215,11 @@ function deriveSectorWeights(
   let digital = 0
   for (const key of DIGITAL_GICS) digital += gics[key] ?? 0
 
-  // Semiconductor: SMH is a pure semi ETF so use its technology weight as proxy.
+  // Semiconductor: SEMI is a pure semi ETF so use its technology weight as proxy.
   // For others, derive from tracked company weights (Nvidia + Broadcom + TSMC)
   // and scale up since these 3 represent only ~35–45% of the semiconductor universe.
   let semiconductor: number
-  if (ticker === "SMH") {
+  if (ticker === "SEMI") {
     semiconductor = Math.round(gics["technology"] ?? 90)
   } else {
     const semiCompanies = (companyWeights.Nvidia ?? 0) +
@@ -245,7 +245,7 @@ function deriveGeoWeights(
   countryWeightings: Array<Record<string, number>>
 ): { us: number; intlDev: number; emerging: number; crypto: number } {
   // Pure-US ETFs have no country weightings in Yahoo's response
-  if (ticker === "QQQM") return { us: 100, intlDev: 0, emerging: 0, crypto: 0 }
+  if (ticker === "EQQQ") return { us: 100, intlDev: 0, emerging: 0, crypto: 0 }
 
   let us = 0
   let emerging = 0
@@ -260,7 +260,7 @@ function deriveGeoWeights(
   }
 
   // If no country data came back (common for pure-US ETFs), use known values
-  if (countryWeightings.length === 0 && ticker === "SMH") {
+  if (countryWeightings.length === 0 && ticker === "SEMI") {
     us = 75; emerging = 12  // TSMC in Taiwan is EM
   }
 
@@ -285,7 +285,7 @@ export async function refreshLookThroughAction(): Promise<{
   if (!session) return { error: "Unauthenticated." }
   // Any authenticated user can refresh (it's read-only data from Yahoo)
 
-  const TICKERS = ["VT", "QQQM", "SMH", "VWO", "BTC"]
+  const TICKERS = ["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"]
   const updated: string[] = []
   const errors:  string[] = []
 

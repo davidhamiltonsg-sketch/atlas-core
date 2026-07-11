@@ -21,9 +21,13 @@ interface CollapsibleRuleGroupProps {
 }
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  "VWRA Governance":         Globe,
   "VT Governance":           Globe,
+  "EQQQ Governance":         Zap,
   "QQQM Governance":         Zap,
+  "SEMI Governance":         Cpu,
   "SMH Governance":          Cpu,
+  "VFEA Governance":         Earth,
   "VWO Governance":          Earth,
   "BTC Governance":          Bitcoin,
   "Bitcoin Governance (BTC + IBIT)": Bitcoin,

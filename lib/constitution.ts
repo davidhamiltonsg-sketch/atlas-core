@@ -7,7 +7,7 @@
  * succession, and governance-score dimensions.
  *
  * The framework sets the US look-through cap at 66/70 (Art. IX) and holds the Bitcoin
- * cap at a constant 8%, tightening to 6% only in a >50% drawdown (Art. X). The SMH
+ * cap at a constant 8%, tightening to 6% only in a >50% drawdown (Art. X). The SEMI
  * pullback band accumulates up to — but never past — the 12% cap (Art. XI). Art. XXX
  * (Crisis Protocol) and Art. XXI A5 (deep-drawdown review) govern systemic and
  * single-position stress. The 4th governance dimension is Freshness (Art. XXII).
@@ -21,10 +21,10 @@ export const CONSTITUTION_UPDATED = '2026-07' as const
 
 // ─── Re-export all constants from lib/constants.ts ────────────────────────────
 // Art. VI   — allocation targets
-// Art. VII  — position hard caps (VT=60%); Art. VIII drift bands (SMH amberHigh=11%)
+// Art. VII  — position hard caps (VWRA=60%); Art. VIII drift bands (SEMI amberHigh=11%)
 // Art. X    — BTC halving cycle (bull = months 12–24 post-halving)
-// Art. XI   — SMH dynamic buy zone / soft bands
-// Art. XII  — combined tech ceiling (QQQM+SMH)
+// Art. XI   — SEMI dynamic buy zone / soft bands
+// Art. XII  — combined tech ceiling (EQQQ+SEMI)
 // Art. XIV  — behavioural rules
 // Art. XIII — DCA params (contribution USD 3,000/mo)
 // Art. XV   — UCITS mandate (warn 60k, require 100k)
@@ -132,8 +132,8 @@ export const AUTHORITY = {
 
 // ─── Art. XI — BUFFER DEPLOYMENT TRIGGER ─────────────────────────────────────
 // SGOV above 12% is a chronic drag — deploy the excess, not just guard the floor.
-// Deploy half the excess above 8% into VT at the next dealing window.
-// Example: SGOV at 14% → deploy 3% into VT, leaving SGOV at 11%.
+// Deploy half the excess above 8% into VWRA at the next dealing window.
+// Example: SGOV at 14% → deploy 3% into VWRA, leaving SGOV at 11%.
 export const SGOV_DEPLOY_TRIGGER_PCT = 12 // above this → deploy excess (Art. XI)
 
 // ─── Art. XXIV — SUCCESSION ──────────────────────────────────────────────────

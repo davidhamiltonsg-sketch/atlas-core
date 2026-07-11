@@ -41,16 +41,16 @@ const top: LiveMarketPos = { price: 99, lo52: 60, hi52: 100 }
 
 function market(overrides: Record<string, LiveMarketPos> = {}): Record<string, LiveMarketPos> {
   const base: Record<string, LiveMarketPos> = {}
-  for (const t of ["VT", "QQQM", "SMH", "VWO", "IBIT"]) base[t] = { ...mid }
+  for (const t of ["VWRA", "EQQQ", "SEMI", "VFEA", "IBIT"]) base[t] = { ...mid }
   return { ...base, ...overrides }
 }
 
 // ─── Base healthy portfolio ───────────────────────────────────────────────────
 const BASE = [
-  pos("VT",   52, 52, 60),
-  pos("QQQM", 23, 23, 30),
-  pos("SMH",  10, 10, 12),
-  pos("VWO",   8,  8, 13),
+  pos("VWRA", 52, 52, 60),
+  pos("EQQQ", 23, 23, 30),
+  pos("SEMI", 10, 10, 12),
+  pos("VFEA",  8,  8, 13),
   pos("IBIT",  7,  7,  8),  // Bitcoin accumulation vehicle
   pos("SGOV",  8,  0, null), // buffer — targetPct 0 so step 2 never fires for it
 ]
@@ -71,73 +71,73 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   expect("step 5 passed", r.steps[4].status === "passed")
 }
 
-// ─── 2. VT underweight → Step 2, fill VT (skip rule does NOT block) ──────────
+// ─── 2. VWRA underweight → Step 2, fill VWRA (skip rule does NOT block) ──────────
 {
   console.log("\nStep 2 — Underweight redirect (skip rule must NOT block)")
   const positions = BASE.map(p =>
-    p.ticker === "VT" ? { ...p, actualPct: 46, targetPct: 52 } : p
+    p.ticker === "VWRA" ? { ...p, actualPct: 46, targetPct: 52 } : p
   )
-  // VT is near its 52w high — in old engine, skip rule would have skipped VT.
-  // In v1.1, step 2 fires and buys VT anyway (drift correction > entry timing).
-  const r = computeLadder(positions, TOTAL, { market: market({ VT: top }) })
+  // VWRA is near its 52w high — in old engine, skip rule would have skipped VWRA.
+  // In v1.1, step 2 fires and buys VWRA anyway (drift correction > entry timing).
+  const r = computeLadder(positions, TOTAL, { market: market({ VWRA: top }) })
   expect("underweight → step 2 fires", r.firedStep === 2, `got step ${r.firedStep}`)
-  expect("underweight → ticker is VT", r.ticker === "VT", r.ticker)
+  expect("underweight → ticker is VWRA", r.ticker === "VWRA", r.ticker)
   expect("underweight → NOT step 7", r.firedStep !== 7)
-  // Exception should be logged because VT is near 52w high
+  // Exception should be logged because VWRA is near 52w high
   expect("underweight + at high → exception logged", r.exceptions.length > 0, "no exception logged")
   expect("step 1 passed", r.steps[0].status === "passed")
 }
 
-// ─── 3. Skip rule fires at step 7 — QQQM at 52w high, VT is the redirect ────
+// ─── 3. Skip rule fires at step 7 — EQQQ at 52w high, VWRA is the redirect ────
 {
-  console.log("\nStep 7 — Skip rule fires for QQQM-at-high")
+  console.log("\nStep 7 — Skip rule fires for EQQQ-at-high")
   // All positions exactly at target (step 2 does NOT fire)
-  const r = computeLadder(BASE, TOTAL, { market: market({ QQQM: top }) })
+  const r = computeLadder(BASE, TOTAL, { market: market({ EQQQ: top }) })
   expect("skip → step 7 fires", r.firedStep === 7, `got step ${r.firedStep}`)
-  expect("skip → ticker is VT (redirect)", r.ticker === "VT", r.ticker ?? "null")
+  expect("skip → ticker is VWRA (redirect)", r.ticker === "VWRA", r.ticker ?? "null")
   expect("skip → headline mentions DCA", r.headline.toLowerCase().includes("dca"))
-  expect("skip → exception logged for QQQM", r.exceptions.some(e => e.includes("QQQM")))
+  expect("skip → exception logged for EQQQ", r.exceptions.some(e => e.includes("EQQQ")))
   expect("skip → isTerminal", r.isTerminal)
 }
 
-// ─── 4. SMH over 12% hard cap → Step 1, TRIM ─────────────────────────────────
+// ─── 4. SEMI over 12% hard cap → Step 1, TRIM ─────────────────────────────────
 {
-  console.log("\nStep 1 — SMH over 12% hard cap")
+  console.log("\nStep 1 — SEMI over 12% hard cap")
   const positions = BASE.map(p =>
-    p.ticker === "SMH" ? { ...p, actualPct: 14 } : p
+    p.ticker === "SEMI" ? { ...p, actualPct: 14 } : p
   )
   const r = computeLadder(positions, TOTAL, { market: market() })
-  expect("SMH cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
-  expect("SMH cap → severity critical", r.severity === "critical")
-  expect("SMH cap → ticker SMH", r.ticker === "SMH", r.ticker)
+  expect("SEMI cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
+  expect("SEMI cap → severity critical", r.severity === "critical")
+  expect("SEMI cap → ticker SEMI", r.ticker === "SEMI", r.ticker)
   // Step 2 must NOT be reached
-  expect("SMH cap → step 2 not_reached", r.steps[1].status === "not_reached")
+  expect("SEMI cap → step 2 not_reached", r.steps[1].status === "not_reached")
 }
 
-// ─── 5. QQQM over 30% hard cap → Step 1, TRIM ────────────────────────────────
+// ─── 5. EQQQ over 30% hard cap → Step 1, TRIM ────────────────────────────────
 {
-  console.log("\nStep 1 — QQQM over 30% hard cap")
+  console.log("\nStep 1 — EQQQ over 30% hard cap")
   const positions = BASE.map(p =>
-    p.ticker === "QQQM" ? { ...p, actualPct: 32 } : p
+    p.ticker === "EQQQ" ? { ...p, actualPct: 32 } : p
   )
   const r = computeLadder(positions, TOTAL, { market: market() })
-  expect("QQQM cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
-  expect("QQQM cap → severity critical", r.severity === "critical")
-  expect("QQQM cap → ticker QQQM", r.ticker === "QQQM", r.ticker)
+  expect("EQQQ cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
+  expect("EQQQ cap → severity critical", r.severity === "critical")
+  expect("EQQQ cap → ticker EQQQ", r.ticker === "EQQQ", r.ticker)
 }
 
-// ─── 6. Combined tech ≥ 42% → Step 1, TRIM SMH ───────────────────────────────
+// ─── 6. Combined tech ≥ 42% → Step 1, TRIM SEMI ───────────────────────────────
 {
   console.log("\nStep 1 — Combined tech ≥ 42%")
   const positions = BASE.map(p => {
-    if (p.ticker === "QQQM") return { ...p, actualPct: 30 }
-    if (p.ticker === "SMH")  return { ...p, actualPct: 12 }
+    if (p.ticker === "EQQQ") return { ...p, actualPct: 30 }
+    if (p.ticker === "SEMI") return { ...p, actualPct: 12 }
     return p
   })
   const r = computeLadder(positions, TOTAL, { market: market() })
   expect("combined tech → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
   expect("combined tech → severity critical", r.severity === "critical")
-  expect("combined tech → trim SMH", r.ticker === "SMH", r.ticker)
+  expect("combined tech → trim SEMI", r.ticker === "SEMI", r.ticker)
 }
 
 // ─── 7. Look-through hard breach → Step 1, TRIM ──────────────────────────────
@@ -145,11 +145,11 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   console.log("\nStep 1 — Look-through hard breach (NVIDIA)")
   const r = computeLadder(BASE, TOTAL, {
     market: market(),
-    lookThroughHardBreach: { label: "NVIDIA exposure", pct: 14.2, hard: 13, trimTicker: "SMH" },
+    lookThroughHardBreach: { label: "NVIDIA exposure", pct: 14.2, hard: 13, trimTicker: "SEMI" },
   })
   expect("look-through → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
   expect("look-through → severity critical", r.severity === "critical")
-  expect("look-through → trim SMH", r.ticker === "SMH", r.ticker)
+  expect("look-through → trim SEMI", r.ticker === "SEMI", r.ticker)
 }
 
 // ─── 8. SGOV below 8% floor → Step 5, build SGOV ─────────────────────────────
@@ -193,22 +193,22 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   expect("BTC sleeve → severity critical", r.severity === "critical")
 }
 
-// Note: SMH at 16% IS over its 12% hard cap, so step 1 fires — not step 3.
+// Note: SEMI at 16% IS over its 12% hard cap, so step 1 fires — not step 3.
 // Step 3 is only reachable when a position is above its soft band but under its hard cap.
-// Test with QQQM soft overweight (29% is above target+band=28% but under 30% cap).
+// Test with EQQQ soft overweight (29% is above target+band=28% but under 30% cap).
 {
-  console.log("\nStep 3 — Overweight redirect (QQQM soft overweight)")
+  console.log("\nStep 3 — Overweight redirect (EQQQ soft overweight)")
   const positions = [
-    pos("VT",   52, 52, 60),
-    pos("QQQM", 29, 23, 30, 5),  // 29% is above target+band=28% but under 30% cap
-    pos("SMH",  10, 10, 12),
-    pos("VWO",   8,  8, 13),
+    pos("VWRA", 52, 52, 60),
+    pos("EQQQ", 29, 23, 30, 5),  // 29% is above target+band=28% but under 30% cap
+    pos("SEMI", 10, 10, 12),
+    pos("VFEA",  8,  8, 13),
     pos("IBIT",  7,  7,  8),
     pos("SGOV",  8,  0, null),
   ]
   const r = computeLadder(positions, TOTAL, { market: market() })
-  expect("QQQM soft overweight → step 3 fires", r.firedStep === 3, `got step ${r.firedStep}`)
-  expect("QQQM overweight → redirect away from QQQM", r.ticker !== "QQQM", r.ticker)
+  expect("EQQQ soft overweight → step 3 fires", r.firedStep === 3, `got step ${r.firedStep}`)
+  expect("EQQQ overweight → redirect away from EQQQ", r.ticker !== "EQQQ", r.ticker)
   expect("step 1 passed", r.steps[0].status === "passed")
   expect("step 2 passed", r.steps[1].status === "passed")
 }
@@ -236,25 +236,25 @@ console.log("Atlas Core — Art. XIII Ladder scenario checks (v1.5)\n")
   expect("soft warning → standard DCA continues", r.headline.toLowerCase().includes("dca"))
 }
 
-// ─── 14. VT over 60% hard cap → Step 1, TRIM VT ──────────────────────────────
+// ─── 14. VWRA over 60% hard cap → Step 1, TRIM VWRA ──────────────────────────────
 {
-  console.log("\nStep 1 — VT over 60% hard cap")
-  const positions = BASE.map(p => p.ticker === "VT" ? { ...p, actualPct: 62 } : p)
+  console.log("\nStep 1 — VWRA over 60% hard cap")
+  const positions = BASE.map(p => p.ticker === "VWRA" ? { ...p, actualPct: 62 } : p)
   const r = computeLadder(positions, TOTAL, { market: market() })
-  expect("VT cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
-  expect("VT cap → severity critical", r.severity === "critical")
-  expect("VT cap → ticker VT", r.ticker === "VT", r.ticker)
-  expect("VT cap → step 2 not_reached", r.steps[1].status === "not_reached")
+  expect("VWRA cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
+  expect("VWRA cap → severity critical", r.severity === "critical")
+  expect("VWRA cap → ticker VWRA", r.ticker === "VWRA", r.ticker)
+  expect("VWRA cap → step 2 not_reached", r.steps[1].status === "not_reached")
 }
 
-// ─── 15. VWO over 13% hard cap → Step 1, TRIM VWO ────────────────────────────
+// ─── 15. VFEA over 13% hard cap → Step 1, TRIM VFEA ────────────────────────────
 {
-  console.log("\nStep 1 — VWO over 13% hard cap")
-  const positions = BASE.map(p => p.ticker === "VWO" ? { ...p, actualPct: 14 } : p)
+  console.log("\nStep 1 — VFEA over 13% hard cap")
+  const positions = BASE.map(p => p.ticker === "VFEA" ? { ...p, actualPct: 14 } : p)
   const r = computeLadder(positions, TOTAL, { market: market() })
-  expect("VWO cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
-  expect("VWO cap → severity critical", r.severity === "critical")
-  expect("VWO cap → ticker VWO", r.ticker === "VWO", r.ticker)
+  expect("VFEA cap → step 1 fires", r.firedStep === 1, `got step ${r.firedStep}`)
+  expect("VFEA cap → severity critical", r.severity === "critical")
+  expect("VFEA cap → ticker VFEA", r.ticker === "VFEA", r.ticker)
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

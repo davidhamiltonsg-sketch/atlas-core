@@ -10,7 +10,7 @@ import Anthropic from "@anthropic-ai/sdk"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
 // VWRA trades on the London Stock Exchange (price in USD); A35 trades on SGX (price in SGD).
-const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQQQ: "EQQQ.L", SEMI: "SEMI.L", A35: "A35.SI" }
+const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", VFEA: "VFEA.L", EQQQ: "EQQQ.L", SEMI: "SEMI.L", A35: "A35.SI" }
 const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k, v]) => [v, k]))
 // Tickers whose Yahoo Finance price is already in SGD (no USD→SGD conversion needed).
 const YF_SGD_PRICED = new Set(["A35.SI"])
@@ -97,7 +97,7 @@ export async function applyExtractedHoldings(
     let holding = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
     if (!holding) {
       // Guard: SBR users can only have SBR tickers created. An Atlas Core screenshot
-      // uploaded by mistake must not create VT/VWO/BTC/IBIT entries in an SBR account.
+      // uploaded by mistake must not create VWRA/VFEA/BTC/IBIT entries in an SBR account.
       if (isSbr && !SBR_ALLOWED_TICKERS.has(sym)) continue
       holding = await db.holding.create({
         data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
@@ -126,7 +126,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
 
-  // Resolve constitution — only Atlas Core users get ensureCoreHoldings (which creates VT/VWO/BTC
+  // Resolve constitution — only Atlas Core users get ensureCoreHoldings (which creates VWRA/VFEA/BTC
   // placeholders). Running it for SBR users would contaminate Dami's account with Atlas Core tickers.
   const user = await db.user.findUnique({ where: { id: session.userId }, select: { email: true } })
   const constitutionId = constitutionIdForEmail(user?.email)
@@ -351,7 +351,7 @@ For each holding visible, return a JSON array with objects containing:
 - value: total market value in SGD (number, as shown in the account base currency)
 
 Only include ETF/stock holdings, not cash. Return ONLY a valid JSON array, no explanation.
-Example: [{"ticker":"VT","units":428,"price":155.52,"value":85209.84}]`,
+Example: [{"ticker":"VWRA","units":428,"price":155.52,"value":85209.84}]`,
             },
           ],
         },

@@ -25,10 +25,10 @@ const POSITIONS: Record<string, {
   value: number   // SGD (units × price × FX)
   costSgd: number // total cost basis in SGD (from IBKR avg cost × units × FX)
 }> = {
-  VT:   { units: 428, price: 158.66, value: 86778, costSgd: 73999 },
-  QQQM: { units: 69,  price: 305.84, value: 26968, costSgd: 22862 },
-  SMH:  { units: 24,  price: 605.45, value: 18569, costSgd: 8958  },
-  VWO:  { units: 129, price: 60.25,  value: 9932,  costSgd: 9708  },
+  VWRA: { units: 428, price: 158.66, value: 86778, costSgd: 73999 },
+  EQQQ: { units: 69,  price: 305.84, value: 26968, costSgd: 22862 },
+  SEMI: { units: 24,  price: 605.45, value: 18569, costSgd: 8958  },
+  VFEA: { units: 129, price: 60.25,  value: 9932,  costSgd: 9708  },
   BTC:  { units: 154, price: 32.48,  value: 6392,  costSgd: 7671  },
 }
 

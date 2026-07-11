@@ -35,7 +35,7 @@ const counts = (rows: { ticker: string; type: string; units: number; price: numb
 console.log("Ingestion dedup/reconcile — contract check\n")
 
 // ── selectExecutionsToImport ──────────────────────────────────────────────────
-const batch = [ex("A1", "VT", "BUY", 10, 100, "20260615"), ex("A2", "QQQM", "BUY", 5, 200, "20260615")]
+const batch = [ex("A1", "VWRA", "BUY", 10, 100, "20260615"), ex("A2", "EQQQ", "BUY", 5, 200, "20260615")]
 
 // 1. Fresh DB → import everything.
 eq("fresh import → all", selectExecutionsToImport(batch, new Set(), new Map()).map((e) => e.tradeID), ["A1", "A2"])
@@ -45,20 +45,20 @@ eq("re-run same ids → none", selectExecutionsToImport(batch, new Set(["A1", "A
 
 // 3. Re-import under NEW ids (same trades already in DB by natural key) → import nothing.
 const dbCounts = counts([
-  { ticker: "VT", type: "BUY", units: 10, price: 100, date: new Date("2026-06-15") },
-  { ticker: "QQQM", type: "BUY", units: 5, price: 200, date: new Date("2026-06-15") },
+  { ticker: "VWRA", type: "BUY", units: 10, price: 100, date: new Date("2026-06-15") },
+  { ticker: "EQQQ", type: "BUY", units: 5, price: 200, date: new Date("2026-06-15") },
 ])
-const reimport = [ex("B1", "VT", "BUY", 10, 100, "20260615"), ex("B2", "QQQM", "BUY", 5, 200, "20260615")]
+const reimport = [ex("B1", "VWRA", "BUY", 10, 100, "20260615"), ex("B2", "EQQQ", "BUY", 5, 200, "20260615")]
 eq("re-import new ids → none (no doubling)", selectExecutionsToImport(reimport, new Set(["A1", "A2"]), dbCounts).length, 0)
 
 // 4. Genuine partial fills (two same-price executions of one order) → both import.
-const fills = [ex("C1", "SMH", "BUY", 50, 150, "20260615"), ex("C2", "SMH", "BUY", 50, 150, "20260615")]
+const fills = [ex("C1", "SEMI", "BUY", 50, 150, "20260615"), ex("C2", "SEMI", "BUY", 50, 150, "20260615")]
 eq("partial fills → both import", selectExecutionsToImport(fills, new Set(), new Map()).map((e) => e.tradeID), ["C1", "C2"])
 
 // ── selectStaleDuplicateTrades ────────────────────────────────────────────────
 const D15 = new Date("2026-06-15"), D16 = new Date("2026-06-16")
-const kVT = naturalKey("VT", "BUY", 10, 100, D15)
-const kSMH = naturalKey("SMH", "BUY", 50, 150, D15)
+const kVT = naturalKey("VWRA", "BUY", 10, 100, D15)
+const kSMH = naturalKey("SEMI", "BUY", 50, 150, D15)
 
 // 5. Doubled key, one copy confirmed by the report → delete the stale copy, keep the confirmed one.
 eq("doubled + report overlap → drop stale",
@@ -97,8 +97,8 @@ eq("outside report window → untouched",
 
 // 10. natural key of an execution matches the DB-row key helper (same fields → same string).
 eq("execution/row natural keys agree",
-  executionNaturalKey(ex("Z9", "VT", "BUY", 10, 100, "20260615")),
-  naturalKey("VT", "BUY", 10, 100, D15))
+  executionNaturalKey(ex("Z9", "VWRA", "BUY", 10, 100, "20260615")),
+  naturalKey("VWRA", "BUY", 10, 100, D15))
 
 console.log(`\n${"─".repeat(54)}`)
 if (failures === 0) { console.log(`  All ${passes} checks passed. Ingestion is idempotent, self-healing, and partial-fill-safe ✓`); process.exit(0) }

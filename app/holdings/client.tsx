@@ -165,7 +165,7 @@ export function HoldingsClient({ holdings: initial, totalTargetPct: initialTotal
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticker</label>
-                <input name="ticker" required placeholder={isSbr ? "e.g. VWRA" : "e.g. VT"} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all uppercase`} />
+                <input name="ticker" required placeholder={isSbr ? "e.g. VWRA" : "e.g. VWRA"} className={`w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 ${accentRing} transition-all uppercase`} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Name</label>

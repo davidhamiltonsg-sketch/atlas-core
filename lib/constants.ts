@@ -4,8 +4,8 @@ import { ATLAS_SPEC } from "@/lib/portfolio-spec"
  * Atlas Core — Governance Constants
  *
  * The raw source of record for every rule value: allocation targets, position hard caps,
- * drift bands, the BTC halving-cycle modifier (§4.1), the SMH cycle-aware soft band (§4.2),
- * and the combined QQQM+SMH tech-concentration ceiling (§4.3). Hard caps are static; only
+ * drift bands, the BTC halving-cycle modifier (§4.1), the SEMI cycle-aware soft band (§4.2),
+ * and the combined EQQQ+SEMI tech-concentration ceiling (§4.3). Hard caps are static; only
  * the soft bands float — the one exception is BTC's hard cap, which moves by cycle phase.
  *
  * UNITS — IMPORTANT:
@@ -28,10 +28,10 @@ export const TICKER_TARGETS: Record<string, number> = Object.fromEntries(
 )
 
 // Hard drift thresholds — whole-number percent. Position hard caps live in Art. VII
-// (VT 60%); the drift bands (soft/hard triggers, SMH amber zone) live in Art. VIII.
+// (VWRA 60%); the drift bands (soft/hard triggers, SEMI amber zone) live in Art. VIII.
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
 // conviction asset: accumulate on weakness toward target, never sold at a loss).
-// SMH hard cap 12% (Principle 04). SMH amberHigh=11 adds a soft amber
+// SEMI hard cap 12% (Principle 04). SEMI amberHigh=11 adds a soft amber
 // zone 11–12% (Art. VII); display shows green <11%, amber 11–12%, red ≥12%.
 // BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
 // floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
@@ -55,10 +55,10 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amber
 // TICKER_TARGETS + HARD_THRESHOLDS + this profile — never hand-maintained — so the
 // displayed bands can never disagree with the numbers the engine enforces.
 export const POSITION_PROFILE: Record<string, { band: number; classification: string; color: string }> = {
-  VT:   { band: 6, classification: "Global Core",              color: "#6366f1" },
-  QQQM: { band: 5, classification: "Digital Economy Engine",   color: "#8b5cf6" },
-  SMH:  { band: 3, classification: "AI Infrastructure Tilt",   color: "#a78bfa" },
-  VWO:  { band: 3, classification: "Geographic Diversifier",   color: "#c4b5fd" },
+  VWRA: { band: 6, classification: "Global Core",              color: "#6366f1" },
+  EQQQ: { band: 5, classification: "Digital Economy Engine",   color: "#8b5cf6" },
+  SEMI: { band: 3, classification: "AI Infrastructure Tilt",   color: "#a78bfa" },
+  VFEA: { band: 3, classification: "Geographic Diversifier",   color: "#c4b5fd" },
   BTC:  { band: 1, classification: "Bitcoin — Volatility Cap", color: "#f59e0b" },
 }
 
@@ -90,7 +90,7 @@ export function getGovernanceBandRow(ticker: string): GovernanceBandRow | null {
 }
 
 export const GOVERNANCE_BAND_ROWS: GovernanceBandRow[] =
-  (["VT", "QQQM", "SMH", "VWO", "BTC"] as const)
+  (["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"] as const)
     .map(getGovernanceBandRow)
     .filter((r): r is GovernanceBandRow => r !== null)
 
@@ -156,7 +156,7 @@ export function getBtcModifier(
   return BTC_CYCLE_MODIFIERS[getBtcCyclePhase(btcPriceVsCycleHigh, manualOverride)]
 }
 
-// ─── §4.2 — SMH CYCLE-AWARE SOFT BAND ────────────────────────────────────────
+// ─── §4.2 — SEMI CYCLE-AWARE SOFT BAND ────────────────────────────────────────
 export type SmhCyclePhase = 'top' | 'mid' | 'bottom'
 
 export interface SmhSoftBand {
@@ -173,7 +173,7 @@ export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
   top: {
     phase: 'top', softLow: 7, softHigh: 10, healthyLow: 9, healthyHigh: 10,
     label: 'Cycle Top',
-    signal: 'SMH within 5% of 52-week high. Hold only. No new buys.',
+    signal: 'SEMI within 5% of 52-week high. Hold only. No new buys.',
   },
   mid: {
     phase: 'mid', softLow: 7, softHigh: 12, healthyLow: 7, healthyHigh: 12,
@@ -186,7 +186,7 @@ export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
     // so healthyHigh/softHigh may never exceed it. See Art. XI accumulation precedence.
     phase: 'bottom', softLow: 5, softHigh: 12, healthyLow: 7, healthyHigh: 12,
     label: 'Cycle Bottom',
-    signal: 'SMH >20% off 52-week high. Buy zone widens on the downside — accumulate toward the 12% cap.',
+    signal: 'SEMI >20% off 52-week high. Buy zone widens on the downside — accumulate toward the 12% cap.',
   },
 }
 
@@ -202,9 +202,9 @@ export function getSmhSoftBand(pctFromHigh: number): SmhSoftBand {
 }
 
 // ─── §4.3 — COMBINED TECH CONCENTRATION RULE ─────────────────────────────────
-// Display/governance rule. QQQM+SMH combined exposure as a whole-number percent.
+// Display/governance rule. EQQQ+SEMI combined exposure as a whole-number percent.
 export const COMBINED_TECH_RULE = {
-  tickers:     ['QQQM', 'SMH'] as const,
+  tickers:     ['EQQQ', 'SEMI'] as const,
   softCeiling: ATLAS_SPEC.combinedTech.soft,  // derived from lib/portfolio-spec.ts
   hardCeiling: ATLAS_SPEC.combinedTech.hard,
   label:       'Combined Tech Concentration',
@@ -298,14 +298,14 @@ export const GOVERNANCE_UPDATED = '2026-07' as const
 // Market-condition-aware rules that complement the Section 3 drift bands with overlays
 export const COMMAND_CENTRE_RULES = {
   minHoldDays: 90,         // 3-month hold before any sale
-  smhConcentrationCap: 12, // SMH hard cap at 12% weight (§4 override)
+  smhConcentrationCap: 12, // SEMI hard cap at 12% weight (§4 override)
   shockBufferTargetPct: 10, // Target 8-10% in SGOV / short-duration
   tranche1Pct: 30,         // First entry tranche: 30% of intended capital
   tranche2Pct: 40,         // Second entry (after 3 green weeks): 40%
   tranche3Pct: 30,         // Third entry (trend confirmed): 30%
-  smhEntryLevel1: 590,     // First SMH alert level (watch)
-  smhEntryLevel2: 550,     // Second SMH alert level (deploy tranche 1)
-  smhEntryLevel3: 510,     // Third SMH alert level (deploy tranche 2)
+  smhEntryLevel1: 590,     // First SEMI alert level (watch)
+  smhEntryLevel2: 550,     // Second SEMI alert level (deploy tranche 1)
+  smhEntryLevel3: 510,     // Third SEMI alert level (deploy tranche 2)
   policyShockRecoveryDays: 42,  // Historical avg recovery: policy shocks
   macroShockRecoveryDays: 540,  // Historical avg recovery: macro cycles
 } as const

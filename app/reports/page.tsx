@@ -26,7 +26,6 @@ import {
   atlasConcentrationLabelPct,
 } from "@/lib/spec-derived"
 import { constitutionIdForEmail } from "@/lib/constitutions"
-import { displayTicker } from "@/lib/approved-alternatives"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -49,11 +48,11 @@ const LOOK_THROUGH_STALE_DAYS = 90
 
 // Pairwise overlap data (approximate % of ETF-A that is shared with ETF-B, weighted)
 const OVERLAP_MATRIX: Record<string, Record<string, number>> = {
-  VT:   { VT: 100, QQQM: 28, SMH: 7,  VWO: 8,  BTC: 0 },
-  QQQM: { VT: 28,  QQQM: 100,SMH: 22, VWO: 0,  BTC: 0 },
-  SMH:  { VT: 7,   QQQM: 22, SMH: 100,VWO: 1,  BTC: 0 },
-  VWO:  { VT: 8,   QQQM: 0,  SMH: 1,  VWO: 100,BTC: 0 },
-  BTC:  { VT: 0,   QQQM: 0,  SMH: 0,  VWO: 0,  BTC: 100 },
+  VWRA: { VWRA: 100, EQQQ: 28, SEMI: 7,  VFEA: 8,  BTC: 0 },
+  EQQQ: { VWRA: 28,  EQQQ: 100,SEMI: 22, VFEA: 0,  BTC: 0 },
+  SEMI: { VWRA: 7,   EQQQ: 22, SEMI: 100,VFEA: 1,  BTC: 0 },
+  VFEA: { VWRA: 8,   EQQQ: 0,  SEMI: 1,  VFEA: 100,BTC: 0 },
+  BTC:  { VWRA: 0,   EQQQ: 0,  SEMI: 0,  VFEA: 0,  BTC: 100 },
 }
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
@@ -93,7 +92,7 @@ async function getReportData(userId: string) {
       if (!sectorLooksBad) liveSectorWeights[lt.ticker] = dbSw
 
       // Quality-check geo weights: if hardcoded US% is significant but DB shows 0,
-      // Yahoo returned no countryWeightings (e.g. VT treated like EM-only).
+      // Yahoo returned no countryWeightings (e.g. VWRA treated like EM-only).
       const geoLooksBad = fallbackGw &&
         fallbackGw.us > 10 && (dbGw.us ?? 0) === 0
       if (!geoLooksBad) liveGeoWeights[lt.ticker] = dbGw
@@ -214,7 +213,7 @@ async function getReportData(userId: string) {
   ]
 
   // HHI Concentration Index — thresholds calibrated to the constitutional target allocation,
-  // not generic portfolio benchmarks (a 52% VT anchor makes generic HHI thresholds impossible to satisfy).
+  // not generic portfolio benchmarks (a 52% VWRA anchor makes generic HHI thresholds impossible to satisfy).
   const hhi = concentrationRows.reduce((sum, p) => sum + Math.pow(p.actualPct / 100, 2), 0)
   const effectiveN = hhi > 0 ? 1 / hhi : 0
   const hhiPct = hhi * 100
@@ -330,7 +329,7 @@ function StatusBadge({ status, size = "sm", tip }: { status: string; size?: "sm"
     </span>
   )
   if (status === "elevated") return (
-    <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/25`} title={tip ?? `Approaching the warning limit — keep an eye on this. Redirect next contributions to ${displayTicker("VT")} or ${displayTicker("VWO")}.`}>
+    <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/25`} title={tip ?? `Approaching the warning limit — keep an eye on this. Redirect next contributions to VWRA or VFEA.`}>
       <AlertTriangle className="h-2.5 w-2.5" /> Elevated
     </span>
   )
@@ -451,9 +450,9 @@ export default async function Reports() {
   // Executive summary — auto-generated, plain English
   const summaryPoints: { text: string; severity: "ok" | "warn" | "critical" }[] = []
   if (hardBreaches > 0) summaryPoints.push({ text: `${hardBreaches} holding${hardBreaches > 1 ? "s have" : " has"} drifted far outside its target range — you need to act before your next investment date. See the action plan below.`, severity: "critical" })
-  if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to ${displayTicker("QQQM")} and ${displayTicker("SMH")} until this resolves.`, severity: "warn" })
+  if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to EQQQ and SEMI until this resolves.`, severity: "warn" })
   if (sectorAlerts > 0) summaryPoints.push({ text: `Your portfolio is overexposed to ${sectorAlerts} theme${sectorAlerts > 1 ? "s" : ""} (e.g. semiconductors or tech). Put your next contributions into ${bestAlternatives(elevatedSectors, positions)} instead.`, severity: "warn" })
-  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward ${displayTicker("VT")} and ${displayTicker("VWO")} to re-balance.`, severity: "warn" })
+  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward VWRA and VFEA to re-balance.`, severity: "warn" })
   if (hhiPct > targetHhi + 10) summaryPoints.push({ text: `Your portfolio is more concentrated than it looks — it behaves like you own only ${effectiveN.toFixed(1)} equally-sized positions. Consider spreading contributions more evenly.`, severity: "warn" })
   if (summaryPoints.length === 0) summaryPoints.push({ text: "Everything looks good — all holdings are within their target ranges and no limits have been breached. Keep following your standard monthly plan.", severity: "ok" })
   summaryPoints.push({ text: `Overall health score: ${healthScore}/100 (${healthLabel}). Last prices recorded: ${snapshotDate}.`, severity: healthScore >= 80 ? "ok" : healthScore >= 60 ? "warn" : "critical" })
@@ -1085,7 +1084,7 @@ export default async function Reports() {
             const responses: Record<string, string> = {
               healthy:   "All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
               elevated:  `Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
-              excessive: `Over the limit — stop buying the ETFs that drive this theme (${displayTicker("QQQM")} and/or ${displayTicker("SMH")}) until this comes down. Redirect contributions to ${alt}.`,
+              excessive: `Over the limit — stop buying the ETFs that drive this theme (EQQQ and/or SEMI) until this comes down. Redirect contributions to ${alt}.`,
             }
             // Contribution by ETF for this sector
             const contribs = positions.map(p => {

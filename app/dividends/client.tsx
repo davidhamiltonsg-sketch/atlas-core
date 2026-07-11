@@ -139,7 +139,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticker</label>
-                <input name="ticker" required list="div-ticker-list" placeholder="VT" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all uppercase" />
+                <input name="ticker" required list="div-ticker-list" placeholder="VWRA" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all uppercase" />
                 <datalist id="div-ticker-list">
                   {holdings.map(h => <option key={h.ticker} value={h.ticker} />)}
                 </datalist>
@@ -217,7 +217,7 @@ export function DividendsClient({ dividends: initialDividends, holdings }: Divid
         <div className="rounded-xl border border-border bg-card p-8 text-center">
           <Coins className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm font-medium">No dividends recorded yet</p>
-          <p className="text-xs text-muted-foreground mt-1">VT and VWO pay regular distributions. Log them here to track your passive income.</p>
+          <p className="text-xs text-muted-foreground mt-1">VWRA and VFEA pay regular distributions. Log them here to track your passive income.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">

@@ -29,17 +29,17 @@ console.log(`Atlas Core — governance contract check (Constitution v1.5)\n`)
 eq("GOVERNANCE_VERSION", GOVERNANCE_VERSION, "6.7")  // legacy version string retained
 
 // ── §1/§3 target weights ─────────────────────────────────────────────────────
-eq("target VT",   TICKER_TARGETS.VT,   52)
-eq("target QQQM", TICKER_TARGETS.QQQM, 23)
-eq("target SMH",  TICKER_TARGETS.SMH,  10)
-eq("target VWO",  TICKER_TARGETS.VWO,  8)
+eq("target VWRA", TICKER_TARGETS.VWRA, 52)
+eq("target EQQQ", TICKER_TARGETS.EQQQ, 23)
+eq("target SEMI", TICKER_TARGETS.SEMI, 10)
+eq("target VFEA", TICKER_TARGETS.VFEA, 8)
 eq("target BTC",  TICKER_TARGETS.BTC,  7)
 
 // ── Art. VII hard-drift triggers (v1.1) ──────────────────────────────────────
-eq("hard VT",   HARD_THRESHOLDS.VT,   { low: 42, high: 60 })                    // Art. VII: cap 60%
-eq("hard QQQM", HARD_THRESHOLDS.QQQM, { low: 15, high: 30 })
-eq("hard SMH",  HARD_THRESHOLDS.SMH,  { low: 5,  high: 12, amberHigh: 11 })    // Art. VII: amber zone 11–12%
-eq("hard VWO",  HARD_THRESHOLDS.VWO,  { low: 3,  high: 13 })
+eq("hard VWRA", HARD_THRESHOLDS.VWRA, { low: 42, high: 60 })                    // Art. VII: cap 60%
+eq("hard EQQQ", HARD_THRESHOLDS.EQQQ, { low: 15, high: 30 })
+eq("hard SEMI", HARD_THRESHOLDS.SEMI, { low: 5,  high: 12, amberHigh: 11 })    // Art. VII: amber zone 11–12%
+eq("hard VFEA", HARD_THRESHOLDS.VFEA, { low: 3,  high: 13 })
 eq("hard BTC",  HARD_THRESHOLDS.BTC,  { high: 8 })
 
 // ── §4.1 BTC halving-cycle caps ──────────────────────────────────────────────
@@ -81,20 +81,20 @@ eq("rule count", GOVERNANCE_RULES.length, 40)
 const catCounts: Record<string, number> = {}
 for (const r of GOVERNANCE_RULES) catCounts[r.category] = (catCounts[r.category] ?? 0) + 1
 eq("category counts", catCounts, {
-  "VT Governance": 4, "QQQM Governance": 4, "SMH Governance": 2, "VWO Governance": 3,
+  "VWRA Governance": 4, "EQQQ Governance": 4, "SEMI Governance": 2, "VFEA Governance": 3,
   "BTC Governance": 2, "Vehicle Transitions": 3, "Overlap & Concentration": 11,
   "Rebalancing": 2, "Behavioural Guards": 5, "Compliance": 4,
 })
-// The SMH cap must read 12% (never 15%) anywhere it is stated in the register.
+// The SEMI cap must read 12% (never 15%) anywhere it is stated in the register.
 for (const r of GOVERNANCE_RULES) {
-  if (/\b15%/.test(r.description) && /SMH/i.test(r.title)) {
-    console.error(`  ✗ stale SMH 15% cap in rule "${r.title}"`); failures++
+  if (/\b15%/.test(r.description) && /SEMI/i.test(r.title)) {
+    console.error(`  ✗ stale SEMI 15% cap in rule "${r.title}"`); failures++
   }
 }
 
 // ── Rule-register text must match the derived bands (prose ↔ constants) ───────
 // The 5 "Healthy Range NN–MM%" rules embed numbers; assert they equal getGovernanceBandRow().
-for (const ticker of ["VT", "QQQM", "SMH", "VWO", "BTC"]) {
+for (const ticker of ["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"]) {
   const band = getGovernanceBandRow(ticker)!
   const rule = GOVERNANCE_RULES.find((r) => r.title.startsWith(`${ticker} — Healthy Range`))
   if (!rule) { console.error(`  ✗ no "Healthy Range" rule for ${ticker}`); failures++; continue }
@@ -112,10 +112,10 @@ for (const ticker of ["VT", "QQQM", "SMH", "VWO", "BTC"]) {
 // syncHoldingFromTrades), and next-best-move trims off that DB value. If it drifts from
 // HARD_THRESHOLDS / TICKER_TARGETS, the engines would enforce a cap the constitution never
 // set — the one seed that was previously outside the contract-test net.
-for (const t of ["VT", "QQQM", "SMH", "VWO", "BTC", "IBIT"] as const) {
+for (const t of ["VWRA", "EQQQ", "SEMI", "VFEA", "BTC", "IBIT"] as const) {
   eq(`seed hardCap ${t}`, CORE_DEFAULTS[t]?.hardCapPct, HARD_THRESHOLDS[t]?.high)
 }
-for (const t of ["VT", "QQQM", "SMH", "VWO", "BTC"] as const) {
+for (const t of ["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"] as const) {
   eq(`seed target ${t}`, CORE_DEFAULTS[t]?.targetPct, TICKER_TARGETS[t])
 }
 
