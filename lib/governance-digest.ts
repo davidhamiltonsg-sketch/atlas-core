@@ -113,7 +113,7 @@ export async function buildGovernanceDigest(userId: string): Promise<GovernanceD
         items.push({
           severity: "breach",
           title: `Crash Protocol active — portfolio is ${Math.abs(drawdownPct).toFixed(0)}% below ATH`,
-          detail: `Art. XIV crash protocol is active. Pre-committed responses: ${sgovExcess > 0 ? `deploy ${(sgovExcess / 2).toFixed(1)}% of portfolio from SGOV into VT (A1), then ` : ""}keep contributions unchanged into VT (A2). Do not sell.`,
+          detail: `Art. XIV crash protocol is active. Pre-committed responses: ${sgovExcess > 0 ? `deploy ${(sgovExcess / 2).toFixed(1)}% of portfolio from SGOV into VWRA (A1), then ` : ""}keep contributions unchanged into VWRA (A2). Do not sell.`,
         })
       } else if (drawdownPct <= -15) {
         items.push({

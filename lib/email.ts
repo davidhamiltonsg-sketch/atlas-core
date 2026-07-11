@@ -259,7 +259,7 @@ export async function sendCrashProtocolEmail(
   const sgovFloor = 8
   const sgovExcess = Math.max(0, sgovPct - sgovFloor)
   const sgovNote = sgovExcess > 0
-    ? `SGOV is at ${sgovPct.toFixed(1)}% — ${sgovExcess.toFixed(1)}% above the ${sgovFloor}% floor. Pre-committed response A1: deploy 50% of that excess (≈ ${(sgovExcess / 2).toFixed(1)}% of portfolio) into VT first.`
+    ? `SGOV is at ${sgovPct.toFixed(1)}% — ${sgovExcess.toFixed(1)}% above the ${sgovFloor}% floor. Pre-committed response A1: deploy 50% of that excess (≈ ${(sgovExcess / 2).toFixed(1)}% of portfolio) into VWRA first.`
     : `SGOV is at the ${sgovFloor}% floor — no dry powder to deploy.`
 
   const { error } = await getResend().emails.send({
@@ -287,7 +287,7 @@ export async function sendCrashProtocolEmail(
             <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">What to do — in order</div>
             <div style="font-size:13px;color:#1f2937;line-height:1.8;">
               1. <strong>SGOV deployment (A1):</strong> ${sgovNote}<br>
-              2. <strong>Continue contributions (A2):</strong> Keep making scheduled monthly contributions into VT — unchanged.<br>
+              2. <strong>Continue contributions (A2):</strong> Keep making scheduled monthly contributions into VWRA — unchanged.<br>
               3. <strong>Do not sell:</strong> Do not exit any position. Do not redesign the portfolio.<br>
               4. <strong>Log the exception:</strong> Record this event in the governance log.
             </div>

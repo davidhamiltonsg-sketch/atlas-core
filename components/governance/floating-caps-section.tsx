@@ -85,7 +85,7 @@ export function FloatingCapsSection() {
         <div className="rounded-xl border border-border bg-background/40 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Cpu className="h-4 w-4 text-violet-500" />
-            <h3 className="text-sm font-bold">{displayTicker("SMH")} — Cycle-Aware Soft Band</h3>
+            <h3 className="text-sm font-bold">SEMI — Cycle-Aware Soft Band</h3>
             <span className="ml-auto text-[10px] font-semibold text-muted-foreground">§4.2</span>
           </div>
 
@@ -110,7 +110,7 @@ export function FloatingCapsSection() {
               smhPhase === "bottom" ? "bg-green-500/10 text-green-500" :
                                       "bg-amber-500/10 text-amber-500"
             }`}>{smhBand.label}</span>
-            <span className="text-[11px] text-muted-foreground">Soft band {smhBand.softLow}%–{smhBand.softHigh}% · hard cap {HARD_THRESHOLDS.SMH.high}%</span>
+            <span className="text-[11px] text-muted-foreground">Soft band {smhBand.softLow}%–{smhBand.softHigh}% · hard cap {HARD_THRESHOLDS.SEMI.high}%</span>
           </div>
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">{smhBand.signal}</p>
@@ -152,16 +152,16 @@ export function FloatingCapsSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(["VT", "QQQM", "SMH", "VWO", "BTC"] as const).map(tk => {
+              {(["VWRA", "EQQQ", "SEMI", "VFEA", "BTC"] as const).map(tk => {
                 const target = TICKER_TARGETS[tk]
                 const hard   = HARD_THRESHOLDS[tk]
-                const floats = tk === "BTC" || tk === "SMH"
+                const floats = tk === "BTC" || tk === "SEMI"
                 let cycleCell = "—"
                 if (tk === "BTC") cycleCell = `${btc.label}: soft ${btc.softHigh}% · hard ${btc.hardHigh}%`
-                if (tk === "SMH") cycleCell = `${smhBand.label}: soft ${smhBand.softLow}%–${smhBand.softHigh}%`
+                if (tk === "SEMI") cycleCell = `${smhBand.label}: soft ${smhBand.softLow}%–${smhBand.softHigh}%`
                 return (
                   <tr key={tk} className="hover:bg-accent/20 transition-colors">
-                    <td className="px-4 py-3 font-bold">{displayTicker(tk)}</td>
+                    <td className="px-4 py-3 font-bold">{tk}</td>
                     <td className="px-4 py-3 tabular-nums">{target}%</td>
                     <td className="px-4 py-3 tabular-nums text-red-400">
                       {hard.low !== undefined ? `${hard.low}%–${hard.high}%` : `≤ ${hard.high}%`}
@@ -173,7 +173,7 @@ export function FloatingCapsSection() {
                 )
               })}
               <tr className="bg-violet-500/[0.04]">
-                <td className="px-4 py-3 font-bold">{displayTicker("QQQM")}+{displayTicker("SMH")}</td>
+                <td className="px-4 py-3 font-bold">EQQQ+SEMI</td>
                 <td className="px-4 py-3 tabular-nums text-muted-foreground">—</td>
                 <td className="px-4 py-3 tabular-nums text-red-400">≤ {COMBINED_TECH_RULE.hardCeiling}%</td>
                 <td className="px-4 py-3 text-violet-600 dark:text-violet-300 font-medium">Combined tech: soft {COMBINED_TECH_RULE.softCeiling}% · hard {COMBINED_TECH_RULE.hardCeiling}%</td>

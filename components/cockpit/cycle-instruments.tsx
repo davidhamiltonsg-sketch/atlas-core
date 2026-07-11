@@ -1,5 +1,4 @@
 import type { BtcPhaseCard, SmhBuyZone, CombinedTechCeiling, SgovQueueState } from "@/lib/cycle"
-import { displayTicker } from "@/lib/approved-alternatives"
 
 interface Props {
   btc: BtcPhaseCard
@@ -75,14 +74,14 @@ export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
           note={btc.daysUntilBullEnd !== null ? `Bull window ends in ${btc.daysUntilBullEnd}d` : `${btc.monthsSinceHalving}mo post-halving`}
         />
         <InstrumentTile
-          title={`${displayTicker("SMH")} Buy Zone`}
+          title="SEMI Buy Zone"
           citation="Art. XI · B1"
           badge={smh.isSkipRule ? "SKIP RULE" : smh.isBuyWindow ? "BUY ZONE" : "NEAR TOP"}
           badgeColor={smhBadgeColor}
           stat={`${(smh.pctFromHigh * 100).toFixed(1)}%`}
           statColor={smh.isSkipRule ? "text-amber-500" : smh.isBuyWindow ? "text-green-500" : "text-red-500"}
           sub={`vs 52w high · ${smh.label}`}
-          note={smh.isSkipRule ? `Step 7 redirects to ${displayTicker("VT")}` : smh.pctToHigh > 0 ? `+${(smh.pctToHigh * 100).toFixed(1)}% to reach high` : undefined}
+          note={smh.isSkipRule ? `Step 7 redirects to VWRA` : smh.pctToHigh > 0 ? `+${(smh.pctToHigh * 100).toFixed(1)}% to reach high` : undefined}
         />
         <InstrumentTile
           title="Combined Tech"
@@ -91,7 +90,7 @@ export function CycleInstruments({ btc, smh, tech, sgov }: Props) {
           badgeColor={techBadgeColor}
           stat={`${tech.combinedPct.toFixed(1)}%`}
           statColor={tech.status === "clear" ? "text-green-500" : tech.status === "soft_breach" ? "text-amber-500" : "text-red-500"}
-          sub={`${displayTicker("QQQM")} ${tech.qqqmPct.toFixed(1)}% + ${displayTicker("SMH")} ${tech.smhPct.toFixed(1)}%`}
+          sub={`EQQQ ${tech.qqqmPct.toFixed(1)}% + SEMI ${tech.smhPct.toFixed(1)}%`}
           note={tech.headroom >= 0 ? `${tech.headroom.toFixed(1)}% below soft ceiling (${tech.softCeiling}%)` : `${Math.abs(tech.headroom).toFixed(1)}% over hard ceiling`}
         />
         <InstrumentTile

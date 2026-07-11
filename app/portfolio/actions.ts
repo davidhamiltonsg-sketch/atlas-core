@@ -351,7 +351,7 @@ For each holding visible, return a JSON array with objects containing:
 - value: total market value in SGD (number, as shown in the account base currency)
 
 Only include ETF/stock holdings, not cash. Return ONLY a valid JSON array, no explanation.
-Example: [{"ticker":"VT","units":428,"price":155.52,"value":85209.84}]`,
+Example: [{"ticker":"VWRA","units":428,"price":155.52,"value":85209.84}]`,
             },
           ],
         },

@@ -26,7 +26,6 @@ import {
   atlasConcentrationLabelPct,
 } from "@/lib/spec-derived"
 import { constitutionIdForEmail } from "@/lib/constitutions"
-import { displayTicker } from "@/lib/approved-alternatives"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -49,11 +48,11 @@ const LOOK_THROUGH_STALE_DAYS = 90
 
 // Pairwise overlap data (approximate % of ETF-A that is shared with ETF-B, weighted)
 const OVERLAP_MATRIX: Record<string, Record<string, number>> = {
-  VT:   { VT: 100, QQQM: 28, SMH: 7,  VWO: 8,  BTC: 0 },
-  QQQM: { VT: 28,  QQQM: 100,SMH: 22, VWO: 0,  BTC: 0 },
-  SMH:  { VT: 7,   QQQM: 22, SMH: 100,VWO: 1,  BTC: 0 },
-  VWO:  { VT: 8,   QQQM: 0,  SMH: 1,  VWO: 100,BTC: 0 },
-  BTC:  { VT: 0,   QQQM: 0,  SMH: 0,  VWO: 0,  BTC: 100 },
+  VWRA: { VWRA: 100, EQQQ: 28, SEMI: 7,  VFEA: 8,  BTC: 0 },
+  EQQQ: { VWRA: 28,  EQQQ: 100,SEMI: 22, VFEA: 0,  BTC: 0 },
+  SEMI: { VWRA: 7,   EQQQ: 22, SEMI: 100,VFEA: 1,  BTC: 0 },
+  VFEA: { VWRA: 8,   EQQQ: 0,  SEMI: 1,  VFEA: 100,BTC: 0 },
+  BTC:  { VWRA: 0,   EQQQ: 0,  SEMI: 0,  VFEA: 0,  BTC: 100 },
 }
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
@@ -1085,7 +1084,7 @@ export default async function Reports() {
             const responses: Record<string, string> = {
               healthy:   "All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
               elevated:  `Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
-              excessive: `Over the limit — stop buying the ETFs that drive this theme (${displayTicker("QQQM")} and/or ${displayTicker("SMH")}) until this comes down. Redirect contributions to ${alt}.`,
+              excessive: `Over the limit — stop buying the ETFs that drive this theme (EQQQ and/or SEMI) until this comes down. Redirect contributions to ${alt}.`,
             }
             // Contribution by ETF for this sector
             const contribs = positions.map(p => {

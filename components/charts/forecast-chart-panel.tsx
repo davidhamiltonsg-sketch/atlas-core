@@ -76,7 +76,7 @@ function ScenarioTooltip({ active, payload, label, inflated }: {
   const nameMap: Record<string, string> = {
     aggressive:   "Best case (15%)",
     base:         "Base case (10%)",
-    vtBenchmark:  "Pure VT (9.5% p.a.)",
+    vtBenchmark:  "Pure VWRA (9.5% p.a.)",
     conservative: "Conservative (5%)",
     savings:      "Cash savings (3%)",
   }
