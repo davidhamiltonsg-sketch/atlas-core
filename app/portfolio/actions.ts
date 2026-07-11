@@ -6,6 +6,7 @@ import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
 import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation } from "@/lib/holdings-sync"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import Anthropic from "@anthropic-ai/sdk"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -191,14 +192,9 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   }
 
   // ── IBKR positions — brokerage truth for SHARE COUNTS (units + mark price + value) ──
-  // SBR users get their own Flex tokens (IBKR_SBR_FLEX_TOKEN / IBKR_SBR_FLEX_QUERY_ID).
-  // Falls back to the main tokens if SBR-specific ones are not yet set (unfunded account).
-  const ibkrToken = constitutionId === "silicon-brick-road"
-    ? (process.env.IBKR_SBR_FLEX_TOKEN || process.env.IBKR_FLEX_TOKEN)
-    : process.env.IBKR_FLEX_TOKEN
-  const ibkrQuery = constitutionId === "silicon-brick-road"
-    ? (process.env.IBKR_SBR_FLEX_QUERY_ID || process.env.IBKR_FLEX_QUERY_ID)
-    : process.env.IBKR_FLEX_QUERY_ID
+  // SBR users get their own Flex tokens (IBKR_SBR_*), falling back to the main tokens
+  // if the SBR account isn't wired up yet. Shared with the modal + cron sync paths.
+  const { token: ibkrToken, positionsQuery: ibkrQuery } = ibkrCredentialsFor(constitutionId)
   const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
   let ibkrError: string | null = null
   if (withIbkr && ibkrToken && ibkrQuery) {

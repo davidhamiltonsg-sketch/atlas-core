@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions, isForexRow } from "@/lib/ibkr-flex"
+import { constitutionIdForEmail } from "@/lib/constitutions"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 
 // Allow up to 30s for the FLEX polling loop
@@ -11,8 +13,8 @@ export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
 
-  const token   = process.env.IBKR_FLEX_TOKEN
-  const queryId = process.env.IBKR_FLEX_QUERY_ID
+  // Use the signed-in user's own IBKR account — SBR has its own Flex tokens.
+  const { token, positionsQuery: queryId } = ibkrCredentialsFor(constitutionIdForEmail(session.email))
 
   if (!token || !queryId) {
     return NextResponse.json(
