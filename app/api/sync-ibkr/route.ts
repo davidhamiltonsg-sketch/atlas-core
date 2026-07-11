@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions, isForexRow } from "@/lib/ibkr-flex"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 
@@ -12,10 +13,9 @@ export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
   const active = await activePortfolioContext(session)
-  const isSbr = active.constitutionId === "silicon-brick-road"
-
-  const token = isSbr ? process.env.IBKR_SBR_FLEX_TOKEN : process.env.IBKR_FLEX_TOKEN
-  const queryId = isSbr ? process.env.IBKR_SBR_FLEX_QUERY_ID : process.env.IBKR_FLEX_QUERY_ID
+  // Portfolio switching is owner-aware: use the active portfolio's IBKR account,
+  // not merely the signed-in user's default portfolio.
+  const { token, positionsQuery: queryId } = ibkrCredentialsFor(active.constitutionId)
 
   if (!token || !queryId) {
     return NextResponse.json(

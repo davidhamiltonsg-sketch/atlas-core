@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session"
 import { fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
 import { importIbkrActivityForUser } from "@/lib/holdings-sync"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { CONSTITUTIONS } from "@/lib/constitutions"
@@ -15,17 +16,17 @@ export async function POST() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
   const active = await activePortfolioContext(session)
-  const isSbr = active.constitutionId === "silicon-brick-road"
   const allowed = new Set<string>([
     ...CORE_TICKERS,
     ...CONSTITUTIONS[active.constitutionId].funds.map((f) => f.ticker),
   ])
   const inScope = (sym: string) => allowed.has(sym.trim().toUpperCase())
 
-  const token = isSbr ? process.env.IBKR_SBR_FLEX_TOKEN : process.env.IBKR_FLEX_TOKEN
-  const activityId = isSbr ? process.env.IBKR_SBR_FLEX_QUERY_ID_ACTIVITY : process.env.IBKR_FLEX_QUERY_ID_ACTIVITY
-  const positionsId = isSbr ? process.env.IBKR_SBR_FLEX_QUERY_ID : process.env.IBKR_FLEX_QUERY_ID
-  const queryId      = activityId ?? positionsId
+  // Use the active portfolio owner's IBKR account so either authorised login can
+  // switch portfolios without silently syncing the wrong broker account.
+  const { token, positionsQuery: positionsId, activityQuery: activityId } =
+    ibkrCredentialsFor(active.constitutionId)
+  const queryId = activityId ?? positionsId
 
   console.log("[sync-ibkr/activity] token present:", !!token, "activityId:", !!activityId, "fallback positionsId:", !!positionsId)
 

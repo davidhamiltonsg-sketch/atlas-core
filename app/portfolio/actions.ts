@@ -5,7 +5,8 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { fetchFlexPositions } from "@/lib/ibkr-flex"
 import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation } from "@/lib/holdings-sync"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -42,13 +43,14 @@ export async function updateHoldingsManually(
 ) {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
+  const active = await activePortfolioContext(session)
 
   const usdSgdRate = await getUsdSgdRate()
 
   for (const u of updates) {
     // Verify holding belongs to this user
     const holding = await db.holding.findFirst({
-      where: { id: u.holdingId, userId: session.userId },
+      where: { id: u.holdingId, userId: active.owner.id },
     })
     if (!holding) continue
 
@@ -81,9 +83,9 @@ export async function applyExtractedHoldings(
 ): Promise<{ updated: number; created: number }> {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
-
-  const user = await db.user.findUnique({ where: { id: session.userId }, select: { email: true } })
-  const constitutionId = constitutionIdForEmail(user?.email)
+  const active = await activePortfolioContext(session)
+  const constitutionId = active.constitutionId
+  const ownerId = active.owner.id
   const isSbr = constitutionId === "silicon-brick-road"
 
   const usdSgdRate = await getUsdSgdRate()
@@ -94,13 +96,13 @@ export async function applyExtractedHoldings(
     const sym = r.ticker?.trim().toUpperCase()
     if (!sym || !(r.units > 0) || !(r.price > 0)) continue
 
-    let holding = await db.holding.findFirst({ where: { userId: session.userId, ticker: sym } })
+    let holding = await db.holding.findFirst({ where: { userId: ownerId, ticker: sym } })
     if (!holding) {
       // Guard: SBR users can only have SBR tickers created. An Atlas Core screenshot
       // uploaded by mistake must not create VWRA/VFEA/BTC/IBIT entries in an SBR account.
       if (isSbr && !SBR_ALLOWED_TICKERS.has(sym)) continue
       holding = await db.holding.create({
-        data: { userId: session.userId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
+        data: { userId: ownerId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
       })
       created++
     }
@@ -125,19 +127,17 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const reconcile = opts.reconcile ?? withIbkr     // add/remove holdings only when we have brokerage truth
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
-
-  // Resolve constitution — only Atlas Core users get ensureCoreHoldings (which creates VWRA/VFEA/BTC
-  // placeholders). Running it for SBR users would contaminate Dami's account with Atlas Core tickers.
-  const user = await db.user.findUnique({ where: { id: session.userId }, select: { email: true } })
-  const constitutionId = constitutionIdForEmail(user?.email)
+  const active = await activePortfolioContext(session)
+  const constitutionId = active.constitutionId
+  const ownerId = active.owner.id
   if (constitutionId === "atlas-core") {
-    await ensureCoreHoldings(session.userId)
+    await ensureCoreHoldings(ownerId)
   } else {
-    await ensureSbrPresentation(session.userId)
+    await ensureSbrPresentation(ownerId)
   }
 
   const holdings = await db.holding.findMany({
-    where: { userId: session.userId },
+    where: { userId: ownerId },
     include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
   })
 
@@ -191,14 +191,9 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   }
 
   // ── IBKR positions — brokerage truth for SHARE COUNTS (units + mark price + value) ──
-  // SBR users get their own Flex tokens (IBKR_SBR_FLEX_TOKEN / IBKR_SBR_FLEX_QUERY_ID).
-  // Falls back to the main tokens if SBR-specific ones are not yet set (unfunded account).
-  const ibkrToken = constitutionId === "silicon-brick-road"
-    ? (process.env.IBKR_SBR_FLEX_TOKEN || process.env.IBKR_FLEX_TOKEN)
-    : process.env.IBKR_FLEX_TOKEN
-  const ibkrQuery = constitutionId === "silicon-brick-road"
-    ? (process.env.IBKR_SBR_FLEX_QUERY_ID || process.env.IBKR_FLEX_QUERY_ID)
-    : process.env.IBKR_FLEX_QUERY_ID
+  // SBR users get their own Flex tokens (IBKR_SBR_*), falling back to the main tokens
+  // if the SBR account isn't wired up yet. Shared with the modal + cron sync paths.
+  const { token: ibkrToken, positionsQuery: ibkrQuery } = ibkrCredentialsFor(constitutionId)
   const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
   let ibkrError: string | null = null
   if (withIbkr && ibkrToken && ibkrQuery) {
@@ -271,7 +266,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
       if (dbTickers.has(sym)) continue
       const created = await db.holding.create({
         data: {
-          userId: session.userId, ticker: sym, name: sym,
+          userId: ownerId, ticker: sym, name: sym,
           targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b",
         },
       })

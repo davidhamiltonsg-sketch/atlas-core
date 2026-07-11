@@ -30,15 +30,15 @@ import {
 
 const C = {
   navy: "#0A0F1E",
-  terminal: "${C.terminal}",
+  terminal: "#060C18",
   card: "#1A2035",
   cardHi: "#212a45",
   line: "#26304A",
-  timestamp: "${C.timestamp}",
+  timestamp: "#3A4D6A",
   dim: "#7C89A8",
   text: "#C7D0E4",
-  label: "${C.label}",
-  bright: "${C.bright}",
+  label: "#EAEEF6",
+  bright: "#F5F7FF",
   gold: "#C9A84C",
   blue: "#4A9EFF",
   green: "#2ECC9A",
@@ -503,7 +503,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
           <div className="flex items-center gap-2.5">
             <span className="mc-live-dot" style={{ background: activeCount ? C.green : brand }} />
             <div>
-              <h1 className={`${spaceGrotesk} text-sm font-bold tracking-wide`} style={{ color: "${C.bright}" }}>
+              <h1 className={`${spaceGrotesk} text-sm font-bold tracking-wide`} style={{ color: C.bright }}>
                 {context.variant === "sbr" ? "SILICON BRICK ROAD" : "ATLAS MISSION CONTROL"}
               </h1>
               <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>
@@ -551,7 +551,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[13px] font-semibold" style={{ color: "${C.label}" }}>{agent.name}</span>
+                      <span className="truncate text-[13px] font-semibold" style={{ color: C.label }}>{agent.name}</span>
                       <StatusDot status={st} />
                     </span>
                     <span className={`${mono} mt-0.5 block truncate text-[10px] tracking-wide`} style={{ color: C.dim }}>
@@ -580,7 +580,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
                   <selectedAgent.icon className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className={`${spaceGrotesk} text-lg font-bold`} style={{ color: "${C.bright}" }}>{selectedAgent.name}</h2>
+                  <h2 className={`${spaceGrotesk} text-lg font-bold`} style={{ color: C.bright }}>{selectedAgent.name}</h2>
                   <p className="text-xs" style={{ color: C.dim }}>{selectedAgent.blurb}</p>
                 </div>
               </div>
@@ -629,7 +629,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
                       <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: a.accent }} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-semibold" style={{ color: "${C.label}" }}>{a.name}</span>
+                          <span className="text-[13px] font-semibold" style={{ color: C.label }}>{a.name}</span>
                           <span className={`${mono} shrink-0 text-[10px]`} style={{ color: C.dim }}>{a.codename}</span>
                         </span>
                         <span className="mt-0.5 block text-xs leading-snug" style={{ color: C.text }}>{a.msg}</span>
@@ -642,7 +642,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
           )}
 
           {/* Execution log — the real-time ops feed */}
-          <section className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: "${C.terminal}", borderColor: C.line }}>
+          <section className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: C.terminal, borderColor: C.line }}>
             <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: C.line }}>
               <div className="flex items-center gap-2">
                 <Activity className="h-3.5 w-3.5" style={{ color: C.green }} />
@@ -656,7 +656,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
               <div className={`${mono} space-y-1 text-[12px] leading-relaxed`}>
                 {log.map(l => (
                   <div key={l.id} className="flex gap-2.5">
-                    <span className="shrink-0 tabular-nums" style={{ color: "${C.timestamp}" }}>{l.time}</span>
+                    <span className="shrink-0 tabular-nums" style={{ color: C.timestamp }}>{l.time}</span>
                     <span className="w-[86px] shrink-0 truncate" style={{ color: l.accent }}>{l.codename}</span>
                     <span className="min-w-0 flex-1" style={{ color: LEVEL_COLOR[l.level] }}>
                       {l.msg}
@@ -677,7 +677,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
 
           <div className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
             <p className={`${mono} text-[10px] tracking-wider`} style={{ color: C.dim }}>TOTAL VALUE</p>
-            <p className={`${spaceGrotesk} mt-1 text-2xl font-bold tabular-nums`} style={{ color: "${C.bright}" }}>
+            <p className={`${spaceGrotesk} mt-1 text-2xl font-bold tabular-nums`} style={{ color: C.bright }}>
               {fmtMoney(context.totalValue, context.currency)}
             </p>
             <div className="mt-1 flex items-center gap-2">
@@ -711,7 +711,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
               {context.holdings.map(h => (
                 <li key={h.ticker} className="flex items-center gap-2.5 text-xs">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: h.color }} />
-                  <span className={`${mono} w-14 shrink-0 font-semibold`} style={{ color: "${C.label}" }}>{h.ticker}</span>
+                  <span className={`${mono} w-14 shrink-0 font-semibold`} style={{ color: C.label }}>{h.ticker}</span>
                   <span className="min-w-0 flex-1 truncate" style={{ color: C.dim }}>{h.name}</span>
                   <span className={`${mono} shrink-0 tabular-nums`} style={{ color: C.text }}>{h.pct.toFixed(1)}%</span>
                 </li>
