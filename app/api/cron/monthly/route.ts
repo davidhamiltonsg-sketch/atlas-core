@@ -72,7 +72,7 @@ export async function GET(req: Request) {
 
         const nextMove = totalValue > 0 ? computeSbrNextMove(positions, totalValue) : {
           severity: "none" as const, ticker: "VWRA", action: "Start investing",
-          what: "Make your first SGD 2,000 contribution.", why: "Build the habit.",
+          what: "Make your first SGD 1,000 contribution.", why: "Build the habit.",
           when: "Anytime.", color: "#38bdf8",
         }
         const phase = sbrPhase(totalValue)

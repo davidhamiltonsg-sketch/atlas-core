@@ -1,8 +1,8 @@
 /**
- * Silicon Brick Road — Constitution v2.2 contract check.
+ * Silicon Brick Road — Constitution v2.3 contract check.
  *
  * SBR's numbers previously had no guard (unlike Atlas Core's check-governance/constitution).
- * This asserts the SILICON_BRICK_ROAD registry constants still match the v2.2 document:
+ * This asserts the SILICON_BRICK_ROAD registry constants still match the v2.3 document:
  * fund targets/ranges/caps, the combined EQQQ+SEMI ceiling, total-equity ceiling, drawdown
  * trigger, skip-at-high threshold, and the phase value thresholds. Pure constant comparison —
  * no DB, no network.
@@ -24,12 +24,12 @@ function eq(label: string, actual: unknown, expected: unknown) {
   else { console.log(`  ✓  ${label}`); passes++ }
 }
 
-console.log("Silicon Brick Road — Constitution v2.2 contract check\n")
+console.log("Silicon Brick Road — Constitution v2.3 contract check\n")
 
 // ── Version pin ───────────────────────────────────────────────────────────────
-eq("version", SBR.version, "2.2")
+eq("version", SBR.version, "2.3")
 eq("currency", SBR.currency, "SGD")
-eq("monthly contribution", SBR.monthlyContribution, 2000)
+eq("monthly contribution", SBR.monthlyContribution, 1000)
 eq("target value (SGD)", SBR.targetValue, 120000)
 
 // ── Fund targets / ranges / caps (Article VII) ────────────────────────────────
@@ -207,5 +207,5 @@ console.log("\nTime-to-goal forecast")
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(54)}`)
-if (failures === 0) { console.log(`  All ${passes} checks passed. Silicon Brick Road v2.2 ✓`); process.exit(0) }
+if (failures === 0) { console.log(`  All ${passes} checks passed. Silicon Brick Road v2.3 ✓`); process.exit(0) }
 else { console.error(`  ${failures} check(s) failed, ${passes} passed.`); process.exit(1) }

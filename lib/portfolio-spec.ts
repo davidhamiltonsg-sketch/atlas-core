@@ -73,7 +73,7 @@ export const ATLAS_SPEC = {
 export const SBR_SPEC = {
   id: "silicon-brick-road",
   currency: "SGD",
-  monthlyContribution: 2000,
+  monthlyContribution: 1000,
   targetValue: 120000,
   forecastBenchmarksAsOf: "Jun 2026",
   funds: [
