@@ -157,10 +157,10 @@ export function getBtcModifier(
 }
 
 // ─── §4.2 — SEMI CYCLE-AWARE SOFT BAND ────────────────────────────────────────
-export type SmhCyclePhase = 'top' | 'mid' | 'bottom'
+export type SemiCyclePhase = 'top' | 'mid' | 'bottom'
 
-export interface SmhSoftBand {
-  phase:       SmhCyclePhase
+export interface SemiSoftBand {
+  phase:       SemiCyclePhase
   softLow:     number  // % of NAV
   softHigh:    number  // % of NAV
   healthyLow:  number  // % of NAV
@@ -169,7 +169,7 @@ export interface SmhSoftBand {
   signal:      string
 }
 
-export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
+export const SEMI_SOFT_BANDS: Record<SemiCyclePhase, SemiSoftBand> = {
   top: {
     phase: 'top', softLow: 7, softHigh: 10, healthyLow: 9, healthyHigh: 10,
     label: 'Cycle Top',
@@ -191,14 +191,14 @@ export const SMH_SOFT_BANDS: Record<SmhCyclePhase, SmhSoftBand> = {
 }
 
 /** @param pctFromHigh price-from-52w-high as a ratio (e.g. -0.05 = 5% below high) */
-export function getSmhCyclePhase(pctFromHigh: number): SmhCyclePhase {
+export function getSemiCyclePhase(pctFromHigh: number): SemiCyclePhase {
   if (pctFromHigh > -0.05) return 'top'
   if (pctFromHigh < -0.20) return 'bottom'
   return 'mid'
 }
 
-export function getSmhSoftBand(pctFromHigh: number): SmhSoftBand {
-  return SMH_SOFT_BANDS[getSmhCyclePhase(pctFromHigh)]
+export function getSemiSoftBand(pctFromHigh: number): SemiSoftBand {
+  return SEMI_SOFT_BANDS[getSemiCyclePhase(pctFromHigh)]
 }
 
 // ─── §4.3 — COMBINED TECH CONCENTRATION RULE ─────────────────────────────────
@@ -298,14 +298,14 @@ export const GOVERNANCE_UPDATED = '2026-07' as const
 // Market-condition-aware rules that complement the Section 3 drift bands with overlays
 export const COMMAND_CENTRE_RULES = {
   minHoldDays: 90,         // 3-month hold before any sale
-  smhConcentrationCap: 12, // SEMI hard cap at 12% weight (§4 override)
+  semiConcentrationCap: 12, // SEMI hard cap at 12% weight (§4 override)
   shockBufferTargetPct: 10, // Target 8-10% in SGOV / short-duration
-  tranche1Pct: 30,         // First entry tranche: 30% of intended capital
-  tranche2Pct: 40,         // Second entry (after 3 green weeks): 40%
-  tranche3Pct: 30,         // Third entry (trend confirmed): 30%
-  smhEntryLevel1: 590,     // First SEMI alert level (watch)
-  smhEntryLevel2: 550,     // Second SEMI alert level (deploy tranche 1)
-  smhEntryLevel3: 510,     // Third SEMI alert level (deploy tranche 2)
+  tranche1Pct: 30,          // First entry tranche: 30% of intended capital
+  tranche2Pct: 40,          // Second entry (after 3 green weeks): 40%
+  tranche3Pct: 30,          // Third entry (trend confirmed): 30%
+  semiEntryLevel1: 590,     // First SEMI alert level (watch)
+  semiEntryLevel2: 550,     // Second SEMI alert level (deploy tranche 1)
+  semiEntryLevel3: 510,     // Third SEMI alert level (deploy tranche 2)
   policyShockRecoveryDays: 42,  // Historical avg recovery: policy shocks
   macroShockRecoveryDays: 540,  // Historical avg recovery: macro cycles
 } as const

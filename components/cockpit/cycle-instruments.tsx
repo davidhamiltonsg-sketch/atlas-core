@@ -1,8 +1,8 @@
-import type { BtcPhaseCard, SmhBuyZone, CombinedTechCeiling, SgovQueueState } from "@/lib/cycle"
+import type { BtcPhaseCard, SemiBuyZone, CombinedTechCeiling, SgovQueueState } from "@/lib/cycle"
 
 interface Props {
   btc: BtcPhaseCard
-  smh: SmhBuyZone
+  smh: SemiBuyZone
   tech: CombinedTechCeiling
   sgov: SgovQueueState
 }
