@@ -4,7 +4,7 @@ import { useState } from "react"
 import {
   TICKER_TARGETS, HARD_THRESHOLDS,
   BTC_CYCLE_MODIFIERS, getBtcCyclePhase, type BtcCyclePhase,
-  getSmhSoftBand, getSmhCyclePhase,
+  getSemiSoftBand, getSemiCyclePhase,
   COMBINED_TECH_RULE,
 } from "@/lib/constants"
 import { Bitcoin, Cpu, Layers, Info } from "lucide-react"
@@ -19,10 +19,10 @@ export function FloatingCapsSection() {
   const btc = BTC_CYCLE_MODIFIERS[btcPhase]
 
   // SEMI: slider is % below the 52-week high (-50%..0%). Stored as whole-number percent.
-  const [smhPctInt, setSmhPctInt] = useState(-2) // SEMI sits near its 52w high today
-  const smhRatio = smhPctInt / 100
-  const smhBand  = getSmhSoftBand(smhRatio)
-  const smhPhase = getSmhCyclePhase(smhRatio)
+  const [semiPctInt, setSemiPctInt] = useState(-2) // SEMI sits near its 52w high today
+  const semiRatio = semiPctInt / 100
+  const semiBand  = getSemiSoftBand(semiRatio)
+  const semiPhase = getSemiCyclePhase(semiRatio)
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
@@ -92,11 +92,11 @@ export function FloatingCapsSection() {
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] text-muted-foreground">Distance from 52-week high</span>
-              <span className="text-[11px] font-bold tabular-nums">{smhPctInt}%</span>
+              <span className="text-[11px] font-bold tabular-nums">{semiPctInt}%</span>
             </div>
             <input
-              type="range" min={-50} max={0} step={1} value={smhPctInt}
-              onChange={e => setSmhPctInt(parseInt(e.target.value, 10))}
+              type="range" min={-50} max={0} step={1} value={semiPctInt}
+              onChange={e => setSemiPctInt(parseInt(e.target.value, 10))}
               className="w-full accent-violet-500"
             />
             <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
@@ -106,14 +106,14 @@ export function FloatingCapsSection() {
 
           <div className="flex items-center gap-2 mb-3">
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-              smhPhase === "top"    ? "bg-red-500/10 text-red-500" :
-              smhPhase === "bottom" ? "bg-green-500/10 text-green-500" :
+              semiPhase === "top"    ? "bg-red-500/10 text-red-500" :
+              semiPhase === "bottom" ? "bg-green-500/10 text-green-500" :
                                       "bg-amber-500/10 text-amber-500"
-            }`}>{smhBand.label}</span>
-            <span className="text-[11px] text-muted-foreground">Soft band {smhBand.softLow}%–{smhBand.softHigh}% · hard cap {HARD_THRESHOLDS.SEMI.high}%</span>
+            }`}>{semiBand.label}</span>
+            <span className="text-[11px] text-muted-foreground">Soft band {semiBand.softLow}%–{semiBand.softHigh}% · hard cap {HARD_THRESHOLDS.SEMI.high}%</span>
           </div>
 
-          <p className="text-[11px] text-muted-foreground leading-relaxed">{smhBand.signal}</p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">{semiBand.signal}</p>
         </div>
       </div>
 
@@ -158,7 +158,7 @@ export function FloatingCapsSection() {
                 const floats = tk === "BTC" || tk === "SEMI"
                 let cycleCell = "—"
                 if (tk === "BTC") cycleCell = `${btc.label}: soft ${btc.softHigh}% · hard ${btc.hardHigh}%`
-                if (tk === "SEMI") cycleCell = `${smhBand.label}: soft ${smhBand.softLow}%–${smhBand.softHigh}%`
+                if (tk === "SEMI") cycleCell = `${semiBand.label}: soft ${semiBand.softLow}%–${semiBand.softHigh}%`
                 return (
                   <tr key={tk} className="hover:bg-accent/20 transition-colors">
                     <td className="px-4 py-3 font-bold">{tk}</td>

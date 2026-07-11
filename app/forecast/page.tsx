@@ -19,7 +19,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
-const VT_HISTORICAL_RATE = (ASSET_EXPECTED_RETURNS.VWRA ?? ASSET_EXPECTED_RETURNS.VT)?.base ?? 0.095 // VWRA/VT (Total World) long-run CAGR proxy
+const VWRA_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? 0.095 // VWRA (Total World) long-run CAGR proxy
 const CONE_VOL_DEFAULT = 0.15 // fallback annual vol for the P10/P90 band when history is thin
 
 const SCENARIO_META = [
@@ -275,7 +275,7 @@ export default async function Forecast() {
   const RISK_FREE_RATE = user?.riskFreeRate ?? 0.04
 
   // Growth-rate assumptions blended from the portfolio's ACTUAL current holdings (not the
-  // target weights) — a portfolio that has drifted toward more BTC/QQQM sees that reflected
+  // target weights) — a portfolio that has drifted toward more BTC/EQQQ sees that reflected
   // here, same as every other computation in the app. The buffer (SGOV) portion uses the
   // user's own Settings risk-free-rate assumption.
   const { rates } = blendedGrowthRates(allocMap, RISK_FREE_RATE)
@@ -295,7 +295,7 @@ export default async function Forecast() {
     const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
     const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.aggressive, yr, CONTRIBUTION_GROWTH_RATE)
     const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, yr, CONTRIBUTION_GROWTH_RATE)
-    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, VT_HISTORICAL_RATE, yr, CONTRIBUTION_GROWTH_RATE)
+    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, VWRA_HISTORICAL_RATE, yr, CONTRIBUTION_GROWTH_RATE)
     const coneP10      = coneProjection(base, yr, -1.28, coneVol)
     const coneP90      = coneProjection(base, yr,  1.28, coneVol)
     const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)

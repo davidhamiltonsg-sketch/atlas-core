@@ -11,7 +11,7 @@ import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { computeLadder } from "@/lib/ladder"
-import { getBtcPhaseCard, getSmhBuyZone, getCombinedTechCeiling, getSgovQueueState } from "@/lib/cycle"
+import { getBtcPhaseCard, getSemiBuyZone, getCombinedTechCeiling, getSgovQueueState } from "@/lib/cycle"
 import { BufferStatus } from "@/components/dashboard/buffer-status"
 import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
@@ -432,7 +432,7 @@ async function getDashboardData(userId: string) {
 
   const cycleInstruments = {
     btc:  getBtcPhaseCard(),
-    smh:  getSmhBuyZone(smhLive?.price ?? 0, smhLive?.hi52 ?? 0),
+    smh:  getSemiBuyZone(smhLive?.price ?? 0, smhLive?.hi52 ?? 0),
     tech: getCombinedTechCeiling(qqqmPct, smhPct),
     sgov: getSgovQueueState({ currentPct: sgovPct, portfolioValueSgd: totalValue, monthlyContributionSgd: monthlyContribution }),
   }

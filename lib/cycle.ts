@@ -7,7 +7,7 @@
  *
  * Exports:
  *   getBtcPhaseCard     — current BTC cycle phase, target, cap, bull window countdown
- *   getSmhBuyZone       — SEMI cycle position and skip-rule status
+ *   getSemiBuyZone      — SEMI cycle position and skip-rule status
  *   getCombinedTechCeiling — EQQQ+SEMI combined exposure vs Art. IX ceilings
  *   getSkipRuleRadar    — per-position skip-rule applicability
  *   getSgovQueueState   — months to SGOV floor at current contribution rate (Art. XIII §5)
@@ -16,12 +16,12 @@
 import {
   getBtcCyclePhase,
   getBtcModifier,
-  getSmhCyclePhase,
-  getSmhSoftBand,
+  getSemiCyclePhase,
+  getSemiSoftBand,
   COMBINED_TECH_RULE,
   BEHAVIORAL_RULES,
   type BtcCyclePhase,
-  type SmhCyclePhase,
+  type SemiCyclePhase,
 } from "@/lib/constitution"
 
 // ── BTC Phase Card (Art. VIII) ───────────────────────────────────────────────
@@ -65,8 +65,8 @@ export function getBtcPhaseCard(
 }
 
 // ── SEMI Buy Zone (Art. XIV) ─────────────────────────────────────────────────
-export interface SmhBuyZone {
-  phase: SmhCyclePhase
+export interface SemiBuyZone {
+  phase: SemiCyclePhase
   label: string
   signal: string
   pctFromHigh: number     // (price / hi52) - 1; negative = below high
@@ -75,10 +75,10 @@ export interface SmhBuyZone {
   pctToHigh: number       // % gain needed to reach 52w high
 }
 
-export function getSmhBuyZone(price: number, hi52: number): SmhBuyZone {
+export function getSemiBuyZone(price: number, hi52: number): SemiBuyZone {
   const pctFromHigh = hi52 > 0 ? (price - hi52) / hi52 : -1
-  const phase       = getSmhCyclePhase(pctFromHigh)
-  const band        = getSmhSoftBand(pctFromHigh)
+  const phase       = getSemiCyclePhase(pctFromHigh)
+  const band        = getSemiSoftBand(pctFromHigh)
   return {
     phase,
     label:       band.label,

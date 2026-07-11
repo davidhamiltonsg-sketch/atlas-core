@@ -71,7 +71,7 @@ export function coreExposureOf(ticker: string): string {
   return ALTERNATIVE_TO_CORE[ticker.toUpperCase()] ?? ticker.toUpperCase()
 }
 
-/** "VWRA is the approved alternative to VT" — label for a held alternative, else null. */
+/** Returns a label like "alternative to CNDX" for tickers in ALTERNATIVE_TO_CORE, else null. */
 export function altLabelFor(ticker: string): string | null {
   const core = ALTERNATIVE_TO_CORE[ticker.toUpperCase()]
   return core ? `alternative to ${core}` : null
