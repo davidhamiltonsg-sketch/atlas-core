@@ -17,6 +17,7 @@ import { ScenarioCards, type Scenario } from "@/components/sbr/scenario-cards"
 import { BrickRoad } from "@/components/sbr/brick-road"
 import { AnimatedNumber } from "@/components/animated-number"
 import { displayTicker } from "@/lib/approved-alternatives"
+import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
 const VT_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VT.base // VT (Total World) long-run CAGR proxy — single source with the blend
@@ -600,7 +601,7 @@ export default async function Forecast() {
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+      <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 mb-6">
         <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground leading-relaxed">
           <span className="font-bold text-foreground">Increasing contributions is often more powerful than optimising returns.</span>{" "}
@@ -608,6 +609,12 @@ export default async function Forecast() {
           than a 1% improvement in annual return. Consistency and contribution growth compound alongside capital.
         </p>
       </div>
+
+      <ProbabilityEngine
+        startValue={currentValue}
+        monthlyDca={MONTHLY_CONTRIBUTION}
+        annualBonus={ANNUAL_LUMP_SUM}
+      />
     </Shell>
   )
 }
