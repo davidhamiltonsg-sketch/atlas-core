@@ -15,6 +15,7 @@
 import {
   COMBINED_TECH_RULE,
   CRASH_DRAWDOWN_PCT,
+  HARD_THRESHOLDS,
   getBtcModifier,
   BITCOIN_TICKERS,
   BITCOIN_RUNOFF_TICKER,
@@ -23,6 +24,7 @@ import {
   applyBitcoinSleeve,
   type BtcCyclePhase,
 } from "@/lib/constitution"
+import { displayTicker } from "@/lib/approved-alternatives"
 
 // ─── Input types ─────────────────────────────────────────────────────────────
 
@@ -99,9 +101,8 @@ const NEAR_HIGH_THRESHOLD = 0.03
 // Art. XI: SGOV shock buffer floor
 const SGOV_FLOOR_PCT = 8
 // Art. XIII step 6: crash protocol trigger
-// Art. VII: hard caps for QQQM and SMH (also in HARD_THRESHOLDS; kept local for clarity)
-const QQQM_HARD_CAP = 30
-const SMH_HARD_CAP  = 12
+const QQQM_HARD_CAP = HARD_THRESHOLDS["QQQM"]?.high ?? 30
+const SMH_HARD_CAP  = HARD_THRESHOLDS["SMH"]?.high ?? 12
 // Tickers that are buffer assets (not target allocations)
 const BUFFER_TICKERS = new Set(["SGOV", "AGG", "CASH"])
 
@@ -204,11 +205,11 @@ export function computeLadder(
 
   const smhPos = positions.find((p) => p.ticker === "SMH")
   if (smhPos && smhPos.actualPct > SMH_HARD_CAP) {
-    steps[0].reason = `SMH: ${smhPos.actualPct.toFixed(1)}% > ${SMH_HARD_CAP}% hard cap`
+    steps[0].reason = `${displayTicker("SMH")}: ${smhPos.actualPct.toFixed(1)}% > ${SMH_HARD_CAP}% hard cap`
     return build(1, {
-      headline: "Trim SMH — over cap",
-      instruction: `SMH is at ${smhPos.actualPct.toFixed(1)}%, over its ${SMH_HARD_CAP}% hard cap. Trim to the ${smhPos.targetPct}% target.`,
-      rationale: `SMH hard cap ${SMH_HARD_CAP}% (Art. VII). AI infrastructure tilt must never become the dominant portfolio risk.`,
+      headline: `Trim ${displayTicker("SMH")} — over cap`,
+      instruction: `${displayTicker("SMH")} is at ${smhPos.actualPct.toFixed(1)}%, over its ${SMH_HARD_CAP}% hard cap. Trim to the ${smhPos.targetPct}% target.`,
+      rationale: `${displayTicker("SMH")} hard cap ${SMH_HARD_CAP}% (Art. VII). AI infrastructure tilt must never become the dominant portfolio risk.`,
       when: "This month's dealing window. Respect the 90-day hold on recent lots.",
       ticker: "SMH", severity: "critical", citation: "Art. XIII Step 1 / Art. VII",
     })
@@ -216,11 +217,11 @@ export function computeLadder(
 
   const qqqmPos = positions.find((p) => p.ticker === "QQQM")
   if (qqqmPos && qqqmPos.actualPct > QQQM_HARD_CAP) {
-    steps[0].reason = `QQQM: ${qqqmPos.actualPct.toFixed(1)}% > ${QQQM_HARD_CAP}% hard cap`
+    steps[0].reason = `${displayTicker("QQQM")}: ${qqqmPos.actualPct.toFixed(1)}% > ${QQQM_HARD_CAP}% hard cap`
     return build(1, {
-      headline: "Trim QQQM — over cap",
-      instruction: `QQQM is at ${qqqmPos.actualPct.toFixed(1)}%, over its ${QQQM_HARD_CAP}% hard cap. Trim back toward the ${qqqmPos.targetPct}% target.`,
-      rationale: `QQQM hard cap ${QQQM_HARD_CAP}% (Art. VII). Digital economy engine must not dominate the portfolio.`,
+      headline: `Trim ${displayTicker("QQQM")} — over cap`,
+      instruction: `${displayTicker("QQQM")} is at ${qqqmPos.actualPct.toFixed(1)}%, over its ${QQQM_HARD_CAP}% hard cap. Trim back toward the ${qqqmPos.targetPct}% target.`,
+      rationale: `${displayTicker("QQQM")} hard cap ${QQQM_HARD_CAP}% (Art. VII). Digital economy engine must not dominate the portfolio.`,
       when: "This month's dealing window. Respect the 90-day hold on recent lots.",
       ticker: "QQQM", severity: "critical", citation: "Art. XIII Step 1 / Art. VII",
     })
@@ -234,10 +235,10 @@ export function computeLadder(
   const isTechHalted = (ticker: string) => techHalted && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(ticker)
   if (combined >= COMBINED_TECH_RULE.hardCeiling) {
     const trimTicker = smhPos ? "SMH" : "QQQM"
-    steps[0].reason = `QQQM+SMH combined: ${combined.toFixed(1)}% ≥ ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling`
+    steps[0].reason = `${displayTicker("QQQM")}+${displayTicker("SMH")} combined: ${combined.toFixed(1)}% ≥ ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling`
     return build(1, {
       headline: "Trim combined tech",
-      instruction: `QQQM+SMH combined is ${combined.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling. Trim ${trimTicker} until combined falls below ${COMBINED_TECH_RULE.softCeiling}%.`,
+      instruction: `${displayTicker("QQQM")}+${displayTicker("SMH")} combined is ${combined.toFixed(1)}%, over the ${COMBINED_TECH_RULE.hardCeiling}% hard ceiling. Trim ${displayTicker(trimTicker)} until combined falls below ${COMBINED_TECH_RULE.softCeiling}%.`,
       rationale: `Combined tech concentration (Art. IX). Overlapping semi exposure means individual caps understate real concentration risk.`,
       when: "This month's dealing window. Respect the 90-day hold on recent lots.",
       ticker: trimTicker, severity: "critical", citation: "Art. XIII Step 1 / Art. IX",
@@ -257,11 +258,11 @@ export function computeLadder(
     )
     .sort((a, b) => (b.actualPct - b.hardCapPct!) - (a.actualPct - a.hardCapPct!))[0]
   if (capBreach) {
-    steps[0].reason = `${capBreach.ticker}: ${capBreach.actualPct.toFixed(1)}% > ${capBreach.hardCapPct}% hard cap`
+    steps[0].reason = `${displayTicker(capBreach.ticker)}: ${capBreach.actualPct.toFixed(1)}% > ${capBreach.hardCapPct}% hard cap`
     return build(1, {
-      headline: `Trim ${capBreach.ticker} — over cap`,
-      instruction: `${capBreach.ticker} is at ${capBreach.actualPct.toFixed(1)}%, over its ${capBreach.hardCapPct}% hard cap. Trim back toward the ${capBreach.targetPct}% target.`,
-      rationale: `${capBreach.ticker} hard cap ${capBreach.hardCapPct}% (Art. VII). No single position may exceed its cap — concentration beats conviction.`,
+      headline: `Trim ${displayTicker(capBreach.ticker)} — over cap`,
+      instruction: `${displayTicker(capBreach.ticker)} is at ${capBreach.actualPct.toFixed(1)}%, over its ${capBreach.hardCapPct}% hard cap. Trim back toward the ${capBreach.targetPct}% target.`,
+      rationale: `${displayTicker(capBreach.ticker)} hard cap ${capBreach.hardCapPct}% (Art. VII). No single position may exceed its cap — concentration beats conviction.`,
       when: "This month's dealing window. Respect the 90-day hold on recent lots.",
       ticker: capBreach.ticker, severity: "critical", citation: "Art. XIII Step 1 / Art. VII",
     })
@@ -279,10 +280,10 @@ export function computeLadder(
       p.actualPct < p.targetPct                 // strictly below exact target
     )
     .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
-  const pausedUnderweight = underweightsRaw.filter((p) => isTechHalted(p.ticker)).map((p) => p.ticker)
+  const pausedUnderweight = underweightsRaw.filter((p) => isTechHalted(p.ticker)).map((p) => displayTicker(p.ticker))
   if (pausedUnderweight.length > 0) {
     exceptions.push(
-      `${pausedUnderweight.join(" and ")} underweight but paused at step 2 — combined QQQM+SMH is ${combined.toFixed(1)}% (§4.3 tech ceiling).`
+      `${pausedUnderweight.join(" and ")} underweight but paused at step 2 — combined ${displayTicker("QQQM")}+${displayTicker("SMH")} is ${combined.toFixed(1)}% (§4.3 tech ceiling).`
     )
   }
   const underweights = underweightsRaw.filter((p) => !isTechHalted(p.ticker))
@@ -312,7 +313,7 @@ export function computeLadder(
 
     return build(2, {
       headline: `Fill ${p.ticker}`,
-      instruction: `Direct this month's full SGD contribution into ${p.ticker} — it is ${gap}% below its ${p.targetPct}% target.${atHigh ? " Position is near its 52-week high; buying anyway — drift correction outranks entry timing." : ""}`,
+      instruction: `Direct this month's full contribution into ${p.ticker} — it is ${gap}% below its ${p.targetPct}% target.${atHigh ? " Position is near its 52-week high; buying anyway — drift correction outranks entry timing." : ""}`,
       rationale: `${p.ticker} underweight at ${p.actualPct.toFixed(1)}% (Art. VII Step 2). The skip rule does not apply at step 2.`,
       when: "This month's contribution. Dealing window opens 3rd business day after the 15th.",
       ticker: p.ticker, severity: "medium", citation: "Art. XIII Step 2",
@@ -340,12 +341,12 @@ export function computeLadder(
       .filter((p) => !overSet.has(p.ticker) && !BUFFER_TICKERS.has(p.ticker) && p.ticker !== BITCOIN_RUNOFF_TICKER && !isTechHalted(p.ticker))
       .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))[0]
     const to = redirectTarget?.ticker ?? "VT"
-    steps[2].reason = `${over.ticker}: ${over.actualPct.toFixed(1)}% > comfortable ceiling ${(over.targetPct + over.toleranceBand).toFixed(0)}%`
+    steps[2].reason = `${displayTicker(over.ticker)}: ${over.actualPct.toFixed(1)}% > comfortable ceiling ${(over.targetPct + over.toleranceBand).toFixed(0)}%`
 
     return build(3, {
-      headline: `Skip ${over.ticker}, buy ${to}`,
-      instruction: `${over.ticker} is at ${over.actualPct.toFixed(1)}% — above its comfortable range. Don't add to it. Put this month's contribution into ${to} instead.`,
-      rationale: `${over.ticker} overweight by ${(over.actualPct - over.targetPct).toFixed(1)}% (Art. VII). Never add to an overweight position.`,
+      headline: `Skip ${displayTicker(over.ticker)}, buy ${displayTicker(to)}`,
+      instruction: `${displayTicker(over.ticker)} is at ${over.actualPct.toFixed(1)}% — above its comfortable range. Don't add to it. Put this month's contribution into ${displayTicker(to)} instead.`,
+      rationale: `${displayTicker(over.ticker)} overweight by ${(over.actualPct - over.targetPct).toFixed(1)}% (Art. VII). Never add to an overweight position.`,
       when: "This month's contribution. Dealing window opens 3rd business day after the 15th.",
       ticker: to, severity: "low", citation: "Art. XIII Step 3",
     })
@@ -393,11 +394,11 @@ export function computeLadder(
     // sit idle as a chronic drag when the market has already fallen 25%+.
     const sgovExcess = sgovPct - SGOV_FLOOR_PCT
     const sgovNote = sgovExcess > 0
-      ? `SGOV has ${sgovPct.toFixed(1)}% — ${sgovExcess.toFixed(1)}% above the ${SGOV_FLOOR_PCT}% floor. Deploy 50% of that excess (about ${(sgovExcess / 2).toFixed(1)}% of portfolio) into VT immediately as pre-committed response A1. Then: `
+      ? `SGOV has ${sgovPct.toFixed(1)}% — ${sgovExcess.toFixed(1)}% above the ${SGOV_FLOOR_PCT}% floor. Deploy 50% of that excess (about ${(sgovExcess / 2).toFixed(1)}% of portfolio) into ${displayTicker("VT")} immediately as pre-committed response A1. Then: `
       : `SGOV is at the ${SGOV_FLOOR_PCT}% floor — no excess to deploy. `
     return build(6, {
       headline: "Crash protocol — keep buying",
-      instruction: `${sgovNote}Continue scheduled contributions unchanged into VT. Do not sell any position. Pre-committed response A2 applies.`,
+      instruction: `${sgovNote}Continue scheduled contributions unchanged into ${displayTicker("VT")}. Do not sell any position. Pre-committed response A2 applies.`,
       rationale: `Sustained decline over ${Math.abs(CRASH_DRAWDOWN_PCT)}% triggers Art. XIV crash protocol. SGOV dry powder deployed first (A1), then contributions continue (A2). The 2022 rule: keep buying during a rate-driven bear market — never redesign.`,
       when: "Deploy SGOV excess today if applicable. Continue contributions on the normal dealing window.",
       ticker: "VT", severity: "high", citation: "Art. XIII Step 6 / Art. XIV / Art. XI",
@@ -417,15 +418,16 @@ export function computeLadder(
     )
     .map((p) => p.ticker)
 
+  const skippedDisplay = skipped.map(displayTicker)
   if (skipped.length > 0) {
     exceptions.push(
-      `Skip rule (B1) fired at step 7: ${skipped.join(", ")} within 3% of 52-week high — redirected to VT.`
+      `Skip rule (B1) fired at step 7: ${skippedDisplay.join(", ")} within 3% of 52-week high — redirected to ${displayTicker("VT")}.`
     )
-    steps[6].reason = `Skip: ${skipped.join(", ")} near 52w high → VT`
+    steps[6].reason = `Skip: ${skippedDisplay.join(", ")} near 52w high → ${displayTicker("VT")}`
     return build(7, {
-      headline: `DCA — skip ${skipped.join("/")}`,
-      instruction: `Standard monthly investment, but skip ${skipped.join(" and ")} (near 52-week high). Redirect their share to VT. All other positions receive their normal target-weight split.`,
-      rationale: `B1 skip rule (Art. XIII): ${skipped.join(" and ")} within 3% of 52w high. VT is the sole exempt position — accumulate it continuously regardless of price.`,
+      headline: `DCA — skip ${skippedDisplay.join("/")}`,
+      instruction: `Standard monthly investment, but skip ${skippedDisplay.join(" and ")} (near 52-week high). Redirect their share to ${displayTicker("VT")}. All other positions receive their normal target-weight split.`,
+      rationale: `B1 skip rule (Art. XIII): ${skippedDisplay.join(" and ")} within 3% of 52w high. ${displayTicker("VT")} is the sole exempt position — accumulate it continuously regardless of price.`,
       when: "Dealing window: 3rd business day after the 15th through month-end.",
       ticker: "VT", severity: "low", citation: "Art. XIII Step 7 / B1",
     }, true)
@@ -434,7 +436,7 @@ export function computeLadder(
   steps[6].reason = "All positions within band — healthy"
   return build(7, {
     headline: "Standard DCA",
-    instruction: `Invest this month's SGD contribution across all positions at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · Bitcoin sleeve 7%. Split by those proportions and round to nearest SGD 10.`,
+    instruction: `Invest this month's contribution across all positions at target weights: VWRA 52% · EQQQ 23% · SEMI 10% · VFEA 8% · Bitcoin sleeve 7%. Split by those proportions and round to nearest whole unit.`,
     rationale: "All positions healthy and within their bands (Art. XIII Step 7). Discipline beats tinkering — stay the course.",
     when: "Dealing window: 3rd business day after the 15th through month-end.",
     ticker: null, severity: "none", citation: "Art. XIII Step 7",

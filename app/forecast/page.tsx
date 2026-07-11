@@ -6,8 +6,18 @@ import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { constitutionIdForEmail, SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection } from "@/lib/forecast"
+import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
+import { sbrPhase } from "@/lib/sbr-engine"
+import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { SBR_TARGET_RATES, SBR_ASSET_EXPECTED_RETURNS, sbrBrickRoadPhases } from "@/lib/spec-derived"
+import { EquityCurve, type ProjectionPoint } from "@/components/sbr/equity-curve"
+import { ScenarioCards, type Scenario } from "@/components/sbr/scenario-cards"
+import { BrickRoad } from "@/components/sbr/brick-road"
+import { AnimatedNumber } from "@/components/animated-number"
+import { displayTicker } from "@/lib/approved-alternatives"
+import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
 const VT_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VT.base // VT (Total World) long-run CAGR proxy — single source with the blend
@@ -42,12 +52,217 @@ async function getForecastData(userId: string) {
   return { currentValue, allocMap, coneVol, volIsReal: realVol !== null }
 }
 
+// ── SBR forecast helpers ──────────────────────────────────────────────────────
+
+const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
+const SBR_SEED = 10000
+const SBR_HORIZON_MONTHS = 60
+
+const SBR_SCENARIOS: Scenario[] = [
+  { name: "Strong",       rate: SBR_TARGET_RATES.aggressive, probability: 15, color: "green", description: "All four funds beat their long-run average for three straight years." },
+  { name: "Base",         rate: SBR_TARGET_RATES.base,       probability: 30, color: "sky",   description: "The most likely path — steady global growth, a few dips, recovery." },
+  { name: "Conservative", rate: SBR_TARGET_RATES.conservative, probability: 45, color: "amber", description: "Below-average returns — still clears the goal with discipline." },
+  { name: "Severe bear",  rate: null,                        probability: 10, color: "red",   description: "A prolonged downturn — the floor kicks in and the purchase waits." },
+]
+
+async function getSbrForecastData(userId: string) {
+  const holdings = await db.holding.findMany({
+    where: { userId, ticker: { in: SBR_FUND_TICKERS } },
+    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+  })
+  const totalValue = holdings.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
+  const allocMap: Record<string, number> = {}
+  for (const h of holdings) {
+    const value = h.snapshots[0]?.value ?? 0
+    allocMap[h.ticker] = totalValue > 0 ? (value / totalValue) * 100 : 0
+  }
+  const growthRates = sbrBlendedGrowthRate(allocMap)
+  const target = SBR_SPEC.targetValue
+  const monthly = SBR_SPEC.monthlyContribution
+
+  const monthsToGoal = {
+    conservative: monthsToTarget(totalValue, monthly, growthRates.conservative, target),
+    base: monthsToTarget(totalValue, monthly, growthRates.base, target),
+    aggressive: monthsToTarget(totalValue, monthly, growthRates.aggressive, target),
+  }
+
+  // months already invested — approximate from contributions data
+  const trades = await db.trade.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } } })
+  const firstTrade = trades.length > 0
+    ? trades.reduce((earliest, t) => (t.date < earliest ? t.date : earliest), trades[0].date)
+    : null
+  const monthsElapsed = firstTrade
+    ? Math.max(0, Math.floor((Date.now() - new Date(firstTrade).getTime()) / (30.44 * 24 * 60 * 60 * 1000)))
+    : 0
+
+  // build month-by-month projection points
+  const horizonMonths = Math.max(SBR_HORIZON_MONTHS, (monthsToGoal.conservative ?? SBR_HORIZON_MONTHS) + 6)
+  const points: ProjectionPoint[] = []
+  for (let m = 0; m <= horizonMonths; m++) {
+    const mr_c = growthRates.conservative / 12
+    const mr_b = growthRates.base / 12
+    const mr_a = growthRates.aggressive / 12
+    const fv = (rate: number) => {
+      let v = totalValue
+      for (let i = 0; i < m; i++) v = v * (1 + rate) + monthly
+      return v
+    }
+    points.push({
+      month: m,
+      conservative: m === 0 ? totalValue : fv(mr_c),
+      base: m === 0 ? totalValue : fv(mr_b),
+      aggressive: m === 0 ? totalValue : fv(mr_a),
+      invested: totalValue + monthly * m,
+    })
+  }
+
+  const phase = sbrPhase(totalValue)
+
+  return {
+    totalValue, growthRates, monthsToGoal, monthsElapsed, points,
+    target, monthly, phase,
+  }
+}
+
+async function SbrForecast({ userId, userName, isAdmin }: { userId: string; userName: string; isAdmin: boolean }) {
+  const d = await getSbrForecastData(userId)
+  const hasBalance = d.totalValue > 0
+
+  function monthsToLabel(months: number | null): string {
+    if (months === null) return "50+ years away at this rate"
+    if (months === 0) return "already there"
+    const dt = new Date()
+    dt.setDate(1)
+    dt.setMonth(dt.getMonth() + months)
+    return dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
+  }
+
+  const phases = sbrBrickRoadPhases(d.target)
+
+  return (
+    <Shell title="Where the Road Leads" subtitle="Projections and scenarios for your home deposit" userName={userName} isAdmin={isAdmin}>
+
+      {/* Hero stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+        <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+          <p className="text-xs text-muted-foreground">Portfolio Now</p>
+          <p className="mt-1 text-xl font-black tabular-nums">
+            {hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : <span className="text-muted-foreground">—</span>}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Phase {d.phase.key}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+          <p className="text-xs text-muted-foreground">Goal</p>
+          <p className="mt-1 text-xl font-black tabular-nums gradient-text">
+            <AnimatedNumber value={d.target} currency="SGD" />
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Home deposit target</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+          <p className="text-xs text-muted-foreground">Base Case ETA</p>
+          <p className="mt-1 text-xl font-black tabular-nums text-sky-400">
+            {d.monthsToGoal.base !== null ? monthsToLabel(d.monthsToGoal.base) : "—"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{(d.growthRates.base * 100).toFixed(1)}% p.a. blended</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 card-elevated">
+          <p className="text-xs text-muted-foreground">Monthly</p>
+          <p className="mt-1 text-xl font-black tabular-nums">
+            <AnimatedNumber value={d.monthly} currency="SGD" />
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Contribution</p>
+        </div>
+      </div>
+
+      {/* Time-to-goal range */}
+      {hasBalance && (
+        <div className="mb-5 rounded-xl border border-sky-500/20 bg-sky-500/[0.04] p-4">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            At SGD {d.monthly.toLocaleString()}/month and your current fund mix ({(d.growthRates.base * 100).toFixed(1)}% growth a year, blended from what you actually hold),
+            projected to reach your goal around <span className="font-semibold text-foreground">{monthsToLabel(d.monthsToGoal.base)}</span>
+            {" "}&mdash; could be as early as {monthsToLabel(d.monthsToGoal.aggressive)} or as late as {monthsToLabel(d.monthsToGoal.conservative)} depending on returns.
+          </p>
+        </div>
+      )}
+
+      {/* Brick Road */}
+      <div className="mb-5">
+        <BrickRoad
+          totalValue={d.totalValue}
+          targetValue={d.target}
+          currentPhase={d.phase.key}
+          phases={phases}
+          monthsToGoal={d.monthsToGoal.base}
+        />
+      </div>
+
+      {/* Equity Curve */}
+      <div className="mb-5">
+        <EquityCurve
+          points={d.points}
+          currentMonth={d.monthsElapsed}
+          currentValue={d.totalValue}
+          targetValue={d.target}
+        />
+      </div>
+
+      {/* Scenario Cards */}
+      <div className="mb-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">What to expect at exit</p>
+        <p className="text-xs text-muted-foreground mb-4 max-w-xl leading-relaxed">
+          Four possible worlds. Probabilities sum to 100%. The floor &mdash; total capital invested &mdash; is the lowest the fund is structured to exit at.
+          Drag the slider to see how a different monthly amount changes the picture.
+        </p>
+        <ScenarioCards
+          scenarios={SBR_SCENARIOS}
+          defaultMonthly={d.monthly}
+          seedValue={SBR_SEED}
+          horizonMonths={SBR_HORIZON_MONTHS}
+          targetValue={d.target}
+        />
+      </div>
+
+      {/* Growth assumptions */}
+      <div className="rounded-xl border border-border bg-card/50 p-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Growth rate assumptions</p>
+        <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
+          Blended from your actual current holdings (not target weights) &mdash; a drifted portfolio&apos;s projection reflects what you really hold.
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Conservative", rate: d.growthRates.conservative, color: "text-amber-400" },
+            { label: "Base", rate: d.growthRates.base, color: "text-sky-400" },
+            { label: "Aggressive", rate: d.growthRates.aggressive, color: "text-green-400" },
+          ].map(({ label, rate, color }) => (
+            <div key={label} className="rounded-lg bg-muted/30 p-3 text-center">
+              <p className="text-[10px] text-muted-foreground mb-1">{label}</p>
+              <p className={`text-lg font-black tabular-nums ${color}`}>{(rate * 100).toFixed(1)}%</p>
+              <p className="text-[10px] text-muted-foreground">p.a.</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 pt-3 border-t border-border">
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            Per-fund assumptions: {SBR_FUND_TICKERS.map(t => {
+              const r = SBR_ASSET_EXPECTED_RETURNS[t]
+              return r ? `${t} ${(r.conservative * 100).toFixed(0)}–${(r.aggressive * 100).toFixed(0)}%` : t
+            }).join(" · ")}
+          </p>
+        </div>
+      </div>
+    </Shell>
+  )
+}
+
+// ── main export ──────────────────────────────────────────────────────────────
+
 export default async function Forecast() {
   const session = await getSession()
   if (!session) redirect("/login")
-  // The 2045 retirement projection is Atlas-Core-specific. Silicon Brick Road (a ~3-year
-  // property goal) uses its own dashboard until a dedicated SBR forecast is built.
-  if (constitutionIdForEmail(session.email) === "silicon-brick-road") redirect("/")
+
+  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
+    return <SbrForecast userId={session.userId} userName={session.name} isAdmin={session.role === "admin"} />
+  }
 
   const [forecast, user] = await Promise.all([
     getForecastData(session.userId),
@@ -64,7 +279,7 @@ export default async function Forecast() {
   // target weights) — a portfolio that has drifted toward more BTC/QQQM sees that reflected
   // here, same as every other computation in the app. The buffer (SGOV) portion uses the
   // user's own Settings risk-free-rate assumption.
-  const rates = blendedGrowthRates(allocMap, RISK_FREE_RATE)
+  const { rates } = blendedGrowthRates(allocMap, RISK_FREE_RATE)
   const returnScenarios = SCENARIO_META.map((s) => ({
     ...s,
     rate: rates[s.key],
@@ -362,8 +577,8 @@ export default async function Forecast() {
               {[
                 { year: "2040", maxEquity: "90%", action: "Complete the 2040 portfolio review. Write a Distribution Plan — a document that says how you will draw money down from the portfolio in retirement." },
                 { year: "2041", maxEquity: "85%", action: "Reduce Bitcoin toward 4% of the portfolio. Rebuild your safety buffer (SGOV / cash) to at least 15%." },
-                { year: "2042", maxEquity: "80%", action: "Reduce semiconductors (SMH) toward 6%. Start moving some money into bonds — target 5–8% in bonds by end of year." },
-                { year: "2043", maxEquity: "75%", action: "Bring QQQM down toward 18% and emerging markets toward 5%. Move bonds and cash combined to 15–20%." },
+                { year: "2042", maxEquity: "80%", action: `Reduce semiconductors (${displayTicker("SMH")}) toward 6%. Start moving some money into bonds — target 5–8% in bonds by end of year.` },
+                { year: "2043", maxEquity: "75%", action: `Bring ${displayTicker("QQQM")} down toward 18% and emerging markets toward 5%. Move bonds and cash combined to 15–20%.` },
                 { year: "2044", maxEquity: "70%", action: "Final year of building the portfolio. Shift the focus from growth to keeping what you have safe and generating income." },
                 { year: "2045", maxEquity: "Per 2040 Review", action: "Retirement drawdown begins. Follow the Distribution Plan written in 2040." },
               ].map(({ year, maxEquity, action }) => (
@@ -379,14 +594,14 @@ export default async function Forecast() {
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
             <span className="font-semibold text-foreground">Sell-down order when drawing down:</span>{" "}
-            SGOV first → BTC → SMH → VWO → QQQM → VT last.
+            SGOV first → BTC → {displayTicker("SMH")} → {displayTicker("VWO")} → {displayTicker("QQQM")} → {displayTicker("VT")} last.
             This sells the highest-concentration and highest-volatility positions first,
             keeping the broadest and cheapest holdings longest.
           </p>
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+      <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 mb-6">
         <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground leading-relaxed">
           <span className="font-bold text-foreground">Increasing contributions is often more powerful than optimising returns.</span>{" "}
@@ -394,6 +609,12 @@ export default async function Forecast() {
           than a 1% improvement in annual return. Consistency and contribution growth compound alongside capital.
         </p>
       </div>
+
+      <ProbabilityEngine
+        startValue={currentValue}
+        monthlyDca={MONTHLY_CONTRIBUTION}
+        annualBonus={ANNUAL_LUMP_SUM}
+      />
     </Shell>
   )
 }

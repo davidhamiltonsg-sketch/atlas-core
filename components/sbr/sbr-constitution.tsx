@@ -6,8 +6,8 @@ import { ThresholdGauge, type ThresholdGaugeRow } from "@/components/governance/
 
 const HIDDEN_EXPOSURE = [
   { label: "Single company", limit: "10%", action: "Put new contributions into other funds until it drops below 10%." },
-  { label: "Technology stocks (combined)", limit: "45%", action: "Stop buying QQQM and SMH until it comes back below 45%." },
-  { label: "Semiconductor stocks (combined)", limit: "20%", action: "Stop buying SMH. If SMH itself is also over 20%, sell some too." },
+  { label: "Technology stocks (combined)", limit: "45%", action: "Stop buying EQQQ and SEMI until it comes back below 45%." },
+  { label: "Semiconductor stocks (combined)", limit: "20%", action: "Stop buying SEMI. If SEMI itself is also over 20%, sell some too." },
   { label: "US market (total exposure)", limit: "75%", action: "Route new contributions to VWRA and A35 instead." },
   { label: "US dollar assets (total)", limit: "85%", action: "Build up A35 (SGD bonds) as you get closer to the property goal." },
 ]
@@ -72,14 +72,14 @@ export function SbrConstitution({ name, isAdmin, allocMap = {} }: { name: string
         </div>
         <div className="grid gap-3 sm:grid-cols-2 p-5">
           <div className="rounded-lg border border-border bg-background/40 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-500 mb-1">Tech stocks cap (QQQM + SMH combined)</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-500 mb-1">Tech stocks cap (EQQQ + SEMI combined)</p>
             <p className="text-lg font-black tabular-nums">Warn {SBR.combined!.warning}% · <span className="text-red-500">Stop {SBR.combined!.hard}%</span></p>
-            <p className="text-[11px] text-muted-foreground mt-1">At 40%, stop buying both. At 45%, halt both completely until they drop below {SBR.combined!.resume}%. QQQM and SMH overlap heavily — this cap stops them from taking over.</p>
+            <p className="text-[11px] text-muted-foreground mt-1">At 40%, stop buying both. At 45%, halt both completely until they drop below {SBR.combined!.resume}%. EQQQ and SEMI overlap heavily — this cap stops them from taking over.</p>
           </div>
           <div className="rounded-lg border border-border bg-background/40 p-4">
             <p className="text-[10px] font-bold uppercase tracking-wide text-blue-500 mb-1">Stocks maximum (all three equity funds)</p>
             <p className="text-lg font-black tabular-nums">{SBR.totalEquityMaxPct}%</p>
-            <p className="text-[11px] text-muted-foreground mt-1">VWRA + QQQM + SMH combined should stay below 90%. If they push above {SBR.totalEquityMaxPct}%, put new money into A35 until they come back down.</p>
+            <p className="text-[11px] text-muted-foreground mt-1">VWRA + EQQQ + SEMI combined should stay below 90%. If they push above {SBR.totalEquityMaxPct}%, put new money into A35 until they come back down.</p>
           </div>
         </div>
       </div>
@@ -123,7 +123,7 @@ export function SbrConstitution({ name, isAdmin, allocMap = {} }: { name: string
 
       {/* Hidden exposure */}
       <div className="rounded-xl card-lux overflow-hidden mb-6">
-        <div className="px-5 py-4 border-b border-border"><h2 className="text-sm font-semibold">What You Actually Own (Inside the Funds)</h2><p className="mt-0.5 text-xs text-muted-foreground">VWRA, QQQM and SMH all hold many of the same companies. These limits stop you accidentally over-concentrating without realising it. Check quarterly using each fund&apos;s factsheet.</p></div>
+        <div className="px-5 py-4 border-b border-border"><h2 className="text-sm font-semibold">What You Actually Own (Inside the Funds)</h2><p className="mt-0.5 text-xs text-muted-foreground">VWRA, EQQQ and SEMI all hold many of the same companies. These limits stop you accidentally over-concentrating without realising it. Check quarterly using each fund&apos;s factsheet.</p></div>
         <div className="overflow-x-auto"><table className="w-full text-xs min-w-[560px]">
           <thead><tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30"><th className="px-5 py-2.5">Exposure type</th><th className="px-3 py-2.5 text-right">Limit</th><th className="px-5 py-2.5">What to do if over the limit</th></tr></thead>
           <tbody className="divide-y divide-border">{HIDDEN_EXPOSURE.map((h) => (<tr key={h.label}><td className="px-5 py-3 font-medium">{h.label}</td><td className="px-3 py-3 text-right tabular-nums text-amber-500 font-semibold">{h.limit}</td><td className="px-5 py-3 text-muted-foreground">{h.action}</td></tr>))}</tbody>

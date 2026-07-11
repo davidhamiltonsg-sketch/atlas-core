@@ -336,7 +336,7 @@ export async function sendAnnualAuditEmail(
     <li>Confirm broker (IBKR Singapore) and custodian risk is acceptable.</li>` : `
     <li>Review property target (S$120,000) — has your budget, CPF contribution, or loan terms changed?</li>
     <li>Recalibrate phase thresholds (S$72k / S$102k / S$114k) if the target changed.</li>
-    <li>Review phase-dependent SMH and combined tech caps — are the tightening levels still appropriate?</li>
+    <li>Review phase-dependent SEMI and combined tech caps — are the tightening levels still appropriate?</li>
     <li>Confirm timeline: how many months to expected purchase? Does Phase III/IV trigger still match?</li>
     <li>Review hidden-exposure factsheets — are provider holdings files current?</li>`
 

@@ -344,7 +344,7 @@ export async function SbrReportPage({
                     <span>0%</span><span>12% target</span><span>15% caution</span><span>20%</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    Blended from what you actually hold — weighted by current allocation, not target weights. A portfolio concentrated in SMH or QQQM raises this number; more VWRA and A35 brings it down. The plan is designed to stay below 12%.
+                    Blended from what you actually hold — weighted by current allocation, not target weights. A portfolio concentrated in SEMI or EQQQ raises this number; more VWRA and A35 brings it down. The plan is designed to stay below 12%.
                   </p>
                 </div>
 
@@ -604,7 +604,7 @@ export async function SbrReportPage({
                 <div className="space-y-2.5">
                   {[
                     { label: "Governance",   score: d.health.governance,   weight: 25, desc: "Decision steps followed, no unauthorised trades" },
-                    { label: "Risk",         score: d.health.risk,         weight: 20, desc: "SMH cap, combined ceiling, no hard breaches" },
+                    { label: "Risk",         score: d.health.risk,         weight: 20, desc: "SEMI cap, combined ceiling, no hard breaches" },
                     { label: "Allocation",   score: d.health.allocation,   weight: 15, desc: "All funds within comfortable ranges" },
                     { label: "Contribution", score: d.health.contribution, weight: 15, desc: "Monthly contributions at plan level" },
                     { label: "Behaviour",    score: d.health.behavioural,  weight: 10, desc: "Discipline — no uncorrected breaches or lapses" },

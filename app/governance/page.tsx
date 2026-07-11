@@ -8,6 +8,7 @@ import { FloatingCapsSection } from "@/components/governance/floating-caps-secti
 import { PreCommitments } from "@/components/governance/pre-commitments"
 import { OperatingSafeguards } from "@/components/governance/operating-safeguards"
 import { GOVERNANCE_BAND_ROWS } from "@/lib/constants"
+import { displayTicker } from "@/lib/approved-alternatives"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 import { SbrConstitution } from "@/components/sbr/sbr-constitution"
 import { ThresholdGauge } from "@/components/governance/threshold-gauge"
@@ -21,7 +22,7 @@ const monthlySteps = [
     step: 1,
     question: "Is anything over its safety limit?",
     detail: "Look at each holding's percentage in the dashboard. Has anything crossed into the red zone?",
-    yes: "Act before investing new money. SMH over 12% → sell some back to 10%. BTC+IBIT over 8% → stop buying. QQQM over 30% → sell some back. Nvidia over 13% of total portfolio → reduce chip exposure. Then go to Step 6.",
+    yes: "Act before investing new money. SEMI over 12% → sell some back to 10%. BTC+IBIT over 8% → stop buying. EQQQ over 30% → sell some back. Nvidia over 13% of total portfolio → reduce chip exposure. Then go to Step 6.",
     no: "Nothing is over its limit. Move to Step 2.",
   },
   {
@@ -51,7 +52,7 @@ const monthlySteps = [
     detail: "No limits breached, nothing too small or too large, no hidden exposure warnings active.",
     yes: null,
     no: null,
-    action: "Split this month's contribution at target weights: VT 52% · QQQM 23% · SMH 10% · VWO 8% · Bitcoin sleeve 7% (via IBIT). Then go to Step 6.",
+    action: "Split this month's contribution at target weights: VWRA 52% · EQQQ 23% · SEMI 10% · VFEA 8% · Bitcoin sleeve 7% (via IBIT). Then go to Step 6.",
   },
   {
     step: 6,
@@ -211,10 +212,10 @@ export default async function Governance() {
           </thead>
           <tbody className="divide-y divide-border">
             {[
-              { ticker: "VT",   target: "52%", job: "The big foundation — owns stocks from all over the world.", color: "#6366f1" },
-              { ticker: "QQQM", target: "23%", job: "The growth engine — the 100 biggest US tech companies.", color: "#8b5cf6" },
-              { ticker: "SMH",  target: "10%", job: "The chip bet — semiconductor companies tied to AI and computing.", color: "#a78bfa" },
-              { ticker: "VWO",  target: "8%",  job: "The geography balancer — extra exposure to emerging market economies.", color: "#c4b5fd" },
+              { ticker: "VWRA", target: "52%", job: "The big foundation — owns stocks from all over the world.", color: "#6366f1" },
+              { ticker: "EQQQ", target: "23%", job: "The growth engine — the 100 biggest US tech companies.", color: "#8b5cf6" },
+              { ticker: "SEMI", target: "10%", job: "The chip bet — semiconductor companies tied to AI and computing.", color: "#a78bfa" },
+              { ticker: "VFEA", target: "8%",  job: "The geography balancer — extra exposure to emerging market economies.", color: "#c4b5fd" },
               { ticker: "BTC",  target: "7%",  job: "The wild card — high upside, but kept deliberately small to limit damage if it falls.", color: "#f59e0b" },
               { ticker: "SGOV", target: "buffer", job: "The safety buffer — short-term US government bonds, used as dry powder and a hedge.", color: "#6b7280" },
             ].map(({ ticker, target, job, color }) => (
@@ -234,7 +235,7 @@ export default async function Governance() {
         </div>
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
-            Plain English: VT is the chassis, QQQM and SMH are the turbochargers, VWO adds geographic balance, BTC is the small optional rocket, and SGOV is the spare fuel can. Strong belief in each one is allowed — an oversized bet in any one is not.
+            Plain English: VWRA is the chassis, EQQQ and SEMI are the turbochargers, VFEA adds geographic balance, BTC is the small optional rocket, and SGOV is the spare fuel can. Strong belief in each one is allowed — an oversized bet in any one is not.
           </p>
         </div>
       </div>

@@ -208,10 +208,10 @@ export const COMBINED_TECH_RULE = {
   softCeiling: ATLAS_SPEC.combinedTech.soft,  // derived from lib/portfolio-spec.ts
   hardCeiling: ATLAS_SPEC.combinedTech.hard,
   label:       'Combined Tech Concentration',
-  rationale:   'QQQM+SMH combined exposure. Semis overlap means individual caps understate concentration risk.',
+  rationale:   'EQQQ+SEMI combined exposure. Semis overlap means individual caps understate concentration risk.',
   action: {
-    soft: 'Flag for review. No new QQQM or SMH buys until combined falls below 36%.',
-    hard: 'Halt all QQQM and SMH contributions. Review at next monthly cycle.',
+    soft: 'Flag for review. No new EQQQ or SEMI buys until combined falls below 36%.',
+    hard: 'Halt all EQQQ and SEMI contributions. Review at next monthly cycle.',
   },
 } as const
 

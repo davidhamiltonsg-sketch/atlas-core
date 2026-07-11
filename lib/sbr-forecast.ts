@@ -8,21 +8,14 @@
  * SGD amount per month), so this doesn't reuse Atlas's projectPortfolio signature.
  */
 
-export interface SbrGrowthRates {
-  conservative: number
-  base: number
-  aggressive: number
-}
+import { SBR_SPEC, type ReturnAssumption } from "@/lib/portfolio-spec"
 
-// Per-fund long-run CAGR assumptions — verified Jun 2026 (update the date when refreshed).
-// VWRA/QQQM/SMH mirror the same funds' long-run profile used elsewhere; A35 (SGD bonds) is
-// deliberately modest and low-variance — it's the safety floor, not a growth engine.
-export const SBR_ASSET_EXPECTED_RETURNS: Record<string, SbrGrowthRates> = {
-  VWRA: { conservative: 0.06, base: 0.095, aggressive: 0.12 },
-  QQQM: { conservative: 0.07, base: 0.115, aggressive: 0.16 },
-  SMH:  { conservative: 0.06, base: 0.13,  aggressive: 0.20 },
-  A35:  { conservative: 0.01, base: 0.03,  aggressive: 0.05 },
-}
+export type SbrGrowthRates = ReturnAssumption
+
+// Derived from SBR_SPEC.funds — the spec is the single source of truth for return assumptions.
+export const SBR_ASSET_EXPECTED_RETURNS: Record<string, SbrGrowthRates> = Object.fromEntries(
+  SBR_SPEC.funds.filter(f => f.expectedReturn).map(f => [f.ticker, f.expectedReturn!])
+)
 
 const FALLBACK_RATES: SbrGrowthRates = { conservative: 0.03, base: 0.07, aggressive: 0.11 }
 

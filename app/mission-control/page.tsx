@@ -1,15 +1,16 @@
 import type { Metadata } from "next"
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google"
 import { getSession } from "@/lib/session"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { constitutionIdForEmail, constitutionForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
 import { computeLadder } from "@/lib/ladder"
-import { BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
+import { BITCOIN_SLEEVE_TARGET_PCT, applyBitcoinSleeve } from "@/lib/next-best-move"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
+import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
@@ -34,7 +35,7 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jet
 const SAMPLE_CONTEXT: PortfolioContext = {
   label: "Atlas Core",
   totalValue: 284_500,
-  currency: "SGD",
+  currency: "USD",
   dayChangePct: 0.42,
   cashPct: 3.1,
   driftAlerts: 1,
@@ -65,7 +66,7 @@ const SBR_SAMPLE_CONTEXT: PortfolioContext = {
     { ticker: "VWRA", name: "Global fund",          pct: 60.0, color: "#4A9EFF" },
     { ticker: "A35",  name: "Singapore bond fund",   pct: 20.0, color: "#2ECC9A" },
     { ticker: "EQQQ", name: "Nasdaq fund",           pct: 10.0, color: "#C9A84C" },
-    { ticker: "SMH",  name: "Chip-maker fund",       pct: 10.0, color: "#E0913A" },
+    { ticker: "SEMI", name: "Chip-maker fund",       pct: 10.0, color: "#E0913A" },
   ],
 }
 
@@ -73,7 +74,8 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
   const session = await getSession()
   if (!session) return SAMPLE_CONTEXT
 
-  const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+  const constitution = constitutionForEmail(session.email)
+  const isSbr = constitution.id === "silicon-brick-road"
   const label = isSbr ? "Silicon Brick Road" : "Atlas Core"
   const fallback = isSbr ? SBR_SAMPLE_CONTEXT : SAMPLE_CONTEXT
 
@@ -114,7 +116,7 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
     return {
       label,
       totalValue: total,
-      currency: "SGD",
+      currency: constitution.currency,
       dayChangePct,
       cashPct: cashPct > 0 ? cashPct : null,
       driftAlerts,
@@ -129,11 +131,11 @@ async function loadPortfolioContext(): Promise<PortfolioContext> {
   }
 }
 
-// ── Real agent findings (Atlas only) ────────────────────────────────────────
-// Each engine runs against the live portfolio and produces timestamped log
-// messages + a final result that the client component animates verbatim.
-// When the server can't produce findings (logged out, no holdings, SBR user),
-// the client falls back to the scripted traces.
+// ── Real agent findings ────────────────────────────────────────────────────
+// Both Atlas and SBR engines run against the live database and produce
+// timestamped log messages + a final result that the client animates verbatim.
+// When the server can't produce findings (logged out, error), the client
+// falls back to the scripted traces.
 
 type Level = "info" | "data" | "ok" | "warn" | "err"
 
@@ -164,7 +166,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     if (totalValue <= 0) return null
 
     // Build position inputs (same pattern as the dashboard)
-    const positions = holdings
+    let positions = holdings
       .map(h => {
         const value = h.snapshots[0]?.value ?? 0
         const actualPct = (value / totalValue) * 100
@@ -182,14 +184,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       })
       .filter(p => p.value > 0)
 
-    // Bitcoin sleeve consolidation — BTC in run-off, IBIT is accumulation
-    const btcPos = positions.find(p => p.ticker === "BTC")
-    const ibitPos = positions.find(p => p.ticker === "IBIT")
-    if (btcPos && ibitPos) {
-      btcPos.targetPct = btcPos.actualPct
-      const ibitTarget = Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btcPos.actualPct)
-      ibitPos.targetPct = ibitTarget
-    }
+    positions = applyBitcoinSleeve(positions)
 
     // Run engines
     const lookThrough = computeLookThrough(positions)
@@ -198,7 +193,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const ltBreach = worstLookThroughBreach(lookThrough)
     const ltApproach = worstLookThroughApproach(lookThrough)
 
-    const sgovPct = positions.find(p => ["SGOV", "CASH", "SGD", "AGG"].includes(p.ticker.toUpperCase()))?.actualPct ?? 0
+    const sgovPct = positions.filter(p => ["SGOV", "CASH", "SGD", "AGG"].includes(p.ticker.toUpperCase())).reduce((s, p) => s + p.actualPct, 0)
     const govAlignment = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough })
 
     const hardBreaches = positions.filter(p => {
@@ -275,7 +270,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const annualLumpSum = user?.annualLumpSum ?? 20000
     const allocMap: Record<string, number> = {}
     for (const p of positions) allocMap[p.ticker] = p.actualPct
-    const rates = blendedGrowthRates(allocMap, riskFreeRate)
+    const { rates, excludedTickers } = blendedGrowthRates(allocMap, riskFreeRate)
     const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
     const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate)
 
@@ -294,7 +289,8 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const buyCount = trades.filter(t => t.type === "BUY").length
     const sellCount = trades.filter(t => t.type === "SELL").length
 
-    const fmt = (v: number) => v >= 1_000_000 ? `S$${(v / 1_000_000).toFixed(1)}M` : `S$${(v / 1_000).toFixed(0)}K`
+    const ccySymbol = "$"
+    const fmt = (v: number) => v >= 1_000_000 ? `${ccySymbol}${(v / 1_000_000).toFixed(1)}M` : `${ccySymbol}${(v / 1_000).toFixed(0)}K`
 
     // ── Build findings per agent ───────────────────────────────────────────
 
@@ -323,6 +319,11 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       }
 
       const ts = spacedTimings(steps.length)
+      const conBreachSummary = breachChecks.length === 1
+        ? `${breachChecks[0].label} breach — health ${health.overall}/100`
+        : breachChecks.length > 1
+          ? `${breachChecks.length} breaches (${breachChecks.slice(0, 2).map(c => c.label).join(", ")}) — health ${health.overall}/100`
+          : null
       findings.constitution = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -330,9 +331,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
           line: {
             t: resultT(ts),
             level: breachChecks.length > 0 ? "warn" : "ok",
-            msg: breachChecks.length > 0
-              ? `${breachChecks.length} breach${breachChecks.length > 1 ? "es" : ""} flagged — health ${health.overall}/100`
-              : `Governance clean — health ${health.overall}/100, all checks passed`,
+            msg: conBreachSummary ?? `Governance clean — health ${health.overall}/100, all checks passed`,
           },
         },
       }
@@ -355,6 +354,17 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
 
       const ts = spacedTimings(steps.length)
       const isClean = govAlignment.overall === "ok"
+      const govBreachChecks = govAlignment.checks.filter(c => c.status === "breach")
+      const govWatchChecks = govAlignment.checks.filter(c => c.status === "watch")
+      let govResultMsg: string
+      if (isClean) {
+        govResultMsg = `Governance clean — ${govAlignment.checks.length} checks, 0 breaches`
+      } else {
+        const parts: string[] = []
+        if (govBreachChecks.length > 0) parts.push(`${govBreachChecks.length} breach (${govBreachChecks.slice(0, 2).map(c => c.label).join(", ")})`)
+        if (govWatchChecks.length > 0) parts.push(`${govWatchChecks.length} watch (${govWatchChecks.slice(0, 2).map(c => c.label).join(", ")})`)
+        govResultMsg = `${parts.join(", ")} — review needed`
+      }
       findings.governance = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -362,9 +372,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
           line: {
             t: resultT(ts),
             level: isClean ? "ok" : "warn",
-            msg: isClean
-              ? `Governance clean — ${govAlignment.checks.length} checks, 0 breaches`
-              : `${govAlignment.breaches} breach${govAlignment.breaches > 1 ? "es" : ""}, ${govAlignment.watches} watch — review needed`,
+            msg: govResultMsg,
           },
         },
       }
@@ -398,6 +406,12 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       }
 
       const ts = spacedTimings(steps.length)
+      const driftSummary = drifted.length > 0
+        ? drifted.slice(0, 3).map(p => {
+            const drift = p.actualPct - p.targetPct
+            return `${p.ticker} ${drift > 0 ? "+" : ""}${drift.toFixed(1)}pp`
+          }).join(", ")
+        : null
       findings.drift = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -406,7 +420,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
             t: resultT(ts),
             level: drifted.length > 0 ? "warn" : "ok",
             msg: drifted.length > 0
-              ? `${drifted.length} position${drifted.length > 1 ? "s" : ""} outside band — rebalance candidate${drifted.length > 1 ? "s" : ""} queued`
+              ? `${drifted.length} outside band (${driftSummary}) — rebalance queued`
               : "All positions within tolerance — no rebalance needed",
           },
         },
@@ -463,16 +477,19 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     {
       const steps: Array<{ level: Level; msg: string }> = []
       steps.push({ level: "info", msg: `Blending growth assumptions from ${positions.length} holdings` })
+      if (excludedTickers.length > 0) {
+        steps.push({ level: "warn", msg: `${excludedTickers.length} ticker${excludedTickers.length !== 1 ? "s" : ""} excluded from blend (${excludedTickers.join(", ")}) — add return assumptions` })
+      }
       steps.push({ level: "data", msg: `CAGR: conservative ${(rates.conservative * 100).toFixed(1)}% · base ${(rates.base * 100).toFixed(1)}% · aggressive ${(rates.aggressive * 100).toFixed(1)}%` })
       steps.push({ level: "data", msg: `Base-case 2045 (${yearsTo2045}yr): ${fmt(base2045)} at ${(rates.base * 100).toFixed(1)}% p.a.` })
-      steps.push({ level: "ok", msg: `Monthly S$${monthlyContribution.toLocaleString()} + annual lump S$${annualLumpSum.toLocaleString()} · growth ${(contributionGrowthRate * 100).toFixed(0)}% p.a.` })
+      steps.push({ level: "ok", msg: `Monthly ${ccySymbol}${monthlyContribution.toLocaleString()} + annual lump ${ccySymbol}${annualLumpSum.toLocaleString()} · growth ${(contributionGrowthRate * 100).toFixed(0)}% p.a.` })
 
       const ts = spacedTimings(steps.length)
       findings.forecast = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
-          status: "done",
-          line: { t: resultT(ts), level: "ok", msg: `Forecast refreshed — base case ${fmt(base2045)} by 2045` },
+          status: excludedTickers.length > 0 ? "alert" : "done",
+          line: { t: resultT(ts), level: excludedTickers.length > 0 ? "warn" : "ok", msg: `Forecast refreshed — base case ${fmt(base2045)} by 2045${excludedTickers.length > 0 ? ` (${excludedTickers.length} ticker${excludedTickers.length !== 1 ? "s" : ""} excluded)` : ""}` },
         },
       }
     }
@@ -506,6 +523,20 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
 
       const ts = spacedTimings(steps.length)
       const hasConcentration = companyBreaches > 0 || sectorBreaches > 0 || techCeiling.status === "hard_breach"
+      let riskResultMsg: string
+      if (hasConcentration) {
+        const breachLabels: string[] = []
+        const companyBreach = lookThrough.companies.find(c => c.status === "breach")
+        if (companyBreach) breachLabels.push(`${companyBreach.label} ${companyBreach.pct.toFixed(1)}%`)
+        const sectorBreach = lookThrough.sectors.find(s => s.status === "breach")
+        if (sectorBreach) breachLabels.push(`${sectorBreach.label} ${sectorBreach.pct.toFixed(1)}%`)
+        if (techCeiling.status === "hard_breach") breachLabels.push(`tech ${techCeiling.combinedPct.toFixed(1)}%`)
+        riskResultMsg = `Concentration issue — ${breachLabels.join(", ")}`
+      } else {
+        const volStr = vol !== null ? ` — vol ${(vol * 100).toFixed(1)}%` : ""
+        const topRisk = worstCompany ? `, top ${worstCompany.label} ${worstCompany.pct.toFixed(1)}%` : ""
+        riskResultMsg = `Risk within bounds${volStr}${topRisk}`
+      }
       findings.risk = {
         script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
         result: {
@@ -513,9 +544,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
           line: {
             t: resultT(ts),
             level: hasConcentration ? "warn" : "ok",
-            msg: hasConcentration
-              ? `Concentration issue — ${companyBreaches + sectorBreaches} look-through breach${(companyBreaches + sectorBreaches) > 1 ? "es" : ""}`
-              : `Risk within bounds${vol !== null ? ` — vol ${(vol * 100).toFixed(1)}%` : ""}, no concentration breach`,
+            msg: riskResultMsg,
           },
         },
       }
@@ -566,14 +595,236 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
   }
 }
 
+// ── Real SBR findings ──────────────────────────────────────────────────────
+// SBR helpers check what Dami actually has in the database. If there are no
+// holdings or trades, they say so honestly instead of playing scripted traces.
+
+async function loadSbrFindings(userId: string): Promise<Record<string, AgentFinding> | null> {
+  try {
+    const [holdings, trades] = await Promise.all([
+      db.holding.findMany({
+        where: { userId },
+        include: { snapshots: { orderBy: { date: "desc" }, take: 2 } },
+      }),
+      db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    ])
+
+    const rows = holdings
+      .map(h => ({
+        ticker: h.ticker,
+        name: h.name,
+        value: h.snapshots[0]?.value ?? 0,
+        targetPct: h.targetPct,
+      }))
+      .filter(r => r.value > 0)
+
+    const totalValue = rows.reduce((s, r) => s + r.value, 0)
+    const hasHoldings = totalValue > 0
+    const hasTrades = trades.length > 0
+    const findings: Record<string, AgentFinding> = {}
+
+    // 1. Buys — what shares to buy this month
+    {
+      const ts = spacedTimings(2)
+      if (hasHoldings) {
+        const fundCount = rows.length
+        findings.buys = {
+          script: [
+            { t: ts[0], level: "info", msg: `Checking your ${fundCount} fund${fundCount !== 1 ? "s" : ""} for this month's split` },
+            { t: ts[1], level: "data", msg: `Total value: S$${Math.round(totalValue).toLocaleString()}` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `${fundCount} fund${fundCount !== 1 ? "s" : ""} loaded — ready when you add this month's savings` } },
+        }
+      } else {
+        findings.buys = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your funds" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no prices yet" : "No holdings recorded yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: hasTrades ? "Sync prices to calculate your monthly split" : "No funds yet — add your first holding to get started" } },
+        }
+      }
+    }
+
+    // 2. Balance — are funds near their targets?
+    {
+      const ts = spacedTimings(2)
+      if (hasHoldings) {
+        const withPct = rows.map(r => ({ ...r, actualPct: (r.value / totalValue) * 100 }))
+        const offTarget = withPct.filter(r => r.targetPct > 0 && Math.abs(r.actualPct - r.targetPct) > 3)
+        if (offTarget.length > 0) {
+          findings.balance = {
+            script: [
+              { t: ts[0], level: "info", msg: "Weighing each fund against its guide-rails" },
+              { t: ts[1], level: "warn", msg: `${offTarget.length} fund${offTarget.length !== 1 ? "s" : ""} outside target range` },
+            ],
+            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: `${offTarget.length} fund${offTarget.length !== 1 ? "s" : ""} a bit off — even out over the next month` } },
+          }
+        } else {
+          findings.balance = {
+            script: [
+              { t: ts[0], level: "info", msg: "Weighing each fund against its guide-rails" },
+              { t: ts[1], level: "ok", msg: "All funds within their target range" },
+            ],
+            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: "Funds balanced — nothing to even out" } },
+          }
+        }
+      } else {
+        findings.balance = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for fund balances to check" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no prices yet" : "No holdings to weigh yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: hasTrades ? "Waiting for price sync — tap Update Holdings" : "No funds yet — nothing to balance" } },
+        }
+      }
+    }
+
+    // 3. Road — where are you on the journey?
+    {
+      const ts = spacedTimings(2)
+      if (hasTrades) {
+        const firstTradeDate = new Date(trades[0].date)
+        const monthsSaved = Math.max(1, Math.round((Date.now() - firstTradeDate.getTime()) / (30.44 * 86_400_000)))
+        findings.road = {
+          script: [
+            { t: ts[0], level: "info", msg: "Counting the months you've been saving" },
+            { t: ts[1], level: "data", msg: `${monthsSaved} month${monthsSaved !== 1 ? "s" : ""} since your first trade` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `On the road — ${monthsSaved} month${monthsSaved !== 1 ? "s" : ""} in` } },
+        }
+      } else {
+        findings.road = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your savings history" },
+            { t: ts[1], level: "data", msg: "No trades recorded yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "The road starts when you make your first trade" } },
+        }
+      }
+    }
+
+    // 4. Safety — have any de-risking steps kicked in?
+    // SBR phases are value-based (not time-based): Phase II starts at SGD 72k.
+    {
+      const ts = spacedTimings(2)
+      const safetyThreshold = 72_000
+      if (hasHoldings) {
+        if (totalValue >= safetyThreshold) {
+          findings.safety = {
+            script: [
+              { t: ts[0], level: "info", msg: "Checking your de-risking milestones" },
+              { t: ts[1], level: "warn", msg: `S$${Math.round(totalValue).toLocaleString()} is past the S$72K safety line` },
+            ],
+            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: "Past the safety threshold — new money should start going to bonds" } },
+          }
+        } else {
+          const remaining = safetyThreshold - totalValue
+          findings.safety = {
+            script: [
+              { t: ts[0], level: "info", msg: "Checking whether any safety step has started" },
+              { t: ts[1], level: "data", msg: `S$${Math.round(remaining).toLocaleString()} to go before the first safety step` },
+            ],
+            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `Still in full-growth mode — safety kicks in at S$72K` } },
+          }
+        }
+      } else {
+        findings.safety = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your fund value" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no price data yet" : "No holdings yet — can't check milestones" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Safety steps start when your fund reaches S$72K" } },
+        }
+      }
+    }
+
+    // 5. Goal — projection towards the home deadline
+    {
+      if (hasHoldings) {
+        const allocMap: Record<string, number> = {}
+        for (const r of rows) allocMap[r.ticker] = (r.value / totalValue) * 100
+        const sbrRates = sbrBlendedGrowthRate(allocMap)
+        const target = 120_000
+        const monthly = 2_000
+        const baseMonths = monthsToTarget(totalValue, monthly, sbrRates.base, target)
+        const consMonths = monthsToTarget(totalValue, monthly, sbrRates.conservative, target)
+
+        const steps: Array<{ level: Level; msg: string }> = []
+        steps.push({ level: "info", msg: `Projecting S$${Math.round(totalValue).toLocaleString()} towards S$120K target` })
+        steps.push({ level: "data", msg: `Blended CAGR: ${(sbrRates.base * 100).toFixed(1)}% base · ${(sbrRates.conservative * 100).toFixed(1)}% conservative` })
+        if (baseMonths !== null) {
+          const baseYrs = (baseMonths / 12).toFixed(1)
+          steps.push({ level: "ok", msg: `Base case: ~${baseMonths} months (${baseYrs}yr) to S$120K at S$${monthly.toLocaleString()}/mo` })
+        } else {
+          steps.push({ level: "warn", msg: "Base case does not reach S$120K within 50 years at current rate" })
+        }
+        if (consMonths !== null && consMonths !== baseMonths) {
+          steps.push({ level: "data", msg: `Conservative: ~${consMonths} months (${(consMonths / 12).toFixed(1)}yr) to S$120K` })
+        }
+
+        const ts = spacedTimings(steps.length)
+        const resultMsg = baseMonths !== null
+          ? `~${baseMonths} months to S$120K at ${(sbrRates.base * 100).toFixed(1)}% p.a.`
+          : `S$${Math.round(totalValue).toLocaleString()} saved — target distant at current rate`
+        findings.goal = {
+          script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
+          result: { status: "done", line: { t: resultT(ts), level: baseMonths !== null ? "ok" : "warn", msg: resultMsg } },
+        }
+      } else {
+        const ts = spacedTimings(2)
+        findings.goal = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your savings to project" },
+            { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no price data yet" : "No holdings yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: hasTrades ? "Sync prices to project your timeline" : "Add your first holding to see a projection" } },
+        }
+      }
+    }
+
+    // 6. Savings — tally of deposits
+    {
+      const ts = spacedTimings(2)
+      if (hasTrades) {
+        const totalBought = trades.filter(t => t.type === "BUY").reduce((s, t) => s + t.amount, 0)
+        findings.savings = {
+          script: [
+            { t: ts[0], level: "info", msg: "Adding up every deposit you've made" },
+            { t: ts[1], level: "data", msg: `${trades.length} trade${trades.length !== 1 ? "s" : ""} · S$${Math.round(totalBought).toLocaleString()} invested` },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `${trades.length} trade${trades.length !== 1 ? "s" : ""} recorded — S$${Math.round(totalBought).toLocaleString()} total` } },
+        }
+      } else {
+        findings.savings = {
+          script: [
+            { t: ts[0], level: "info", msg: "Looking for your trade history" },
+            { t: ts[1], level: "data", msg: "No trades recorded yet" },
+          ],
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No deposits yet — your first trade starts the counter" } },
+        }
+      }
+    }
+
+    return findings
+  } catch {
+    return null
+  }
+}
+
 export default async function MissionControlPage() {
   const [context, session] = await Promise.all([
     loadPortfolioContext(),
     getSession(),
   ])
 
-  const isAtlas = session && constitutionIdForEmail(session.email) !== "silicon-brick-road"
-  const findings = isAtlas ? await loadAgentFindings(session.userId) : null
+  let findings: Record<string, AgentFinding> | null = null
+  if (session) {
+    const isSbr = constitutionIdForEmail(session.email) === "silicon-brick-road"
+    findings = isSbr
+      ? await loadSbrFindings(session.userId)
+      : await loadAgentFindings(session.userId)
+  }
 
   return (
     <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>

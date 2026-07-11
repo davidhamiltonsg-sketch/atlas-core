@@ -5,6 +5,7 @@ import { applyBitcoinSleeve } from "@/lib/constants"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
+import { ATLAS_TARGET_HHI, ATLAS_HHI_THRESHOLDS, atlasConcentrationLabel } from "@/lib/spec-derived"
 
 // ─── Risk Math ─────────────────────────────────────────────────────────────────
 
@@ -34,9 +35,9 @@ function hhi(weights: number[]): number {
 }
 
 function hhiLabel(h: number): { label: string; color: string } {
-  if (h < 0.15) return { label: "Diversified", color: "text-green-500" }
-  if (h < 0.25) return { label: "Moderate", color: "text-yellow-400" }
-  return { label: "Concentrated", color: "text-red-500" }
+  const label = atlasConcentrationLabel(h)
+  const color = label === "On Target" ? "text-green-500" : label === "Drifting" ? "text-yellow-400" : "text-red-500"
+  return { label, color }
 }
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
@@ -55,13 +56,12 @@ async function getRiskData(userId: string) {
   // Multiple syncs on the same day create duplicate snapshots. Summing all of
   // them inflates the portfolio total (3 syncs → 3× the actual value) and
   // produces a fake "ATH" followed by a 66% drawdown.
-  // We keep the LATEST snapshot value for each holding on each calendar date.
-  const holdingDateMaps = new Map<string, Map<string, number>>()
+  // We keep the LATEST snapshot for each holding on each calendar date.
+  const holdingDateMaps = new Map<string, Map<string, { value: number; price: number }>>()
   for (const h of holdings) {
-    const dm = new Map<string, number>()
+    const dm = new Map<string, { value: number; price: number }>()
     for (const s of h.snapshots) {
-      // snapshots ordered asc — later ones overwrite earlier ones on the same date
-      dm.set(s.date.toISOString().split("T")[0], s.value)
+      dm.set(s.date.toISOString().split("T")[0], { value: s.value, price: s.price })
     }
     holdingDateMaps.set(h.id, dm)
   }
@@ -69,27 +69,46 @@ async function getRiskData(userId: string) {
   const holdingsWithData = holdings.filter(h => holdingDateMaps.get(h.id)!.size > 0)
 
   // ── Step 2: Build portfolio timeline (complete dates only) ─────────────────
-  // Only include dates where EVERY holding has exactly one value — partial dates
-  // (some holdings synced, others not) create the same inflation problem.
+  // Only include dates where EVERY holding has a snapshot — partial dates
+  // (some holdings synced, others not) create inflation.
   const allDates = [...new Set(
     holdingsWithData.flatMap(h => [...holdingDateMaps.get(h.id)!.keys()])
   )].sort()
 
-  const timeline = allDates
+  type TimelineEntry = { date: string; value: number; holdings: { value: number; price: number }[] }
+  const timeline: TimelineEntry[] = allDates
     .map(date => {
-      const values = holdingsWithData.map(h => holdingDateMaps.get(h.id)!.get(date))
-      if (values.some(v => v === undefined)) return null
-      return { date, value: values.reduce<number>((s, v) => s + v!, 0) }
+      const hData = holdingsWithData.map(h => holdingDateMaps.get(h.id)!.get(date))
+      if (hData.some(v => v === undefined)) return null
+      return {
+        date,
+        value: hData.reduce((s, d) => s + d!.value, 0),
+        holdings: hData as { value: number; price: number }[],
+      }
     })
-    .filter((x): x is { date: string; value: number } => x !== null)
+    .filter((x): x is TimelineEntry => x !== null)
 
-  // ── Step 3: Period returns on clean timeline ───────────────────────────────
+  // ── Step 3: Price-based period returns ────────────────────────────────────
+  // Returns are computed from PRICE changes (not value changes) weighted by
+  // beginning-of-period portfolio weights. This isolates market movement from
+  // cash flows — a new purchase increases value but not price, so it doesn't
+  // register as a return.
   const periodReturns: number[] = []
   const daysBetween: number[] = []
   for (let i = 1; i < timeline.length; i++) {
     const prev = timeline[i - 1]
     const curr = timeline[i]
-    if (prev.value > 0) periodReturns.push((curr.value - prev.value) / prev.value)
+    if (prev.value <= 0) continue
+    let portfolioReturn = 0
+    for (let j = 0; j < prev.holdings.length; j++) {
+      const pPrice = prev.holdings[j].price
+      const cPrice = curr.holdings[j].price
+      if (pPrice > 0) {
+        const weight = prev.holdings[j].value / prev.value
+        portfolioReturn += weight * ((cPrice - pPrice) / pPrice)
+      }
+    }
+    periodReturns.push(portfolioReturn)
     daysBetween.push((new Date(curr.date).getTime() - new Date(prev.date).getTime()) / 86_400_000)
   }
 
@@ -97,7 +116,6 @@ async function getRiskData(userId: string) {
   const periodSd = stdDev(periodReturns)
   const annualisedVol = annualise(periodSd, avgDays)
   const avgPeriodReturn = periodReturns.length > 0 ? mean(periodReturns) : 0
-  // Geometric annualisation: (1 + avgPeriodReturn)^(periods/year) - 1
   const periodsPerYear = 365 / Math.max(avgDays, 1)
   const annualisedReturn = Math.pow(1 + avgPeriodReturn, periodsPerYear) - 1
 
@@ -109,30 +127,37 @@ async function getRiskData(userId: string) {
     ? (annualisedReturn - riskFree) / annualisedVol
     : null
 
-  // Max Drawdown
+  // Max Drawdown — computed on a return index (not raw value) so deposits
+  // don't register as new highs followed by fake drawdowns.
+  const returnIndex: number[] = [100]
+  for (let i = 0; i < periodReturns.length; i++) {
+    returnIndex.push(returnIndex[i] * (1 + periodReturns[i]))
+  }
   let peak = 0, maxDrawdown = 0, drawdownStart = "", drawdownEnd = "", peakDate = "", currentDrawdown = 0
-  for (const { date, value } of timeline) {
-    if (value > peak) { peak = value; peakDate = date }
-    const dd = (value - peak) / Math.max(peak, 1)
+  for (let i = 0; i < returnIndex.length; i++) {
+    const idx = returnIndex[i]
+    const date = timeline[i]?.date ?? ""
+    if (idx > peak) { peak = idx; peakDate = date }
+    const dd = (idx - peak) / Math.max(peak, 1)
     if (dd < maxDrawdown) { maxDrawdown = dd; drawdownStart = peakDate; drawdownEnd = date }
   }
   const lastValue = timeline[timeline.length - 1]?.value ?? 0
-  if (peak > 0) currentDrawdown = (lastValue - peak) / peak
+  if (peak > 0) currentDrawdown = (returnIndex[returnIndex.length - 1] - peak) / peak
 
   // VaR 95% parametric (1.645σ)
   const var95Daily   = annualisedVol / Math.sqrt(252) * 1.645 * lastValue
   const var95Monthly = annualisedVol / Math.sqrt(12)  * 1.645 * lastValue
 
-  // ── Step 4: Per-holding stats using deduplicated snapshots ─────────────────
+  // ── Step 4: Per-holding stats — returns from PRICES, not values ────────────
   const holdingStats = holdings.map(h => {
-    const dm = holdingDateMaps.get(h.id) ?? new Map<string, number>()
+    const dm = holdingDateMaps.get(h.id) ?? new Map<string, { value: number; price: number }>()
     const sortedDates = [...dm.keys()].sort()
     const hReturns: number[] = []
     const hDaysBetween: number[] = []
     for (let i = 1; i < sortedDates.length; i++) {
-      const prevVal = dm.get(sortedDates[i - 1])!
-      const currVal = dm.get(sortedDates[i])!
-      if (prevVal > 0) hReturns.push((currVal - prevVal) / prevVal)
+      const prevPrice = dm.get(sortedDates[i - 1])!.price
+      const currPrice = dm.get(sortedDates[i])!.price
+      if (prevPrice > 0) hReturns.push((currPrice - prevPrice) / prevPrice)
       hDaysBetween.push(
         (new Date(sortedDates[i]).getTime() - new Date(sortedDates[i - 1]).getTime()) / 86_400_000
       )
@@ -144,7 +169,7 @@ async function getRiskData(userId: string) {
       name: h.name,
       color: h.color,
       targetPct: h.targetPct,
-      latestValue: latestDate ? (dm.get(latestDate) ?? 0) : 0,
+      latestValue: latestDate ? dm.get(latestDate)!.value : 0,
       annualisedVol: annualise(stdDev(hReturns), Math.max(hAvgDays, 1)),
       dataPoints: sortedDates.length,
     }
@@ -321,6 +346,7 @@ export default async function RiskPage() {
               {data.hhiScore.toFixed(3)}
             </p>
             <p className={`text-[11px] font-semibold mt-0.5 ${hhiInfo.color}`}>{hhiInfo.label}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Target: {ATLAS_TARGET_HHI.toFixed(3)}</p>
           </div>
         </div>
 
@@ -431,7 +457,7 @@ export default async function RiskPage() {
                           <span className="text-muted-foreground hidden sm:inline">{h.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-right tabular-nums">{h.targetPct}%</td>
+                      <td className="px-5 py-3 text-right tabular-nums">{h.targetPct.toFixed(1)}%</td>
                       <td className="px-5 py-3 text-right tabular-nums font-semibold">{formatCurrency(h.latestValue, "SGD")}</td>
                       <td className="px-5 py-3 text-right tabular-nums">
                         {h.dataPoints >= 8 ? formatPercent(h.annualisedVol * 100, 1, false) : "—"}
@@ -461,9 +487,9 @@ export default async function RiskPage() {
                 <p className={`text-xs font-semibold mt-1 ${hhiInfo.color}`}>{hhiInfo.label}</p>
               </div>
               <div className="text-right text-xs text-muted-foreground space-y-1">
-                <p>&lt;0.15 — Diversified</p>
-                <p>0.15–0.25 — Moderate</p>
-                <p>&gt;0.25 — Concentrated</p>
+                <p>&lt;{ATLAS_HHI_THRESHOLDS.onTarget.toFixed(2)} — On Target</p>
+                <p>{ATLAS_HHI_THRESHOLDS.onTarget.toFixed(2)}–{ATLAS_HHI_THRESHOLDS.drifting.toFixed(2)} — Drifting</p>
+                <p>&gt;{ATLAS_HHI_THRESHOLDS.drifting.toFixed(2)} — Concentrated</p>
               </div>
             </div>
 
@@ -475,7 +501,7 @@ export default async function RiskPage() {
                   <div key={h.ticker}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold">{h.ticker}</span>
-                      <span className="text-xs text-muted-foreground tabular-nums">{formatPercent(w * 100, 1, false)} actual · {h.targetPct}% target</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">{formatPercent(w * 100, 1, false)} actual · {h.targetPct.toFixed(1)}% target</span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
                       <div

@@ -18,14 +18,14 @@ const GROUPS: Group[] = [
     rules: [
       { id: "A1", name: "Policy shock", body: "On a >~10% drop from a discrete event (tariff, geopolitics, regulation): take NO action for 14 calendar days, then deploy the buffer into the most beaten-down quality holding in tranches. Sell nothing." },
       { id: "A2", name: "Macro shock", body: "On a sustained decline (rate cycle, recession, de-rating): hold everything, continue scheduled contributions unchanged, do not redesign. The 2022 rule — holders who kept buying recovered." },
-      { id: "A3", name: "A loss is never a sell trigger", body: "Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: “Would I buy this at today's price?” If yes, do not sell. Broken-thesis tests — QQQM: structural pricing-power loss for 3+ years AND a credible non-US alternative at scale. SMH: capex reversal 3+ quarters AND a structural (not cyclical) AI-compute decline. Bitcoin sleeve (BTC/IBIT): protocol-layer vulnerability, multi-sovereign adoption reversal, or a superior replacement network — single-jurisdiction regulatory pressure does not qualify." },
+      { id: "A3", name: "A loss is never a sell trigger", body: "Being down is a sunk cost. Sell a conviction holding only when its thesis breaks — never the colour of the number. Ask: \u201CWould I buy this at today's price?\u201D If yes, do not sell. Broken-thesis tests — EQQQ (NASDAQ-100): structural pricing-power loss for 3+ years AND a credible non-US alternative at scale. SEMI (Semiconductors): capex reversal 3+ quarters AND a structural (not cyclical) AI-compute decline. Bitcoin sleeve (BTC/IBIT): protocol-layer vulnerability, multi-sovereign adoption reversal, or a superior replacement network — single-jurisdiction regulatory pressure does not qualify." },
       { id: "A4", name: "Never crystallise a loss to fund something else", body: "Buffers, new positions and rebalances are funded from new contributions — never by selling an underwater position. Stops loss-aversion disguising itself as risk management." },
     ],
   },
   {
     id: "B", title: "Buying discipline", Icon: ShoppingCart, accent: "text-amber-500 bg-amber-500/10",
     rules: [
-      { id: "B1", name: "Don't buy the top", body: "Do not add to any position within ~3% of its 52-week high. The broad-market anchor (VT) is exempt. Redirect skipped money to the anchor or hold it." },
+      { id: "B1", name: "Don't buy the top", body: "Do not add to any position within ~3% of its 52-week high. The broad-market anchor (VWRA) is exempt. Redirect skipped money to the anchor or hold it." },
       { id: "B2", name: "Three-tranche entry", body: "Never deploy full intended capital on the first signal. Split 30% / 40% / 30%: 30% on the first dip, 40% after three green weeks from the trough, 30% once the uptrend confirms." },
       { id: "B3", name: "Accumulate conviction on weakness", body: "An underweight conviction holding (e.g. BTC below its 7% target) is accumulated on weakness toward target, under its cap — never exited for being down." },
     ],
@@ -33,7 +33,7 @@ const GROUPS: Group[] = [
   {
     id: "C", title: "Structural limits", Icon: Ruler, accent: "text-violet-500 bg-violet-500/10",
     rules: [
-      { id: "C1", name: "Hard caps are inviolable", body: "SMH ≤ 12%, BTC ≤ its cycle cap, combined QQQM+SMH ≤ 42% (§4.3). A breach triggers a trim back to target. No debate, no exceptions." },
+      { id: "C1", name: "Hard caps are inviolable", body: "SEMI ≤ 12%, BTC ≤ its cycle cap, combined EQQQ+SEMI ≤ 42% (§4.3). A breach triggers a trim back to target. No debate, no exceptions." },
       { id: "C2", name: "Maintain an 8–10% defensive buffer at all times once built", body: "Built only from new contributions (see A4)." },
       { id: "C3", name: "No half-convictions", body: "Every position is either sized to matter when it wins or exited. No orphan positions too small to help and large enough to drag." },
     ],

@@ -11,25 +11,17 @@
  * reasonable range of long-run outcomes — informing patience, not decisions.
  */
 
-export interface AssetReturnAssumption {
-  conservative: number
-  base: number
-  aggressive: number
-}
+import { ATLAS_SPEC, type ReturnAssumption } from "@/lib/portfolio-spec"
 
-// Per-asset-class long-run CAGR assumptions — verified Jun 2026 (update the date when
-// these are refreshed). BTC/IBIT share one entry since they're one economic sleeve
-// everywhere else in the app (applyBitcoinSleeve).
-export const FORECAST_BENCHMARKS_AS_OF = "Jun 2026"
+export type { ReturnAssumption }
+export type AssetReturnAssumption = ReturnAssumption
 
-export const ASSET_EXPECTED_RETURNS: Record<string, AssetReturnAssumption> = {
-  VT:   { conservative: 0.06,  base: 0.095, aggressive: 0.12 },  // Global total-world equity, long-run
-  QQQM: { conservative: 0.07,  base: 0.115, aggressive: 0.16 },  // US large-cap tech tilt
-  SMH:  { conservative: 0.06,  base: 0.13,  aggressive: 0.20 },  // Semiconductors — cyclical, higher variance
-  VWO:  { conservative: 0.03,  base: 0.065, aggressive: 0.10 },  // Emerging markets — valuation-dependent
-  BTC:  { conservative: -0.05, base: 0.12,  aggressive: 0.25 },  // Bitcoin sleeve — genuinely wide uncertainty
-  IBIT: { conservative: -0.05, base: 0.12,  aggressive: 0.25 },
-}
+export const FORECAST_BENCHMARKS_AS_OF = ATLAS_SPEC.forecastBenchmarksAsOf
+
+// Derived from ATLAS_SPEC.funds — the spec is the single source of truth for return assumptions.
+export const ASSET_EXPECTED_RETURNS: Record<string, AssetReturnAssumption> = Object.fromEntries(
+  ATLAS_SPEC.funds.filter(f => f.expectedReturn).map(f => [f.ticker, f.expectedReturn!])
+)
 
 // Buffer/cash-like tickers use the user's own risk-free-rate assumption (Settings),
 // not a fixed guess — it already represents "current MAS T-bill proxy" per that field's
@@ -47,11 +39,17 @@ const FALLBACK_RATES: AssetReturnAssumption = { conservative: 0.05, base: 0.10, 
  * @param allocPct ticker -> % of NAV (0-100); need not sum to exactly 100.
  * @param riskFreeRate the user's Settings risk-free-rate assumption, applied to buffer tickers.
  */
-export function blendedGrowthRates(allocPct: Record<string, number>, riskFreeRate: number): AssetReturnAssumption {
+export interface BlendResult {
+  rates: AssetReturnAssumption
+  excludedTickers: string[]
+}
+
+export function blendedGrowthRates(allocPct: Record<string, number>, riskFreeRate: number): BlendResult {
   let weight = 0
   let conservative = 0
   let base = 0
   let aggressive = 0
+  const excludedTickers: string[] = []
 
   for (const [ticker, pct] of Object.entries(allocPct)) {
     if (!(pct > 0)) continue
@@ -62,7 +60,10 @@ export function blendedGrowthRates(allocPct: Record<string, number>, riskFreeRat
       aggressive += w * riskFreeRate
     } else {
       const a = ASSET_EXPECTED_RETURNS[ticker]
-      if (!a) continue // unknown ticker — excluded, blend renormalizes over known weight below
+      if (!a) {
+        excludedTickers.push(ticker)
+        continue
+      }
       conservative += w * a.conservative
       base += w * a.base
       aggressive += w * a.aggressive
@@ -70,8 +71,11 @@ export function blendedGrowthRates(allocPct: Record<string, number>, riskFreeRat
     weight += w
   }
 
-  if (weight <= 0) return FALLBACK_RATES // no holdings yet — same defaults the static version used
-  return { conservative: conservative / weight, base: base / weight, aggressive: aggressive / weight }
+  if (weight <= 0) return { rates: FALLBACK_RATES, excludedTickers }
+  return {
+    rates: { conservative: conservative / weight, base: base / weight, aggressive: aggressive / weight },
+    excludedTickers,
+  }
 }
 
 /**

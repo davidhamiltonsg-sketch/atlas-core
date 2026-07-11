@@ -17,7 +17,7 @@ if (!url) throw new Error("DATABASE_URL is not set")
 const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url, authToken }) })
 
 const SBR_EMAIL = "dutszm@gmail.com"
-const SBR_TICKERS = new Set(["VWRA", "QQQM", "SMH", "A35"])
+const SBR_TICKERS = new Set(["VWRA", "EQQQ", "SEMI", "A35"])
 
 async function main() {
   console.log("Fix SBR holdings — removing contamination from Atlas Core tickers\n")

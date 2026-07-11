@@ -27,9 +27,13 @@ export function lookThroughWeightsAge(now: Date, staleAfterDays = 92): { ageDays
 // Approximate % of each ETF made up by each mega-cap (fund fact-sheet level).
 export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
   VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
+  VWRA: { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
   QQQM: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
+  EQQQ: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
   SMH:  { Nvidia: 20.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 8.0, TSMC: 12.0 },
+  SEMI: { Nvidia: 20.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 8.0, TSMC: 12.0 },
   VWO:  { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
+  VFEA: { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
   BTC:  {},
   IBIT: {},
   SGOV: {},
@@ -38,9 +42,13 @@ export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
 // Approximate sector / geography make-up of each ETF (% of the ETF).
 export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital: number; us: number; ai: number }> = {
   VT:   { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
+  VWRA: { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
   QQQM: { semiconductor: 13,  digital: 65, us: 100, ai: 35 },
+  EQQQ: { semiconductor: 13,  digital: 65, us: 100, ai: 35 },
   SMH:  { semiconductor: 100, digital: 90, us: 75,  ai: 70 },
+  SEMI: { semiconductor: 100, digital: 90, us: 75,  ai: 70 },
   VWO:  { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
+  VFEA: { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
   BTC:  { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
   IBIT: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
   SGOV: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
@@ -49,9 +57,13 @@ export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital
 // Geographic make-up of each ETF (% of the ETF): US / Intl-Developed / Emerging / Crypto.
 export const ETF_GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emerging: number; crypto: number }> = {
   VT:   { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
+  VWRA: { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
   QQQM: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
+  EQQQ: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
   SMH:  { us: 75,  intlDev: 13, emerging: 12,  crypto: 0 },
+  SEMI: { us: 75,  intlDev: 13, emerging: 12,  crypto: 0 },
   VWO:  { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
+  VFEA: { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
   BTC:  { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
   IBIT: { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
   SGOV: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },

@@ -22,6 +22,8 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
+import { BrickRoad } from "@/components/sbr/brick-road"
+import { sbrBrickRoadPhases } from "@/lib/spec-derived"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -283,6 +285,19 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         )}
       </div>
 
+      {/* Brick Road — visual journey progress */}
+      {hasBalance && (
+        <div className="mb-5">
+          <BrickRoad
+            totalValue={d.totalValue}
+            targetValue={target}
+            currentPhase={d.phase.key}
+            phases={sbrBrickRoadPhases(target)}
+            monthsToGoal={d.monthsToGoal.base}
+          />
+        </div>
+      )}
+
       {/* Phase crossing celebration — fires for 7 days after the cron logs a transition */}
       {hasBalance && d.phaseCrossedRecently && d.newPhaseFromLog && (
         <div className="mb-5 rounded-xl border border-green-500/30 bg-green-500/[0.06] px-5 py-4">
@@ -345,7 +360,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       {!hasBalance && (
         <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
           <p className="text-sm font-bold text-sky-400">Your four funds are set up — let&apos;s add what you hold</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Your plan is ready (VWRA 50 · QQQM 25 · SMH 15 · A35 10), but the portfolio is still showing S$0. Add what you currently own on the <a href="/portfolio" className="underline font-semibold">Portfolio</a> page, and this page will tell you what to buy each month.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Your plan is ready (VWRA 50 · EQQQ 25 · SEMI 15 · A35 10), but the portfolio is still showing S$0. Add what you currently own on the <a href="/portfolio" className="underline font-semibold">Portfolio</a> page, and this page will tell you what to buy each month.</p>
         </div>
       )}
 

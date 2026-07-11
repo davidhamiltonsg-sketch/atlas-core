@@ -10,7 +10,7 @@ import Anthropic from "@anthropic-ai/sdk"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
 // VWRA trades on the London Stock Exchange (price in USD); A35 trades on SGX (price in SGD).
-const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", A35: "A35.SI" }
+const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQQQ: "EQQQ.L", SEMI: "SEMI.L", A35: "A35.SI" }
 const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k, v]) => [v, k]))
 // Tickers whose Yahoo Finance price is already in SGD (no USD→SGD conversion needed).
 const YF_SGD_PRICED = new Set(["A35.SI"])
@@ -74,7 +74,7 @@ export async function updateHoldingsManually(
 // Apply screenshot-extracted holdings: update existing tickers AND create any new ones
 // (e.g. IBIT, or an out-of-scope ETF). Every row that has units & price is brought in so
 // the portfolio stays accurate — out-of-scope tickers are then flagged on the dashboard.
-const SBR_ALLOWED_TICKERS = new Set(["VWRA", "QQQM", "SMH", "A35"])
+const SBR_ALLOWED_TICKERS = new Set(["VWRA", "EQQQ", "SEMI", "A35"])
 
 export async function applyExtractedHoldings(
   rows: Array<{ ticker: string; units: number; price: number }>

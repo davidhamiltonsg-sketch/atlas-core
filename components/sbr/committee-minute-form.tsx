@@ -7,7 +7,7 @@ const SBR_ARTICLES = [
   "EME protocol — panic circuit breaker",
   "Phase III de-risking sell",
   "Phase IV liquidation",
-  "SMH over-cap mandatory sell",
+  "SEMI over-cap mandatory sell",
   "A35 floor breach",
   "Combined ceiling hard breach",
   "Rule change (7-day wait)",

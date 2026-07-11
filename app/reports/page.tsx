@@ -19,7 +19,14 @@ import {
   LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS, ETF_WEIGHTS_AS_OF,
 } from "@/lib/look-through"
 import { HARD_THRESHOLDS, applyBitcoinSleeve } from "@/lib/constants"
+import { ATLAS_SPEC } from "@/lib/portfolio-spec"
+import {
+  ATLAS_TARGET_HHI_PCT, ATLAS_TARGET_EFF_N,
+  ATLAS_HHI_THRESHOLDS, ATLAS_EFF_N_THRESHOLDS,
+  atlasConcentrationLabelPct,
+} from "@/lib/spec-derived"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { displayTicker } from "@/lib/approved-alternatives"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -52,14 +59,13 @@ const OVERLAP_MATRIX: Record<string, Record<string, number>> = {
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
 async function getReportData(userId: string) {
-  const [holdings, rules, lookThroughRecords] = await Promise.all([
+  const [holdings, lookThroughRecords] = await Promise.all([
     db.holding.findMany({
       where: { userId },
       include: {
         snapshots: { orderBy: { date: "desc" }, take: 5 }, // last 5 for drift history
       },
     }),
-    db.governanceRule.findMany({ where: { active: true }, orderBy: { category: "asc" } }),
     db.etfLookThrough.findMany(),
   ])
 
@@ -207,15 +213,20 @@ async function getReportData(userId: string) {
       : []),
   ]
 
-  // HHI Concentration Index
+  // HHI Concentration Index — thresholds calibrated to the constitutional target allocation,
+  // not generic portfolio benchmarks (a 52% VT anchor makes generic HHI thresholds impossible to satisfy).
   const hhi = concentrationRows.reduce((sum, p) => sum + Math.pow(p.actualPct / 100, 2), 0)
   const effectiveN = hhi > 0 ? 1 / hhi : 0
-  // HHI thresholds: <0.10 = diversified, 0.10–0.18 = moderate, >0.18 = concentrated
   const hhiPct = hhi * 100
-  const concentrationRating = hhiPct < 10 ? "Diversified" : hhiPct < 18 ? "Moderate" : "Concentrated"
+  const targetHhi = ATLAS_TARGET_HHI_PCT
+  const targetEffN = ATLAS_TARGET_EFF_N
+  const concentrationRating = atlasConcentrationLabelPct(hhiPct)
 
-  // Largest position dominance
+  // Largest position dominance — uses the constitution's rangeHigh, not a hardcoded number
   const topPosition = [...concentrationRows].sort((a, b) => b.actualPct - a.actualPct)[0]
+  const topSpec = topPosition ? ATLAS_SPEC.funds.find(f => f.ticker === topPosition.ticker) : undefined
+  const topRangeHigh = topSpec ? topSpec.target + topSpec.band : 58
+  const topHardCap = topSpec?.hardCap ?? 60
 
   // Metrics — drift uses the canonical §3 hard-drift triggers from lib/constants
   // (single source of truth; do not redefine a local copy — it drifts out of date).
@@ -266,9 +277,6 @@ async function getReportData(userId: string) {
   })
   const healthScore = health.overall
 
-  // Governance compliance — map each rule category to a status
-  const ruleCategories = [...new Set(rules.map(r => r.category as string))]
-
   // Look-through staleness — computed here (server data function) so the current-time read
   // stays out of the component render body.
   const lookThroughRef = lookThroughUpdatedAt ?? LOOK_THROUGH_LAST_REVIEWED
@@ -279,7 +287,8 @@ async function getReportData(userId: string) {
     totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, softBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
-    rules, ruleCategories, lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
+    targetHhi, targetEffN, topRangeHigh, topHardCap,
+    lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
   }
 }
 
@@ -321,12 +330,12 @@ function StatusBadge({ status, size = "sm", tip }: { status: string; size?: "sm"
     </span>
   )
   if (status === "elevated") return (
-    <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/25`} title={tip ?? "Approaching the warning limit — keep an eye on this. Redirect next contributions to VT or VWO."}>
+    <span className={`${base} bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-400/25`} title={tip ?? `Approaching the warning limit — keep an eye on this. Redirect next contributions to ${displayTicker("VT")} or ${displayTicker("VWO")}.`}>
       <AlertTriangle className="h-2.5 w-2.5" /> Elevated
     </span>
   )
   return (
-    <span className={`${base} bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20`} title={tip ?? "Within normal limits — no action needed."}>
+    <span className={`${base} bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20`} title={tip ?? `Within normal limits — no action needed.`}>
       <CheckCircle2 className="h-2.5 w-2.5" /> Healthy
     </span>
   )
@@ -368,7 +377,8 @@ export default async function Reports() {
     totalValue, hasBalance, positions, companyExposure, sectorExposure, geoExposure,
     health, healthScore, driftAlerts, maxDrift, companyBreaches, sectorBreaches,
     hardBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
-    rules, ruleCategories, lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
+    targetHhi, targetEffN, topRangeHigh, topHardCap,
+    lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
   } = await getReportData(session.userId)
 
   if (!hasBalance) {
@@ -441,33 +451,12 @@ export default async function Reports() {
   // Executive summary — auto-generated, plain English
   const summaryPoints: { text: string; severity: "ok" | "warn" | "critical" }[] = []
   if (hardBreaches > 0) summaryPoints.push({ text: `${hardBreaches} holding${hardBreaches > 1 ? "s have" : " has"} drifted far outside its target range — you need to act before your next investment date. See the action plan below.`, severity: "critical" })
-  if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to QQQM and SMH until this resolves.`, severity: "warn" })
+  if (companyAlerts > 0) summaryPoints.push({ text: `You own too much of ${companyAlerts} individual compan${companyAlerts > 1 ? "ies" : "y"} (through your ETFs combined). Stop adding to ${displayTicker("QQQM")} and ${displayTicker("SMH")} until this resolves.`, severity: "warn" })
   if (sectorAlerts > 0) summaryPoints.push({ text: `Your portfolio is overexposed to ${sectorAlerts} theme${sectorAlerts > 1 ? "s" : ""} (e.g. semiconductors or tech). Put your next contributions into ${bestAlternatives(elevatedSectors, positions)} instead.`, severity: "warn" })
-  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward VT and VWO to re-balance.`, severity: "warn" })
-  if (hhiPct > 15) summaryPoints.push({ text: `Your portfolio is more concentrated than it looks — it behaves like you own only ${effectiveN.toFixed(1)} equally-sized positions. Consider spreading contributions more evenly.`, severity: "warn" })
+  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) summaryPoints.push({ text: `${geoExposure.us.toFixed(0)}% of your money is tied to the US market — that's more than your plan allows. Shift upcoming purchases toward ${displayTicker("VT")} and ${displayTicker("VWO")} to re-balance.`, severity: "warn" })
+  if (hhiPct > targetHhi + 10) summaryPoints.push({ text: `Your portfolio is more concentrated than it looks — it behaves like you own only ${effectiveN.toFixed(1)} equally-sized positions. Consider spreading contributions more evenly.`, severity: "warn" })
   if (summaryPoints.length === 0) summaryPoints.push({ text: "Everything looks good — all holdings are within their target ranges and no limits have been breached. Keep following your standard monthly plan.", severity: "ok" })
   summaryPoints.push({ text: `Overall health score: ${healthScore}/100 (${healthLabel}). Last prices recorded: ${snapshotDate}.`, severity: healthScore >= 80 ? "ok" : healthScore >= 60 ? "warn" : "critical" })
-
-  // Priority action plan — plain English
-  const actions: { priority: number; action: string; urgency: "critical" | "high" | "medium" | "low" }[] = []
-  positions.filter(p => p.overCap).forEach(p => {
-    actions.push({ priority: 1, action: `${p.ticker} is at ${p.actualPct.toFixed(1)}% — above its hard limit. Do NOT buy any more ${p.ticker} until it drops back below ${p.hardCapPct}%. Consider selling a small amount if it stays elevated.`, urgency: "critical" })
-  })
-  positions.filter(p => p.outsideBand && p.driftPct < 0).forEach(p => {
-    actions.push({ priority: 2, action: `${p.ticker} (${p.name}) is too small in your portfolio at ${p.actualPct.toFixed(1)}% — your plan says it should be ${p.targetPct.toFixed(1)}%. Put this month's contribution into ${p.ticker} to bring it back up.`, urgency: "high" })
-  })
-  positions.filter(p => p.outsideBand && p.driftPct > 0 && !p.overCap).forEach(p => {
-    actions.push({ priority: 3, action: `${p.ticker} has grown to ${p.actualPct.toFixed(1)}% — a little above its ${p.targetPct.toFixed(1)}% target. Skip buying ${p.ticker} this month and put that money into smaller positions instead.`, urgency: "high" })
-  })
-  if (excessiveCompanies.length > 0) {
-    actions.push({ priority: 4, action: `You have too much tied to ${excessiveCompanies.join(", ")} through your ETFs. Stop buying QQQM and SMH for now — these are the ETFs that hold the most of those companies.`, urgency: "high" })
-  }
-  if (geoExposure.us > LOOKTHROUGH_SECTOR_CAPS.us.soft) {
-    actions.push({ priority: 5, action: `${geoExposure.us.toFixed(0)}% of your portfolio is in US companies. Your plan allows up to 70%. Buy more VT (which includes international) and VWO (emerging markets) to rebalance.`, urgency: "medium" })
-  }
-  if (actions.length === 0) {
-    actions.push({ priority: 1, action: "Nothing needs fixing right now. Follow your normal monthly plan — invest your usual amounts into each holding as normal.", urgency: "low" })
-  }
 
   return (
     <Shell title="Reports" subtitle="Overlap & concentration engine — v1.5" userName={session.name} isAdmin={session.role === "admin"}>
@@ -503,7 +492,7 @@ export default async function Reports() {
           </div>
           <div className="ph-metric">
             <p className="ph-metric-label">Concentration</p>
-            <p className={`ph-metric-value ${hhiPct > 18 ? "crit" : hhiPct > 10 ? "warn" : "good"}`}>{concentrationRating}</p>
+            <p className={`ph-metric-value ${concentrationRating === "Concentrated" ? "crit" : concentrationRating === "Drifting" ? "warn" : "good"}`}>{concentrationRating}</p>
             <p className="ph-metric-sub">HHI {hhiPct.toFixed(1)}% · {effectiveN.toFixed(1)} eff. positions</p>
           </div>
           <div className="ph-metric">
@@ -680,44 +669,7 @@ export default async function Reports() {
         </div>
       </div>
 
-      {/* ── 3. PRIORITY ACTION PLAN ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before print-break-avoid">
-        <SectionHeader
-          icon={Zap}
-          title="What To Do — Action Plan"
-          sub="Art. VII / VIII / XII — drift triggers and cap breaches translated into plain-English actions"
-          badge={
-            <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold ${
-              actions.some(a => a.urgency === "critical") ? "bg-red-500/10 text-red-600 dark:text-red-400" :
-              actions.some(a => a.urgency === "high")     ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
-              "bg-green-500/10 text-green-600 dark:text-green-400"
-            }`}>
-              {actions.filter(a => a.urgency !== "low").length} action{actions.filter(a => a.urgency !== "low").length !== 1 ? "s" : ""} needed
-            </span>
-          }
-        />
-        <div className="divide-y divide-border">
-          {actions.map((a, i) => {
-            const urgencyStyle = {
-              critical: { bg: "bg-red-500/[0.04] border-l-4 border-l-red-500",   badge: "bg-red-500/15 text-red-600 dark:text-red-400",     label: "Critical" },
-              high:     { bg: "bg-amber-500/[0.03] border-l-[3px] border-l-amber-400", badge: "bg-amber-500/15 text-amber-700 dark:text-amber-400", label: "High" },
-              medium:   { bg: "bg-blue-500/[0.03] border-l-[3px] border-l-blue-400",   badge: "bg-blue-500/15 text-blue-700 dark:text-blue-400",   label: "Medium" },
-              low:      { bg: "border-l-4 border-l-transparent",                        badge: "bg-green-500/10 text-green-600 dark:text-green-400",  label: "Clear" },
-            }[a.urgency]
-            return (
-              <div key={i} className={`flex items-start gap-4 px-5 py-3.5 ${urgencyStyle.bg}`}>
-                <div className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-black text-muted-foreground mt-0.5">
-                  {i + 1}
-                </div>
-                <p className="flex-1 text-xs leading-relaxed text-foreground/85">{a.action}</p>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${urgencyStyle.badge}`}>
-                  {urgencyStyle.label}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      {/* Action plan removed — lives on the Dashboard (Decision Ladder) */}
 
       {/* ── 4. ALLOCATION + DONUT ─────────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-[1fr_300px] mb-6 print-break-before">
@@ -790,7 +742,7 @@ export default async function Reports() {
           badge={
             <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold ${
               concentrationRating === "Concentrated" ? "bg-red-500/10 text-red-500" :
-              concentrationRating === "Moderate"     ? "bg-amber-500/10 text-amber-500" :
+              concentrationRating === "Drifting"     ? "bg-amber-500/10 text-amber-500" :
               "bg-green-500/10 text-green-500"
             }`}>{concentrationRating}</span>
           }
@@ -801,25 +753,25 @@ export default async function Reports() {
               label: "Spread Score",
               value: hhiPct.toFixed(1),
               unit: "",
-              sub: "Lower score = more spread out",
-              note: hhiPct < 10 ? "Well diversified" : hhiPct < 18 ? "Somewhat concentrated" : "Too concentrated",
-              cls: hhiPct < 10 ? "text-green-500" : hhiPct < 18 ? "text-amber-500" : "text-red-500",
+              sub: `Target: ${targetHhi.toFixed(1)} — lower = more spread`,
+              note: hhiPct < targetHhi + 4 ? "Near target spread" : hhiPct < targetHhi + 10 ? "Drifting from plan" : "Well above target",
+              cls: hhiPct < targetHhi + 4 ? "text-green-500" : hhiPct < targetHhi + 10 ? "text-amber-500" : "text-red-500",
             },
             {
               label: "Concentration Density",
               value: effectiveN.toFixed(1),
               unit: "",
-              sub: "Effective independent positions (1/HHI)",
-              note: effectiveN >= 5 ? "Good diversity" : effectiveN >= 3 ? "Moderate" : "Very concentrated",
-              cls: effectiveN >= 5 ? "text-green-500" : effectiveN >= 3 ? "text-amber-500" : "text-red-500",
+              sub: `Target: ${targetEffN.toFixed(1)} effective positions`,
+              note: effectiveN >= targetEffN - 0.3 ? "Near target" : effectiveN >= targetEffN - 0.8 ? "More concentrated than plan" : "Well below target",
+              cls: effectiveN >= targetEffN - 0.3 ? "text-green-500" : effectiveN >= targetEffN - 0.8 ? "text-amber-500" : "text-red-500",
             },
             {
               label: "Biggest Holding",
               value: topPosition ? topPosition.actualPct.toFixed(1) : "—",
               unit: "%",
               sub: topPosition ? `${topPosition.ticker} — ${topPosition.name}` : "",
-              note: topPosition && topPosition.actualPct > 55 ? "Getting large — watch it" : "Normal size",
-              cls: topPosition && topPosition.actualPct > 55 ? "text-amber-500" : "text-foreground",
+              note: topPosition && topPosition.actualPct > topHardCap ? "Above hard cap" : topPosition && topPosition.actualPct > topRangeHigh ? "Above comfortable range" : "Within range",
+              cls: topPosition && topPosition.actualPct > topHardCap ? "text-red-500" : topPosition && topPosition.actualPct > topRangeHigh ? "text-amber-500" : "text-green-500",
             },
             {
               label: "Hard Drift Positions",
@@ -1133,7 +1085,7 @@ export default async function Reports() {
             const responses: Record<string, string> = {
               healthy:   "All good — your exposure to this theme is within normal limits. Keep following your standard plan.",
               elevated:  `Getting close to the limit — keep an eye on this. Put your next contributions into ${alt} instead.`,
-              excessive: `Over the limit — stop buying the ETFs that drive this theme (QQQM and/or SMH) until this comes down. Redirect contributions to ${alt}.`,
+              excessive: `Over the limit — stop buying the ETFs that drive this theme (${displayTicker("QQQM")} and/or ${displayTicker("SMH")}) until this comes down. Redirect contributions to ${alt}.`,
             }
             // Contribution by ETF for this sector
             const contribs = positions.map(p => {
@@ -1251,82 +1203,7 @@ export default async function Reports() {
         </div>
       </div>
 
-      {/* ── 11. GOVERNANCE COMPLIANCE SCORECARD ──────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden mb-6 print-break-before">
-        <SectionHeader
-          icon={ShieldCheck}
-          title="Governance Compliance — Your Investment Rules"
-          sub={`Art. VII–XII — ${rules.length} active rules across ${ruleCategories.length} categories checked against your live positions`}
-          badge={
-            <span className="shrink-0 rounded-lg bg-violet-500/10 border border-violet-500/20 px-2.5 py-1 text-xs font-bold text-violet-600 dark:text-violet-400">
-              {rules.length} rules active
-            </span>
-          }
-        />
-        <div className="divide-y divide-border">
-          {ruleCategories.map((category) => {
-            const catRules = rules.filter(r => r.category === category)
-            return (
-              <div key={category} className="print-break-avoid">
-                <div className="px-5 py-2.5 bg-muted/30 flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{category}</span>
-                  <span className="text-[10px] text-muted-foreground">{catRules.length} rule{catRules.length !== 1 ? "s" : ""}</span>
-                </div>
-                <div className="divide-y divide-border/60">
-                  {catRules.map((rule) => (
-                    <div key={rule.id} className="px-5 py-3 flex items-start gap-3 hover:bg-accent/20 transition-colors">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold">{rule.title}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{rule.description}</p>
-                      </div>
-                      <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-500/20">Active</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── 12. GOVERNANCE SUMMARY CARDS ─────────────────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-3 mb-6 print-break-before print-break-avoid">
-        {[
-          {
-            title: "Contribution Routing",
-            body: driftAlerts === 0
-              ? "All positions within tolerance. Maintain standard monthly allocation split."
-              : `${driftAlerts} position${driftAlerts > 1 ? "s" : ""} outside tolerance band. Redirect contributions to underweight positions before next execution day.`,
-            status: driftAlerts === 0 ? "healthy" : "elevated" as "healthy" | "elevated" | "excessive",
-          },
-          {
-            title: "Concentration Review",
-            body: companyAlerts === 0
-              ? "No single-stock concentration caps breached. Look-through exposure within governance limits."
-              : `${companyAlerts} company cap${companyAlerts > 1 ? "s" : ""} breached. Review contributions to QQQM and SMH to reduce concentrated exposure.`,
-            status: companyAlerts === 0 ? "healthy" : "elevated" as "healthy" | "elevated" | "excessive",
-          },
-          {
-            title: "Rebalance Trigger",
-            body: maxDrift < 5
-              ? `Max drift ${formatPercent(maxDrift, 1, false)}. No rebalancing action required. Continue contribution-based routing.`
-              : `Max drift ${formatPercent(maxDrift, 1, false)}. Hard trigger review warranted. Redirect contributions to underweight positions first.`,
-            status: maxDrift < 5 ? "healthy" : maxDrift < 10 ? "elevated" : "excessive" as "healthy" | "elevated" | "excessive",
-          },
-        ].map(({ title, body, status }) => (
-          <div key={title} className={`rounded-xl border bg-card p-4 ${status === "excessive" ? "border-red-500/30" : status === "elevated" ? "border-amber-400/30" : "border-border"}`}>
-            <div className="flex items-center gap-2 mb-2">
-              {status === "healthy"
-                ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                : <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${status === "excessive" ? "text-red-500" : "text-amber-500"}`} />
-              }
-              <p className="text-xs font-semibold">{title}</p>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{body}</p>
-          </div>
-        ))}
-      </div>
+      {/* Governance scorecard + summary cards removed — canonical home is the Governance page */}
 
       {/* Methodology */}
       <div className="rounded-xl border border-border bg-card p-4 print-break-avoid">

@@ -15,12 +15,12 @@ export interface AltVehicle {
 }
 
 export const APPROVED_ALTERNATIVES: Record<string, AltVehicle> = {
-  VT:   { tickers: ["VWRA"],          reason: "Irish UCITS — avoids US estate tax & dividend-withholding drag" },
-  VWO:  { tickers: ["VFEA"],          reason: "Irish UCITS — same EM exposure, better tax structure" },
-  QQQM: { tickers: ["EQQQ", "CNDX"],  reason: "Irish UCITS NASDAQ-100 — avoids US estate tax (higher TER, assess first)" },
-  SMH:  { tickers: ["SEMI"],          reason: "Irish UCITS semis — verify index match before switching" },
-  BTC:  { tickers: ["IBIT"],          reason: "Held via IBIT (iShares Bitcoin Trust)" },
-  IBIT: { tickers: [],                reason: "Switch to a lower-fee / UCITS Bitcoin ETF if one becomes available" },
+  VT:   { tickers: ["VWRA"],          reason: "MIGRATED → VWRA (Irish UCITS). Lower all-in cost, no US estate tax." },
+  VWO:  { tickers: ["VFEA"],          reason: "MIGRATED → VFEA (Irish UCITS). Same EM exposure, better tax structure." },
+  QQQM: { tickers: ["EQQQ", "CNDX"],  reason: "MIGRATED → EQQQ (Irish UCITS NASDAQ-100). SBR uses EQQQ from day one." },
+  SMH:  { tickers: ["SEMI"],          reason: "MIGRATED → SEMI (Irish UCITS semis). Same index, no estate tax." },
+  BTC:  { tickers: ["IBIT"],          reason: "Held via IBIT. Phased exit: hold until BTC recovers above cost basis × 1.15, then reassess." },
+  IBIT: { tickers: [],                reason: "Hold for now. Reassess when a lower-fee or UCITS Bitcoin ETF becomes available." },
 }
 
 // Irish-UCITS alternatives (NOT US-sited → outside US estate tax). IBIT is excluded:
@@ -32,6 +32,20 @@ export function isUsSited(ticker: string): boolean {
   return !(UCITS_TICKERS as readonly string[]).includes(ticker.toUpperCase())
 }
 
+/**
+ * After UCITS migration, core exposure identifiers (VT, QQQM, SMH, VWO) no longer
+ * correspond to US-sited holdings — the actual wrapper is an Irish UCITS fund.
+ * Use this instead of isUsSited() when positions are stored by exposure identifier.
+ */
+export function isActuallyUsSited(exposureId: string): boolean {
+  const id = exposureId.toUpperCase()
+  if (!(UCITS_TICKERS as readonly string[]).includes(id)) {
+    const alt = APPROVED_ALTERNATIVES[id]
+    if (alt && alt.reason.startsWith("MIGRATED")) return false
+  }
+  return isUsSited(id)
+}
+
 // ─── Governance universe ─────────────────────────────────────────────────────
 // Every ticker the policy knows about: the core positions, the cash buffer, and each
 // pre-approved alternative vehicle. Anything else held in the brokerage is "out of
@@ -39,14 +53,14 @@ export function isUsSited(ticker: string): boolean {
 // action so you can decide: keep & classify it, switch to an approved fund, or exit.
 export const CORE_TICKERS = ["VT", "VWO", "QQQM", "SMH", "BTC", "IBIT", "SGOV"] as const
 
-// SBR-specific tickers: VWRA is already in APPROVED_ALTERNATIVES; A35 is SBR-only.
-export const SBR_TICKERS = ["VWRA", "QQQM", "SMH", "A35"] as const
+// SBR-specific tickers: all UCITS/SGX from day one.
+export const SBR_TICKERS = ["VWRA", "EQQQ", "SEMI", "A35"] as const
 
 export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
   ...CORE_TICKERS,
+  ...SBR_TICKERS,
   ...Object.keys(APPROVED_ALTERNATIVES),
   ...Object.values(APPROVED_ALTERNATIVES).flatMap((a) => a.tickers),
-  "A35", // ABF Singapore Bond Index Fund — SBR safety floor
 ])
 
 /** Is this ticker part of the governed policy universe (core, buffer, or approved alternative)? */
@@ -73,4 +87,18 @@ export function coreExposureOf(ticker: string): string {
 export function altLabelFor(ticker: string): string | null {
   const core = ALTERNATIVE_TO_CORE[ticker.toUpperCase()]
   return core ? `alternative to ${core}` : null
+}
+
+/**
+ * The ticker the user actually holds after UCITS migration.
+ * Maps exposure identifiers (VT, QQQM, SMH, VWO) to their migrated UCITS wrapper
+ * for display purposes. Non-migrated tickers (BTC, IBIT, SGOV) pass through unchanged.
+ */
+export function displayTicker(exposureId: string): string {
+  const id = exposureId.toUpperCase()
+  const alt = APPROVED_ALTERNATIVES[id]
+  if (alt && alt.reason.startsWith("MIGRATED") && alt.tickers.length > 0) {
+    return alt.tickers[0]
+  }
+  return id
 }

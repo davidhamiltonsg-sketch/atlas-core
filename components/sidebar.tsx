@@ -37,7 +37,7 @@ type NavGroupDef = { label: string; items: NavItem[] }
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
 const BRAND: Record<ConstitutionId, { name: string; version: string }> = {
   "atlas-core":         { name: "Atlas Core",         version: "v1.5 · GDEA" },
-  "silicon-brick-road": { name: "Silicon Brick Road", version: "v2.2 · SBR" },
+  "silicon-brick-road": { name: "Silicon Brick Road", version: "v2.3 · SBR" },
 }
 
 const NAV: Record<ConstitutionId, NavGroupDef[]> = {
@@ -86,6 +86,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/dividends", label: "Dividends", icon: Coins },
     ] },
     { label: "Insights", items: [
+      { href: "/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/reports", label: "Road Report", icon: FileBarChart2 },
       { href: "/risk", label: "Risk", icon: BarChart3 },
       { href: "/ytd", label: "YTD / P&L", icon: LineChart },
