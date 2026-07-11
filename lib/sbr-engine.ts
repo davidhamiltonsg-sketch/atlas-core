@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Silicon Brick Road — Decision Engine (Constitution v2.2, Article VI).
+// Silicon Brick Road — Decision Engine (Constitution v2.3, Article VI).
 //
 // Migration pillar 3 ("one engine per portfolio, parameterized") — Increment 5b.
 // Both the headline instruction (computeSbrNextMove) and the money-split
@@ -7,7 +7,7 @@
 // Art. VI priority ladder exactly once. The two output functions are views of one
 // computation; they can't silently disagree on which branch fired.
 //
-// Priority (highest wins): SMH cap → A35 floor → equity ceiling (92%) → phase (III/IV) →
+// Priority (highest wins): SEMI cap → A35 floor → equity ceiling (92%) → phase (III/IV) →
 // combined ceiling → drawdown → underweight → skip-at-high → standard split.
 // A35 floor precedes combined ceiling: a depleted safety buffer is the most urgent risk.
 // Underweight outranks skip-at-high — a below-range fund is bought even near its yearly high.
@@ -76,11 +76,11 @@ export type SbrBranch =
   | { tag: "empty" }
   | { tag: "smh_cap";        smhPct: number; smhHard: number; sellSgd: number }
   | { tag: "combined_hard";  combined: number; combinedHard: number; resume: number }
-  | { tag: "combined_warn";  combined: number; warning: number }
+  | { tag: "combined_warn";  combined: number; warning: number; resume: number }
   | { tag: "a35_floor";      a35Pct: number }
   | { tag: "equity_ceiling"; equityPct: number }
   | { tag: "phase_III_entry"; totalValue: number }
-  | { tag: "phase_III";      totalValue: number; qqqmSell: number; vwraSell: number }
+  | { tag: "phase_III";      totalValue: number; eqqqSell: number; vwraSell: number }
   | { tag: "phase_IV";       totalValue: number }
   | { tag: "drawdown";       drawdownPct: number }
   | { tag: "underweight";    fund: SbrPosition; nearItsHigh: boolean }
@@ -106,7 +106,8 @@ export function sbrRoute(
 
   // 1 — SEMI over its phase-dependent hard cap → mandatory sell (always highest priority)
   if (semi && semi.actualPct > phaseCaps.smhHard) {
-    return { tag: "smh_cap", smhPct: semi.actualPct, smhHard: phaseCaps.smhHard, sellSgd: Math.round(((semi.actualPct - 15) / 100) * totalValue) }
+    const semiTarget = c.funds.find(f => f.ticker === "SEMI")?.target ?? 15
+    return { tag: "smh_cap", smhPct: semi.actualPct, smhHard: phaseCaps.smhHard, sellSgd: Math.round(((semi.actualPct - semiTarget) / 100) * totalValue) }
   }
 
   // 2 — A35 below its floor → build safety before any phase or ceiling check
@@ -125,13 +126,13 @@ export function sbrRoute(
   // The gate prevents unnecessary selling if the portfolio briefly crosses 96k on volatility.
   if (phase.key === "III") {
     if (totalValue < 102_000) return { tag: "phase_III_entry", totalValue }
-    return { tag: "phase_III", totalValue, qqqmSell: Math.round(0.03 * totalValue), vwraSell: Math.round(0.02 * totalValue) }
+    return { tag: "phase_III", totalValue, eqqqSell: Math.round(0.03 * totalValue), vwraSell: Math.round(0.02 * totalValue) }
   }
   if (phase.key === "IV") return { tag: "phase_IV", totalValue }
 
   // 5 — combined ceiling checks (Phase I/II only — Phase III/IV were handled above)
   if (combined > phaseCaps.combinedHard) return { tag: "combined_hard", combined, combinedHard: phaseCaps.combinedHard, resume: phaseCaps.combinedResume }
-  if (combined >= phaseCaps.combinedWarning) return { tag: "combined_warn", combined, warning: phaseCaps.combinedWarning }
+  if (combined >= phaseCaps.combinedWarning) return { tag: "combined_warn", combined, warning: phaseCaps.combinedWarning, resume: phaseCaps.combinedResume }
 
   // 5 — drawdown past trigger → deploy cash reserve, then all new money to VWRA
   if (opts.drawdownPct !== undefined && opts.drawdownPct <= -(c.drawdownTriggerPct ?? 15)) {
@@ -188,7 +189,7 @@ export function computeSbrNextMove(
     case "combined_warn":
       return { severity: "medium", ticker: "VWRA", action: "Tech funds are getting heavy — buy VWRA only this month",
         what: `EQQQ + SEMI are ${branch.combined.toFixed(1)}% together — past the ${branch.warning}% warning level. Skip both this month and put all new money into VWRA instead.`,
-        why: "When tech stocks get heavy, buying global stocks (VWRA) keeps the balance. You can return to EQQQ and SEMI when they drop below 42% combined.",
+        why: `When tech stocks get heavy, buying global stocks (VWRA) keeps the balance. You can return to EQQQ and SEMI when they drop below ${branch.resume}% combined.`,
         when: "This month.", color: fundColor(c, "VWRA") }
 
     case "a35_floor":
@@ -212,9 +213,9 @@ export function computeSbrNextMove(
     }
 
     case "phase_III": {
-      const remaining = Math.round(120000 - branch.totalValue)
+      const remaining = Math.round((c.targetValue ?? 120000) - branch.totalValue)
       return { severity: "high", ticker: "A35", action: "Phase III — start shifting money to safety",
-        what: `Once this quarter, sell about SGD ${branch.qqqmSell.toLocaleString()} of EQQQ (3% of the portfolio) and SGD ${branch.vwraSell.toLocaleString()} of VWRA (2%), and move the SGD ${(branch.qqqmSell + branch.vwraSell).toLocaleString()} into A35. Continue putting all new monthly contributions into A35 too. Leave SEMI untouched for now — it stays put through Phase III and is the first fund you sell when you buy the property.`,
+        what: `Once this quarter, sell about SGD ${branch.eqqqSell.toLocaleString()} of EQQQ (3% of the portfolio) and SGD ${branch.vwraSell.toLocaleString()} of VWRA (2%), and move the SGD ${(branch.eqqqSell + branch.vwraSell).toLocaleString()} into A35. Continue putting all new monthly contributions into A35 too. Leave SEMI untouched for now — it stays put through Phase III and is the first fund you sell when you buy the property.`,
         why: `You are in Phase III — about S$${remaining.toLocaleString()} away from your goal. Gradually moving to bonds now protects those gains if markets fall at the worst time.`,
         when: "On your next monthly window. Repeat each quarter until you reach Phase IV.", color: fundColor(c, "A35") }
     }
@@ -264,7 +265,7 @@ export interface SbrHealth {
   overall: number
   overallLabel: "Good standing" | "Review recommended" | "Action required"
   governance: number     // 25% — decision steps followed, no unauthorised trades
-  risk: number           // 20% — SMH cap, combined ceiling, no breaches
+  risk: number           // 20% — SEMI cap, combined ceiling, no breaches
   allocation: number     // 15% — all funds within comfortable ranges
   contribution: number   // 15% — monthly investing discipline (proxy: snapshot freshness)
   behavioural: number    // 10% — discipline proxy: penalised by uncorrected breaches + lapsed contributions
@@ -303,7 +304,7 @@ export function computeSbrHealth(
   const liquidity = a35Pct >= 8 ? 100 : a35Pct >= 7 ? 80 : a35Pct >= 5 ? 50 : 20
 
   // Governance (25%): no breaches = full score; each hard breach costs 30pts, soft costs 10pts
-  const hardBreaches = semiBreach || combBreach ? 1 : 0
+  const hardBreaches = (semiBreach ? 1 : 0) + (combBreach ? 1 : 0)
   const softBreaches = combWarn || outOfRange.length > 0 ? 1 : 0
   const governance = Math.max(0, 100 - hardBreaches * 30 - softBreaches * 10)
 
@@ -373,7 +374,7 @@ export function computeSbrDca(
 
   // Use the shared routing core — only the DCA-relevant directed branches route all money to one fund.
   // "smh_cap" is headline-only (sell instruction); DCA falls through to the proportional split
-  // but naturally excludes SMH from new buying since it's above its range.
+  // but naturally excludes SEMI from new buying since it's above its range.
   const totalValue = positions.reduce((s, p) => s + p.value, 0)
   const branch = sbrRoute(positions, totalValue, opts, c)
 
@@ -462,7 +463,7 @@ export function computeSbrDca(
 // all other SBR funds are US-listed ETFs traded in whole shares (lot size = 1).
 //
 // Usage:
-//   const accrual = loadAccrualFromDb()           // { VWRA: 0, QQQM: 45.20, ... }
+//   const accrual = loadAccrualFromDb()           // { VWRA: 0, EQQQ: 45.20, ... }
 //   const result  = computeWholeShareBuy(plan, prices, accrual)
 //   saveAccrualToDb(result.newAccrual)             // persist the carry-forward
 //   showUser(result.instructions)

@@ -13,13 +13,14 @@ interface DriftAlert {
 
 interface DriftNotificationsProps {
   alerts: DriftAlert[]
+  constitutionName?: string
 }
 
 const STORAGE_KEY = "atlas_notifications_enabled"
 const LAST_NOTIFIED_KEY = "atlas_last_notified"
 const NOTIFY_COOLDOWN_MS = 4 * 60 * 60 * 1000 // 4 hours
 
-export function DriftNotifications({ alerts }: DriftNotificationsProps) {
+export function DriftNotifications({ alerts, constitutionName = "Atlas Core" }: DriftNotificationsProps) {
   const [enabled, setEnabled] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default")
   const notifiedRef = useRef(false)
@@ -54,7 +55,7 @@ export function DriftNotifications({ alerts }: DriftNotificationsProps) {
 
     if (hardAlerts.length > 0) {
       const tickers = hardAlerts.map(a => a.ticker).join(", ")
-      new Notification("Atlas Core — Hard Breach", {
+      new Notification(`${constitutionName} — Hard Breach`, {
         body: `${tickers} ${hardAlerts.length === 1 ? "has" : "have"} breached hard drift thresholds. Immediate review required.`,
         icon: "/icon-192.png",
         tag: "atlas-hard-breach",
@@ -62,7 +63,7 @@ export function DriftNotifications({ alerts }: DriftNotificationsProps) {
       })
     } else if (softAlerts.length > 0) {
       const tickers = softAlerts.map(a => a.ticker).join(", ")
-      new Notification("Atlas Core — Drift Alert", {
+      new Notification(`${constitutionName} — Drift Alert`, {
         body: `${tickers} ${softAlerts.length === 1 ? "has" : "have"} drifted outside tolerance bands.`,
         icon: "/icon-192.png",
         tag: "atlas-soft-drift",
