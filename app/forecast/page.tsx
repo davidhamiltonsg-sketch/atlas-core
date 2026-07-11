@@ -20,7 +20,7 @@ import { displayTicker } from "@/lib/approved-alternatives"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
-const VT_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VT.base // VT (Total World) long-run CAGR proxy — single source with the blend
+const VT_HISTORICAL_RATE = (ASSET_EXPECTED_RETURNS.VWRA ?? ASSET_EXPECTED_RETURNS.VT)?.base ?? 0.095 // VWRA/VT (Total World) long-run CAGR proxy
 const CONE_VOL_DEFAULT = 0.15 // fallback annual vol for the P10/P90 band when history is thin
 
 const SCENARIO_META = [
