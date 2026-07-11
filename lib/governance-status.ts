@@ -16,7 +16,7 @@ export interface DigestItem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { HARD_THRESHOLDS, COMBINED_TECH_RULE, getBtcModifier, OPERATING_ASSUMPTIONS, BITCOIN_TICKERS } from "@/lib/constants"
-import { isInScope } from "@/lib/approved-alternatives"
+import { isInScope, displayTicker } from "@/lib/approved-alternatives"
 import type { LookThroughResult } from "@/lib/look-through"
 
 export type Align = "ok" | "watch" | "breach"
@@ -71,9 +71,9 @@ export function evaluateGovernance(input: {
   const smh = pos("SMH")
   if (smh) {
     checks.push({
-      id: "smh", label: "Chip fund (SMH) under its 12% limit",
+      id: "smh", label: `Chip fund (${displayTicker("SMH")}) under its 12% limit`,
       status: smh.actualPct > 12 ? "breach" : smh.actualPct > 11 ? "watch" : "ok",
-      detail: `SMH is ${smh.actualPct.toFixed(1)}% of your money (limit 12%)`,
+      detail: `${displayTicker("SMH")} is ${smh.actualPct.toFixed(1)}% of your money (limit 12%)`,
     })
   }
 
@@ -94,7 +94,7 @@ export function evaluateGovernance(input: {
     .filter((p) => (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker.toUpperCase()))
     .reduce((s, p) => s + p.actualPct, 0)
   checks.push({
-    id: "tech", label: `Tech funds (QQQM + SMH) under ${COMBINED_TECH_RULE.hardCeiling}%`,
+    id: "tech", label: `Tech funds (${displayTicker("QQQM")} + ${displayTicker("SMH")}) under ${COMBINED_TECH_RULE.hardCeiling}%`,
     status: tech > COMBINED_TECH_RULE.hardCeiling ? "breach" : tech >= COMBINED_TECH_RULE.softCeiling ? "watch" : "ok",
     detail: `Combined ${tech.toFixed(1)}% (review at ${COMBINED_TECH_RULE.softCeiling}%, limit ${COMBINED_TECH_RULE.hardCeiling}%)`,
   })

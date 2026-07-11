@@ -94,7 +94,7 @@ export default async function Behaviour() {
   const activeProhibitedActions = isSbr
     ? [
         { action: "Panic selling on a dip", rationale: "Selling locks in a loss that would have recovered if you waited." },
-        { action: "Adding new funds", rationale: "Four funds only — VWRA, QQQM, SMH, A35. More funds = more complexity, less focus." },
+        { action: "Adding new funds", rationale: "Four funds only — VWRA, EQQQ, SEMI, A35. More funds = more complexity, less focus." },
         { action: "Chasing last month's winner", rationale: "Buying after a big run means buying at a high price. Wait for your regular contribution day." },
         { action: "Skipping contributions during a downturn", rationale: "When prices are down, your money buys more. This is the best time to invest, not the time to stop." },
         { action: "Rebalancing based on gut feeling", rationale: "Only rebalance when a fund is outside its allowed range — not because it feels off." },
