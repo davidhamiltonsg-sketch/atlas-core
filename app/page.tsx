@@ -26,6 +26,7 @@ import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { redirect } from "next/navigation"
+import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
 
 // This is a personal, auth-gated dashboard whose server render includes live
 // date maths (dealing-window and contribution countdowns). Pin it to dynamic so
@@ -116,7 +117,7 @@ async function getDashboardData(userId: string) {
       where: { userId },
       include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
     }),
-    getUsdSgdRate(),
+    getCachedUsdSgdRate(),
     db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
     db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "atlas-core", currency: "SGD" } } }),
   ])
@@ -446,15 +447,16 @@ async function getDashboardData(userId: string) {
 }
 
 export default async function Dashboard() {
-  const session = await getSession()
-  if (!session) redirect("/login?portfolio=atlas-core")
+  try {
+    const session = await getSession()
+    if (!session) redirect("/login?portfolio=atlas-core")
 
-  const active = await activePortfolioContext(session)
-  if (active.constitutionId === "silicon-brick-road") {
-    return <SbrDashboard userId={active.owner.id} name={session.name} isAdmin={session.role === "admin"} />
-  }
+    const active = await activePortfolioContext(session)
+    if (active.constitutionId === "silicon-brick-road") {
+      return <SbrDashboard userId={active.owner.id} name={session.name} isAdmin={session.role === "admin"} />
+    }
 
-  const d = await getDashboardData(active.owner.id)
+    const d = await getDashboardData(active.owner.id)
 
   const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
   const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
@@ -597,5 +599,7 @@ export default async function Dashboard() {
 
       </div>
     </Shell>
-  )
+  } finally {
+    clearFxCache()
+  }
 }

@@ -16,6 +16,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getConstitution } from "@/lib/constitutions"
+import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
 
 // Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
 export const maxDuration = 60
@@ -28,7 +29,7 @@ async function getPortfolioData(userId: string) {
       orderBy: { targetPct: "desc" },
     }),
     db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
-    getUsdSgdRate(),
+    getCachedUsdSgdRate(),
   ])
 
   // Weighted-average cost basis per ticker (SGD total, USD per unit)
@@ -80,12 +81,13 @@ async function getPortfolioData(userId: string) {
 }
 
 export default async function Portfolio() {
-  const session = await getSession()
-  if (!session) redirect("/login")
-  const active = await activePortfolioContext(session)
-  const isSbr = active.constitutionId === "silicon-brick-road"
-  const targetSleeveCount = getConstitution(active.constitutionId).funds.length
-  const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
+  try {
+    const session = await getSession()
+    if (!session) redirect("/login")
+    const active = await activePortfolioContext(session)
+    const isSbr = active.constitutionId === "silicon-brick-road"
+    const targetSleeveCount = getConstitution(active.constitutionId).funds.length
+    const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
 
   const snapshotDate = holdings[0]?.latestSnapshot
     ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
@@ -493,5 +495,7 @@ export default async function Portfolio() {
       </div>
       </div>
     </Shell>
-  )
+  } finally {
+    clearFxCache()
+  }
 }
