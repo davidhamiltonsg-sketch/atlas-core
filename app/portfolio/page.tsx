@@ -12,18 +12,22 @@ import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { applyBitcoinSleeve, BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
+import { activePortfolioContext } from "@/lib/active-portfolio"
+import { openPositionValuation } from "@/lib/valuation"
+import { getUsdSgdRate } from "@/lib/holdings-sync"
 
 // Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
 export const maxDuration = 60
 
 async function getPortfolioData(userId: string) {
-  const [holdings, trades] = await Promise.all([
+  const [holdings, trades, usdSgdRate] = await Promise.all([
     db.holding.findMany({
       where: { userId },
       include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
       orderBy: { targetPct: "desc" },
     }),
     db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    getUsdSgdRate(),
   ])
 
   // Weighted-average cost basis per ticker (SGD total, USD per unit)
@@ -64,10 +68,8 @@ async function getPortfolioData(userId: string) {
       const sparklineValues = h.snapshots.map(s => s.value)
 
       const cb = avgCostMap[h.ticker]
-      const costBasisSgd = cb ? cb.sgd : 0
-      const avgCostUsd = cb && cb.units > 0 ? cb.usd / cb.units : null
-      const unrealisedSgd = costBasisSgd > 0 ? value - costBasisSgd : null
-      const unrealisedPct = costBasisSgd > 0 && unrealisedSgd !== null ? (unrealisedSgd / costBasisSgd) * 100 : null
+      const valuation=openPositionValuation({value,units:latest?.units??0,snapshotCostBasis:latest?.costBasis,snapshotUnrealizedPnl:latest?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate})
+      const avgCostUsd=valuation.averagePriceInstrumentCurrency, unrealisedSgd=valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct=valuation.reconciles?valuation.unrealizedReturnPct:null
 
       return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues, avgCostUsd, unrealisedSgd, unrealisedPct }
     }),
@@ -79,7 +81,8 @@ async function getPortfolioData(userId: string) {
 export default async function Portfolio() {
   const session = await getSession()
   if (!session) redirect("/login")
-  const { holdings, totalValue, hasBalance } = await getPortfolioData(session.userId)
+  const active = await activePortfolioContext(session)
+  const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
 
   const snapshotDate = holdings[0]?.latestSnapshot
     ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {

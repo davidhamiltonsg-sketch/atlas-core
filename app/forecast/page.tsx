@@ -11,6 +11,7 @@ import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, 
 import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
 import { sbrPhase } from "@/lib/sbr-engine"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 import { SBR_TARGET_RATES, SBR_ASSET_EXPECTED_RETURNS, sbrBrickRoadPhases } from "@/lib/spec-derived"
 import { EquityCurve, type ProjectionPoint } from "@/components/sbr/equity-curve"
 import { ScenarioCards, type Scenario } from "@/components/sbr/scenario-cards"
@@ -258,14 +259,15 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
 export default async function Forecast() {
   const session = await getSession()
   if (!session) redirect("/login")
+  const active = await activePortfolioContext(session)
 
-  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
-    return <SbrForecast userId={session.userId} userName={session.name} isAdmin={session.role === "admin"} />
+  if (active.constitutionId === "silicon-brick-road") {
+    return <SbrForecast userId={active.owner.id} userName={session.name} isAdmin={session.role === "admin"} />
   }
 
   const [forecast, user] = await Promise.all([
-    getForecastData(session.userId),
-    db.user.findUnique({ where: { id: session.userId } }),
+    getForecastData(active.owner.id),
+    db.user.findUnique({ where: { id: active.owner.id } }),
   ])
   const { currentValue, allocMap, coneVol, volIsReal } = forecast
 

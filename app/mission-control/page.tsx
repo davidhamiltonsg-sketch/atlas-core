@@ -16,6 +16,7 @@ import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { getLiveMarketPositions } from "@/lib/finnhub"
 import { activePortfolioContext, portfolioOwner } from "@/lib/active-portfolio"
+import { redirect } from "next/navigation"
 
 // Mission Control is a personal, auth-gated console — never statically cached.
 export const dynamic = "force-dynamic"
@@ -66,14 +67,14 @@ const SBR_SAMPLE_CONTEXT: PortfolioContext = {
 
 async function loadPortfolioContext(active?: { constitutionId: "atlas-core" | "silicon-brick-road"; userId: string }): Promise<PortfolioContext> {
   const session = await getSession()
-  if (!session) return SAMPLE_CONTEXT
+  if (!session) throw new Error("Unauthenticated")
 
   const constitution = active
     ? (active.constitutionId === "silicon-brick-road" ? constitutionForEmail("dutszm@gmail.com") : constitutionForEmail(null))
     : constitutionForEmail(session.email)
   const isSbr = constitution.id === "silicon-brick-road"
   const label = isSbr ? "Silicon Brick Road" : "Atlas Core"
-  const fallback = isSbr ? SBR_SAMPLE_CONTEXT : SAMPLE_CONTEXT
+  const empty:PortfolioContext={label,totalValue:0,currency:constitution.currency,dayChangePct:null,cashPct:null,driftAlerts:0,live:false,variant:isSbr?"sbr":"atlas",holdings:[]}
 
   try {
 
@@ -95,7 +96,7 @@ async function loadPortfolioContext(active?: { constitutionId: "atlas-core" | "s
       .filter(r => r.value > 0)
 
     const total = rows.reduce((s, r) => s + r.value, 0)
-    if (total <= 0) return fallback
+    if (total <= 0) return empty
 
     const prevTotal = rows.reduce((s, r) => s + r.prevValue, 0)
     const dayChangePct = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : null
@@ -121,9 +122,7 @@ async function loadPortfolioContext(active?: { constitutionId: "atlas-core" | "s
       variant: isSbr ? "sbr" : "atlas",
     }
   } catch {
-    // A console should never crash the app — degrade to the sample context
-    // for whichever portfolio the signed-in user owns.
-    return fallback
+    return empty
   }
 }
 
@@ -810,31 +809,30 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
 
 export default async function MissionControlPage({ searchParams }: { searchParams: Promise<{ portfolio?: string }> }) {
   const session = await getSession()
+  if(!session) redirect("/login?portfolio=atlas-core")
   const requested = (await searchParams).portfolio
-  const cookieActive = session ? await activePortfolioContext(session) : null
+  const cookieActive = await activePortfolioContext(session)
   const requestedId: ConstitutionId | null = requested === "atlas-core" || requested === "silicon-brick-road" ? requested : null
-  const active = session && requestedId
+  const active = requestedId
     ? { constitutionId: requestedId, owner: await portfolioOwner(requestedId) ?? cookieActive!.owner }
     : cookieActive
   const context = await loadPortfolioContext(active ? { constitutionId: active.constitutionId, userId: active.owner.id } : undefined)
 
   let findings: Record<string, AgentFinding> | null = null
-  if (session) {
-    const isSbr = active?.constitutionId === "silicon-brick-road"
+  {
+    const isSbr = active.constitutionId === "silicon-brick-road"
     findings = isSbr
-      ? await loadSbrFindings(active?.owner.id ?? session.userId)
-      : await loadAgentFindings(active?.owner.id ?? session.userId)
+      ? await loadSbrFindings(active.owner.id)
+      : await loadAgentFindings(active.owner.id)
   }
 
-  const requiredTickers = active?.constitutionId === "silicon-brick-road"
+  const requiredTickers = active.constitutionId === "silicon-brick-road"
     ? ["IMID", "EQAC", "SMH", "IB01"]
     : ["IMID", "EQAC", "SMH", "IWQU"]
-  const requiredLookThrough = session
-    ? await db.etfLookThrough.findMany({
+  const requiredLookThrough = await db.etfLookThrough.findMany({
         where: { ticker: { in: requiredTickers } },
         select: { ticker: true, updatedAt: true },
       })
-    : []
   // The portfolio is only as fresh as its oldest required building block.
   // Missing funds deliberately show as "never refreshed" rather than borrowing
   // a newer timestamp from another fund.
@@ -842,6 +840,7 @@ export default async function MissionControlPage({ searchParams }: { searchParam
     ? new Date(Math.min(...requiredLookThrough.map(row => row.updatedAt.getTime())))
     : null
 
+  if(!findings) return <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-[#07101f] text-white grid place-items-center p-6`}><div className="max-w-lg rounded-2xl border border-red-400/30 bg-red-500/5 p-6"><h1 className="text-xl font-bold">Mission Control could not reconcile live data</h1><p className="mt-2 text-sm text-white/65">No sample figures are shown. Refresh the IBKR data or check the production logs, then try again.</p></div></div>
   return (
     <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <MissionControl context={context} findings={findings} lookThroughUpdatedAt={lookThroughUpdatedAt} />

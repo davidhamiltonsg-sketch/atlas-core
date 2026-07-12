@@ -57,6 +57,16 @@ export async function proxy(req: NextRequest) {
     return res
   }
 
+  // Legacy utilities are consolidated into the current information architecture. Keep old
+  // bookmarks working without exposing or maintaining a second application in parallel.
+  const consolidated: Record<string, string> = {
+    "/holdings": "/portfolio", "/trades": "/portfolio", "/contributions": "/portfolio",
+    "/dividends": "/portfolio", "/rebalance": "/portfolio", "/history": "/portfolio", "/ytd": "/portfolio",
+    "/calendar": "/governance", "/behaviour": "/governance",
+    "/smart-money": "/reports", "/watchlist": "/reports", "/export": "/settings",
+  }
+  if (consolidated[pathname]) return NextResponse.redirect(new URL(consolidated[pathname], req.url))
+
   return NextResponse.next()
 }
 

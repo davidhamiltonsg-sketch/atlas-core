@@ -185,7 +185,7 @@ export async function sendMonthlyReminderEmail(
   const accentBg = isAtlas ? "#f5f3ff" : "#e0f2fe"
   const moniker = isAtlas ? "AC" : "SBR"
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
-  const tagline = isAtlas ? "Investment Constitution v1.5" : `Phase ${phase?.key ?? "I"} · Property deposit`
+  const tagline = isAtlas ? "Investment Constitution v3.1" : "Flexible medium-term growth · Constitution v3.2"
   const severityColor = nextMove.severity === "critical" ? "#dc2626"
     : nextMove.severity === "high" ? "#d97706"
     : nextMove.severity === "medium" ? "#0284c7"
@@ -329,15 +329,14 @@ export async function sendAnnualAuditEmail(
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
 
   const atlasChecklist = isAtlas ? `
-    <li>Verify SGOV yield reference (Art. XI) is still current — if rates have moved &gt;1%, update the illustration.</li>
+    <li>Confirm personal SGD emergency liquidity remains outside Atlas.</li>
     <li>Review UCITS threshold status (Art. XV) — if US-sited ETF value is approaching USD 100k, confirm migration timeline.</li>
     <li>Check look-through data freshness — has any factsheet changed materially in the past year?</li>
-    <li>Review BTC cycle phase (Art. X) — confirm current halving month and update if needed.</li>
+    <li>Review the governed 5% Bitcoin sleeve and its approved vehicle identity.</li>
     <li>Confirm broker (IBKR Singapore) and custodian risk is acceptable.</li>` : `
-    <li>Review property target (S$120,000) — has your budget, CPF contribution, or loan terms changed?</li>
-    <li>Recalibrate phase thresholds (S$72k / S$102k / S$114k) if the target changed.</li>
-    <li>Review phase-dependent SEMI and combined tech caps — are the tightening levels still appropriate?</li>
-    <li>Confirm timeline: how many months to expected purchase? Does Phase III/IV trigger still match?</li>
+    <li>Confirm SBR still has no fixed spending date or mandatory target value.</li>
+    <li>Review IMID 80%, EQAC 10%, SMH 5% and IB01 5% against Dami's circumstances.</li>
+    <li>If a real SGD use has emerged, document its amount, date and flexibility before changing risk.</li>
     <li>Review hidden-exposure factsheets — are provider holdings files current?</li>`
 
   const { error } = await getResend().emails.send({

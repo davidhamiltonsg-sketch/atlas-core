@@ -28,6 +28,7 @@ import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockp
 import { AnimatedNumber } from "@/components/animated-number"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { activePortfolioContext } from "@/lib/active-portfolio"
+import { openPositionValuation } from "@/lib/valuation"
 import { redirect } from "next/navigation"
 
 // This is a personal, auth-gated dashboard whose server render includes live
@@ -177,19 +178,8 @@ async function getDashboardData(userId: string) {
     // IBKR's open-position report is authoritative for live cost basis and unrealised P/L.
     // Reconstructing from the full trade table can double-count re-imported or partial history,
     // so the trade ledger is used only when the latest IBKR snapshot omitted these fields.
-    const snapshotCostBasis = latestSnapshot?.costBasis
-    const snapshotUnrealised = latestSnapshot?.unrealizedPnl
-    const costBasisSgd = snapshotCostBasis != null && snapshotCostBasis > 0
-      ? snapshotCostBasis
-      : cb?.sgd ?? 0
-    const avgCostUsd = costBasisSgd > 0 && (latestSnapshot?.units ?? 0) > 0 && usdSgdRate > 0
-      ? costBasisSgd / latestSnapshot!.units / usdSgdRate
-      : cb && cb.units > 0 ? cb.usd / cb.units : null
-    const unrealisedSgd = snapshotUnrealised != null
-      ? snapshotUnrealised
-      : costBasisSgd > 0 ? value - costBasisSgd : null
-    const unrealisedPct = costBasisSgd > 0 ? (unrealisedSgd! / costBasisSgd) * 100 : null
-    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd, costBasisSgd, unrealisedSgd, unrealisedPct, units: h.snapshots[0]?.units ?? 0 }
+    const valuation = openPositionValuation({value,units:latestSnapshot?.units??0,snapshotCostBasis:latestSnapshot?.costBasis,snapshotUnrealizedPnl:latestSnapshot?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate})
+    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd:valuation.averagePriceInstrumentCurrency, costBasisSgd:valuation.costBasis??0, unrealisedSgd:valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct:valuation.reconciles?valuation.unrealizedReturnPct:null, valuationSource:valuation.source, valuationReconciles:valuation.reconciles, units: h.snapshots[0]?.units ?? 0 }
   })
 
   // Bitcoin sleeve consolidation — BTC in run-off, IBIT is accumulation vehicle
@@ -484,7 +474,9 @@ export default async function Dashboard() {
   ]
   const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
   const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
-  const totalUnrealised = totalCostBasis > 0 ? d.totalValue - totalCostBasis : null
+  const costedMarketValue = costedRows.reduce((sum,p)=>sum+p.value,0)
+  const valuationComplete = d.holdingsRows.filter(p=>p.value>0).every(p=>p.unrealisedSgd!==null)
+  const totalUnrealised = totalCostBasis > 0 && valuationComplete ? costedMarketValue - totalCostBasis : null
   const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
 
   return (
@@ -562,7 +554,7 @@ export default async function Dashboard() {
             <div className="atlas-value-stats">
               <div><span>Cost basis</span><b>{totalCostBasis > 0 ? formatCurrency(totalCostBasis, "SGD") : "Awaiting ledger"}</b></div>
               <div><span>Unrealised P&amp;L</span><b className={totalUnrealised !== null && totalUnrealised < 0 ? "down" : "up"}>{totalUnrealised === null ? "—" : `${totalUnrealised >= 0 ? "+" : "−"}${formatCurrency(Math.abs(totalUnrealised), "SGD")}`}</b></div>
-              <div><span>Total return</span><b className={totalReturnPct !== null && totalReturnPct < 0 ? "down" : "up"}>{totalReturnPct === null ? "—" : `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}</b></div>
+              <div><span>Unrealised return</span><b className={totalReturnPct !== null && totalReturnPct < 0 ? "down" : "up"}>{totalReturnPct === null ? "Needs reconciliation" : `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}</b></div>
             </div>
             <div className="atlas-command-line">
               <span>CONSTITUTION SAYS</span>

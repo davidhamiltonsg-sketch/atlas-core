@@ -2,8 +2,7 @@
  * SBR market data — live prices for the four SBR funds.
  *
  * All four SBR funds are non-US-listed:
- *   VWRA (VWRA.L, London), EQQQ (EQQQ.L, London), SEMI (SEMI.L, London),
- *   A35 (A35.SI, SGX) → all fetched via Yahoo Finance.
+ *   IMID, EQAC, SMH and IB01 London listings, fetched via Yahoo Finance.
  */
 
 import type { EngineMarket } from "@/lib/next-best-move"
@@ -54,23 +53,12 @@ async function fetchYahoo52wHigh(symbol: string): Promise<number> {
 export async function getSbrMarketData(): Promise<SbrMarketResult> {
   const asOf = new Date().toISOString()
 
-  // All four SBR funds are non-US: VWRA.L, EQQQ.L, SEMI.L (London), A35.SI (SGX).
-  const [vwraPrice, vwra52, eqqqPrice, eqqq52, semiPrice, semi52, a35Price] = await Promise.all([
-    fetchYahooPrice("VWRA.L"),
-    fetchYahoo52wHigh("VWRA.L"),
-    fetchYahooPrice("EQQQ.L"),
-    fetchYahoo52wHigh("EQQQ.L"),
-    fetchYahooPrice("SEMI.L"),
-    fetchYahoo52wHigh("SEMI.L"),
-    fetchYahooPrice("A35.SI"),
-  ])
+  const symbols={IMID:"IMID.L",EQAC:"EQAC.L",SMH:"SMH.L",IB01:"IB01.L"}
+  const rows=await Promise.all(Object.entries(symbols).map(async([ticker,symbol])=>({ticker,price:await fetchYahooPrice(symbol),hi52:await fetchYahoo52wHigh(symbol)})))
 
   const positions: Record<string, { price: number; hi52: number }> = {}
 
-  if (vwraPrice > 0) positions["VWRA"] = { price: vwraPrice, hi52: vwra52 }
-  if (eqqqPrice > 0) positions["EQQQ"] = { price: eqqqPrice, hi52: eqqq52 }
-  if (semiPrice > 0) positions["SEMI"] = { price: semiPrice, hi52: semi52 }
-  if (a35Price > 0) positions["A35"] = { price: a35Price, hi52: 0 }
+  for(const row of rows)if(row.price>0)positions[row.ticker]={price:row.price,hi52:row.hi52}
 
   const stale = Object.keys(positions).length === 0
 

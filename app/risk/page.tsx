@@ -4,6 +4,7 @@ import { formatCurrency, formatPercent } from "@/lib/utils"
 import { applyBitcoinSleeve } from "@/lib/constants"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
 import { ATLAS_TARGET_HHI, ATLAS_HHI_THRESHOLDS, atlasConcentrationLabel } from "@/lib/spec-derived"
 
@@ -241,8 +242,8 @@ function ddLabel(dd: number): { label: string; color: string } {
 export default async function RiskPage() {
   const session = await getSession()
   if (!session) redirect("/login")
-
-  const data = await getRiskData(session.userId)
+  const active = await activePortfolioContext(session)
+  const data = await getRiskData(active.owner.id)
 
   const hasData = data.dataPoints >= 2
   // Sharpe requires 12+ periods. Annualised volatility (and the VaR derived from it) needs

@@ -3,7 +3,7 @@
 //
 // Atlas Core hosts more than one investment constitution. Which one a user sees is
 // decided by WHO LOGS IN. David → Atlas Core (2045 retirement). Dami → Silicon Brick
-// Road (HDB property deposit). Each constitution is config-as-data here, so the app can
+// Road (flexible medium-term investment). Each constitution is config-as-data here, so the app can
 // render a completely different governed portfolio without forking the codebase.
 //
 // David's Atlas Core keeps its bespoke engine (lib/next-best-move.ts, lib/constants.ts);
@@ -27,7 +27,7 @@ export interface ConstitutionFund {
   rangeLow: number        // comfortable range low
   rangeHigh: number       // comfortable range high
   hardCap: number | null  // outer limit that triggers mandatory action (null = floor-only)
-  floor?: number          // safety floor (A35) — below this, all contributions redirect here
+  floor?: number          // required allocation floor — below this, contributions redirect here
   color: string
   note?: string
 }
@@ -174,7 +174,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
     { n: 6, title: "None of the above — the portfolio is on mandate.", detail: "Continue the monthly contribution. Do not trade merely because markets moved or a forecast changed." },
   ],
   rules: [
-    { category: "The Ground Rules", title: "Flexible medium-term growth", description: "SBR has no fixed end date and is not reserved for a property purchase. It remains in growth mode until Dami writes down a genuine use, SGD amount and date." },
+    { category: "The Ground Rules", title: "Flexible medium-term growth", description: "SBR has no fixed end date or pre-assigned spending purpose. It remains in growth mode until Dami writes down a genuine use, SGD amount and date." },
     { category: "How to Split Your Money", title: "One broad core and three helpers", description: "Target IMID 80%, EQAC 10%, SMH 5% and IB01 5%. All four approved vehicles are Irish-domiciled accumulating UCITS share classes identified by ISIN." },
     { category: "Keeping Things in Balance", title: "Use contributions before selling", description: "Route each contribution to the furthest-underweight eligible holding. Soft bands guide new cash; hard caps require a documented correction. Market falls alone never force a sale." },
     { category: "Regular Investing", title: "Whole shares and the DCA cash bank", description: "Buy whole shares after reserving commission and FX. Unused contribution cash carries forward in SBR's separate SGD bank and is never treated as invested or as IB01." },

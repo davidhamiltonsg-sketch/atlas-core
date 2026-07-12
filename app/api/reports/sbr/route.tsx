@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { getSession } from "@/lib/session"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 import { getSbrReportData } from "@/lib/reports/sbr-report-data"
 import { SbrReportPdf } from "@/components/reports/sbr-report-pdf"
 import type { ReportPeriod } from "@/lib/reports/pdf-theme"
@@ -11,7 +11,8 @@ const VALID_PERIODS: ReportPeriod[] = ["monthly", "quarterly", "annual"]
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
-  if (constitutionIdForEmail(session.email) !== "silicon-brick-road") {
+  const active=await activePortfolioContext(session)
+  if (active.constitutionId !== "silicon-brick-road") {
     return NextResponse.json({ error: "Not available for this portfolio" }, { status: 403 })
   }
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   }
   const period = periodParam as ReportPeriod
 
-  const data = await getSbrReportData(session.userId, period)
+  const data = await getSbrReportData(active.owner.id, period)
   const buffer = await renderToBuffer(<SbrReportPdf data={data} />)
 
   return new NextResponse(new Uint8Array(buffer), {

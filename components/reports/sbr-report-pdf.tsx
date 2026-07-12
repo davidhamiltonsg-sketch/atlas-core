@@ -29,10 +29,10 @@ export function SbrReportPdf({ data }: { data: SbrReportData }) {
     <ReportPdf title={`Silicon Brick Road — ${data.periodLabel}`}>
       <CoverPage
         theme={theme}
-        reportLabel="HDB Deposit Plan Report"
+        reportLabel="Flexible Growth Portfolio Report"
         periodLabel={data.periodLabel}
         generatedOn={data.generatedOn}
-        heroLabel="Total Saved Toward Deposit"
+        heroLabel="Current Portfolio Value"
         heroValue={formatCurrency(data.totalValue, "SGD")}
         heroSub={changeLabel}
       />

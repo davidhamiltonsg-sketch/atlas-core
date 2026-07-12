@@ -28,7 +28,7 @@ export function instrumentIdentity(input: InstrumentIdentityInput): InstrumentId
   // different venues. Venue-qualify storage while keeping the familiar display label.
   let ticker = symbol
   if (symbol === "SMH") {
-    if (isin === "IE00BMC38736" || exchange?.includes("LSE")) ticker = "SMH.L"
+    if (isin === "IE00BMC38736" || exchange?.includes("LSE")) ticker = "SMH"
     else if (cusip === "92189F676" || exchange?.includes("NASDAQ") || exchange?.includes("ARCA")) ticker = "SMH.US"
   }
 

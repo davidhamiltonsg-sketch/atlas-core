@@ -4,8 +4,8 @@ import { SILICON_BRICK_ROAD as SBR } from "./constitutions"
 
 // Shared Silicon Brick Road provisioning for Dami (dutszm@gmail.com). Used by both the CLI
 // (prisma/seed-sbr.ts) and the admin route (/api/admin/provision-dami) so the two never drift.
-// Sets Dami's password from `dami_key`, switches his contribution settings to SBR, and replaces
-// his holdings with the four-fund set (EQQQ/SEMI units preserved). Idempotent.
+// Sets Dami's password from `dami_key`, switches his contribution settings to SBR, and
+// non-destructively upserts the current four-fund mandate. Existing history is never deleted.
 export type ProvisionResult =
   | { ok: true; holdings: number; email: string }
   | { ok: false; error: string }
@@ -24,24 +24,15 @@ export async function provisionDami(prisma: PrismaClient): Promise<ProvisionResu
     create: { email: EMAIL, name: "Dami", passwordHash, role: "user", monthlyContribution: SBR.monthlyContribution, annualLumpSum: 0, contributionGrowthRate: 0 },
   })
 
-  // Preserve EQQQ / SEMI units before replacing the holding set.
-  const prior = await prisma.holding.findMany({
-    where: { userId: user.id, ticker: { in: ["EQQQ", "SEMI"] } },
-    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
-  })
-  const priorByTicker = new Map(prior.map((h) => [h.ticker, h.snapshots[0]]))
-
-  await prisma.dividend.deleteMany({ where: { userId: user.id } })
-  await prisma.holding.deleteMany({ where: { userId: user.id } })
-
   let holdings = 0
   for (const f of SBR.funds) {
-    const holding = await prisma.holding.create({
-      data: { userId: user.id, ticker: f.ticker, name: f.name, targetPct: f.target, hardCapPct: f.hardCap, toleranceBand: band(f), color: f.color },
+    const holding = await prisma.holding.upsert({
+      where:{userId_ticker:{userId:user.id,ticker:f.ticker}},
+      update:{name:f.name,targetPct:f.target,hardCapPct:f.hardCap,toleranceBand:band(f),color:f.color},
+      create: { userId: user.id, ticker: f.ticker, name: f.name, targetPct: f.target, hardCapPct: f.hardCap, toleranceBand: band(f), color: f.color },
     })
-    const prev = priorByTicker.get(f.ticker)
-    const snap = prev ? { units: prev.units, price: prev.price, value: prev.value } : { units: 0, price: 0, value: 0 }
-    await prisma.snapshot.create({ data: { holdingId: holding.id, units: snap.units, price: snap.price, value: snap.value, currency: "SGD", date: new Date() } })
+    const snapshot=await prisma.snapshot.findFirst({where:{holdingId:holding.id}})
+    if(!snapshot)await prisma.snapshot.create({ data: { holdingId: holding.id, units: 0, price: 0, value: 0, currency: "SGD", date: new Date() } })
     holdings++
   }
   return { ok: true, holdings, email: EMAIL }

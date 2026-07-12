@@ -8,13 +8,13 @@ import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation } from "
 import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
+import { SBR_SPEC } from "@/lib/portfolio-spec"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
-// VWRA trades on the London Stock Exchange (price in USD); A35 trades on SGX (price in SGD).
-const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", VFEA: "VFEA.L", EQQQ: "EQQQ.L", SEMI: "SEMI.L", A35: "A35.SI" }
+const YF_TICKER_MAP: Record<string, string> = { IMID: "IMID.L", IWQU: "IWQU.L", EQAC: "EQAC.L", SMH: "SMH.L", IB01: "IB01.L" }
 const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k, v]) => [v, k]))
 // Tickers whose Yahoo Finance price is already in SGD (no USD→SGD conversion needed).
-const YF_SGD_PRICED = new Set(["A35.SI"])
+const YF_SGD_PRICED = new Set<string>()
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
@@ -37,7 +37,7 @@ async function getUsdSgdRate(): Promise<number> {
 }
 
 // Manual update: create new snapshots for one or more holdings.
-// Pass currency: "SGD" for SGD-priced instruments (e.g. A35) to skip USD→SGD conversion.
+// Pass currency: "SGD" for an SGD-priced instrument to skip USD→SGD conversion.
 export async function updateHoldingsManually(
   updates: Array<{ holdingId: string; units: number; price: number; currency?: "USD" | "SGD" }>
 ) {
@@ -76,7 +76,7 @@ export async function updateHoldingsManually(
 // Apply screenshot-extracted holdings: update existing tickers AND create any new ones
 // (e.g. IBIT, or an out-of-scope ETF). Every row that has units & price is brought in so
 // the portfolio stays accurate — out-of-scope tickers are then flagged on the dashboard.
-const SBR_ALLOWED_TICKERS = new Set(["VWRA", "EQQQ", "SEMI", "A35"])
+const SBR_ALLOWED_TICKERS = new Set(SBR_SPEC.funds.map(f=>f.ticker))
 
 export async function applyExtractedHoldings(
   rows: Array<{ ticker: string; units: number; price: number }>
@@ -99,14 +99,14 @@ export async function applyExtractedHoldings(
     let holding = await db.holding.findFirst({ where: { userId: ownerId, ticker: sym } })
     if (!holding) {
       // Guard: SBR users can only have SBR tickers created. An Atlas Core screenshot
-      // uploaded by mistake must not create VWRA/VFEA/BTC/IBIT entries in an SBR account.
+      // uploaded by mistake must not create out-of-mandate entries in an SBR account.
       if (isSbr && !SBR_ALLOWED_TICKERS.has(sym)) continue
       holding = await db.holding.create({
         data: { userId: ownerId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
       })
       created++
     }
-    const fxMultiplier = sym === "A35" ? 1 : usdSgdRate
+    const fxMultiplier = usdSgdRate
     await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: r.units * r.price * fxMultiplier })
     updated++
   }
@@ -143,7 +143,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
 
   if (holdings.length === 0) return { success: false, error: "No holdings found" }
 
-  // Yahoo Finance API — map non-standard tickers (VWRA→VWRA.L, A35→A35.SI) before the fetch.
+  // Yahoo Finance API — map governed tickers to their exchange-qualified symbols.
   const yfSymbols = holdings.map(h => YF_TICKER_MAP[h.ticker] ?? h.ticker)
   const symbols = yfSymbols.join(",")
 
@@ -160,7 +160,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
         const data = await res.json()
         const quotes: Array<{ symbol: string; regularMarketPrice: number }> = data?.quoteResponse?.result ?? []
         for (const q of quotes) {
-          // Reverse-map Yahoo tickers back to DB tickers (e.g. VWRA.L → VWRA, A35.SI → A35)
+          // Reverse-map exchange-qualified symbols back to governed database keys.
           const dbTicker = YF_REVERSE_MAP[q.symbol] ?? q.symbol
           if (q.regularMarketPrice) priceMap[dbTicker] = q.regularMarketPrice
         }
@@ -238,7 +238,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
       if (!latest || Math.abs((latest.units ?? 0) - units) > 1e-6) unitsUpdated++
     } else if (yh && latest) {
       // Yahoo price-only — carry units forward (no brokerage data for this holding).
-      // SGD-priced tickers (A35.SI) must not be multiplied by the USD→SGD rate.
+      // Any explicitly SGD-priced ticker must not be multiplied by the USD→SGD rate.
       const yfSym = YF_TICKER_MAP[holding.ticker]
       const isSgdPriced = yfSym ? YF_SGD_PRICED.has(yfSym) : false
       units = latest.units

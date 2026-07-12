@@ -58,7 +58,7 @@ const sbrGovPositions = targetPositions.map(x => ({ ...x, targetPct: x.actualPct
 eq("SBR target governance has no hard breach", evaluateSbrGovernance(sbrGovPositions, 100000).breaches, 0)
 
 eq("US SMH identity stays separate", instrumentIdentity({ symbol: "SMH", cusip: "92189F676", exchange: "NASDAQ" }).ticker, "SMH.US")
-eq("UCITS SMH identity stays separate", instrumentIdentity({ symbol: "SMH", isin: "IE00BMC38736", exchange: "LSE" }).ticker, "SMH.L")
+eq("UCITS SMH uses governed canonical key", instrumentIdentity({ symbol: "SMH", isin: "IE00BMC38736", exchange: "LSE" }).ticker, "SMH")
 
 if (failures) { console.error(`\n${failures} v2 routing check(s) failed.`); process.exit(1) }
 console.log("\nAll portfolio v2 routing checks passed ✓")

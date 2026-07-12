@@ -5,6 +5,7 @@ import { constitutionIdForEmail, SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { instrumentIdentity } from "@/lib/instrument-identity"
 import { recordDcaBankMovement } from "@/lib/dca-bank-service"
+import { portfolioOwner } from "@/lib/active-portfolio"
 import {
   parseFlexDate, naturalKey, executionNaturalKey,
   selectExecutionsToImport, selectStaleDuplicateTrades, type ExistingTradeRow,
@@ -94,6 +95,11 @@ export async function upsertSnapshotToday(
 
 export interface IbkrSyncResult { ok: boolean; reason?: string; users: number; snapshots: number }
 
+async function brokerPortfolioOwners(){
+  const [atlas,sbr]=await Promise.all([portfolioOwner("atlas-core"),portfolioOwner("silicon-brick-road")])
+  return [...new Map([atlas,sbr].filter((u):u is NonNullable<typeof u>=>!!u).map(u=>[u.id,{id:u.id,email:u.email}])).values()]
+}
+
 /**
  * Automated snapshot refresh from IBKR Flex — for the scheduled cron, so the portfolio
  * never silently ages when the owner forgets to update it manually. Writes at most one
@@ -101,7 +107,7 @@ export interface IbkrSyncResult { ok: boolean; reason?: string; users: number; s
  * Only matched tickers are updated; it never creates or removes holdings.
  */
 export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
-  const users = await db.user.findMany({ select: { id: true, email: true } })
+  const users = await brokerPortfolioOwners()
   const reports = new Map<string, Awaited<ReturnType<typeof fetchFlexPositions>>>()
   let snapshots = 0
   let usersSynced = 0
@@ -123,11 +129,13 @@ export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
     }
     const identified = result.positions.map((p) => ({ p, identity: instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid }) }))
     const bySymbol = new Map(identified.flatMap((x) => [[x.identity.ticker, x], [x.identity.displayTicker, x]]))
-    const holdings = await db.holding.findMany({ where: { userId: u.id } })
+    const holdings = await db.holding.findMany({ where: { userId: u.id },include:{snapshots:{orderBy:{date:"desc"},take:1}} })
+    const matchedHoldingIds=new Set<string>()
     for (const h of holdings) {
       const matched = bySymbol.get(h.ticker.toUpperCase())
       if (!matched) continue
       const { p: pos, identity } = matched
+      matchedHoldingIds.add(h.id)
       await db.holding.update({ where: { id: h.id }, data: {
         displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
         isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
@@ -139,6 +147,9 @@ export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
       })
       snapshots++
     }
+    // A complete open-position report is authoritative. A previously open holding absent
+    // from it is closed at zero so stale snapshots cannot inflate NAV after a full sale.
+    for(const h of holdings){if(!matchedHoldingIds.has(h.id)&&(h.snapshots[0]?.units??0)>0){await upsertSnapshotToday(h.id,{units:0,price:0,value:0,costBasis:0,unrealizedPnl:0});snapshots++}}
     usersSynced++
   }
   if (usersSynced === 0) return { ok: false, reason: errors.join("; ") || "IBKR not configured", users: 0, snapshots: 0 }
@@ -456,7 +467,7 @@ export interface IbkrActivitySyncResult { ok: boolean; reason?: string; users: n
  * activity query isn't configured.
  */
 export async function syncIbkrActivityAllUsers(): Promise<IbkrActivitySyncResult> {
-  const users = await db.user.findMany({ select: { id: true, email: true } })
+  const users = await brokerPortfolioOwners()
   const reports = new Map<string, Awaited<ReturnType<typeof fetchFlexActivity>>>()
   let trades = 0
   let dividends = 0

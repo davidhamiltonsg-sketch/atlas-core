@@ -234,7 +234,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         <span className="text-xs font-semibold text-sky-400 group-hover:text-sky-300 shrink-0">Open ↗</span>
       </a>
 
-      {/* Flexible-horizon runway — no invented property target or automatic phase. */}
+      {/* Flexible-horizon runway — no invented spending target or automatic phase. */}
       <div className="rounded-2xl card-lux p-5 mb-5">
         <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Where we are going</p>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mt-2">
@@ -351,10 +351,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                         <span className="text-xs text-muted-foreground block">{a.reason}</span>
                         {accrual > 0 && (
                           <span className="text-[10px] text-sky-400 mt-0.5 block">
-                            {a.ticker === "A35"
-                              ? `Banking ${formatCurrency(accrual, "SGD")} of ~SGD 1,180 needed — buys next lot`
-                              : `Banking ${formatCurrency(accrual, "SGD")} toward next share`
-                            }
+                            Banking {formatCurrency(accrual, "SGD")} toward the next whole share
                           </span>
                         )}
                       </div>
@@ -475,7 +472,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Flexible growth mode — active</span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">There is no automatic value phase or property deadline. De-risk only after Dami records a real SGD use, amount and date.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">There is no automatic value phase or spending deadline. De-risk only after Dami records a real SGD use, amount and date.</p>
               </div>
               <a href="/governance" className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 shrink-0">
                 Read rules <ChevronRight className="h-3 w-3" />

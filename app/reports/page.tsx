@@ -26,6 +26,7 @@ import {
   atlasConcentrationLabelPct,
 } from "@/lib/spec-derived"
 import { constitutionIdForEmail } from "@/lib/constitutions"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 
 // ─── Single source of truth ──────────────────────────────────────────────────
 // Weights and caps live in lib/look-through.ts (which matches the Governance Doc §4
@@ -367,9 +368,10 @@ function SectionHeader({ icon: Icon, title, sub, badge }: {
 export default async function Reports() {
   const session = await getSession()
   if (!session) redirect("/login")
+  const active = await activePortfolioContext(session)
   // SBR users get their own dedicated report surface — look-through is Atlas-specific.
-  if (constitutionIdForEmail(session.email) === "silicon-brick-road") {
-    return <SbrReportPage userId={session.userId} userName={session.name ?? ""} isAdmin={session.role === "admin"} />
+  if (active.constitutionId === "silicon-brick-road") {
+    return <SbrReportPage userId={active.owner.id} userName={session.name ?? ""} isAdmin={session.role === "admin"} />
   }
 
   const {
@@ -378,7 +380,7 @@ export default async function Reports() {
     hardBreaches, hhi, hhiPct, effectiveN, concentrationRating, topPosition,
     targetHhi, targetEffN, topRangeHigh, topHardCap,
     lookThroughUpdatedAt, lookThroughAgeDays, lookThroughStale,
-  } = await getReportData(session.userId)
+  } = await getReportData(active.owner.id)
 
   if (!hasBalance) {
     return (

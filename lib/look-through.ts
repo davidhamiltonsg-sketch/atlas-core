@@ -19,7 +19,7 @@ export const ETF_WEIGHTS_AS_OF = "2026-06-30"
 /** Age (days) of the ETF weight tables relative to `now`, and whether they are stale
  *  (older than `staleAfterDays`, default one quarter). Lets the UI flag §4 exposure as
  *  "based on weights last refreshed N days ago" instead of implying live precision. */
-export function lookThroughWeightsAge(now: Date, staleAfterDays = 92): { ageDays: number; stale: boolean } {
+export function lookThroughWeightsAge(now: Date, staleAfterDays = 95): { ageDays: number; stale: boolean } {
   const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(ETF_WEIGHTS_AS_OF).getTime()) / 86400000))
   return { ageDays, stale: ageDays > staleAfterDays }
 }
@@ -83,14 +83,8 @@ export const ETF_GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emer
 
 // Caps as written in the Governance Document (§4). Whole-number percent of NAV.
 export const LOOKTHROUGH_COMPANY_CAPS: Record<string, { soft: number; hard: number }> = {
-  Nvidia:    { soft: 10, hard: 13 },
-  Microsoft: { soft: 10, hard: 13 },
-  Apple:     { soft: 8,  hard: 11 },
-  Amazon:    { soft: 7,  hard: 9 },
-  Meta:      { soft: 6,  hard: 8 },
-  Alphabet:  { soft: 6,  hard: 8 },
-  Broadcom:  { soft: 5,  hard: 7 },
-  TSMC:      { soft: 5,  hard: 7 },
+  Nvidia:{soft:7,hard:8},Microsoft:{soft:7,hard:8},Apple:{soft:7,hard:8},Amazon:{soft:7,hard:8},
+  Meta:{soft:7,hard:8},Alphabet:{soft:7,hard:8},Broadcom:{soft:7,hard:8},TSMC:{soft:7,hard:8},
 }
 
 // soft/hard derived from the single source (lib/portfolio-spec.ts); labels are presentation.
@@ -121,8 +115,8 @@ export interface LookThroughResult {
 }
 
 function statusFor(pct: number, soft: number, hard: number): CapStatus {
-  if (pct > hard) return "breach"
-  if (pct > soft) return "watch"
+  if (pct >= hard) return "breach"
+  if (pct >= soft) return "watch"
   return "ok"
 }
 
