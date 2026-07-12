@@ -172,10 +172,22 @@ async function getDashboardData(userId: string) {
     const prevPrice = h.snapshots[1]?.price ?? 0
     const priceChangePct = prevPrice > 0 ? ((latestPrice - prevPrice) / prevPrice) * 100 : null
     const priceHistory = [...h.snapshots].reverse().map(s => s.price).filter(p => p > 0)
+    const latestSnapshot = h.snapshots[0]
     const cb = avgCost[h.ticker]
-    const costBasisSgd = cb ? cb.sgd : 0
-    const avgCostUsd = cb && cb.units > 0 ? cb.usd / cb.units : null
-    const unrealisedSgd = costBasisSgd > 0 ? value - costBasisSgd : null
+    // IBKR's open-position report is authoritative for live cost basis and unrealised P/L.
+    // Reconstructing from the full trade table can double-count re-imported or partial history,
+    // so the trade ledger is used only when the latest IBKR snapshot omitted these fields.
+    const snapshotCostBasis = latestSnapshot?.costBasis
+    const snapshotUnrealised = latestSnapshot?.unrealizedPnl
+    const costBasisSgd = snapshotCostBasis != null && snapshotCostBasis > 0
+      ? snapshotCostBasis
+      : cb?.sgd ?? 0
+    const avgCostUsd = costBasisSgd > 0 && (latestSnapshot?.units ?? 0) > 0 && usdSgdRate > 0
+      ? costBasisSgd / latestSnapshot!.units / usdSgdRate
+      : cb && cb.units > 0 ? cb.usd / cb.units : null
+    const unrealisedSgd = snapshotUnrealised != null
+      ? snapshotUnrealised
+      : costBasisSgd > 0 ? value - costBasisSgd : null
     const unrealisedPct = costBasisSgd > 0 ? (unrealisedSgd! / costBasisSgd) * 100 : null
     return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd, costBasisSgd, unrealisedSgd, unrealisedPct, units: h.snapshots[0]?.units ?? 0 }
   })

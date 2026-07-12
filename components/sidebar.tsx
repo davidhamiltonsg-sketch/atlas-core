@@ -6,23 +6,13 @@ import {
   LayoutDashboard,
   PieChart,
   ShieldCheck,
-  Brain,
   FileBarChart2,
   TrendingUp,
   X,
   Users,
   Settings,
-  History,
-  ArrowLeftRight,
-  PiggyBank,
-  GitCompare,
   Wallet,
   BarChart3,
-  Coins,
-  CalendarDays,
-  LineChart,
-  Download,
-  Landmark,
   Radar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -42,55 +32,33 @@ const BRAND: Record<ConstitutionId, { name: string; version: string }> = {
 
 const NAV: Record<ConstitutionId, NavGroupDef[]> = {
   "atlas-core": [
-    { label: "Home", items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { label: "Cockpit", items: [
+      { href: "/", label: "Portfolio overview", icon: LayoutDashboard },
       { href: "/mission-control", label: "Mission Control", icon: Radar },
     ] },
-    { label: "Plan", items: [
-      { href: "/governance", label: "Rules & Caps", icon: ShieldCheck },
-      { href: "/calendar", label: "Calendar & Rules", icon: CalendarDays },
-      { href: "/behaviour", label: "Staying Calm", icon: Brain },
-    ] },
     { label: "Portfolio", items: [
-      { href: "/portfolio", label: "Portfolio", icon: PieChart },
-      { href: "/holdings", label: "Holdings", icon: Wallet },
-      { href: "/rebalance", label: "Rebalance", icon: GitCompare },
-      { href: "/trades", label: "Trades", icon: ArrowLeftRight },
-      { href: "/contributions", label: "Contributions", icon: PiggyBank },
-      { href: "/dividends", label: "Dividends", icon: Coins },
-    ] },
-    { label: "Insights", items: [
-      { href: "/reports", label: "What You Own", icon: FileBarChart2 },
-      { href: "/smart-money", label: "Research", icon: Landmark },
+      { href: "/portfolio", label: "Holdings & activity", icon: Wallet },
+      { href: "/reports", label: "Look-through report", icon: FileBarChart2 },
+      { href: "/risk", label: "Risk & concentration", icon: BarChart3 },
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
-      { href: "/risk", label: "Risk", icon: BarChart3 },
-      { href: "/ytd", label: "YTD / P&L", icon: LineChart },
-      { href: "/history", label: "History", icon: History },
+    ] },
+    { label: "Mandate", items: [
+      { href: "/governance", label: "Constitution & rules", icon: ShieldCheck },
     ] },
   ],
   "silicon-brick-road": [
-    { label: "Home", items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { label: "Cockpit", items: [
+      { href: "/", label: "Portfolio overview", icon: LayoutDashboard },
       { href: "/mission-control", label: "Mission Control", icon: Radar },
     ] },
-    { label: "Constitution", items: [
-      { href: "/governance", label: "The Constitution", icon: ShieldCheck },
-      { href: "/behaviour", label: "Staying Calm", icon: Brain },
-    ] },
     { label: "Portfolio", items: [
-      { href: "/portfolio", label: "Portfolio", icon: PieChart },
-      { href: "/holdings", label: "Holdings", icon: Wallet },
-      { href: "/rebalance", label: "Rebalance", icon: GitCompare },
-      { href: "/trades", label: "Trades", icon: ArrowLeftRight },
-      { href: "/contributions", label: "Contributions", icon: PiggyBank },
-      { href: "/dividends", label: "Dividends", icon: Coins },
-    ] },
-    { label: "Insights", items: [
+      { href: "/portfolio", label: "Holdings & activity", icon: Wallet },
+      { href: "/reports", label: "Look-through report", icon: FileBarChart2 },
+      { href: "/risk", label: "Risk & concentration", icon: BarChart3 },
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
-      { href: "/reports", label: "Portfolio Report", icon: FileBarChart2 },
-      { href: "/risk", label: "Risk", icon: BarChart3 },
-      { href: "/ytd", label: "YTD / P&L", icon: LineChart },
-      { href: "/history", label: "History", icon: History },
+    ] },
+    { label: "Mandate", items: [
+      { href: "/governance", label: "Constitution & rules", icon: ShieldCheck },
     ] },
   ],
 }
@@ -189,7 +157,6 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
           ))}
           <NavGroup label="Settings">
             <NavLink href="/settings" label="Settings" icon={Settings} onClick={onClose} constitutionId={constitutionId} />
-            <NavLink href="/export" label="Export" icon={Download} onClick={onClose} constitutionId={constitutionId} />
             {isAdmin && <NavLink href="/admin/users" label="Users" icon={Users} onClick={onClose} constitutionId={constitutionId} />}
           </NavGroup>
         </nav>
