@@ -148,6 +148,12 @@ export function Sidebar({ open, onClose, isAdmin = false, constitutionId = "atla
           </button>
         </div>
 
+        <div className="deck-active-portfolio mx-5 mt-5 border p-4">
+          <p>ACTIVE PORTFOLIO</p>
+          <strong>{brand.name}</strong>
+          <span><i /> Constitution current</span>
+        </div>
+
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {groups.map(group => (

@@ -1042,6 +1042,11 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
 }
 .command-shell .atlas-sidebar > div:first-of-type { height: 112px; padding-inline: 22px; border-color: var(--deck-line); }
 .command-shell .atlas-sidebar nav { padding: 22px 0; }
+.command-shell .deck-active-portfolio { border-color:var(--deck-line); background:color-mix(in srgb,var(--deck-surface) 72%,transparent); }
+.command-shell .deck-active-portfolio p { color:var(--deck-soft); font-family:var(--font-ibm-plex-mono),monospace; font-size:10px; letter-spacing:.14em; }
+.command-shell .deck-active-portfolio strong { display:block; margin-top:10px; color:var(--deck-text); font-size:17px; }
+.command-shell .deck-active-portfolio span { display:flex; align-items:center; gap:8px; margin-top:14px; color:var(--deck-signal); font-family:var(--font-ibm-plex-mono),monospace; font-size:10px; letter-spacing:.06em; }
+.command-shell .deck-active-portfolio i { width:5px; height:5px; border-radius:50%; background:var(--deck-signal); box-shadow:0 0 12px var(--deck-signal); }
 .command-shell .atlas-sidebar nav > div { margin: 0 0 12px; }
 .command-shell .atlas-sidebar nav p {
   padding: 10px 24px 7px; color: #607489 !important; font-family: var(--font-ibm-plex-mono), monospace;
