@@ -172,7 +172,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   decisionLadder: [
     { n: 1, title: "Is any holding above a hard cap or below a required floor?", detail: "Pause additions to the breached holding. Route new cash to the furthest-underweight eligible core or reserve. Document a correction; do not sell automatically." },
     { n: 2, title: `Is EQAC plus SMH above ${SBR_SPEC.combined.hard}%?`, detail: "Pause both satellites and direct new contributions to the furthest-underweight eligible holding until the combined allocation is back within the mandate." },
-    { n: 3, title: "Is look-through data stale or a concentration trigger active?", detail: "Refresh the source data. Data older than 95 days block concentration-led trades. A confirmed trigger pauses the overlapping satellite; it does not force a sale." },
+    { n: 3, title: "Is look-through data stale or a concentration trigger active?", detail: "Refresh the source data. Warn after 35 days and block concentration-led trades after 75 days. A confirmed trigger pauses the overlapping satellite; it does not force a sale." },
     { n: 4, title: "Has Dami recorded a real SGD use, amount and date?", detail: "If no, remain in flexible growth mode. If yes, write a liability-matching transition plan before changing risk." },
     { n: 5, title: "Is a fund below its soft band?", detail: "Put the available whole-share contribution into the furthest-underweight eligible fund. Carry unused cash in SBR's separate DCA bank." },
     { n: 6, title: "None of the above — the portfolio is on mandate.", detail: "Continue the monthly contribution. Do not trade merely because markets moved or a forecast changed." },
