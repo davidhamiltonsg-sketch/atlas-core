@@ -164,6 +164,8 @@ body {
     hsl(var(--background));
 }
 .atlas-sidebar { box-shadow: 18px 0 55px rgb(0 0 0 / .18); }
+.atlas-topbar { box-shadow: 0 14px 45px rgb(0 0 0 / .16); }
+.atlas-topbar h1 { font-family:var(--font-fraunces);font-size:20px;letter-spacing:-.025em; }
 .atlas-sidebar nav a { min-height: 40px; border: 1px solid transparent; }
 .atlas-sidebar nav a:hover { border-color: hsl(var(--border)); background: hsl(var(--card) / .72); }
 .atlas-stage { scrollbar-gutter: stable; }
@@ -177,6 +179,29 @@ body {
   color: hsl(var(--foreground)); background: hsl(var(--accent)); outline: none;
 }
 .atlas-mobile-nav svg { width: 18px; height: 18px; }
+
+/* One visual language across every authenticated route. */
+.atlas-shell .card-lux,
+.atlas-shell .card-elevated,
+.atlas-shell main .bg-card {
+  background:
+    linear-gradient(145deg, hsl(var(--card) / .94), hsl(var(--background) / .88))!important;
+  border-color:hsl(var(--border))!important;
+  box-shadow:0 18px 50px rgb(0 0 0 / .20),inset 0 1px 0 rgb(255 255 255 / .025)!important;
+  backdrop-filter:blur(16px);
+}
+.atlas-shell .card-lux:hover,.atlas-shell a.card-elevated:hover {
+  border-color:hsl(var(--primary) / .34)!important;
+  box-shadow:0 22px 60px rgb(0 0 0 / .27),0 0 30px hsl(var(--primary) / .06)!important;
+}
+.atlas-shell main h1,.atlas-shell main h2 { text-wrap:balance; }
+.atlas-shell main h2 { letter-spacing:-.025em; }
+.atlas-shell table thead { background:hsl(var(--background) / .72); }
+.atlas-shell table th { color:hsl(var(--muted-foreground));font-family:var(--font-ibm-plex-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase; }
+.atlas-shell table tr { border-color:hsl(var(--border)); }
+.atlas-shell input,.atlas-shell select,.atlas-shell textarea { background:hsl(var(--background) / .75);border-color:hsl(var(--border)); }
+.atlas-shell button:not([class*="bg-red"]):not([class*="bg-green"]) { border-color:hsl(var(--border)); }
+.atlas-shell [class*="uppercase"][class*="tracking"] { font-family:var(--font-ibm-plex-mono); }
 
 .atlas-flightdeck {
   background:

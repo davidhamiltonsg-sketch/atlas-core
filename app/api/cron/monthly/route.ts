@@ -89,7 +89,7 @@ export async function GET(req: Request) {
         const ladder = computeLadder(positions, totalValue, {})
         const nextMove = {
           severity: ladder.severity,
-          ticker: ladder.ticker ?? "VWRA",
+          ticker: ladder.ticker ?? "IMID",
           action: ladder.headline,
           what: ladder.instruction,
           why: ladder.rationale,

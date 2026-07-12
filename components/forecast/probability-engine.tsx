@@ -6,26 +6,27 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 interface Asset { n: string; w: number; mu: number[]; s: number }
 
 const ATLAS_ASSETS: Asset[] = [
-  { n: 'VWRA', w: 0.52, mu: [0.0585, 0.0935, 0.1185], s: 0.15 },
-  { n: 'EQQQ', w: 0.23, mu: [0.0682, 0.1132, 0.1582], s: 0.22 },
-  { n: 'SEMI', w: 0.10, mu: [0.0596, 0.1296, 0.1996], s: 0.32 },
-  { n: 'VFEA', w: 0.08, mu: [0.0286, 0.0636, 0.0986], s: 0.18 },
+  { n: 'IMID', w: 0.52, mu: [0.05, 0.085, 0.12], s: 0.15 },
+  { n: 'IWQU', w: 0.29, mu: [0.05, 0.09, 0.13], s: 0.16 },
+  { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.22 },
+  { n: 'SMH', w: 0.04, mu: [0.04, 0.115, 0.18], s: 0.32 },
   { n: 'IBIT', w: 0.05, mu: [-0.05,  0.12,   0.25  ], s: 0.70 },
 ]
 
-// 5×5 empirical correlation matrix (VWRA/EQQQ/SEMI/VFEA/IBIT, 2014–2024)
+// Planning correlation matrix for IMID/IWQU/EQAC/SMH/IBIT. It is an explicit model input,
+// not a claim that future correlations are known or stationary.
 const CORR_5: number[][] = [
   [1.00, 0.87, 0.78, 0.82, 0.18],
-  [0.87, 1.00, 0.88, 0.72, 0.22],
-  [0.78, 0.88, 1.00, 0.68, 0.24],
-  [0.82, 0.72, 0.68, 1.00, 0.14],
+  [0.92, 1.00, 0.82, 0.72, 0.18],
+  [0.87, 0.82, 1.00, 0.88, 0.22],
+  [0.78, 0.72, 0.88, 1.00, 0.24],
   [0.18, 0.22, 0.24, 0.14, 1.00],
 ]
 // CIDX maps both UCITS tickers (VWRA/EQQQ/SEMI/VFEA) and their legacy US equivalents
 // (VT/QQQM/SMH/VWO) to the same correlation column — kept for backward data compatibility
 // so historical snapshots with old tickers still resolve to the correct matrix index.
 const CIDX: Record<string, number> = {
-  VWRA: 0, VT: 0, EQQQ: 1, QQQM: 1, SEMI: 2, SMH: 2, VFEA: 3, VWO: 3, IBIT: 4, BTC: 4,
+  IMID: 0, VT: 0, IWQU: 1, EQAC: 2, QQQM: 2, SMH: 3, IBIT: 4, BTC: 4,
 }
 
 // ── GBM math ──────────────────────────────────────────────────────────────────
@@ -595,7 +596,7 @@ export function ProbabilityEngine({
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           <strong>Methodology:</strong> GBM with Itô-corrected drift — S(t+Δt) = S(t)·exp[(μ−σ²/2)Δt + σ√Δt·Z], monthly steps.
           Correlated normals via Cholesky decomposition of the 2014–2024 empirical 5×5 correlation matrix.
-          Asset config: VWRA 54% (σ=15%), EQQQ 23% (σ=22%), SEMI 10% (σ=32%), VFEA 8% (σ=18%), Bitcoin sleeve 5% (σ=70%).
+          Asset config: IMID 52% (σ=15%), IWQU 29% (σ=16%), EQAC 10% (σ=22%), SMH 4% (σ=32%), Bitcoin sleeve 5% (σ=70%).
           {scenario === 0 && ' Conservative μ: blended ~7.1% p.a.'}
           {scenario === 1 && ' Base μ: blended ~10.3% p.a.'}
           {scenario === 2 && ' Aggressive μ: blended ~13.9% p.a.'}

@@ -19,7 +19,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
-const VWRA_HISTORICAL_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? 0.095 // VWRA (Total World) long-run CAGR proxy
+const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
 const CONE_VOL_DEFAULT = 0.15 // fallback annual vol for the P10/P90 band when history is thin
 
 const SCENARIO_META = [
@@ -295,7 +295,7 @@ export default async function Forecast() {
     const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
     const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.aggressive, yr, CONTRIBUTION_GROWTH_RATE)
     const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, yr, CONTRIBUTION_GROWTH_RATE)
-    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, VWRA_HISTORICAL_RATE, yr, CONTRIBUTION_GROWTH_RATE)
+    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, GLOBAL_BENCHMARK_RATE, yr, CONTRIBUTION_GROWTH_RATE)
     const coneP10      = coneProjection(base, yr, -1.28, coneVol)
     const coneP90      = coneProjection(base, yr,  1.28, coneVol)
     const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
@@ -575,9 +575,9 @@ export default async function Forecast() {
             <tbody className="divide-y divide-border">
               {[
                 { year: "2040", maxEquity: "90%", action: "Complete the 2040 portfolio review. Write a Distribution Plan — a document that says how you will draw money down from the portfolio in retirement." },
-                { year: "2041", maxEquity: "85%", action: "Reduce Bitcoin toward 4% of the portfolio. Rebuild your safety buffer (SGOV / cash) to at least 15%." },
-                { year: "2042", maxEquity: "80%", action: "Reduce semiconductors (SEMI) toward 6%. Start moving some money into bonds — target 5–8% in bonds by end of year." },
-                { year: "2043", maxEquity: "75%", action: "Bring EQQQ down toward 18% and emerging markets toward 5%. Move bonds and cash combined to 15–20%." },
+                { year: "2041", maxEquity: "Review", action: "Confirm the 2045 use, currency and required amount before changing the growth portfolio." },
+                { year: "2042", maxEquity: "Review", action: "Create a separate liability-matched spending sleeve only for money likely to be used within three years." },
+                { year: "2043", maxEquity: "Review", action: "Fund the documented liability sleeve progressively; keep surplus capital under the v3.1 growth constitution." },
                 { year: "2044", maxEquity: "70%", action: "Final year of building the portfolio. Shift the focus from growth to keeping what you have safe and generating income." },
                 { year: "2045", maxEquity: "Per 2040 Review", action: "Retirement drawdown begins. Follow the Distribution Plan written in 2040." },
               ].map(({ year, maxEquity, action }) => (
@@ -593,7 +593,7 @@ export default async function Forecast() {
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
             <span className="font-semibold text-foreground">Sell-down order when drawing down:</span>{" "}
-            SGOV first → BTC → SEMI → VFEA → EQQQ → VWRA last.
+            Liability-matched cash first → Bitcoin → SMH → EQAC → IWQU → IMID last.
             This sells the highest-concentration and highest-volatility positions first,
             keeping the broadest and cheapest holdings longest.
           </p>

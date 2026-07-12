@@ -48,11 +48,11 @@ const LOOK_THROUGH_STALE_DAYS = 90
 
 // Pairwise overlap data (approximate % of ETF-A that is shared with ETF-B, weighted)
 const OVERLAP_MATRIX: Record<string, Record<string, number>> = {
-  VWRA: { VWRA: 100, EQQQ: 28, SEMI: 7,  VFEA: 8,  BTC: 0 },
-  EQQQ: { VWRA: 28,  EQQQ: 100,SEMI: 22, VFEA: 0,  BTC: 0 },
-  SEMI: { VWRA: 7,   EQQQ: 22, SEMI: 100,VFEA: 1,  BTC: 0 },
-  VFEA: { VWRA: 8,   EQQQ: 0,  SEMI: 1,  VFEA: 100,BTC: 0 },
-  BTC:  { VWRA: 0,   EQQQ: 0,  SEMI: 0,  VFEA: 0,  BTC: 100 },
+  IMID: { IMID: 100, IWQU: 70, EQAC: 28, SMH: 7, BTC: 0 },
+  IWQU: { IMID: 70, IWQU: 100, EQAC: 30, SMH: 6, BTC: 0 },
+  EQAC: { IMID: 28, IWQU: 30, EQAC: 100, SMH: 22, BTC: 0 },
+  SMH:  { IMID: 7, IWQU: 6, EQAC: 22, SMH: 100, BTC: 0 },
+  BTC:  { IMID: 0, IWQU: 0, EQAC: 0, SMH: 0, BTC: 100 },
 }
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
@@ -458,13 +458,13 @@ export default async function Reports() {
   summaryPoints.push({ text: `Overall health score: ${healthScore}/100 (${healthLabel}). Last prices recorded: ${snapshotDate}.`, severity: healthScore >= 80 ? "ok" : healthScore >= 60 ? "warn" : "critical" })
 
   return (
-    <Shell title="Reports" subtitle="Overlap & concentration engine — v1.5" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Reports" subtitle="Portfolio and look-through risk · Constitution v3.1" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* ── Print-only cover page ── hidden on screen, rendered in PDF ── */}
       <div className="print-header hidden">
 
         {/* Eyebrow + title */}
-        <p className="ph-eyebrow">Atlas Core · Governed Digital Economy Architecture · v1.5</p>
+        <p className="ph-eyebrow">Atlas Core · Diversified Growth Architecture · v3.1</p>
         <h1>Annual Portfolio Report</h1>
         <p className="ph-sub">{reportDate} &nbsp;·&nbsp; Personal &amp; Confidential</p>
 

@@ -277,9 +277,9 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const vol = annualisedVolatility(timeline)
 
     // Tech ceiling
-    const qqqmPct = positions.find(p => p.ticker === "EQQQ")?.actualPct ?? 0
-    const smhPct = positions.find(p => p.ticker === "SEMI")?.actualPct ?? 0
-    const techCeiling = getCombinedTechCeiling(qqqmPct, smhPct)
+    const eqacPct = positions.find(p => p.ticker === "EQAC")?.actualPct ?? 0
+    const smhPct = positions.find(p => p.ticker === "SMH")?.actualPct ?? 0
+    const techCeiling = getCombinedTechCeiling(eqacPct, smhPct)
 
     // Trade counts
     const buyCount = trades.filter(t => t.type === "BUY").length

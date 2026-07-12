@@ -21,7 +21,7 @@ const VERSION_PILL: Record<ConstitutionId, { label: string; cls: string; dot: st
 export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId = "atlas-core" }: TopbarProps) {
   const pill = VERSION_PILL[constitutionId]
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6">
+    <header className="atlas-topbar flex h-[72px] shrink-0 items-center gap-4 border-b border-border bg-card/70 backdrop-blur-xl px-4 lg:px-7">
       <button
         onClick={onMenuClick}
         className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors"

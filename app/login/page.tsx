@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { loginAction } from "./actions"
 import { AtlasCoreMark, SbrMark } from "@/components/brand/brand-mark"
-import { SpinningMark, SPIN_THEME } from "@/components/brand/spinning-mark"
 import { Lock } from "lucide-react"
 import type { ConstitutionId } from "@/lib/constitutions"
 
@@ -32,6 +31,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const portfolio: ConstitutionId = searchParams.get("portfolio") === "silicon-brick-road" ? "silicon-brick-road" : "atlas-core"
   const meta = PORTFOLIO_META[portfolio]
+  const Mark = PORTFOLIO_MARK[portfolio]
 
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -51,14 +51,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <SpinningMark
-            Mark={PORTFOLIO_MARK[portfolio]}
-            conic={SPIN_THEME[portfolio].conic}
-            glowShadow={SPIN_THEME[portfolio].glow}
-            size="h-16 w-16"
-            ringInset="-inset-3"
-            className="mb-4"
-          />
+          <Mark className="mb-4 h-16 w-16 drop-shadow-[0_12px_28px_hsl(var(--primary)/.28)]" />
           <h1 className="font-display text-xl font-semibold tracking-tight">{meta.name}</h1>
           <p className="text-xs text-muted-foreground mt-1">{meta.version}</p>
         </div>

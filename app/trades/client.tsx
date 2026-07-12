@@ -134,7 +134,7 @@ export function TradesClient({ trades: initialTrades, holdings }: TradesClientPr
                   name="ticker"
                   required
                   list="ticker-list"
-                  placeholder="VWRA"
+                  placeholder="IMID"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-all uppercase"
                 />
                 <datalist id="ticker-list">

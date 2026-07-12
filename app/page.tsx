@@ -11,9 +11,7 @@ import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { computeLadder } from "@/lib/ladder"
-import { getBtcPhaseCard, getSemiBuyZone, getCombinedTechCeiling, getSgovQueueState } from "@/lib/cycle"
-import { BufferStatus } from "@/components/dashboard/buffer-status"
-import { getLiveMarketPositions, getSgovYield } from "@/lib/finnhub"
+import { getLiveMarketPositions } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
@@ -27,9 +25,7 @@ import { SbrDashboard } from "@/components/sbr/sbr-dashboard"
 import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
 import { DecisionLadderCard } from "@/components/cockpit/decision-ladder-card"
 import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
-import { CycleInstruments } from "@/components/cockpit/cycle-instruments"
 import { AnimatedNumber } from "@/components/animated-number"
-import { PortfolioChooser } from "@/components/portfolio-chooser"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { redirect } from "next/navigation"
@@ -299,9 +295,8 @@ async function getDashboardData(userId: string) {
     latestPrice: p.latestPrice ?? 0,
   }))
 
-  const [marketSnapshot, sgov, recentExecutions] = await Promise.all([
+  const [marketSnapshot, recentExecutions] = await Promise.all([
     getLiveMarketPositions(),
-    getSgovYield(),
     getRecentExecutions(userId, 1),
   ])
 
@@ -426,30 +421,11 @@ async function getDashboardData(userId: string) {
     }
   }
 
-  // Cycle Instruments (Art. VIII, IX, XI, XIV)
-  const smhLive = marketSnapshot.positions["SMH"]
-  const qqqmPct = positions.find(p => p.ticker === "EQAC")?.actualPct ?? 0
-  const smhPct  = positions.find(p => p.ticker === "SMH")?.actualPct ?? 0
-  const sgovPct = positions.filter(p => ["SGOV", "AGG", "CASH"].includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
-
-  const cycleInstruments = {
-    btc:  getBtcPhaseCard(),
-    smh:  getSemiBuyZone(smhLive?.price ?? 0, smhLive?.hi52 ?? 0),
-    tech: getCombinedTechCeiling(qqqmPct, smhPct),
-    sgov: getSgovQueueState({ currentPct: sgovPct, portfolioValueSgd: totalValue, monthlyContributionSgd: monthlyContribution }),
-  }
-
-  // Buffer status (F2)
-  const sgovValue = (sgovPct / 100) * totalValue
-  const bufferTargetLow = 8, bufferTargetHigh = 10
-  const bufferNeeded = Math.max(0, (bufferTargetLow / 100) * totalValue - sgovValue)
-  const bufferMonthsToBand = bufferNeeded > 0 && monthlyContribution > 0 ? Math.ceil(bufferNeeded / monthlyContribution) : 0
-
   const usSitedValueUsd = usdSgdRate > 0
     ? positions.filter(p => isActuallyUsSited(p.ticker)).reduce((s, p) => s + p.value / usdSgdRate, 0)
     : 0
   const outOfScopeTickers = positions.filter((p) => p.value > 0 && !isInScope(p.ticker)).map((p) => p.ticker.toUpperCase())
-  const govAlignment = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough, usSitedValueUsd })
+  const govAlignment = evaluateGovernance({ positions, bufferPct: 0, lookThrough, usSitedValueUsd })
 
   const dealingWindow = getDealingWindow(today)
 
@@ -465,10 +441,8 @@ async function getDashboardData(userId: string) {
     base2045, baseRate: rates.base, yearsTo2045, daysToContribution, nextContributionLabel, historyPoints,
     valueChange, monthlyContribution, annualLumpSum, usdSgdRate, onTrackPct,
     marketStale: marketSnapshot.stale,
-    bufferTargetLow, bufferTargetHigh, bufferMonthsToBand,
-    sgovYieldPct: sgov.dividendYieldPct, sgovSecYieldPct: sgov.secYieldPct, sgovStale: sgov.stale,
     govAlignment, outOfScopeTickers, updateHoldings,
-    complianceBands, cycleInstruments, ladder, dealingWindow,
+    complianceBands, ladder, dealingWindow,
     lastDone: recentExecutions[0] ?? null,
     cashBankBalance: cashBank?.balance ?? 0,
   }
@@ -635,47 +609,10 @@ export default async function Dashboard() {
             <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />
           )}
 
-          {/* ── PERFORMANCE ───────────────────────────────────────────── */}
-          {/* KPI strip */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <a href="/ytd" className="rounded-2xl card-lux p-4 flex flex-col gap-2 group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Portfolio</span>
-                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <p className="text-2xl font-black tabular-nums gradient-text"><AnimatedNumber value={d.totalValue} currency="SGD" /></p>
-              {d.valueChange !== null ? (
-                <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>
-                  {d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}
-                </p>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">USD/SGD {d.usdSgdRate.toFixed(4)}</p>
-              )}
-            </a>
-            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Health</span>
-              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}><AnimatedNumber value={d.health.overall} /></p>
-              <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
-            </div>
-            <a href="/portfolio" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${d.driftAlerts > 0 ? "border-amber-400/40" : "border-border hover:border-primary/30"}`}>
-              <span className="text-xs font-medium text-muted-foreground">Drift Alerts</span>
-              <p className={`text-xl font-black tabular-nums ${d.driftAlerts > 0 ? (d.hardBreaches > 0 ? "text-red-500" : "text-amber-500") : "text-green-500"}`}><AnimatedNumber value={d.driftAlerts} /></p>
-              <p className="text-[11px] text-muted-foreground">{d.driftAlerts === 0 ? "All on target" : `${d.hardBreaches}H / ${d.softBreaches}S breach`}</p>
-            </a>
-            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">DCA cash bank</span>
-              <p className="text-xl font-black tabular-nums text-emerald-500">{formatCurrency(d.cashBankBalance, "SGD")}</p>
-              <p className="text-[11px] text-muted-foreground">Unused cash carried to whole shares</p>
-            </div>
-          </div>
-
           {/* ── WHAT IS HELD ─────────────────────────────────────────── */}
           {d.hasBalance && (
             <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} />
           )}
-
-          {/* ── CYCLE INSTRUMENTS ────────────────────────────────────── */}
-          <CycleInstruments {...d.cycleInstruments} />
 
           {/* ── GOVERNANCE & COMPLIANCE ──────────────────────────────── */}
           {d.hasBalance && d.govAlignment && (
@@ -698,32 +635,6 @@ export default async function Dashboard() {
 
         {/* Right sidebar */}
         <div className="space-y-4 lg:sticky lg:top-4 lg:self-start reveal-stack">
-
-          {/* Allocation donut */}
-          <Link href="/portfolio" className="group block rounded-2xl card-lux p-5 relative overflow-hidden">
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Allocation</h2>
-              <span className="text-[11px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0">View →</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mb-3">Outer = actual · Inner = target</p>
-            <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD" />
-          </Link>
-
-          {/* Value history */}
-          {d.historyPoints.length >= 2 && (
-            <div className="rounded-2xl card-lux p-4">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value History</h2>
-                {d.valueChange !== null && (
-                  <span className={`text-[11px] font-bold tabular-nums ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    {d.valueChange >= 0 ? "+" : ""}{formatCurrency(d.valueChange, "SGD")}
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] text-muted-foreground mb-2">{d.historyPoints.length} snapshots</p>
-              <PortfolioHistoryChart data={d.historyPoints} />
-            </div>
-          )}
 
           {/* 2045 goal + contribution countdown */}
           <div className="grid grid-cols-2 gap-3">
@@ -751,19 +662,6 @@ export default async function Dashboard() {
             </div>
           </div>
 
-          {/* Shock buffer */}
-          {d.hasBalance && (
-            <BufferStatus
-              currentPct={d.cycleInstruments.sgov.currentPct}
-              targetLow={d.bufferTargetLow}
-              targetHigh={d.bufferTargetHigh}
-              monthsToBand={d.bufferMonthsToBand}
-              yieldPct={d.sgovYieldPct}
-              secYieldPct={d.sgovSecYieldPct}
-              monthlyContribution={d.monthlyContribution}
-              stale={d.sgovStale}
-            />
-          )}
 
           {/* Health methodology */}
           {d.hasBalance && (
