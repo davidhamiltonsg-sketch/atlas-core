@@ -585,7 +585,7 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
             </div>
 
             {/* mission telemetry strip */}
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mc-telemetry-grid mt-4 grid grid-cols-3 gap-2">
               <Telemetry mono={mono} label="STATUS" value={status[selected].toUpperCase()} color={statusColor(status[selected])} />
               <Telemetry mono={mono} label="PROGRESS" value={`${progress[selected] ?? 0}%`} color={C.blue} />
               <Telemetry mono={mono} label={copy.codenameLabel} value={selectedAgent.codename} color={C.dim} />

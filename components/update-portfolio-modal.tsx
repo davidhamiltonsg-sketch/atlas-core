@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useTransition } from "react"
+import { useEffect, useState, useRef, useTransition } from "react"
 import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw, ArrowUpCircle } from "lucide-react"
 import { updateHoldingsManually, extractFromScreenshot, applyExtractedHoldings } from "@/app/portfolio/actions"
 import { isInScope } from "@/lib/approved-alternatives"
@@ -39,6 +39,7 @@ interface UpdatePortfolioModalProps {
 }
 
 export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose" }: UpdatePortfolioModalProps) {
+  const closeRef = useRef<HTMLButtonElement>(null)
   const [mode, setMode] = useState<"choose" | "manual" | "screenshot" | "ibkr">(defaultMode)
 
   // Manual state
@@ -60,6 +61,13 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    closeRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
 
   // ── Manual ────────────────────────────────────────────────────────────────
 
@@ -197,20 +205,20 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="update-portfolio-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>
-            <h2 className="text-sm font-semibold">Update Portfolio Values</h2>
+            <h2 id="update-portfolio-title" className="text-sm font-semibold">Update Portfolio Values</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Sync from IBKR or enter manually</p>
           </div>
-          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors">
+          <button ref={closeRef} onClick={onClose} aria-label="Close portfolio update" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
 
           {/* Mode choose */}
           {mode === "choose" && (
@@ -349,13 +357,13 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
           {/* Manual input */}
           {mode === "manual" && (
             <div className="space-y-3">
-              <div className="grid grid-cols-[1fr_90px_90px] gap-2 text-[11px] font-medium text-muted-foreground px-1">
+              <div className="grid grid-cols-[minmax(0,1fr)_70px_70px] gap-2 px-1 text-[10px] font-medium text-muted-foreground sm:grid-cols-[1fr_90px_90px] sm:text-[11px]">
                 <span>Holding</span>
                 <span className="text-right">Units</span>
                 <span className="text-right">Price (USD)</span>
               </div>
               {holdings.map((h) => (
-                <div key={h.id} className="grid grid-cols-[1fr_90px_90px] gap-2 items-center">
+                <div key={h.id} className="grid grid-cols-[minmax(0,1fr)_70px_70px] items-center gap-2 sm:grid-cols-[1fr_90px_90px]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold">{h.ticker}</span>
                     <span className="text-[11px] text-muted-foreground truncate hidden sm:block">{h.name}</span>
@@ -453,7 +461,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 p-5 border-t border-border">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <button
             onClick={() => {
               if (mode !== "choose") { setMode("choose"); setIbkrState("idle") }

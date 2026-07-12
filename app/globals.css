@@ -1220,7 +1220,8 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
   content:"";position:fixed;inset:45% -10% -20%;pointer-events:none;opacity:.18;transform:perspective(500px) rotateX(64deg);transform-origin:center bottom;
   background-image:linear-gradient(rgba(36,195,242,.42) 1px,transparent 1px),linear-gradient(90deg,rgba(36,195,242,.34) 1px,transparent 1px);background-size:64px 44px;mask-image:linear-gradient(to top,#000,transparent 86%);
 }
-.command-shell .atlas-sidebar,.command-shell .atlas-topbar,.command-stage { position:relative;z-index:1; }
+.command-shell .atlas-sidebar { z-index:40; }
+.command-shell .atlas-topbar,.command-stage { position:relative;z-index:1; }
 .command-shell .atlas-sidebar { background:color-mix(in srgb,var(--deck-rail) 94%,transparent)!important;border-color:var(--deck-line)!important;box-shadow:24px 0 80px rgba(0,0,0,.28)!important; }
 .command-shell .atlas-sidebar nav a { border-radius:2px!important;color:var(--deck-soft)!important;min-height:44px; }
 .command-shell .atlas-sidebar nav a[aria-current="page"] { color:var(--deck-text)!important;background:linear-gradient(90deg,color-mix(in srgb,var(--deck-accent) 17%,transparent),transparent)!important;box-shadow:inset 2px 0 var(--deck-accent); }
@@ -1342,3 +1343,133 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
 .mc-console section,.mc-console aside>div{border-radius:16px!important;box-shadow:0 20px 54px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)!important}.mc-console button{border-radius:10px!important;min-height:44px}.mc-console .mc-tile{border-radius:13px!important}.mc-console [class*="text-[9px]"],.mc-console [class*="text-[10px]"]{font-size:11px!important}.mc-console [class*="text-[11px]"]{font-size:12px!important}.mc-console [class*="text-[12px]"],.mc-console .text-xs{font-size:13px!important}.mc-console table td{font-size:12px!important}.mc-console table th{font-size:11px!important}.mc-console p{line-height:1.55}
 .command-shell .atlas-command-band{border-radius:18px!important;padding:24px 26px!important;box-shadow:0 22px 58px rgba(0,0,0,.2)!important}.command-shell .deck-ledger{border-radius:18px!important;box-shadow:0 24px 62px rgba(0,0,0,.2)}.portfolio-deck>.grid>div>.grid:first-child>div,.portfolio-deck .rounded-xl.border.bg-card{border-radius:15px!important}.settings-deck>.card-lux{border-radius:18px!important}.settings-deck input{border-radius:10px!important}.settings-deck button[type="submit"]{border-radius:10px!important}.governance-hierarchy li,.math-grid article,.governance-allocation article,.rule-grid article{border-radius:14px!important}.governance-hierarchy li span,.rule-grid dd,.math-grid p{font-size:13px!important}.governance-allocation article small,.rule-category span{font-size:11px!important}.reconciliation-table th,.reconciliation-table td{font-size:12px!important}.reconciliation-list summary div span,.report-decision small,.reconciliation-card header span{font-size:12px!important}
 @media(max-width:760px){.mc-console>div{display:flex!important;flex-direction:column}.mc-console>div>main{order:1}.mc-console>div>aside:last-child{order:2}.mc-console>div>aside:first-child{order:3}.reconciliation-table table,.allocation-ledger table{min-width:620px}.reconciliation-table::after{content:"Swipe to inspect all contributors →";display:block;position:sticky;left:0;padding-top:8px;color:var(--deck-soft);font-size:11px}}
+
+/* ─── Mobile command surface · 375–430px production contract ─────────────── */
+@media (max-width: 640px) {
+  html,body{max-width:100%;overflow-x:hidden}
+  .command-shell{font-size:14px}
+  .command-shell::after{opacity:.08}
+  .command-stage{padding:12px 12px calc(92px + env(safe-area-inset-bottom))!important;overflow-x:hidden}
+  .command-stage>div{max-width:100%;min-width:0}
+
+  /* Chrome: keep the portfolio switch usable without crushing the title. */
+  .command-shell .atlas-topbar{height:64px!important;gap:8px;padding:8px 10px!important}
+  .command-shell .atlas-topbar h1{font-size:18px!important;line-height:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .command-shell .atlas-topbar p{display:none}
+  .command-shell .atlas-topbar>div:first-of-type{min-width:0}
+  .command-shell .atlas-topbar form:has(select){max-width:112px}
+  .command-shell .atlas-topbar select{width:112px;min-width:0;height:40px;padding-inline:8px;font-size:10px;text-overflow:ellipsis}
+  .command-shell .atlas-topbar button{min-width:40px;min-height:40px}
+  .command-shell .atlas-sidebar{width:min(88vw,320px)!important;padding-bottom:calc(12px + env(safe-area-inset-bottom))!important}
+  .command-shell .atlas-sidebar nav a{min-height:48px!important;font-size:14px!important}
+
+  /* Bottom rail is thumb-safe and never covers content. */
+  .command-shell .atlas-mobile-nav{inset-inline:8px;bottom:max(8px,env(safe-area-inset-bottom));gap:2px;padding:5px;border-radius:18px!important;box-shadow:0 18px 55px rgba(0,0,0,.55)!important}
+  .command-shell .atlas-mobile-nav a{min-width:0;min-height:54px;padding:5px 2px;border-radius:13px!important}
+  .command-shell .atlas-mobile-nav span{max-width:100%;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* Cockpit: one instrument per row, readable financial values. */
+  .command-shell .atlas-flightdeck{margin-bottom:14px!important;border-radius:18px!important}
+  .command-shell .atlas-flightdeck-head{padding:22px 19px 18px!important;gap:14px}
+  .command-shell .atlas-flightdeck-head h2{font-size:36px!important;line-height:.98!important}
+  .command-shell .atlas-flightdeck-head>div:first-child>p:last-child{font-size:12px;line-height:1.55}
+  .atlas-freshness{white-space:normal;font-size:10px}
+  .command-shell .atlas-value-bay,.command-shell .atlas-chart-bay,.command-shell .atlas-orbit-bay{padding:21px 18px!important}
+  .atlas-total{font-size:38px!important;overflow-wrap:anywhere}
+  .atlas-value-stats{grid-template-columns:1fr!important;gap:0}
+  .atlas-value-stats>div{display:grid;grid-template-columns:1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid var(--deck-line)}
+  .atlas-value-stats>div:last-child{border-bottom:0}
+  .atlas-value-stats b{margin-top:0!important;text-align:right;overflow-wrap:anywhere}
+  .atlas-command-line{padding:15px!important}
+  .atlas-chart-bay .recharts-responsive-container{min-height:220px!important;height:220px!important}
+  .atlas-orbit-bay .recharts-responsive-container{min-height:235px!important;height:235px!important}
+  .atlas-flightdeck-foot{grid-template-columns:1fr!important}
+  .atlas-flightdeck-foot div{padding:13px 18px!important;border-right:0!important;border-bottom:1px solid var(--deck-line)}
+  .atlas-flightdeck-foot div:last-child{border-bottom:0}
+  .command-shell .atlas-command-band{display:block!important;padding:20px!important;border-radius:16px!important}
+  .command-shell .atlas-command-band a,.command-shell .atlas-command-band button{display:inline-flex;margin-top:14px;min-height:42px;align-items:center}
+
+  /* Page heroes and metric tiles. */
+  .portfolio-deck-hero,.settings-hero,.governance-hero,.report-hero{padding:22px 18px!important;border-radius:18px!important;gap:22px!important}
+  .portfolio-deck-hero h1,.settings-hero h1,.report-hero h1{font-size:34px!important;line-height:1!important}
+  .governance-hero h1{font-size:38px!important;line-height:.98!important}
+  .portfolio-deck-hero dl,.report-hero dl{width:100%}
+  .portfolio-deck-hero dl div,.report-hero dl div{padding:13px 0!important}
+  .constitution-seal{width:132px!important;height:132px!important;justify-self:center}
+  .governance-actions{display:grid!important;width:100%}
+  .governance-actions a{width:100%;justify-content:center;text-align:center}
+  .governance-hierarchy,.governance-math,.governance-allocation{padding:20px 16px!important}
+  .governance-hierarchy ol{gap:9px}
+  .governance-hierarchy li{min-height:0;padding:16px}
+  .math-grid article,.rule-grid article{padding:17px}
+  .math-grid code{font-size:14px;overflow-wrap:anywhere}
+  .rule-register>header,.rule-register>div{padding:20px 16px!important}
+  .rule-category{align-items:flex-start}.rule-category span{white-space:nowrap}
+  .rule-grid dl div{gap:5px}
+  .review-rhythm article{padding:22px 18px}
+
+  /* Portfolio and settings controls must never stay in desktop columns. */
+  .portfolio-deck>.grid{grid-template-columns:1fr!important}
+  .portfolio-deck>.grid>div>.grid:first-child{grid-template-columns:1fr 1fr!important}
+  .portfolio-deck .sticky{position:static!important;top:auto!important}
+  .portfolio-deck .px-5{padding-left:16px!important;padding-right:16px!important}
+  .settings-deck{width:100%}
+  .settings-flow{padding:14px!important}
+  .settings-deck>.card-lux>div{padding-left:17px!important;padding-right:17px!important}
+  .settings-deck input,.settings-deck select{width:100%;font-size:16px!important}
+
+  /* Risk and forecast: keep cards readable, charts full width. */
+  .risk-deck>div:first-child,.forecast-deck>div:first-child{padding:18px!important;border-radius:17px}
+  .risk-deck .grid-cols-2,.forecast-deck .grid-cols-2{grid-template-columns:1fr!important}
+  .risk-deck .sm\:grid-cols-4,.forecast-deck .sm\:grid-cols-4{grid-template-columns:1fr 1fr!important}
+  .risk-deck .p-5,.forecast-deck .p-5{padding:17px!important}
+  .forecast-deck .recharts-responsive-container{height:270px!important;min-height:270px!important}
+  .forecast-deck canvas{max-width:100%!important;height:auto!important}
+  .forecast-deck [role="tablist"]{display:grid!important;grid-template-columns:1fr!important;gap:6px}
+  .forecast-deck input[type="number"]{font-size:16px!important;min-width:0}
+
+  /* Mission Control becomes a vertical report, not three squeezed columns. */
+  .mc-console{border-radius:16px!important;overflow:visible!important;min-height:0!important}
+  .mc-console>header{padding:13px!important;align-items:flex-start!important}
+  .mc-console>header h1{font-size:18px!important;line-height:1.05!important}
+  .mc-console>header>div:last-child{display:none!important}
+  .mc-console>div{display:flex!important;flex-direction:column!important;padding:10px!important;gap:12px!important}
+  .mc-console>div>main{order:1;width:100%}.mc-console>div>aside:last-child{order:2;width:100%}.mc-console>div>aside:first-child{order:3;width:100%}
+  .mc-console section,.mc-console aside>div{border-radius:14px!important;padding:15px!important}
+  .mc-telemetry-grid{grid-template-columns:1fr 1fr!important}
+  .mc-console .mc-tile{min-height:58px}
+  .mc-console>div>aside:first-child>div:nth-child(2){display:grid!important;grid-template-columns:1fr!important}
+  .mc-console .min-h-\[420px\]{min-height:280px!important}
+
+  /* Tables: explicit horizontal affordance, sticky identity column. */
+  .deck-ledger-scroll,.allocation-ledger,.reconciliation-table,.risk-deck .overflow-x-auto,.forecast-deck .overflow-x-auto,.mc-console .overflow-x-auto{max-width:100%;overflow-x:auto!important;overscroll-behavior-inline:contain;scrollbar-width:thin}
+  .deck-ledger table,.allocation-ledger table,.reconciliation-table table,.risk-deck table,.forecast-deck table,.mc-console table{min-width:650px!important}
+  .deck-ledger th:first-child,.deck-ledger td:first-child,.allocation-ledger th:first-child,.allocation-ledger td:first-child,.reconciliation-table th:first-child,.reconciliation-table td:first-child,.risk-deck th:first-child,.risk-deck td:first-child,.forecast-deck th:first-child,.forecast-deck td:first-child,.mc-console th:first-child,.mc-console td:first-child{position:sticky;left:0;z-index:2;background:var(--deck-surface);box-shadow:8px 0 14px rgba(0,0,0,.18)}
+  .deck-ledger-head,.allocation-ledger header,.reconciliation-card header{padding:20px 17px!important}
+  .deck-ledger-head{align-items:flex-start;flex-direction:column}
+  .report-decision{grid-template-columns:1fr!important}.report-decision article{padding:22px 18px!important}.report-matrices{gap:14px}
+  .reconciliation-list summary{padding:15px 17px}.reconciliation-table{padding:0 12px 15px}
+
+  /* Modals and empty states fit above the mobile keyboard. */
+  [role="dialog"]{max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 24px)!important;margin:8px!important}
+  [role="dialog"] input,[role="dialog"] select,[role="dialog"] textarea{font-size:16px!important}
+}
+
+@media (max-width: 390px) {
+  .mc-telemetry-grid{grid-template-columns:1fr!important}
+  .command-shell .atlas-topbar form:has(select){max-width:98px}.command-shell .atlas-topbar select{width:98px}
+  .portfolio-deck>.grid>div>.grid:first-child{grid-template-columns:1fr!important}
+  .risk-deck .sm\:grid-cols-4,.forecast-deck .sm\:grid-cols-4{grid-template-columns:1fr!important}
+  .governance-hero h1{font-size:34px!important}
+}
+
+.mobile-reconciliation-proof{display:none}
+@media(max-width:640px){
+  .command-shell .atlas-sidebar{position:fixed!important;inset-block:0;left:0;z-index:40;transform:translateX(-100%)!important}
+  .command-shell .atlas-sidebar.translate-x-0{transform:translateX(0)!important}
+  .mobile-reconciliation-proof{display:flex;justify-content:space-between;gap:12px;margin:0 16px 10px;padding:10px 12px;border:1px solid var(--deck-line);border-radius:10px;background:var(--deck-bg);color:var(--deck-soft);font:500 10px var(--font-data-face),monospace}
+  .risk-deck .flex.items-start.justify-between{flex-direction:column;align-items:flex-start}
+  .settings-deck .flex.items-center.justify-between.py-1{align-items:flex-start;flex-direction:column;gap:5px}
+  .rule-category{flex-wrap:wrap}.rule-category span{margin-left:0;width:100%}
+  .chart-tooltip{width:min(220px,calc(100vw - 52px))!important;min-width:0!important;max-width:calc(100vw - 52px)!important}
+}

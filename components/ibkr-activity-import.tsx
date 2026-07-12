@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { useEffect, useRef, useState, useTransition, useMemo } from "react"
 import { X, RefreshCw, Check, AlertCircle, ArrowUpCircle, Loader2, TrendingUp, Info, ShieldAlert } from "lucide-react"
 import { isInScope } from "@/lib/approved-alternatives"
 
@@ -55,6 +55,7 @@ function formatFlexDate(s: string) {
 }
 
 export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportProps) {
+  const closeRef = useRef<HTMLButtonElement>(null)
   const [state, setState] = useState<"idle" | "fetching" | "preview" | "error">("idle")
   const [executions, setExecutions] = useState<Execution[]>([])
   const [dividends, setDividends] = useState<Dividend[]>([])
@@ -68,6 +69,13 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set())
   const [selectedDivs, setSelectedDivs] = useState<Set<string>>(new Set())
   const [behaviourAcknowledged, setBehaviourAcknowledged] = useState(false)
+
+  useEffect(() => {
+    closeRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
 
   async function handleFetch() {
     setState("fetching")
@@ -146,22 +154,22 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-xl rounded-2xl border border-border bg-card shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="ibkr-activity-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>
-            <h2 className="text-sm font-semibold">Import Activity from IBKR</h2>
+            <h2 id="ibkr-activity-title" className="text-sm font-semibold">Import Activity from IBKR</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Pull executed trades and dividends from your FLEX activity report
             </p>
           </div>
-          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors">
+          <button ref={closeRef} onClick={onClose} aria-label="Close IBKR activity import" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5 max-h-[70vh] overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
 
           {state === "idle" && (
             <div className="flex flex-col items-center gap-4 py-8">
@@ -435,7 +443,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
 
         {/* Footer */}
         {state === "preview" && !importResult && (
-          <div className="flex items-center justify-between gap-3 p-5 border-t border-border">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             <button
               onClick={onClose}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"

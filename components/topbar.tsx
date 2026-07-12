@@ -26,7 +26,7 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
     <header className="atlas-topbar flex h-[72px] shrink-0 items-center gap-4 border-b border-border bg-card/70 backdrop-blur-xl px-4 lg:px-7">
       <button
         onClick={onMenuClick}
-        className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors"
+        className="lg:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors"
         aria-label="Open menu"
       >
         <Menu className="h-4 w-4" />
@@ -71,7 +71,7 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
         <form action={logoutAction}>
           <button
             type="submit"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             title="Sign out" aria-label="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />

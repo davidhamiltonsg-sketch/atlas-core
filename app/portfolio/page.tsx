@@ -15,6 +15,7 @@ import { applyBitcoinSleeve, BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-m
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { getUsdSgdRate } from "@/lib/holdings-sync"
+import { getConstitution } from "@/lib/constitutions"
 
 // Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
 export const maxDuration = 60
@@ -83,6 +84,7 @@ export default async function Portfolio() {
   if (!session) redirect("/login")
   const active = await activePortfolioContext(session)
   const isSbr = active.constitutionId === "silicon-brick-road"
+  const targetSleeveCount = getConstitution(active.constitutionId).funds.length
   const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
 
   const snapshotDate = holdings[0]?.latestSnapshot
@@ -139,7 +141,7 @@ export default async function Portfolio() {
       <div className="portfolio-deck">
       <section className="portfolio-deck-hero">
         <div><p>LIVE POSITION LEDGER</p><h1>{hasBalance ? "What you own, without the noise." : "Your governed portfolio is ready."}</h1><span>{hasBalance ? "Target holdings lead. Historic and migrating instruments remain in the audit trail without crowding today’s portfolio." : "The target architecture is in place. Your first confirmed IBKR snapshot will activate performance, basis and drift controls."}</span></div>
-        <dl><div><dt>Portfolio value</dt><dd>{formatCurrency(totalValue,"SGD")}</dd></div><div><dt>Target sleeves</dt><dd>{displaySlots.length}</dd></div><div><dt>Governance</dt><dd className={hardBreaches ? "down" : "up"}>{hardBreaches ? `${hardBreaches} review` : "Clear"}</dd></div></dl>
+        <dl><div><dt>Portfolio value</dt><dd>{formatCurrency(totalValue,"SGD")}</dd></div><div><dt>Target sleeves</dt><dd>{targetSleeveCount}</dd></div><div><dt>Governance</dt><dd className={hardBreaches ? "down" : "up"}>{hardBreaches ? `${hardBreaches} review` : "Clear"}</dd></div></dl>
       </section>
 
       {/* Toolbar */}
@@ -330,7 +332,7 @@ export default async function Portfolio() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
                 <h2 className="text-sm font-semibold">Holdings</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Hover a row and click the pencil icon to edit inline</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Use the edit control on a row to update units and price</p>
               </div>
               <span className="text-xs text-muted-foreground">Snapshot: {snapshotDate}</span>
             </div>

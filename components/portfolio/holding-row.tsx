@@ -224,13 +224,15 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       </div>
 
       {/* Mobile row */}
-      <div className="col-span-2 flex items-center justify-between md:hidden text-xs mt-1">
-        <span className="font-semibold">S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-        <div className="flex items-center gap-2">
+      <div className="col-span-2 grid grid-cols-2 gap-2 md:hidden text-xs mt-2">
+        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Market value</span><strong>S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Units · price</span><strong>{h.latestSnapshot?.units?.toLocaleString("en-SG") ?? "—"} · ${h.latestSnapshot?.price?.toFixed(2) ?? "—"}</strong></div>
+        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Target</span><strong>{h.targetPct.toFixed(1)}%</strong></div>
+        <div className="flex items-center justify-between gap-2">
           <span className={`font-bold ${driftColor}`}>
             {h.actualPct.toFixed(1)}% · {h.drift >= 0 ? "+" : ""}{h.drift.toFixed(1)}% drift
           </span>
-          <button onClick={() => setEditing(!editing)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
+          <button onClick={() => setEditing(!editing)} aria-label={`Edit ${h.ticker} units and price`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
             <Pencil className="h-3 w-3" />
           </button>
         </div>
@@ -243,22 +245,22 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
             <div className="flex flex-col gap-0.5">
               <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Units</label>
               <input type="number" value={units} onChange={e => setUnits(e.target.value)}
-                className="w-24 rounded border border-border bg-card px-2 py-1 text-xs tabular-nums"
+                className="h-11 w-28 rounded border border-border bg-card px-2 text-base tabular-nums"
                 step="0.01" min="0" />
             </div>
             <div className="flex flex-col gap-0.5">
               <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Price $</label>
               <input type="number" value={price} onChange={e => setPrice(e.target.value)}
-                className="w-28 rounded border border-border bg-card px-2 py-1 text-xs tabular-nums"
+                className="h-11 w-32 rounded border border-border bg-card px-2 text-base tabular-nums"
                 step="0.01" min="0" />
             </div>
             <div className="flex items-end gap-1">
               <button onClick={handleSave} disabled={isPending}
-                className="flex items-center gap-1 rounded bg-green-500/15 px-2.5 py-1 text-xs font-semibold text-green-600 hover:bg-green-500/25 disabled:opacity-50">
+                className="flex h-11 items-center gap-1 rounded bg-green-500/15 px-3 text-xs font-semibold text-green-600 hover:bg-green-500/25 disabled:opacity-50">
                 <Check className="h-3.5 w-3.5" /> Save
               </button>
               <button onClick={handleCancel}
-                className="flex items-center gap-1 rounded bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent">
+                className="flex h-11 items-center gap-1 rounded bg-muted px-3 text-xs font-semibold text-muted-foreground hover:bg-accent">
                 <X className="h-3.5 w-3.5" /> Cancel
               </button>
             </div>

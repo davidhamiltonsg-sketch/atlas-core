@@ -32,7 +32,7 @@ export function RefreshLookThroughButton({ lastUpdated, compact = false }: { las
       <button
         onClick={handleRefresh}
         disabled={isPending}
-        className={`no-print inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${compact ? "border-cyan-400/30 bg-cyan-400/[0.07] text-cyan-300 hover:bg-cyan-400/10" : "border-violet-500/30 bg-violet-500/[0.06] text-violet-500 hover:bg-violet-500/10"}`}
+        className={`no-print inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-60 ${compact ? "border-cyan-400/30 bg-cyan-400/[0.07] text-cyan-300 hover:bg-cyan-400/10" : "border-violet-500/30 bg-violet-500/[0.06] text-violet-500 hover:bg-violet-500/10"}`}
       >
         <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
         {isPending ? "Checking sources…" : compact ? "Refresh source data" : "Refresh Holdings Data"}

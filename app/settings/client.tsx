@@ -106,7 +106,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
       {/* Contribution Settings */}
       <Section title={`${portfolioName} contribution and forecast model`} icon={TrendingUp}>
         <form onSubmit={handleContrib} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Monthly contribution (SGD)</label>
               <div className="relative">

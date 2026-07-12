@@ -25,7 +25,7 @@ export function PortfolioUpdateButton({ holdings, defaultMode = "choose", label 
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-lg border border-border bg-card hover:bg-accent px-3 py-1.5 text-xs font-medium text-foreground transition-colors"
+        className="flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-card hover:bg-accent px-3 py-2 text-xs font-medium text-foreground transition-colors"
       >
         <RefreshCw className="h-3.5 w-3.5" />
         {label}
