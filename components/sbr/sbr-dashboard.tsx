@@ -186,6 +186,10 @@ async function getSbrData(userId: string) {
 export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; name: string; isAdmin: boolean }) {
   const d = await getSbrData(userId)
   const hasBalance = d.totalValue > 0
+  const positiveRows=d.holdingsRows.filter(row=>row.value>0)
+  const valuationComplete=positiveRows.every(row=>row.unrealisedSgd!==null)
+  const totalUnrealised=valuationComplete?positiveRows.reduce((sum,row)=>sum+(row.unrealisedSgd??0),0):null
+  const totalCostBasis=valuationComplete?positiveRows.reduce((sum,row)=>sum+row.value-(row.unrealisedSgd??0),0):null
 
   // Convert SBR health dimensions to SealDimension format (weighted points)
   const sealDimensions: SealDimension[] = [
@@ -356,14 +360,14 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 : <p className="text-[11px] text-muted-foreground">SGD · base currency</p>}
             </a>
             <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Health Score</span>
-              <p className={`text-xl font-black tabular-nums ${d.health.overall >= 80 ? "text-green-500" : d.health.overall >= 65 ? "text-amber-500" : "text-red-500"}`}><AnimatedNumber value={d.health.overall} /></p>
-              <p className="text-[11px] text-muted-foreground">{d.health.overallLabel}</p>
+              <span className="text-xs font-medium text-muted-foreground">Cost basis</span>
+              <p className="text-xl font-black tabular-nums">{totalCostBasis!==null?formatCurrency(totalCostBasis,"SGD"):"—"}</p>
+              <p className="text-[11px] text-muted-foreground">{valuationComplete?"IBKR open positions":"Needs reconciliation"}</p>
             </div>
             <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">DCA cash bank</span>
-              <p className="text-xl font-black tabular-nums text-sky-400">{formatCurrency(d.cashBankBalance, "SGD")}</p>
-              <p className="text-[11px] text-muted-foreground">Carries forward to whole shares</p>
+              <span className="text-xs font-medium text-muted-foreground">Unrealised P&amp;L</span>
+              <p className={`text-xl font-black tabular-nums ${totalUnrealised===null?"text-muted-foreground":totalUnrealised>=0?"text-green-500":"text-red-500"}`}>{totalUnrealised===null?"—":`${totalUnrealised>=0?"+":""}${formatCurrency(totalUnrealised,"SGD")}`}</p>
+              <p className="text-[11px] text-muted-foreground">{valuationComplete?"Unrealised only":"Needs reconciliation"}</p>
             </div>
             <a href="/governance" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${
               d.govAlignment.overall === "breach" ? "border-red-500/30" : d.govAlignment.overall === "watch" ? "border-amber-400/40" : "border-border hover:border-primary/30"

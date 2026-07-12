@@ -112,7 +112,7 @@ export function AllocationDonut({ data, totalValue, currency = "SGD", subLabel }
         {/* Centre label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Total</span>
-          <span className="text-xl font-black tabular-nums leading-tight gradient-text">
+          <span className="text-xl font-black tabular-nums leading-tight text-foreground">
             <AnimatedNumber value={totalValue} currency={currency} />
           </span>
           <span className="text-[10px] text-muted-foreground mt-0.5">{subLabel ?? `${currency} · Live`}</span>

@@ -1009,3 +1009,130 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
 @media (prefers-reduced-motion: reduce) {
   .mc-live-dot, .mc-ping, .mc-tile-active, .mc-cursor { animation: none; }
 }
+
+/* ─── Portfolio Command Deck 2026 ───────────────────────────────────────────
+   One authenticated visual system for Atlas and SBR. The portfolio changes
+   spectral accent; the instrument architecture, hierarchy and typography do not. */
+.command-shell[data-theme="atlas-core"] {
+  --deck-bg: #07101c; --deck-rail: #050b14; --deck-surface: #0b1522;
+  --deck-surface-hi: #101b2b; --deck-line: #213044; --deck-line-hi: #3c5270;
+  --deck-accent: #8567ff; --deck-accent-2: #c25cff; --deck-signal: #52e3bd;
+  --deck-soft: #8da4bc; --deck-text: #e7eef7; --deck-warn: #ffb454;
+}
+.command-shell[data-theme="sbr"] {
+  --deck-bg: #061219; --deck-rail: #040d12; --deck-surface: #0a1921;
+  --deck-surface-hi: #0d202a; --deck-line: #1d3843; --deck-line-hi: #315966;
+  --deck-accent: #28b7ec; --deck-accent-2: #45e0c4; --deck-signal: #45e0c4;
+  --deck-soft: #88aab5; --deck-text: #e5f4f7; --deck-warn: #ffbd62;
+}
+.command-shell {
+  background: var(--deck-bg) !important; color: var(--deck-text) !important;
+  font-family: var(--font-geist), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.command-shell::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(90deg, transparent 0 23%, color-mix(in srgb,var(--deck-line) 22%,transparent) 23% 23.06%, transparent 23.06%),
+    radial-gradient(70% 46% at 78% -8%, color-mix(in srgb,var(--deck-accent) 12%,transparent), transparent 68%);
+}
+.command-shell .atlas-sidebar {
+  width: 314px !important; background: var(--deck-rail) !important;
+  border-color: var(--deck-line) !important; backdrop-filter: none !important;
+  box-shadow: 20px 0 55px rgba(0,0,0,.16); z-index: 4;
+}
+.command-shell .atlas-sidebar > div:first-of-type { height: 112px; padding-inline: 22px; border-color: var(--deck-line); }
+.command-shell .atlas-sidebar nav { padding: 22px 0; }
+.command-shell .atlas-sidebar nav > div { margin: 0 0 12px; }
+.command-shell .atlas-sidebar nav p {
+  padding: 10px 24px 7px; color: #607489 !important; font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: .16em;
+}
+.command-shell .atlas-sidebar nav a {
+  min-height: 48px; border-radius: 0 !important; padding: 0 24px; gap: 16px;
+  color: var(--deck-soft) !important; font-size: 15px; font-weight: 520;
+  background: transparent !important; border-left: 2px solid transparent;
+}
+.command-shell .atlas-sidebar nav a:hover { color: var(--deck-text) !important; background: color-mix(in srgb,var(--deck-accent) 7%,transparent) !important; }
+.command-shell .atlas-sidebar nav a:has(span.absolute) {
+  color: var(--deck-text) !important; border-left-color: var(--deck-accent);
+  background: linear-gradient(90deg,color-mix(in srgb,var(--deck-accent) 18%,transparent),transparent 88%) !important;
+}
+.command-shell .atlas-sidebar nav a span.absolute { display:none; }
+.command-shell .atlas-sidebar nav a svg { color: var(--deck-accent) !important; }
+.command-shell .atlas-sidebar > div:last-child { border-color: var(--deck-line); min-height: 72px; padding-inline: 20px; }
+.command-shell .atlas-topbar {
+  height: 96px !important; background: color-mix(in srgb,var(--deck-bg) 94%,transparent) !important;
+  border-color: var(--deck-line) !important; backdrop-filter: blur(18px); padding-inline: 34px;
+}
+.command-shell .atlas-topbar h1 { color: var(--deck-text); font-size: 28px; font-weight: 680; letter-spacing: -.035em; }
+.command-shell .atlas-topbar p { color: var(--deck-soft); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+.command-shell .atlas-topbar select {
+  height: 44px; min-width: 160px; border-radius: 8px; color: var(--deck-text);
+  background: var(--deck-rail); border-color: var(--deck-line);
+}
+.command-stage { position: relative; z-index: 1; background: transparent !important; }
+.command-shell main::before,.command-shell main::after { display:none !important; }
+
+/* Quiet instrument panels replace the old glass-card stack. */
+.command-shell .card-lux,
+.command-shell .card-elevated,
+.command-shell .ring-hero,
+.command-shell main .bg-card\/75,
+.command-shell main .bg-card\/50 {
+  background: var(--deck-surface) !important; border: 1px solid var(--deck-line) !important;
+  border-radius: 8px !important; box-shadow: none !important; backdrop-filter: none !important;
+}
+.command-shell .card-lux:hover,.command-shell .card-elevated:hover {
+  border-color: var(--deck-line-hi) !important; transform: translateY(-1px);
+  background: var(--deck-surface-hi) !important;
+}
+.command-shell .gradient-text { color: var(--deck-text) !important; background: none !important; -webkit-text-fill-color: currentColor !important; }
+.command-shell .text-primary { color: var(--deck-accent) !important; }
+.command-shell .bg-primary { background: var(--deck-accent) !important; }
+.command-shell .ph-eyebrow,.command-shell .atlas-kicker,
+.command-shell h3.text-xs.font-bold.uppercase {
+  color: var(--deck-soft) !important; font-family: var(--font-ibm-plex-mono), monospace;
+  letter-spacing: .16em !important; font-size: 10px !important;
+}
+
+/* Atlas flight deck: square command bays, no luxury-card remnants. */
+.command-shell .atlas-flightdeck {
+  border-radius: 8px !important; border-color: var(--deck-line) !important;
+  background: var(--deck-surface) !important; box-shadow: 0 28px 70px rgba(0,0,0,.22);
+}
+.command-shell .atlas-flightdeck-head { background: linear-gradient(110deg,color-mix(in srgb,var(--deck-accent) 10%,var(--deck-surface)),var(--deck-surface)); border-color: var(--deck-line); }
+.command-shell .atlas-flightdeck-head h2 { font-family: var(--font-geist),sans-serif; font-size: clamp(34px,4vw,62px); letter-spacing: -.055em; }
+.command-shell .atlas-flightdeck-grid { border-color: var(--deck-line); }
+.command-shell .atlas-value-bay,.command-shell .atlas-chart-bay,.command-shell .atlas-orbit-bay { border-color: var(--deck-line) !important; background: transparent !important; }
+.command-shell .atlas-chart-bay .recharts-responsive-container { min-height: 260px !important; }
+.command-shell .atlas-total { color: var(--deck-text); }
+.command-shell .atlas-command-line { border-radius: 0; border-color: color-mix(in srgb,var(--deck-accent) 52%,var(--deck-line)); background: color-mix(in srgb,var(--deck-accent) 7%,var(--deck-bg)); }
+.command-shell .atlas-command-line span,.command-shell .atlas-panel-title span { color: var(--deck-soft); font-family: var(--font-ibm-plex-mono),monospace; letter-spacing:.14em; }
+.command-shell .atlas-flightdeck-foot { border-color: var(--deck-line); background: var(--deck-rail); }
+
+/* Tables read as position ledgers, not SaaS cards. */
+.command-shell table { border-collapse: collapse; }
+.command-shell thead { background: var(--deck-rail) !important; }
+.command-shell th { color: var(--deck-soft) !important; font-family: var(--font-ibm-plex-mono),monospace; letter-spacing: .12em; text-transform: uppercase; font-size: 10px !important; }
+.command-shell tr { border-color: var(--deck-line) !important; }
+.command-shell tbody tr:hover { background: color-mix(in srgb,var(--deck-accent) 5%,transparent) !important; }
+
+/* SBR inherits architecture; cyan is identity, not a second visual system. */
+.command-shell[data-theme="sbr"] .ring-hero { border-color: color-mix(in srgb,var(--deck-accent) 52%,var(--deck-line)) !important; }
+.command-shell[data-theme="sbr"] .text-sky-400,.command-shell[data-theme="sbr"] .text-sky-500 { color: var(--deck-accent) !important; }
+.command-shell[data-theme="sbr"] .border-sky-500\/30,.command-shell[data-theme="sbr"] .border-sky-500\/40 { border-color: color-mix(in srgb,var(--deck-accent) 38%,var(--deck-line)) !important; }
+
+.command-shell .atlas-mobile-nav { background: color-mix(in srgb,var(--deck-rail) 96%,transparent) !important; border-color:var(--deck-line) !important; border-radius:10px !important; }
+.command-shell .atlas-mobile-nav a { color:var(--deck-soft); }
+.command-shell .atlas-mobile-nav svg { color:var(--deck-accent); }
+@media (max-width:1023px) {
+  .command-shell::before { display:none; }
+  .command-shell .atlas-sidebar { width:min(88vw,314px) !important; }
+  .command-shell .atlas-topbar { height:72px !important; padding-inline:16px; }
+  .command-shell .atlas-topbar h1 { font-size:20px; }
+  .command-stage { padding-top:16px !important; }
+  .command-shell .atlas-flightdeck-head h2 { font-size:36px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .command-shell * { scroll-behavior:auto !important; }
+}

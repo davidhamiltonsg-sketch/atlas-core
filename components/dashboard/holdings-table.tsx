@@ -98,7 +98,7 @@ function ThisMonth({ tm, currency }: { tm: HoldingRow["thisMonth"]; currency: st
 // gain, position within its band, governance status, and this month's action.
 export function HoldingsTable({ positions, totalValue, priceStale = false, contributionCurrency = "USD", plainEnglish = false }: { positions: HoldingRow[]; totalValue: number; priceStale?: boolean; contributionCurrency?: string; plainEnglish?: boolean }) {
   const totalUnreal = positions.reduce((s, p) => s + (p.unrealisedSgd ?? 0), 0)
-  const hasAnyCost = positions.some(p => p.unrealisedSgd !== null)
+  const valuationComplete = positions.filter(p=>p.value>0).every(p => p.unrealisedSgd !== null)
   // Plain-English column wording for Silicon Brick Road; institutional wording for Atlas Core.
   const L = plainEnglish
     ? { title: "Your Funds", subtitle: "What you hold, how it's doing, and what to buy this month", unreal: "Paper gain/loss", band: "Where it sits", footer: "and this month's plan" }
@@ -192,8 +192,8 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
               <td />
               <td />
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalValue, "SGD")}</td>
-              <td className={`px-3 py-3 text-right tabular-nums ${!hasAnyCost ? "text-muted-foreground" : totalUnreal >= 0 ? "text-green-500" : "text-red-500"}`}>
-                {hasAnyCost ? `${totalUnreal >= 0 ? "+" : ""}${formatCurrency(totalUnreal, "SGD")}` : "—"}
+              <td className={`px-3 py-3 text-right tabular-nums ${!valuationComplete ? "text-muted-foreground" : totalUnreal >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {valuationComplete ? `${totalUnreal >= 0 ? "+" : ""}${formatCurrency(totalUnreal, "SGD")}` : "Needs reconciliation"}
               </td>
               <td colSpan={3} />
             </tr>
@@ -201,7 +201,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
         </table>
       </div>
       <div className="px-5 py-2.5 border-t border-border bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{positions.length} {plainEnglish ? "fund" : "holding"}{positions.length !== 1 ? "s" : ""} · gain from your trade log · {L.footer}</span>
+        <span>{positions.length} {plainEnglish ? "fund" : "holding"}{positions.length !== 1 ? "s" : ""} · IBKR snapshot valuation · {L.footer}</span>
         <a href="/portfolio" className="font-semibold text-primary hover:underline">{plainEnglish ? "Manage funds →" : "Manage holdings →"}</a>
       </div>
     </Card>

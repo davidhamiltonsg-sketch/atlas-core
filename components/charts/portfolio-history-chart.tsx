@@ -17,6 +17,7 @@ export interface HistoryPoint {
 interface Props {
   data: HistoryPoint[]
   height?: number
+  accent?: string
 }
 
 function fmt(v: number): string {
@@ -39,7 +40,7 @@ function CustomTooltip({ active, payload, label }: {
   )
 }
 
-export function PortfolioHistoryChart({ data, height = 90 }: Props) {
+export function PortfolioHistoryChart({ data, height = 260, accent = "var(--deck-accent, #8567ff)" }: Props) {
   if (data.length < 2) {
     return (
       <div className="flex items-center justify-center text-[11px] text-muted-foreground" style={{ height }}>
@@ -50,16 +51,15 @@ export function PortfolioHistoryChart({ data, height = 90 }: Props) {
 
   const min = Math.min(...data.map(d => d.value)) * 0.98
   const max = Math.max(...data.map(d => d.value)) * 1.02
-  const isGain = data[data.length - 1].value >= data[0].value
-  const color = isGain ? "#22c55e" : "#ef4444"
+  const color = accent
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 12, right: 8, left: 0, bottom: 4 }}>
         <defs>
           <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor={color} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={color} stopOpacity={0.02} />
+            <stop offset="5%"  stopColor={color} stopOpacity={0.42} />
+            <stop offset="95%" stopColor={color} stopOpacity={0.015} />
           </linearGradient>
         </defs>
         <XAxis dataKey="label" hide={height <= 90} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
@@ -69,7 +69,7 @@ export function PortfolioHistoryChart({ data, height = 90 }: Props) {
           type="monotone"
           dataKey="value"
           stroke={color}
-          strokeWidth={2}
+          strokeWidth={3}
           fill="url(#histGrad)"
           dot={height > 90 ? { r: 3, fill: color, strokeWidth: 0 } : false}
           activeDot={{ r: 4, fill: color }}
