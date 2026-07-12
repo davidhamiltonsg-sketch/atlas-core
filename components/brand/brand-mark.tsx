@@ -5,7 +5,7 @@ import type { ConstitutionId } from "@/lib/constitutions"
 // accents signal the same house; the charge inside tells each portfolio's
 // story. Atlas Core — the celestial sphere of Atlas, crowned, cradled in
 // gold (bearing the world, royal purple). Silicon Brick Road — a brick road
-// rising in perspective to a golden home (the HDB goal), edged with silicon
+// rising in perspective toward a long investment horizon, edged with silicon
 // circuit traces, in luminous blues. Pure SVG, self-contained gradients,
 // legible from 16px favicons to full-bleed hero placements.
 

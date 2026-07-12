@@ -4,13 +4,12 @@ import { useState, useTransition } from "react"
 import { createCommitteeMinute } from "@/app/actions/sbr-committee"
 
 const SBR_ARTICLES = [
-  "EME protocol — panic circuit breaker",
-  "Phase III de-risking sell",
-  "Phase IV liquidation",
-  "SEMI over-cap mandatory sell",
-  "A35 floor breach",
-  "Combined ceiling hard breach",
-  "Rule change (7-day wait)",
+  "Hard-cap review",
+  "IB01 floor review",
+  "EQAC plus SMH ceiling",
+  "Look-through concentration review",
+  "Future SGD use documented",
+  "Rule change (30-day cooling-off)",
   "Other (describe in decision)",
 ]
 

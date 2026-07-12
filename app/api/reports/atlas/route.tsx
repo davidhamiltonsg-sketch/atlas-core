@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { getSession } from "@/lib/session"
-import { constitutionIdForEmail } from "@/lib/constitutions"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 import { getAtlasReportData } from "@/lib/reports/atlas-report-data"
 import { AtlasReportPdf } from "@/components/reports/atlas-report-pdf"
 import type { ReportPeriod } from "@/lib/reports/pdf-theme"
@@ -11,7 +11,8 @@ const VALID_PERIODS: ReportPeriod[] = ["monthly", "quarterly", "annual"]
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
-  if (constitutionIdForEmail(session.email) !== "atlas-core") {
+  const active=await activePortfolioContext(session)
+  if (active.constitutionId !== "atlas-core") {
     return NextResponse.json({ error: "Not available for this portfolio" }, { status: 403 })
   }
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   }
   const period = periodParam as ReportPeriod
 
-  const data = await getAtlasReportData(session.userId, period)
+  const data = await getAtlasReportData(active.owner.id, period)
   const buffer = await renderToBuffer(<AtlasReportPdf data={data} />)
 
   return new NextResponse(new Uint8Array(buffer), {

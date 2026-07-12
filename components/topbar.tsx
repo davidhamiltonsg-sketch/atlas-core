@@ -40,13 +40,13 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
       {/* Right: user + version pill + logout */}
       <div className="shrink-0 flex items-center gap-2">
         {userName && (
-          <form action={selectPortfolio} className="hidden sm:block">
+          <form action={selectPortfolio}>
             <select
               name="portfolio"
               value={constitutionId}
               onChange={(event) => event.currentTarget.form?.requestSubmit()}
               aria-label="Active portfolio"
-              className="h-8 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+              className="h-9 max-w-[132px] rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/30 sm:max-w-none"
             >
               <option value="atlas-core">Atlas Core</option>
               <option value="silicon-brick-road">Silicon Brick Road</option>

@@ -172,13 +172,14 @@ body {
 .atlas-stage > div > section,
 .atlas-stage > div > div { position: relative; }
 .atlas-mobile-nav a {
-  display: grid; place-items: center; min-height: 46px; border-radius: 12px;
+  display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; min-height: 48px; border-radius: 12px;
   color: hsl(var(--muted-foreground));
 }
 .atlas-mobile-nav a:hover,.atlas-mobile-nav a:focus-visible {
   color: hsl(var(--foreground)); background: hsl(var(--accent)); outline: none;
 }
 .atlas-mobile-nav svg { width: 18px; height: 18px; }
+.atlas-mobile-nav span { font-size: 9px; font-weight: 700; line-height: 1; }
 
 /* One visual language across every authenticated route. */
 .atlas-shell .card-lux,

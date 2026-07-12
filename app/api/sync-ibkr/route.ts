@@ -5,6 +5,7 @@ import { fetchFlexPositions, isForexRow } from "@/lib/ibkr-flex"
 import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
+import { instrumentIdentity } from "@/lib/instrument-identity"
 
 // Allow up to 30s for the FLEX polling loop
 export const maxDuration = 30
@@ -76,26 +77,37 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "No positions provided" }, { status: 400 })
   }
 
+  // Confirmation selects positions; it never authorises client-supplied money values.
+  // Re-fetch the Flex report and persist only the fresh server-side rows.
+  const {token,positionsQuery}=ibkrCredentialsFor(active.constitutionId)
+  if(!token||!positionsQuery)return NextResponse.json({error:"IBKR positions query is not configured"},{status:503})
+  const fresh=await fetchFlexPositions(token,positionsQuery)
+  if(!fresh.success)return NextResponse.json({error:fresh.error},{status:502})
+  const selected=new Map(body.positions.map(p=>[p.symbol?.trim().toUpperCase(),p.holdingId??null]))
+  const authoritative=fresh.positions.filter(p=>selected.has(p.symbol.trim().toUpperCase()))
+  if(!authoritative.length)return NextResponse.json({error:"Selected positions were not present in the refreshed IBKR report"},{status:409})
+
   let updated = 0
   let created = 0
-  for (const pos of body.positions) {
+  for (const pos of authoritative) {
     // Never persist a forex / cash balance as a holding (see isForexRow).
     if (pos.symbol && isForexRow(pos.symbol)) continue
     // Resolve the holding: by id, else by symbol, else CREATE it (new ticker like IBIT).
     let holdingId: string | null = null
-    if (pos.holdingId) {
-      const h = await db.holding.findFirst({ where: { id: pos.holdingId, userId: active.owner.id } })
+    const requestedHoldingId=selected.get(pos.symbol.trim().toUpperCase())
+    if (requestedHoldingId) {
+      const h = await db.holding.findFirst({ where: { id: requestedHoldingId, userId: active.owner.id } })
       if (h) holdingId = h.id
     }
     if (!holdingId) {
-      const sym = pos.symbol?.trim().toUpperCase()
-      if (!sym) continue
+      const identity=instrumentIdentity({symbol:pos.symbol,isin:pos.isin,cusip:pos.cusip,exchange:pos.exchange,conid:pos.conid})
+      const sym = identity.ticker
       const existing = await db.holding.findFirst({ where: { userId: active.owner.id, ticker: sym } })
       if (existing) {
         holdingId = existing.id
       } else {
         const h = await db.holding.create({
-          data: { userId: active.owner.id, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
+          data: { userId: active.owner.id, ticker: sym, displayTicker:identity.displayTicker,instrumentKey:identity.instrumentKey,isin:identity.isin,cusip:identity.cusip,exchange:identity.exchange,ibkrConid:identity.ibkrConid,name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
         })
         holdingId = h.id
         created++

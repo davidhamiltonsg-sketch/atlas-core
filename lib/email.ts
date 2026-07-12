@@ -152,7 +152,7 @@ export async function sendSbrDigestEmail(
           </td></tr></table>
       </td></tr>
       <tr><td style="padding:16px 32px;border-top:1px solid #e0f2fe;background:#f0f9ff;">
-        <p style="margin:0;font-size:11px;color:#0369a1;">Silicon Brick Road — property deposit portfolio. Discipline over prediction.</p>
+        <p style="margin:0;font-size:11px;color:#0369a1;">Silicon Brick Road — flexible medium-term growth. Discipline over prediction.</p>
       </td></tr>
     </table>
   </td></tr></table>
@@ -414,7 +414,7 @@ export async function sendPasswordResetEmail(
                   </td>
                   <td style="padding-left:12px;">
                     <div style="font-size:15px;font-weight:700;color:#1a1a2e;">Atlas Core</div>
-                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v1.5 · GDEA</div>
+                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v3.1 · Atlas Core</div>
                   </td>
                 </tr>
               </table>

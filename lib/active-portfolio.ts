@@ -4,7 +4,7 @@ import type { SessionPayload } from "@/lib/session"
 import { constitutionIdForEmail, type ConstitutionId } from "@/lib/constitutions"
 
 const COOKIE = "active_portfolio"
-export const SBR_OWNER_EMAIL = "dutszm@gmail.com"
+export const SBR_OWNER_EMAIL = process.env.SBR_OWNER_EMAIL ?? "dutszm@gmail.com"
 
 export async function activePortfolioId(session: SessionPayload): Promise<ConstitutionId> {
   const value = (await cookies()).get(COOKIE)?.value
@@ -21,11 +21,14 @@ export async function setActivePortfolio(id: ConstitutionId) {
     path: "/",
   })
 }
+export async function clearActivePortfolio(){;(await cookies()).delete(COOKIE)}
 
 export async function portfolioOwner(id: ConstitutionId) {
   if (id === "silicon-brick-road") {
     return db.user.findUnique({ where: { email: SBR_OWNER_EMAIL } })
   }
+  const atlasEmail=process.env.ATLAS_OWNER_EMAIL??process.env.ADMIN_EMAIL
+  if(atlasEmail)return db.user.findUnique({where:{email:atlasEmail}})
   return db.user.findFirst({ where: { role: "admin" }, orderBy: { createdAt: "asc" } })
 }
 

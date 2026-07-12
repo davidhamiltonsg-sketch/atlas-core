@@ -147,10 +147,9 @@ export async function getAtlasReportData(userId: string, period: ReportPeriod): 
     activeRules, totalRules, snapshotAgeDays,
   })
 
-  const sgovPos = positions.find((p) => p.ticker === "SGOV")
   const governance = evaluateGovernance({
     positions,
-    bufferPct: sgovPos?.actualPct ?? 0,
+    bufferPct: 0,
     lookThrough,
   })
 

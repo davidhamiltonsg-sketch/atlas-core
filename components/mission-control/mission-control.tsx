@@ -196,25 +196,24 @@ const ATLAS_AGENTS: AgentDef[] = [
   {
     id: "sbr",
     name: "SBR Engine",
-    codename: "SBR-PHASE",
-    blurb: "Runs the Silicon Brick Road phase gate",
+    codename: "SBR-GROWTH",
+    blurb: "Runs the Silicon Brick Road flexible-growth mandate",
     icon: Brain,
     accent: C.green,
     script: [
-      { t: 120, level: "info", msg: "Reading SBR constitution v2.2 · phase logic" },
-      { t: 720, level: "data", msg: "Portfolio $71.4k · phase A gate at $96k" },
+      { t: 120, level: "info", msg: "Reading SBR constitution v3.2 · flexible growth" },
+      { t: 720, level: "data", msg: "Targets IMID 80 · EQAC 10 · SMH 5 · IB01 5" },
       { t: 1320, level: "data", msg: "Whole-share accrual bank: S$412 carried" },
-      { t: 1900, level: "info", msg: "Phase B unlocks in ~8 monthly cycles" },
+      { t: 1900, level: "info", msg: "No spending transition is active" },
     ],
-    result: { status: "done", line: { t: 2400, level: "ok", msg: "SBR on Phase A track — accrual healthy" } },
+    result: { status: "done", line: { t: 2400, level: "ok", msg: "SBR flexible-growth mandate is active" } },
   },
 ]
 
 // The Silicon Brick Road roster — same console, but plain-English helpers with
 // no jargon (per the SBR constitution: no "DCA", "drift band", "look-through",
 // "FX", "dealing window"). One Mission Control, two portfolios: an SBR user sees
-// friendly helpers about bricks, the road, and the home deposit — never the
-// Atlas governance vocabulary.
+// friendly helpers about contributions, balance, risk and a flexible horizon.
 const SBR_AGENTS: AgentDef[] = [
   {
     id: "buys",
@@ -226,7 +225,7 @@ const SBR_AGENTS: AgentDef[] = [
     script: [
       { t: 120, level: "info", msg: "Splitting this month's savings across your four funds" },
       { t: 700, level: "data", msg: "Buying only whole shares · carrying the rest forward" },
-      { t: 1300, level: "data", msg: "3 × global fund · 1 × Singapore bond fund" },
+      { t: 1300, level: "data", msg: "Whole-share plan uses IMID, EQAC, SMH and IB01" },
     ],
     result: { status: "done", line: { t: 1800, level: "ok", msg: "Buy list ready — a little carries to next month" } },
   },
@@ -239,7 +238,7 @@ const SBR_AGENTS: AgentDef[] = [
     accent: C.blue,
     script: [
       { t: 120, level: "info", msg: "Weighing each fund against its guide-rails" },
-      { t: 720, level: "data", msg: "Global 60% · bonds 20% · Nasdaq 10% · chips 10%" },
+      { t: 720, level: "data", msg: "Global 80% · Nasdaq 10% · chips 5% · Treasury bills 5%" },
       { t: 1320, level: "warn", msg: "Chip-maker fund sitting a little high" },
     ],
     result: { status: "alert", line: { t: 1800, level: "warn", msg: "One fund a bit high — even it out over the next month" } },
@@ -247,41 +246,41 @@ const SBR_AGENTS: AgentDef[] = [
   {
     id: "road",
     name: "Where You Are",
-    codename: "ROAD",
-    blurb: "Your place on the road to the home",
+    codename: "HORIZON",
+    blurb: "Current position within a flexible investment horizon",
     icon: Radar,
     accent: C.green,
     script: [
-      { t: 120, level: "info", msg: "Counting the months you've saved" },
-      { t: 720, level: "data", msg: "Building-up phase · still adding every month" },
+      { t: 120, level: "info", msg: "Checking whether a genuine SGD use has been recorded" },
+      { t: 720, level: "data", msg: "No fixed end date · monthly investing continues" },
     ],
-    result: { status: "done", line: { t: 1300, level: "ok", msg: "On the road — next milestone is the halfway safety step" } },
+    result: { status: "done", line: { t: 1300, level: "ok", msg: "Flexible growth mode remains appropriate" } },
   },
   {
     id: "safety",
-    name: "Safety Steps",
+    name: "Risk Limits",
     codename: "SAFETY",
-    blurb: "Watches for the de-risking milestones",
+    blurb: "Watches holding, overlap and look-through limits",
     icon: ShieldCheck,
     accent: C.gold,
     script: [
-      { t: 120, level: "info", msg: "Checking whether any safety step has started" },
-      { t: 760, level: "data", msg: "First step: move new money to safety at month 18" },
+      { t: 120, level: "info", msg: "Checking caps, floors and data freshness" },
+      { t: 760, level: "data", msg: "No automatic de-risking milestone exists" },
     ],
-    result: { status: "done", line: { t: 1300, level: "ok", msg: "No safety steps yet — you're still building up" } },
+    result: { status: "done", line: { t: 1300, level: "ok", msg: "Risk limits checked against current holdings" } },
   },
   {
     id: "goal",
-    name: "Goal Check",
-    codename: "GOAL",
-    blurb: "Projects your pot out to the home deadline",
+    name: "Scenario Range",
+    codename: "SCENARIO",
+    blurb: "Projects a range without inventing a deadline",
     icon: TrendingUp,
     accent: C.green,
     script: [
-      { t: 120, level: "info", msg: "Growing your seed and monthly savings to mid-2029" },
-      { t: 780, level: "data", msg: "Steady-markets case lands around S$57.7K" },
+      { t: 120, level: "info", msg: "Running conservative, base and strong-market cases" },
+      { t: 780, level: "data", msg: "Return targets remain planning assumptions" },
     ],
-    result: { status: "done", line: { t: 1300, level: "ok", msg: "On track — comfortably above your safety floor" } },
+    result: { status: "done", line: { t: 1300, level: "ok", msg: "Scenario range refreshed — no trade signal created" } },
   },
   {
     id: "savings",
@@ -294,7 +293,7 @@ const SBR_AGENTS: AgentDef[] = [
       { t: 120, level: "info", msg: "Adding up every deposit you've made" },
       { t: 720, level: "data", msg: "Deposits landing on schedule each month" },
     ],
-    result: { status: "done", line: { t: 1200, level: "ok", msg: "Savings on plan — keep laying one brick a month" } },
+    result: { status: "done", line: { t: 1200, level: "ok", msg: "Contributions reconciled — continue the written plan" } },
   },
 ]
 

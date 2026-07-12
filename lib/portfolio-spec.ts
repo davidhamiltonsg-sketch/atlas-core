@@ -93,9 +93,7 @@ export const SBR_SPEC = {
   phases: [{ key: "GROWTH", min: 0, max: null }],
 } as const
 
-// Phase-dependent caps for SBR — as the portfolio matures toward the property goal,
-// semiconductor and tech ceilings tighten to reduce sequencing risk. Phase I values
-// match SBR_SPEC.combined so no existing code that reads the static spec breaks.
+// Single flexible-growth rule set retained behind the phase-shaped compatibility type.
 export const SBR_PHASE_CAPS = {
   GROWTH: { smhHard: 8, combinedHard: 20, combinedWarning: 18, combinedResume: 17 },
 } as const
