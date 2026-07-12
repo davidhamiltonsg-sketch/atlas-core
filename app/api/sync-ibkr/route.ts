@@ -6,6 +6,7 @@ import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { instrumentIdentity } from "@/lib/instrument-identity"
+import { assertCanMutateOwner } from "@/lib/mutation-auth"
 
 // Allow up to 30s for the FLEX polling loop
 export const maxDuration = 30
@@ -68,6 +69,7 @@ export async function PUT(req: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
   const active = await activePortfolioContext(session)
+  try { assertCanMutateOwner(session, active.owner.id) } catch { return NextResponse.json({ error: "Read-only portfolio access" }, { status: 403 }) }
 
   const body = await req.json() as {
     positions: Array<{ holdingId?: string | null; symbol?: string; units: number; markPrice: number; positionValue: number; costBasis?: number | null; unrealizedPnl?: number | null }>

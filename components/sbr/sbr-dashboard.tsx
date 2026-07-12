@@ -22,6 +22,7 @@ import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 import { computeSbrLookThrough } from "@/lib/sbr-look-through"
+import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { openPositionValuation } from "@/lib/valuation"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
@@ -97,8 +98,11 @@ async function getSbrData(userId: string) {
 
   // Governance status — shared with the PDF report so both surfaces agree.
   const lookThroughAsOf=lookThroughSources.length===SBR_FUND_TICKERS.length?new Date(Math.min(...lookThroughSources.map(x=>x.updatedAt.getTime()))):new Date(0)
-  const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf)
-  const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue, lookThroughAsOf)
+  const refreshedLt = await refreshedLookThroughData()
+  const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf,refreshedLt.weights)
+  const excludedPct=totalValue>0?Math.max(0,100-positions.reduce((s,p)=>s+p.actualPct,0)):0
+  if(excludedPct>0.005){lookThrough.unclassifiedPct+=excludedPct;lookThrough.warnings.unshift(`${excludedPct.toFixed(1)}% of NAV is outside the target universe and is included as unclassified.`)}
+  const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue, lookThroughAsOf,new Date(),lookThrough)
 
   // Holdings rows
   const statusOf = (p: SbrPosition): HoldingRow["status"] => {
@@ -148,7 +152,7 @@ async function getSbrData(userId: string) {
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: fundColor, value }
   })
 
-  const latest = holdings.reduce<Date | null>((d, h) => { const s = h.snapshots[0]?.date; return s && (!d || s > d) ? s : d }, null)
+  const latest = holdings.reduce<Date | null>((d, h) => { const s = h.snapshots[0]?.date; return s && (h.snapshots[0]?.value??0)>0 && (!d || s < d) ? s : d }, null)
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
   const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
 
@@ -255,7 +259,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       <section className="mb-5 grid gap-3 lg:grid-cols-3" aria-label="What to do, why, and where SBR is going">
         <article className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.nextMove.action}</h2><p>{d.nextMove.what}</p></div><Link href="/portfolio">Review activity →</Link></article>
         <article className="atlas-command-band"><div><span>WHY</span><h2>{d.nextMove.why}</h2><p>{d.nextMove.when??"At the next permitted contribution window."}</p></div><Link href="/mission-control?portfolio=silicon-brick-road">Open Mission Control →</Link></article>
-        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 15 · SMH 5 · IBIT 5 · DBMFE 10. A real SGD use must be documented before risk changes.</p></div><a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
+        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 15 · SMH 5 · IBIT 5 · DBMFE 10. A real SGD use must be documented before risk changes.</p></div><a href="/downloads/silicon-brick-road-constitution-v10.2.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
       </section>
 
 

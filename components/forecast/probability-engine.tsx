@@ -9,7 +9,7 @@ const ATLAS_ASSETS: Asset[] = [
   { n: 'VWRA', w: 0.70, mu: [0.05, 0.085, 0.12], s: 0.16 },
   { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.23 },
   { n: 'SMH', w: 0.05, mu: [0.04, 0.115, 0.18], s: 0.30 },
-  { n: 'IBIT', w: 0.05, mu: [-0.05,  0.12,   0.25  ], s: 0.70 },
+  { n: 'IBIT', w: 0.05, mu: [-0.10,  0.12,   0.25  ], s: 0.70 },
   { n: 'DBMFE', w: 0.10, mu: [0.00, 0.06, 0.10], s: 0.135 },
 ]
 
@@ -46,11 +46,12 @@ function chol(C: number[][]): number[][] {
   return L
 }
 
-let _sp = 0, _hs = false
+let _sp = 0, _hs = false, _seed=0x5a17c9e3
+function random(){_seed=(_seed*1664525+1013904223)>>>0;return _seed/4294967296}
 function rn(): number {
   if (_hs) { _hs = false; return _sp }
   let u = 0, v = 0, s = 0
-  do { u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; s = u * u + v * v } while (s >= 1 || s === 0)
+  do { u = random() * 2 - 1; v = random() * 2 - 1; s = u * u + v * v } while (s >= 1 || s === 0)
   const m = Math.sqrt(-2 * Math.log(s) / s); _sp = v * m; _hs = true; return u * m
 }
 
@@ -80,9 +81,10 @@ interface MCResult {
 
 function runMC(
   assets: Asset[], nP: number, si: number, sv: number,
-  NY: number, DCA: number, BONUS: number,
+  NY: number, DCA: number, BONUS: number, GROWTH:number,
   MS: number[], MSY: number[]
 ): MCResult {
+  _seed=0x5a17c9e3;_hs=false
   const C = buildCorr(assets), L = chol(C)
   const nA = assets.length
   const dt = 1 / 12, sdt = Math.sqrt(dt)
@@ -102,16 +104,17 @@ function runMC(
     yearVals[0][p] = sv
 
     for (let yr = 0; yr < NY; yr++) {
+      const annualDca=DCA*Math.pow(1+GROWTH,yr),annualBonus=BONUS*Math.pow(1+GROWTH,yr)
       for (let mo = 0; mo < 12; mo++) {
         const z = corrZ(L, nA)
         for (let i = 0; i < nA; i++) {
-          pos[i] = pos[i] * Math.exp(dr[i] + dif[i] * z[i]) + w[i] * DCA
+          pos[i] = pos[i] * Math.exp(dr[i] + dif[i] * z[i]) + w[i] * annualDca
         }
         pval = pos.reduce((s, v) => s + v, 0)
         if (pval > peak) peak = pval
         const dd = (peak - pval) / peak; if (dd > mdd) mdd = dd
       }
-      for (let i = 0; i < nA; i++) pos[i] += w[i] * BONUS
+      for (let i = 0; i < nA; i++) pos[i] += w[i] * annualBonus
       pval = pos.reduce((s, v) => s + v, 0)
       if (pval > peak) peak = pval
       const dd2 = (peak - pval) / peak; if (dd2 > mdd) mdd = dd2
@@ -269,10 +272,12 @@ export function ProbabilityEngine({
   startValue,
   monthlyDca,
   annualBonus,
+  contributionGrowthRate,
 }: {
   startValue: number
   monthlyDca: number
   annualBonus: number
+  contributionGrowthRate:number
 }) {
   const [dca, setDca] = useState(monthlyDca)
   const [bonus, setBonus] = useState(annualBonus)
@@ -291,14 +296,14 @@ export function ProbabilityEngine({
     setIsRunning(true)
     setTimeout(() => {
       try {
-        const r = runMC(ATLAS_ASSETS, _np, _si, _sv, NY, _dca, _bonus, MS, MSY)
+        const r = runMC(ATLAS_ASSETS, _np, _si, _sv, NY, _dca, _bonus, contributionGrowthRate, MS, MSY)
         setResult(r)
         setHasRun(true)
       } finally {
         setIsRunning(false)
       }
     }, 20)
-  }, [])
+  }, [contributionGrowthRate])
 
   const scheduleRun = useCallback((
     _dca: number, _bonus: number, _sv: number, _si: number, _np: number
@@ -354,7 +359,7 @@ export function ProbabilityEngine({
       <div className="px-5 py-4 border-b border-border grid gap-4 sm:grid-cols-2 lg:grid-cols-4 bg-muted/20">
         <div>
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">
-            Starting Value (USD)
+            Starting value (SGD)
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -370,7 +375,7 @@ export function ProbabilityEngine({
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">
-            Monthly DCA (USD)
+            Monthly contribution (SGD)
           </label>
           <div className="flex gap-1.5 flex-wrap">
             {[1000, 2000, 3000, 4000, 5000].map(v => (
@@ -396,7 +401,7 @@ export function ProbabilityEngine({
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1.5">
-            Annual Bonus (USD)
+            Annual lump sum (SGD)
           </label>
           <div className="flex gap-1.5 flex-wrap">
             {[0, 10000, 20000, 30000].map(v => (

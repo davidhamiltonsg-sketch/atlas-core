@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getSession } from "@/lib/session"
-import { constitutionForEmail, type ConstitutionId } from "@/lib/constitutions"
+import { constitutionForEmail } from "@/lib/constitutions"
 import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
@@ -8,6 +8,7 @@ import { computeLadder } from "@/lib/ladder"
 import { BITCOIN_SLEEVE_TARGET_PCT, applyBitcoinSleeve } from "@/lib/next-best-move"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
+import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
@@ -15,7 +16,7 @@ import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-me
 import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { getLiveMarketPositions } from "@/lib/finnhub"
-import { activePortfolioContext, portfolioOwner } from "@/lib/active-portfolio"
+import { activePortfolioContext } from "@/lib/active-portfolio"
 import { redirect } from "next/navigation"
 import { Shell } from "@/components/shell"
 
@@ -177,7 +178,8 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     positions = applyBitcoinSleeve(positions)
 
     // Run engines
-    const lookThrough = computeLookThrough(positions)
+    const refreshedLt = await refreshedLookThroughData()
+    const lookThrough = computeLookThrough(positions,new Date(),refreshedLt.updatedAt,refreshedLt.weights)
     const companyBreaches = lookThrough.companies.filter(c => c.status === "breach").length
     const sectorBreaches = lookThrough.sectors.filter(s => s.status === "breach").length
     const ltBreach = worstLookThroughBreach(lookThrough)
@@ -564,21 +566,6 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       }
     }
 
-    // 9. SBR Engine — cross-portfolio reference
-    {
-      const ts = spacedTimings(2)
-      findings.sbr = {
-        script: [
-          { t: ts[0], level: "info", msg: "SBR phase gate — separate portfolio, tracked independently" },
-          { t: ts[1], level: "data", msg: "Full SBR status available on the Silicon Brick Road dashboard" },
-        ],
-        result: {
-          status: "done",
-          line: { t: resultT(ts), level: "info", msg: "SBR monitoring available via the Silicon Brick Road dashboard" },
-        },
-      }
-    }
-
     return findings
   } catch {
     return null
@@ -591,12 +578,13 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
 
 async function loadSbrFindings(userId: string): Promise<Record<string, AgentFinding> | null> {
   try {
-    const [holdings, trades] = await Promise.all([
+    const [holdings, trades, owner] = await Promise.all([
       db.holding.findMany({
         where: { userId },
         include: { snapshots: { orderBy: { date: "desc" }, take: 2 } },
       }),
       db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+      db.user.findUnique({where:{id:userId},select:{monthlyContribution:true,annualLumpSum:true,contributionGrowthRate:true}}),
     ])
 
     const rows = holdings
@@ -737,15 +725,14 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
         const allocMap: Record<string, number> = {}
         for (const r of rows) allocMap[r.ticker] = (r.value / totalValue) * 100
         const sbrRates = sbrBlendedGrowthRate(allocMap)
-        const monthly = SBR_SPEC.monthlyContribution
-        const project = (years: number, rate: number) => {
-          let value = totalValue
-          for (let i = 0; i < years * 12; i++) value = value * (1 + rate / 12) + monthly
-          return value
-        }
+        const monthly = owner?.monthlyContribution??SBR_SPEC.monthlyContribution
+        const annual = owner?.annualLumpSum??0
+        const growth = owner?.contributionGrowthRate??0
+        const project = (years:number,rate:number)=>projectPortfolio(totalValue,monthly,annual,rate,years,growth)
         const steps: Array<{ level: Level; msg: string }> = [
           { level: "info", msg: `Projecting flexible 5- and 10-year illustrations from S$${Math.round(totalValue).toLocaleString()}` },
           { level: "data", msg: `Blended assumptions: ${(sbrRates.conservative * 100).toFixed(1)}% conservative · ${(sbrRates.base * 100).toFixed(1)}% base` },
+          { level: "data", msg: `Settings: S$${monthly.toLocaleString()}/mo · S$${annual.toLocaleString()}/yr · growth ${(growth*100).toFixed(1)}% p.a.` },
           { level: "data", msg: `Base illustration: S$${Math.round(project(5, sbrRates.base)).toLocaleString()} in 5y · S$${Math.round(project(10, sbrRates.base)).toLocaleString()} in 10y` },
         ]
         const ts = spacedTimings(steps.length)
@@ -794,15 +781,10 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
   }
 }
 
-export default async function MissionControlPage({ searchParams }: { searchParams: Promise<{ portfolio?: string }> }) {
+export default async function MissionControlPage() {
   const session = await getSession()
   if(!session) redirect("/login?portfolio=atlas-core")
-  const requested = (await searchParams).portfolio
-  const cookieActive = await activePortfolioContext(session)
-  const requestedId: ConstitutionId | null = requested === "atlas-core" || requested === "silicon-brick-road" ? requested : null
-  const active = requestedId
-    ? { constitutionId: requestedId, owner: await portfolioOwner(requestedId) ?? cookieActive!.owner }
-    : cookieActive
+  const active = await activePortfolioContext(session)
   const constitutionId = active.constitutionId
   const context = await loadPortfolioContext(active ? { constitutionId: active.constitutionId, userId: active.owner.id } : undefined)
 
@@ -829,7 +811,7 @@ export default async function MissionControlPage({ searchParams }: { searchParam
   if(!findings) return <Shell title="Mission Control" subtitle={context.label} userName={session.name} isAdmin={session.role==="admin"} constitutionId={constitutionId}><div className="deck-ledger p-6"><h1>Mission Control could not reconcile live data</h1><p>No sample figures are shown. Refresh the IBKR data or check the production logs, then try again.</p></div></Shell>
   return (
     <Shell title="Mission Control" subtitle={`${context.label} · live governance`} userName={session.name} isAdmin={session.role==="admin"} constitutionId={constitutionId}>
-      <MissionControl context={context} findings={findings} lookThroughUpdatedAt={lookThroughUpdatedAt} />
+      <MissionControl key={context.variant} context={context} findings={findings} lookThroughUpdatedAt={lookThroughUpdatedAt} />
     </Shell>
   )
 }

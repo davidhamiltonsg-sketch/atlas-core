@@ -91,7 +91,7 @@ export const ATLAS_CORE: Constitution = {
   currency: "USD",
   monthlyContribution: 3000,
   broker: "IBKR Singapore",
-  docPath: "/atlas-core-constitution.html",
+  docPath: "/downloads/atlas-core-constitution-v10.4.html",
   funds: ATLAS_SPEC.funds.map((f) => ({
     ticker: f.ticker,
     name: ({ VWRA: "Vanguard FTSE All-World UCITS ETF (Acc)", EQAC: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", SMH: "VanEck Semiconductor UCITS ETF", BTC: "Bitcoin sleeve — IBIT", DBMFE: "iMGP DBi Managed Futures Fund R EUR UCITS ETF" } as Record<string,string>)[f.ticker] ?? f.ticker,
@@ -162,7 +162,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   currency: SBR_SPEC.currency,
   monthlyContribution: SBR_SPEC.monthlyContribution,
   broker: "IBKR Singapore",
-  docPath: "/silicon-brick-road.html",
+  docPath: "/downloads/silicon-brick-road-constitution-v10.2.html",
   funds: SBR_FUNDS,
   combined: { tickers: [...SBR_SPEC.combined.tickers], warning: SBR_SPEC.combined.warning, hard: SBR_SPEC.combined.hard, resume: SBR_SPEC.combined.resume, label: "Combined EQAC + SMH ceiling" },
   totalEquityMaxPct: SBR_SPEC.totalEquityMaxPct,

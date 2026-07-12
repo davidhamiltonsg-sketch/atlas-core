@@ -82,6 +82,7 @@ export default async function Portfolio() {
   const session = await getSession()
   if (!session) redirect("/login")
   const active = await activePortfolioContext(session)
+  const isSbr = active.constitutionId === "silicon-brick-road"
   const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
 
   const snapshotDate = holdings[0]?.latestSnapshot
@@ -134,7 +135,12 @@ export default async function Portfolio() {
   }))
 
   return (
-    <Shell title="Portfolio Architecture" subtitle="Holdings, target allocations, and hard caps" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Position Ledger" subtitle={`${isSbr ? "Silicon Brick Road" : "Atlas Core"} · ownership, basis and governed bands`} userName={session.name} isAdmin={session.role === "admin"} constitutionId={active.constitutionId}>
+      <div className="portfolio-deck">
+      <section className="portfolio-deck-hero">
+        <div><p>LIVE POSITION LEDGER</p><h1>{hasBalance ? "What you own, without the noise." : "Your governed portfolio is ready."}</h1><span>{hasBalance ? "Target holdings lead. Historic and migrating instruments remain in the audit trail without crowding today’s portfolio." : "The target architecture is in place. Your first confirmed IBKR snapshot will activate performance, basis and drift controls."}</span></div>
+        <dl><div><dt>Portfolio value</dt><dd>{formatCurrency(totalValue,"SGD")}</dd></div><div><dt>Target sleeves</dt><dd>{displaySlots.length}</dd></div><div><dt>Governance</dt><dd className={hardBreaches ? "down" : "up"}>{hardBreaches ? `${hardBreaches} review` : "Clear"}</dd></div></dl>
+      </section>
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
@@ -482,6 +488,7 @@ export default async function Portfolio() {
             })}
           </div>
         </div>
+      </div>
       </div>
     </Shell>
   )

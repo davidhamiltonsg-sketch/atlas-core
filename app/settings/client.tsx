@@ -12,6 +12,8 @@ interface SettingsClientProps {
   annualLumpSum: number
   contributionGrowthRate: number
   riskFreeRate: number
+  portfolioName: string
+  canEdit: boolean
 }
 
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
@@ -40,7 +42,7 @@ function StatusMessage({ msg }: { msg: { type: "success" | "error"; text: string
   )
 }
 
-export function SettingsClient({ initialName, initialEmail, role, monthlyContribution, annualLumpSum, contributionGrowthRate, riskFreeRate }: SettingsClientProps) {
+export function SettingsClient({ initialName, initialEmail, role, monthlyContribution, annualLumpSum, contributionGrowthRate, riskFreeRate, portfolioName, canEdit }: SettingsClientProps) {
   // Profile
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
@@ -99,13 +101,14 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
   }
 
   return (
-    <div className="max-w-xl space-y-5">
+    <div className="settings-deck space-y-5">
+      <section className="settings-hero"><div><p>MODEL INPUTS</p><h1>Control the cash flows, then let the forecast recalculate.</h1><span>These values belong to {portfolioName}. Saving them updates its cockpit, contribution engine, forecast and risk baseline.</span></div><div className="settings-flow" aria-label="Settings dependency flow"><b>Settings</b><i>→</i><b>Contribution engine</b><i>→</i><b>Forecast &amp; risk</b></div></section>
       {/* Contribution Settings */}
-      <Section title="Contribution Settings" icon={TrendingUp}>
+      <Section title={`${portfolioName} contribution and forecast model`} icon={TrendingUp}>
         <form onSubmit={handleContrib} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Monthly Contribution (USD)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Monthly contribution (SGD)</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <input
@@ -114,6 +117,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                   step="100"
                   min="0"
                   required
+                  disabled={!canEdit}
                   defaultValue={monthlyContribution}
                   className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 />
@@ -121,7 +125,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
               <p className="text-[11px] text-muted-foreground mt-1">Used in the execution plan and forecast.</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Annual Lump Sum (USD)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Annual lump sum (SGD)</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <input
@@ -130,6 +134,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                   step="1000"
                   min="0"
                   required
+                  disabled={!canEdit}
                   defaultValue={annualLumpSum}
                   className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 />
@@ -147,6 +152,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                 min="0"
                 max="1"
                 required
+                disabled={!canEdit}
                 defaultValue={contributionGrowthRate}
                 className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               />
@@ -164,6 +170,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
                 min="0"
                 max="1"
                 required
+                disabled={!canEdit}
                 defaultValue={riskFreeRate}
                 className="w-full rounded-lg border border-border bg-background px-3 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               />
@@ -174,11 +181,11 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
           <StatusMessage msg={contribMsg} />
           <button
             type="submit"
-            disabled={contribPending}
+            disabled={contribPending || !canEdit}
             className="flex items-center gap-1.5 rounded-lg btn-brand disabled:opacity-60 text-xs font-semibold px-4 py-2"
           >
             {contribPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-            Save Contribution Settings
+            {canEdit ? "Save and recalculate" : "Read-only portfolio"}
           </button>
         </form>
       </Section>

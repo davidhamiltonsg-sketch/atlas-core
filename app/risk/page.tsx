@@ -268,6 +268,7 @@ export default async function RiskPage() {
 
   return (
     <Shell title="Risk Metrics" subtitle="Volatility, drawdown, and concentration analysis" userName={session.name} isAdmin={session.role === "admin"}>
+      <div className="risk-deck">
       <div className="space-y-5">
 
         {/* Data quality notice */}
@@ -547,6 +548,7 @@ export default async function RiskPage() {
           </div>
         </div>
 
+      </div>
       </div>
     </Shell>
   )

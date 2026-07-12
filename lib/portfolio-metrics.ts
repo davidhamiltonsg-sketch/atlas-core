@@ -14,7 +14,9 @@ interface HoldingWithSnapshots {
   snapshots: Array<{ date: Date; value: number }>
 }
 
-/** Build a clean portfolio value timeline (deduped by date, complete dates only). */
+/** Build an as-of portfolio timeline. Each holding carries its last confirmed value
+ * forward until the next snapshot, so staggered broker timestamps do not turn
+ * temporarily missing rows into zero or erase the entire portfolio history. */
 export function buildPortfolioTimeline(holdings: HoldingWithSnapshots[]): TimelinePoint[] {
   const dateMaps = new Map<string, Map<string, number>>()
   for (const h of holdings) {
@@ -24,13 +26,11 @@ export function buildPortfolioTimeline(holdings: HoldingWithSnapshots[]): Timeli
   }
   const withData = holdings.filter((h) => (dateMaps.get(h.id)?.size ?? 0) > 0)
   const allDates = [...new Set(withData.flatMap((h) => [...dateMaps.get(h.id)!.keys()]))].sort()
-  return allDates
-    .map((date) => {
-      const values = withData.map((h) => dateMaps.get(h.id)!.get(date))
-      if (values.some((v) => v === undefined)) return null
-      return { date, value: (values as number[]).reduce((s, v) => s + v, 0) }
-    })
-    .filter((x): x is TimelinePoint => x !== null)
+  const last=new Map<string,number>()
+  return allDates.map(date=>{
+    for(const h of withData){const value=dateMaps.get(h.id)!.get(date);if(value!==undefined)last.set(h.id,value)}
+    return {date,value:[...last.values()].reduce((s,v)=>s+v,0)}
+  }).filter(point=>point.value>0)
 }
 
 function mean(a: number[]): number { return a.reduce((s, v) => s + v, 0) / a.length }

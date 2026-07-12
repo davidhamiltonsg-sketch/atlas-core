@@ -5,19 +5,22 @@ export default async function Loading() {
   const hint = await getPortfolioHint()
   const id = hint === "silicon-brick-road" ? "silicon-brick-road" : "atlas-core"
   const name = id === "silicon-brick-road" ? "Silicon Brick Road" : "Atlas Core"
+  const sbr = id === "silicon-brick-road"
   return (
-    <div data-theme={id === "silicon-brick-road" ? "sbr" : "atlas-core"} className="fixed inset-0 z-50 grid place-items-center bg-background">
-      <div className="w-[min(88vw,420px)] rounded-2xl border border-border bg-card/90 p-7 shadow-2xl backdrop-blur-xl">
-        <div className="flex items-center gap-4">
-          <BrandMark constitutionId={id} className="h-11 w-11" />
-          <div><p className="font-display text-lg font-semibold">{name}</p><p className="font-data text-[10px] uppercase tracking-[.22em] text-muted-foreground">Synchronising portfolio</p></div>
+    <div data-theme={sbr ? "sbr" : "atlas-core"} className={`premium-loader ${sbr ? "is-sbr" : "is-atlas"}`} role="status" aria-live="polite" aria-label={`Preparing ${name}`}>
+      <div className="loader-atmosphere" aria-hidden="true" />
+      <div className="loader-instrument" aria-hidden="true">
+        <i className="loader-orbit orbit-one" /><i className="loader-orbit orbit-two" /><i className="loader-orbit orbit-three" />
+        <span className="loader-pulse" />
+        <BrandMark constitutionId={id} className="loader-crest" />
+      </div>
+      <div className="loader-copy">
+        <p>{sbr ? "THE ROAD AHEAD" : "PORTFOLIO COMMAND DECK"}</p>
+        <h1>{name}</h1>
+        <div className="loader-progress"><span /></div>
+        <div className="loader-states" aria-hidden="true">
+          <span>Reading broker snapshot</span><span>Checking constitution</span><span>Preparing your cockpit</span>
         </div>
-        <div className="mt-7 grid gap-2" aria-label="Loading">
-          <div className="h-2 w-full rounded-full bg-muted" />
-          <div className="h-2 w-4/5 rounded-full bg-muted" />
-          <div className="h-2 w-3/5 rounded-full bg-muted" />
-        </div>
-        <p className="mt-5 text-xs text-muted-foreground">Reading holdings, rules and source freshness…</p>
       </div>
     </div>
   )

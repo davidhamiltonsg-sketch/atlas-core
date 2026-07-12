@@ -46,6 +46,7 @@ interface Props {
   currentValue: number
   milestones?: MilestoneMarker[]
   monthlyContribution: number
+  baseRate: number
 }
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -64,18 +65,19 @@ function fmtShort(v: number): string {
 
 // ── Tooltips ───────────────────────────────────────────────────────────────────
 
-function ScenarioTooltip({ active, payload, label, inflated }: {
+function ScenarioTooltip({ active, payload, label, inflated, baseRate }: {
   active?: boolean
   payload?: Array<{ name: string; value: number; color: string }>
   label?: string
   inflated?: boolean
+  baseRate:number
 }) {
   if (!active || !payload?.length) return null
   const order = ["aggressive", "base", "vtBenchmark", "conservative", "savings"]
   const sorted = [...payload].sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
   const nameMap: Record<string, string> = {
     aggressive:   "Best case (15%)",
-    base:         "Base case (10%)",
+    base:         `Base case (${(baseRate*100).toFixed(1)}%)`,
     vtBenchmark:  "Pure VWRA (9.5% p.a.)",
     conservative: "Conservative (5%)",
     savings:      "Cash savings (3%)",
@@ -181,11 +183,12 @@ function ContribTooltip({ active, payload, label, monthlyContribution }: {
 
 // ── Chart Renderers ────────────────────────────────────────────────────────────
 
-function ScenarioChart({ data, currentValue, milestones, inflated }: {
+function ScenarioChart({ data, currentValue, milestones, inflated, baseRate }: {
   data: ExtendedForecastPoint[]
   currentValue: number
   milestones: MilestoneMarker[]
   inflated: boolean
+  baseRate:number
 }) {
   const chartData = data.map(d => ({
     label: d.label,
@@ -227,7 +230,7 @@ function ScenarioChart({ data, currentValue, milestones, inflated }: {
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} interval={1} />
         <YAxis tickFormatter={fmtShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={56} />
-        <Tooltip content={<ScenarioTooltip inflated={inflated} />} />
+        <Tooltip content={<ScenarioTooltip inflated={inflated} baseRate={baseRate} />} />
         <ReferenceLine y={inflated ? currentValue : currentValue} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: "Today", position: "insideTopLeft", fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
         <ReferenceLine x="2045" stroke="hsl(var(--primary))" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: "2045", position: "insideTopRight", fontSize: 10, fill: "hsl(var(--primary))" }} />
         {milestones.filter(m => m.value < maxVal).map(m => (
@@ -243,10 +246,11 @@ function ScenarioChart({ data, currentValue, milestones, inflated }: {
   )
 }
 
-function ConeChart({ data, currentValue, inflated }: {
+function ConeChart({ data, currentValue, inflated, baseRate }: {
   data: ExtendedForecastPoint[]
   currentValue: number
   inflated: boolean
+  baseRate:number
 }) {
   const chartData = data.map(d => {
     const p10 = inflated ? d.realConeP10 : d.coneP10
@@ -293,7 +297,7 @@ function ConeChart({ data, currentValue, inflated }: {
         </div>
         <div className="flex items-center gap-2">
           <div className="h-0.5 w-6 rounded bg-violet-500" />
-          <span>Base case (10% p.a.)</span>
+          <span>Base case ({(baseRate*100).toFixed(1)}% p.a.)</span>
         </div>
         <div className="flex items-center gap-1.5 ml-auto">
           <span className="text-[10px]">Model: log-normal · σ = 15% annual vol</span>
@@ -303,10 +307,11 @@ function ConeChart({ data, currentValue, inflated }: {
   )
 }
 
-function ContribChart({ data, currentValue, monthlyContribution }: {
+function ContribChart({ data, currentValue, monthlyContribution, baseRate }: {
   data: ExtendedForecastPoint[]
   currentValue: number
   monthlyContribution: number
+  baseRate:number
 }) {
   const chartData = data.map(d => ({
     label: d.label,
@@ -358,7 +363,7 @@ function ContribChart({ data, currentValue, monthlyContribution }: {
           <span>−20% (${Math.round(monthlyContribution * 0.8).toLocaleString()}/mo)</span>
         </div>
         <div className="flex items-center gap-1.5 ml-auto text-[10px]">
-          All at 10% p.a. CAGR
+          All at {(baseRate*100).toFixed(1)}% p.a. CAGR
         </div>
       </div>
     </div>
@@ -375,7 +380,7 @@ const VIEWS = [
 
 type ViewId = typeof VIEWS[number]["id"]
 
-export function ForecastChartPanel({ data, currentValue, milestones = [], monthlyContribution }: Props) {
+export function ForecastChartPanel({ data, currentValue, milestones = [], monthlyContribution, baseRate }: Props) {
   const [view, setView] = useState<ViewId>("scenarios")
   const [inflated, setInflated] = useState(false)
   const showInflationToggle = view !== "contributions"
@@ -427,13 +432,13 @@ export function ForecastChartPanel({ data, currentValue, milestones = [], monthl
       {/* Chart */}
       <div className="chart-enter">
         {view === "scenarios" && (
-          <ScenarioChart data={data} currentValue={currentValue} milestones={milestones} inflated={inflated} />
+          <ScenarioChart data={data} currentValue={currentValue} milestones={milestones} inflated={inflated} baseRate={baseRate} />
         )}
         {view === "cone" && (
-          <ConeChart data={data} currentValue={currentValue} inflated={inflated} />
+          <ConeChart data={data} currentValue={currentValue} inflated={inflated} baseRate={baseRate} />
         )}
         {view === "contributions" && (
-          <ContribChart data={data} currentValue={currentValue} monthlyContribution={monthlyContribution} />
+          <ContribChart data={data} currentValue={currentValue} monthlyContribution={monthlyContribution} baseRate={baseRate} />
         )}
       </div>
 

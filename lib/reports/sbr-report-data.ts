@@ -3,6 +3,7 @@ import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { computeSbrNextMove, computeSbrHealth, type SbrPosition, type SbrHealth } from "@/lib/sbr-engine"
 import { computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_SINGLE_COMPANY_LIMIT, type SbrLookThrough } from "@/lib/sbr-look-through"
+import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import type { NextMove } from "@/lib/next-best-move"
 import type { GovAlignment } from "@/lib/governance-status"
@@ -120,14 +121,17 @@ export async function getSbrReportData(userId: string, period: ReportPeriod): Pr
 
   const latest = holdingsSorted.reduce<Date | null>((latestDate, h) => {
     const d = h.snapshots[0]?.date
-    return d && (!latestDate || d > latestDate) ? d : latestDate
+    return d && (h.snapshots[0]?.value??0)>0 && (!latestDate || d < latestDate) ? d : latestDate
   }, null)
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
 
   const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
-  const governance = evaluateSbrGovernance(positions, totalValue)
   const lookThroughAsOf=lookThroughSources.length===SBR_FUND_TICKERS.length?new Date(Math.min(...lookThroughSources.map(x=>x.updatedAt.getTime()))):new Date(0)
-  const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf)
+  const refreshedLt = await refreshedLookThroughData()
+  const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf,refreshedLt.weights)
+  const excludedPct=totalValue>0?Math.max(0,100-positions.reduce((s,p)=>s+p.actualPct,0)):0
+  if(excludedPct>0.005){lookThrough.unclassifiedPct+=excludedPct;lookThrough.warnings.unshift(`${excludedPct.toFixed(1)}% of NAV is outside the target universe and is included as unclassified.`)}
+  const governance = evaluateSbrGovernance(positions, totalValue,lookThroughAsOf,new Date(),lookThrough)
   const nextMove = computeSbrNextMove(positions, totalValue, { drawdownPct })
 
   const now = new Date()

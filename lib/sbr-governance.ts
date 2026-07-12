@@ -2,18 +2,18 @@ import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import {
   computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_TECHNOLOGY_WATCH,
   SBR_SINGLE_COMPANY_LIMIT, SBR_SINGLE_COMPANY_WATCH, SBR_COUNTRY_LIMIT, SBR_COUNTRY_WATCH,
-  SBR_SEMICONDUCTOR_LIMIT, SBR_SEMICONDUCTOR_WATCH,
+  SBR_SEMICONDUCTOR_LIMIT, SBR_SEMICONDUCTOR_WATCH, type SbrLookThrough,
 } from "@/lib/sbr-look-through"
 import type { SbrPosition } from "@/lib/sbr-engine"
 import type { GovAlignment, Align } from "@/lib/governance-status"
 
-export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: number, weightsAsOf?: Date, now = new Date()): GovAlignment {
+export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: number, weightsAsOf?: Date, now = new Date(), computedLookThrough?:SbrLookThrough): GovAlignment {
   if (totalValue <= 0) return { checks: [], breaches: 0, watches: 0, overall: "ok" }
   const st = (breach: boolean, watch: boolean): Align => breach ? "breach" : watch ? "watch" : "ok"
   const actual = new Map(positions.map((p) => [p.ticker === "SMH.L" ? "SMH" : p.ticker, p.actualPct]))
   const combined = (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
   const equity = (actual.get("VWRA") ?? 0) + (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
-  const lt = computeSbrLookThrough(positions, now, weightsAsOf)
+  const lt = computedLookThrough??computeSbrLookThrough(positions, now, weightsAsOf)
   const rangeDrift = SBR.funds.filter((f) => {
     const pct = actual.get(f.ticker) ?? 0
     return pct < f.rangeLow || pct > f.rangeHigh

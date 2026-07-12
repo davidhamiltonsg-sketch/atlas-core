@@ -111,11 +111,14 @@ export interface ExposureLine {
   soft: number
   hard: number
   status: CapStatus
+  contributors: Array<{ ticker: string; portfolioWeightPct: number; underlyingWeightPct: number; contributionPct: number }>
 }
 
 export interface LookThroughResult {
   companies: ExposureLine[]
   sectors: ExposureLine[]
+  geographies: ExposureLine[]
+  assets: ExposureLine[]
   unclassifiedPct: number
   managedFuturesPct: number
   cryptoPct: number
@@ -125,6 +128,12 @@ export interface LookThroughResult {
   estimated: boolean
   hardSignalsActionable: boolean
   warnings: string[]
+}
+
+export interface FundLookThroughWeights {
+  companyWeights?: Record<string, number>
+  sectorWeights?: { semiconductor?: number; digital?: number; us?: number; ai?: number }
+  geoWeights?: { us?: number; intlDev?: number; emerging?: number; crypto?: number }
 }
 
 function statusFor(pct: number, soft: number, hard: number): CapStatus {
@@ -138,9 +147,12 @@ export function computeLookThrough(
   positions: Array<{ ticker: string; actualPct: number }>,
   now = new Date(),
   sourceUpdatedAt?: Record<string, Date | string | null | undefined>,
+  refreshedWeights?: Record<string, FundLookThroughWeights>,
 ): LookThroughResult {
   const companyTotals: Record<string, number> = {}
   const sectorTotals: Record<string, number> = { semiconductor: 0, digital: 0, us: 0, ai: 0 }
+  const companyContributors:Record<string,ExposureLine["contributors"]>={},sectorContributors:Record<string,ExposureLine["contributors"]>={}
+  const geoTotals:Record<string,number>={us:0,intlDev:0,emerging:0,crypto:0},geoContributors:Record<string,ExposureLine["contributors"]>={}
 
   let unclassifiedPct = 0, managedFuturesPct = 0, cryptoPct = 0
   const requiredDates: Date[] = []
@@ -157,30 +169,38 @@ export function computeLookThrough(
       const d = supplied ? new Date(supplied) : sourceUpdatedAt ? new Date(0) : new Date(ETF_WEIGHTS_AS_OF)
       if (Number.isFinite(d.getTime())) requiredDates.push(d)
     }
-    const cw = ETF_COMPANY_WEIGHTS[ticker] ?? {}
+    const cw = refreshedWeights?.[ticker]?.companyWeights ?? ETF_COMPANY_WEIGHTS[ticker] ?? {}
     for (const [co, pct] of Object.entries(cw)) {
       companyTotals[co] = (companyTotals[co] ?? 0) + w * pct
+      if(pct>0)(companyContributors[co]??=[]).push({ticker,portfolioWeightPct:p.actualPct,underlyingWeightPct:pct,contributionPct:w*pct})
     }
-    const sw = ETF_SECTOR_WEIGHTS[ticker]
+    const sw = refreshedWeights?.[ticker]?.sectorWeights ?? ETF_SECTOR_WEIGHTS[ticker]
     if (sw) {
-      sectorTotals.semiconductor += w * sw.semiconductor
-      sectorTotals.digital       += w * sw.digital
-      sectorTotals.us            += w * sw.us
-      sectorTotals.ai            += w * sw.ai
+      sectorTotals.semiconductor += w * (sw.semiconductor ?? 0)
+      sectorTotals.digital       += w * (sw.digital ?? 0)
+      sectorTotals.us            += w * (sw.us ?? 0)
+      sectorTotals.ai            += w * (sw.ai ?? 0)
+      for(const key of ["semiconductor","digital","us","ai"] as const){const inside=sw[key]??0;if(inside>0)(sectorContributors[key]??=[]).push({ticker,portfolioWeightPct:p.actualPct,underlyingWeightPct:inside,contributionPct:w*inside})}
     }
+    const gw=refreshedWeights?.[ticker]?.geoWeights??ETF_GEO_WEIGHTS[ticker]
+    if(gw)for(const key of ["us","intlDev","emerging","crypto"] as const){const inside=gw[key]??0;geoTotals[key]+=w*inside;if(inside>0)(geoContributors[key]??=[]).push({ticker,portfolioWeightPct:p.actualPct,underlyingWeightPct:inside,contributionPct:w*inside})}
   }
 
   const companies: ExposureLine[] = Object.keys(LOOKTHROUGH_COMPANY_CAPS).map((co) => {
     const cap = LOOKTHROUGH_COMPANY_CAPS[co]
     const pct = companyTotals[co] ?? 0
-    return { key: co, label: co, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard) }
+    return { key: co, label: co, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard), contributors:companyContributors[co]??[] }
   }).sort((a, b) => b.pct - a.pct)
 
   const sectors: ExposureLine[] = Object.keys(LOOKTHROUGH_SECTOR_CAPS).map((k) => {
     const cap = LOOKTHROUGH_SECTOR_CAPS[k]
     const pct = sectorTotals[k] ?? 0
-    return { key: k, label: cap.label, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard) }
+    return { key: k, label: cap.label, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard), contributors:sectorContributors[k]??[] }
   }).sort((a, b) => b.pct - a.pct)
+  const geoLabels:Record<string,string>={us:"United States",intlDev:"International developed",emerging:"Emerging markets",crypto:"Global / Bitcoin"}
+  const geographies=Object.keys(geoLabels).map(key=>({key,label:geoLabels[key],pct:geoTotals[key]??0,soft:key==="us"?70:100,hard:key==="us"?75:100,status:statusFor(geoTotals[key]??0,key==="us"?70:100,key==="us"?75:100),contributors:geoContributors[key]??[]})).sort((a,b)=>b.pct-a.pct)
+  const assetDefs=[{key:"equity",label:"Equity",tickers:new Set(["VWRA","IMID","EQAC","IWQU","SMH","VT","QQQM","EQQQ","SEMI","VWO","VFEA"])},{key:"managed",label:"Managed futures",tickers:new Set(["DBMFE"])},{key:"crypto",label:"Bitcoin",tickers:new Set(["BTC","IBIT"])},{key:"unclassified",label:"Unclassified",tickers:new Set<string>()}]
+  const assets=assetDefs.map(def=>{const rows=positions.filter(p=>def.key==="unclassified"?!assetDefs.slice(0,3).some(x=>x.tickers.has(p.ticker.toUpperCase())):def.tickers.has(p.ticker.toUpperCase())).map(p=>({ticker:p.ticker.toUpperCase(),portfolioWeightPct:p.actualPct,underlyingWeightPct:100,contributionPct:p.actualPct}));const pct=rows.reduce((s,r)=>s+r.contributionPct,0);return {key:def.key,label:def.label,pct,soft:100,hard:100,status:"ok" as CapStatus,contributors:rows}})
 
   const oldest = requiredDates.length ? new Date(Math.min(...requiredDates.map(d => d.getTime()))) : now
   const ageDays = Math.max(0, Math.floor((now.getTime() - oldest.getTime()) / 86_400_000))
@@ -190,7 +210,7 @@ export function computeLookThrough(
   if (managedFuturesPct > 0) warnings.push(`${managedFuturesPct.toFixed(1)}% is managed futures and is reported separately from equity sectors.`)
   if (freshness !== "fresh") warnings.push(`Oldest required source is ${ageDays} days old; refresh before a concentration-led allocation change.`)
   warnings.push("Look-through values are estimates. They may pause or redirect contributions, but never create an automatic sell signal.")
-  return { companies, sectors, unclassifiedPct, managedFuturesPct, cryptoPct, ageDays, freshness, stale: freshness === "stale", estimated: true, hardSignalsActionable: false, warnings }
+  return { companies, sectors, geographies, assets, unclassifiedPct, managedFuturesPct, cryptoPct, ageDays, freshness, stale: freshness === "stale", estimated: true, hardSignalsActionable: false, warnings }
 }
 
 /** The single worst look-through breach (hard cap exceeded), if any — for the engine. */

@@ -46,8 +46,8 @@ export async function updateContributionSettingsAction(formData: FormData) {
 
   if (isNaN(monthly) || monthly < 0) return { error: "Invalid monthly contribution." }
   if (isNaN(annual) || annual < 0) return { error: "Invalid annual lump sum." }
-  if (isNaN(growth) || growth < 0 || growth > 1) return { error: "Growth rate must be between 0 and 1." }
-  if (isNaN(rfr) || rfr < 0 || rfr > 1) return { error: "Risk-free rate must be between 0 and 1." }
+  if (isNaN(growth) || growth < 0 || growth > 0.20) return { error: "Contribution growth must be between 0% and 20% a year." }
+  if (isNaN(rfr) || rfr < 0 || rfr > 0.15) return { error: "Risk-free rate must be between 0% and 15% a year." }
 
   await db.user.update({
     where: { id: active.owner.id },
@@ -58,6 +58,8 @@ export async function updateContributionSettingsAction(formData: FormData) {
   revalidatePath("/")
   revalidatePath("/forecast")
   revalidatePath("/risk")
+  revalidatePath("/mission-control")
+  revalidatePath("/reports")
   return { success: true }
 }
 

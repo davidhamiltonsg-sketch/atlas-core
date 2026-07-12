@@ -54,7 +54,7 @@ const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 async function getSbrForecastData(userId: string) {
   const [holdings, owner] = await Promise.all([
     db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 1 } } }),
-    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true, annualLumpSum: true, contributionGrowthRate: true } }),
   ])
   const totalValue = holdings.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
   const allocMap: Record<string, number> = {}
@@ -64,27 +64,35 @@ async function getSbrForecastData(userId: string) {
   }
   const growthRates = sbrBlendedGrowthRate(allocMap)
   const monthly = owner?.monthlyContribution ?? SBR_SPEC.monthlyContribution
+  const annual = owner?.annualLumpSum ?? 0
+  const growth = owner?.contributionGrowthRate ?? 0
   const futureValue = (years: number, annualRate: number) => {
     const months = years * 12
     const monthlyRate = effectiveMonthlyRate(annualRate)
     let value = totalValue
-    for (let month = 0; month < months; month++) value = value * (1 + monthlyRate) + monthly
+    for (let month = 0; month < months; month++) {
+      const year = Math.floor(month / 12)
+      const contribution = monthly * Math.pow(1 + growth, year)
+      value = value * (1 + monthlyRate) + contribution
+      if (month % 12 === 11) value += annual * Math.pow(1 + growth, year)
+    }
     return value
   }
   const horizons = [3, 5, 10].map(years => ({
     years,
-    contributed: totalValue + monthly * years * 12,
+    contributed: totalValue + Array.from({length:years},(_,year)=>(monthly*12+annual)*Math.pow(1+growth,year)).reduce((a,b)=>a+b,0),
     conservative: futureValue(years, growthRates.conservative),
     base: futureValue(years, growthRates.base),
     aggressive: futureValue(years, growthRates.aggressive),
   }))
-  return { totalValue, growthRates, monthly, horizons }
+  return { totalValue, growthRates, monthly, annual, growth, horizons }
 }
 
 async function SbrForecast({ userId, userName, isAdmin }: { userId: string; userName: string; isAdmin: boolean }) {
   const d = await getSbrForecastData(userId)
   return (
     <Shell title="Where SBR Could Go" subtitle="Flexible-horizon scenarios — ranges, not promises or deadlines" userName={userName} isAdmin={isAdmin}>
+      <div className="forecast-deck">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 mb-6">
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Portfolio Now</p>
@@ -106,7 +114,7 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
       </div>
 
       <div className="mb-5 rounded-xl border border-sky-500/20 bg-sky-500/[0.04] p-4 text-xs leading-relaxed text-muted-foreground">
-        SBR has no fixed value target and no required end date. These illustrations show what the current balance plus S${d.monthly.toLocaleString()} monthly contributions could become. They are not probabilities, guarantees, valuations or trading signals.
+        SBR has no fixed value target and no required end date. These illustrations use S${d.monthly.toLocaleString()} monthly, S${d.annual.toLocaleString()} annually and {(d.growth*100).toFixed(1)}% yearly contribution growth from Settings. They are not probabilities, guarantees, valuations or trading signals.
       </div>
       <div className="mb-5 overflow-x-auto rounded-xl border border-border bg-card p-5">
         <h2 className="text-lg font-bold">Illustrative growth ranges</h2>
@@ -140,6 +148,7 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
             }).join(" · ")}
           </p>
         </div>
+      </div>
       </div>
     </Shell>
   )
@@ -253,6 +262,7 @@ export default async function Forecast() {
 
   return (
     <Shell title="Forecast Engine" subtitle="Long-term compounding trajectories — 2045 horizon" userName={session.name} isAdmin={session.role === "admin"}>
+      <div className="forecast-deck">
 
       {/* Hero stat row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
@@ -301,6 +311,7 @@ export default async function Forecast() {
             currentValue={currentValue}
             milestones={milestones}
             monthlyContribution={MONTHLY_CONTRIBUTION}
+            baseRate={rates.base}
           />
         </div>
       </div>
@@ -507,7 +518,9 @@ export default async function Forecast() {
         startValue={currentValue}
         monthlyDca={MONTHLY_CONTRIBUTION}
         annualBonus={ANNUAL_LUMP_SUM}
+        contributionGrowthRate={CONTRIBUTION_GROWTH_RATE}
       />
+      </div>
     </Shell>
   )
 }

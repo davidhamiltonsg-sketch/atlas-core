@@ -3,10 +3,12 @@ import { HARD_THRESHOLDS } from "@/lib/constants"
 import { applyBitcoinSleeve, type PositionInput } from "@/lib/next-best-move"
 import { computeLadder, type LadderInstruction } from "@/lib/ladder"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, type LookThroughResult } from "@/lib/look-through"
+import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { computePortfolioHealth, type PortfolioHealth } from "@/lib/health"
 import { evaluateGovernance, type GovAlignment } from "@/lib/governance-status"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { PERIOD_MONTHS, PERIOD_LABEL, formatPeriodLabel, formatGeneratedOn, type ReportPeriod } from "@/lib/reports/pdf-theme"
+import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 
 export interface AtlasReportPosition {
   ticker: string
@@ -108,18 +110,15 @@ export async function getAtlasReportData(userId: string, period: ReportPeriod): 
   const valueChangePct = periodAgoValue !== null && periodAgoValue > 0 ? (valueChangeAbs! / periodAgoValue) * 100 : null
 
   // Drawdown from the all-time-high snapshot total, for the ladder's crash-protocol step.
-  const dateSet = [...new Set(holdings.flatMap((h) => h.snapshots.map((s) => s.date.toISOString())))].sort()
-  const totalsByDate = dateSet.map((d) => holdings.reduce((sum, h) => {
-    const snap = h.snapshots.find((s) => s.date.toISOString() === d)
-    return sum + (snap?.value ?? 0)
-  }, 0))
+  const totalsByDate = buildPortfolioTimeline(holdings).map(point=>point.value)
   let portfolioDrawdownPct: number | undefined
   if (totalsByDate.length >= 2) {
     const peak = Math.max(...totalsByDate)
     if (peak > 0 && totalValue < peak) portfolioDrawdownPct = ((totalValue - peak) / peak) * 100
   }
 
-  const lookThrough = computeLookThrough(positions)
+  const refreshedLt = await refreshedLookThroughData()
+  const lookThrough = computeLookThrough(positions,new Date(),refreshedLt.updatedAt,refreshedLt.weights)
   const lookThroughBreach = worstLookThroughBreach(lookThrough)
   const lookThroughHardBreach = lookThroughBreach
     ? { label: lookThroughBreach.label, pct: lookThroughBreach.pct, hard: lookThroughBreach.hard, trimTicker: null }
@@ -138,7 +137,7 @@ export async function getAtlasReportData(userId: string, period: ReportPeriod): 
   ])
   const latestSnapshotDate = holdings.reduce<Date | null>((latest, h) => {
     const d = h.snapshots[0]?.date
-    return d && (!latest || d > latest) ? d : latest
+    return d && (h.snapshots[0]?.value??0)>0 && (!latest || d < latest) ? d : latest
   }, null)
   const snapshotAgeDays = latestSnapshotDate ? Math.floor((Date.now() - latestSnapshotDate.getTime()) / 86_400_000) : 999
 

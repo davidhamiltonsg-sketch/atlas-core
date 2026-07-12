@@ -4,16 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { RefreshLookThroughButton } from "@/components/reports/refresh-look-through-button"
 import {
-  ShieldCheck, GitCompare, TrendingUp, Landmark, BarChart3, Coins, Brain,
+  ShieldCheck, GitCompare, TrendingUp, Landmark, BarChart3, Coins,
   Activity, Radar, Gauge, ArrowLeft, Play, Square, Zap, CircleDot, AlertTriangle,
 } from "lucide-react"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mission Control — a live agent dispatch console.
 //
-// This is a deliberately OFF-THEME surface: a dark command-centre that stands
-// apart from the app's violet/azure dashboards. Every colour is hard-coded from
-// the mission-control palette so it never re-skins with the constitution theme.
+// A portfolio-aware command centre: shared operating model, distinct Atlas and
+// SBR spectral identities. Server findings remain authoritative; styling never
+// changes calculations or mutates portfolio data.
 //
 //   navy   #0A0F1E  base            gold  #C9A84C  wealth / precision accent
 //   card   #1A2035  surface         blue  #4A9EFF  data / AI
@@ -29,20 +29,10 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const C = {
-  navy: "#0A0F1E",
-  terminal: "#060C18",
-  card: "#1A2035",
-  cardHi: "#212a45",
-  line: "#26304A",
-  timestamp: "#3A4D6A",
-  dim: "#7C89A8",
-  text: "#C7D0E4",
-  label: "#EAEEF6",
-  bright: "#F5F7FF",
-  gold: "#C9A84C",
-  blue: "#4A9EFF",
-  green: "#2ECC9A",
-  red: "#E05555",
+  navy: "var(--mc-bg)", terminal: "var(--mc-terminal)", card: "var(--mc-card)", cardHi: "var(--mc-card-hi)",
+  line: "var(--mc-line)", timestamp: "var(--mc-timestamp)", dim: "var(--mc-dim)", text: "var(--mc-text)",
+  label: "var(--mc-label)", bright: "var(--mc-bright)", gold: "var(--mc-warn)", blue: "var(--mc-accent)",
+  green: "var(--mc-positive)", red: "var(--mc-negative)",
 } as const
 
 type Level = "info" | "data" | "ok" | "warn" | "err"
@@ -81,13 +71,13 @@ const ATLAS_AGENTS: AgentDef[] = [
     icon: ShieldCheck,
     accent: C.gold,
     script: [
-      { t: 120, level: "info", msg: "Loading Constitution v5.8 · 41 numeric clauses" },
-      { t: 620, level: "data", msg: "Reconciling drift bands · caps · crash ladder" },
-      { t: 1180, level: "data", msg: "39/41 clauses matched to code constants" },
-      { t: 1720, level: "warn", msg: "SGOV crash-deploy trigger reads 18% vs clause 22 (20%)" },
-      { t: 2280, level: "info", msg: "Compiling remediation note for governance log" },
+      { t: 120, level: "info", msg: "Loading Atlas Core Constitution v10.4" },
+      { t: 620, level: "data", msg: "Reconciling five sleeves, soft bands and hard limits" },
+      { t: 1180, level: "data", msg: "Checking look-through limits and source freshness" },
+      { t: 1720, level: "info", msg: "Verifying whole-share and settlement controls" },
+      { t: 2280, level: "info", msg: "Compiling the governed action summary" },
     ],
-    result: { status: "alert", line: { t: 2700, level: "warn", msg: "1 threshold drifted from constitution — flagged for review" } },
+    result: { status: "done", line: { t: 2700, level: "ok", msg: "Constitution v10.4 controls loaded" } },
   },
   {
     id: "governance",
@@ -97,8 +87,8 @@ const ATLAS_AGENTS: AgentDef[] = [
     icon: Gauge,
     accent: C.blue,
     script: [
-      { t: 120, level: "info", msg: "Evaluating hard caps across 9 sleeves" },
-      { t: 640, level: "data", msg: "Single-name cap 15% · sector cap 35% · cash floor 2%" },
+      { t: 120, level: "info", msg: "Evaluating hard limits across five approved sleeves" },
+      { t: 640, level: "data", msg: "Checking allocation and look-through concentration limits" },
       { t: 1200, level: "ok", msg: "All caps within tolerance band" },
       { t: 1740, level: "data", msg: "Monthly check window: 4 days remaining" },
     ],
@@ -192,21 +182,6 @@ const ATLAS_AGENTS: AgentDef[] = [
       { t: 1260, level: "ok", msg: "All distributions reconciled to snapshots" },
     ],
     result: { status: "done", line: { t: 1700, level: "ok", msg: "Income ledger balanced — 0 unmatched" } },
-  },
-  {
-    id: "sbr",
-    name: "SBR Engine",
-    codename: "SBR-GROWTH",
-    blurb: "Runs the Silicon Brick Road flexible-growth mandate",
-    icon: Brain,
-    accent: C.green,
-    script: [
-      { t: 120, level: "info", msg: "Reading SBR constitution v10.2 · flexible growth" },
-      { t: 720, level: "data", msg: "Targets VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10" },
-      { t: 1320, level: "data", msg: "Whole-share accrual bank: S$412 carried" },
-      { t: 1900, level: "info", msg: "No spending transition is active" },
-    ],
-    result: { status: "done", line: { t: 2400, level: "ok", msg: "SBR flexible-growth mandate is active" } },
   },
 ]
 
@@ -325,7 +300,7 @@ const COPY = {
     spinup: "▶ dispatch received — engine spinning up",
     sweepMsg: (n: number) => `━━ full governance sweep · ${n} agents dispatched ━━`,
     codenameLabel: "CODENAME", ctx: "PORTFOLIO CONTEXT", alloc: "ALLOCATION",
-    driftText: (n: number) => `${n} drift`, showCash: true,
+    driftText: (n: number) => `${n} drift`, showCash: false,
     flaggedTitle: "FLAGGED — NEEDS REVIEW", historyTitle: "SWEEP HISTORY",
     unit: "agents", flaggedWord: "flagged", noSweeps: "No sweeps yet — run one to build history.",
   },
@@ -360,11 +335,11 @@ const COMMON_BUILDING_BLOCKS = [
 ] as const
 const ATLAS_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
   { fund: "BTC · Bitcoin sleeve", us: "N/A", tech: "N/A", semis: "N/A", note: "Vehicle / custody source", href: "https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf" },
-  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "iMGP official fund page", href: "https://www.imgp.com/en/imgpfunds/fund/LU2951555585" },
+  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "iMGP official fund page", href: "https://www.imgp.com/en/imgpfunds/fund/LU2951555403" },
 ] as const
 const SBR_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
   { fund: "BTC · Bitcoin sleeve", us: "N/A", tech: "N/A", semis: "N/A", note: "Vehicle / custody source", href: "https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf" },
-  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "iMGP official fund page", href: "https://www.imgp.com/en/imgpfunds/fund/LU2951555585" },
+  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "iMGP official fund page", href: "https://www.imgp.com/en/imgpfunds/fund/LU2951555403" },
 ] as const
 
 function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" | "sbr"; mono: string; lastUpdated: Date | null }) {
@@ -373,7 +348,7 @@ function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" |
   return <section className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
     <div className="flex flex-wrap items-start justify-between gap-3 mb-3"><div><SectionLabel mono={mono}>LOOK-THROUGH BASIS</SectionLabel><h2 className="text-sm font-semibold mt-1" style={{ color: C.text }}>Fund building blocks used</h2></div><RefreshLookThroughButton lastUpdated={lastUpdated} compact /></div>
     <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-[11px]"><thead><tr style={{ color: C.dim, borderBottom: `1px solid ${C.line}` }}><th className="py-2">Fund</th><th>US %</th><th>Info-tech %</th><th>Semis %</th><th>Source / note</th></tr></thead><tbody>{buildingBlocks.map(r=><tr key={r.fund} style={{ borderBottom: `1px solid ${C.line}` }}><td className="py-2 font-semibold">{r.fund}</td><td>{r.us}</td><td>{r.tech}</td><td>{r.semis}</td><td><a href={r.href} target="_blank" rel="noreferrer" className="underline underline-offset-2" style={{ color: C.blue }}>{r.note} ↗</a></td></tr>)}</tbody></table></div>
-    <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>Exposure is calculated dynamically from the latest available holdings. Stale or missing source data blocks concentration-led trades. DBMFE is a managed-futures diversifier, not cash and not a capital guarantee; Bitcoin is reported outside equity country and sector percentages.</p>
+    <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>The figures in this reference table are benchmark context. Live exposure is calculated from the refreshed database coefficients and reconciled fund-by-fund in Look-through. Stale or missing source data blocks concentration-led trades. DBMFE is not cash or a capital guarantee; Bitcoin is reported separately.</p>
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{rules.map(([lens,watch,review])=><div key={lens} className="rounded-lg border p-2" style={{ borderColor:C.line, background:C.navy }}><p className="text-[9px]" style={{color:C.dim}}>{lens}</p><p className={`${mono} mt-1 text-[10px]`}>WATCH {watch} · REVIEW {review}</p></div>)}</div>
     <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Warn when the oldest required source is more than 35 days old; after 75 days, block concentration-led trades until the source is refreshed.</p>
   </section>
@@ -488,7 +463,8 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
 
   return (
     <div
-      className="mc-console min-h-[70vh] w-full overflow-hidden border"
+      data-variant={context.variant}
+      className={`mc-console mc-theme-${context.variant} min-h-[70vh] w-full overflow-hidden border`}
       style={{ background: "var(--deck-surface)", borderColor: "var(--deck-line)", color: C.text, fontFamily: "var(--font-geist-sans)" }}
     >
       {/* Top command bar */}
@@ -541,7 +517,8 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
                 <button
                   key={agent.id}
                   onClick={() => setSelected(agent.id)}
-                  onDoubleClick={() => dispatch(agent)}
+                  aria-pressed={isSel}
+                  aria-label={`${agent.name}, ${st}. Select to inspect; use the Run button to execute.`}
                   className={`mc-tile group relative flex items-start gap-3 rounded-xl border p-3 text-left transition-all ${st === "active" ? "mc-tile-active" : ""}`}
                   style={{
                     background: isSel ? C.cardHi : C.card,

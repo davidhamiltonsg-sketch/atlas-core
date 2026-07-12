@@ -12,6 +12,7 @@ import { computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } 
 import { computeLadder } from "@/lib/ladder"
 import { getLiveMarketPositions } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
+import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { isActuallyUsSited, isInScope } from "@/lib/approved-alternatives"
 import { getRecentExecutions } from "@/lib/execution-actions"
@@ -203,8 +204,8 @@ async function getDashboardData(userId: string) {
 
   const latestSnapshotDate = holdings.reduce<Date | null>((latest, h) => {
     const d = h.snapshots[0]?.date
-    if (!d) return latest
-    return latest === null || d > latest ? d : latest
+    if (!d || (h.snapshots[0]?.value??0)<=0) return latest
+    return latest === null || d < latest ? d : latest
   }, null)
   const daysSinceUpdate = latestSnapshotDate
     ? Math.floor((Date.now() - new Date(latestSnapshotDate).getTime()) / 86_400_000)
@@ -215,7 +216,8 @@ async function getDashboardData(userId: string) {
     db.governanceRule.count(),
   ])
   const snapshotAgeDays = daysSinceUpdate ?? 999
-  const lookThrough = computeLookThrough(positions)
+  const refreshedLt = await refreshedLookThroughData()
+  const lookThrough = computeLookThrough(positions,new Date(),refreshedLt.updatedAt,refreshedLt.weights)
   const companyHardBreaches = lookThrough.companies.filter(c => c.status === "breach").length
   const sectorHardBreaches  = lookThrough.sectors.filter(s => s.status === "breach").length
   const health = computePortfolioHealth({ hardBreaches, softBreaches, maxDrift, companyHardBreaches, sectorHardBreaches, activeRules, totalRules, snapshotAgeDays })

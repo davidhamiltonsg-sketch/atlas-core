@@ -42,7 +42,7 @@ const ASSETS: Record<string, Record<string, number>> = {
 }
 const SEMICONDUCTORS: Record<string, number> = { IMID: 10, EQAC: 30, SMH: 100, IB01: 0, VWRA: 8, BTC: 0, DBMFE: 0 }
 
-export interface ExposureLine { name: string; pct: number }
+export interface ExposureLine { name: string; pct: number; contributors?: Array<{ticker:string;portfolioWeightPct:number;underlyingWeightPct:number;contributionPct:number}> }
 export interface SbrLookThrough {
   technologyPct: number
   semiconductorPct: number
@@ -70,25 +70,33 @@ export interface SbrLookThrough {
 
 function aggregate(positions: Array<{ ticker: string; actualPct: number }>, table: Record<string, Record<string, number>>): ExposureLine[] {
   const totals: Record<string, number> = {}
+  const contributors:Record<string,NonNullable<ExposureLine["contributors"]>>={}
   for (const p of positions) {
     const raw = p.ticker.toUpperCase()
     const ticker = raw === "SMH.L" ? "SMH" : raw
     for (const [name, insidePct] of Object.entries(table[ticker] ?? {})) {
       totals[name] = (totals[name] ?? 0) + (p.actualPct / 100) * insidePct
+      if(insidePct>0)(contributors[name]??=[]).push({ticker,portfolioWeightPct:p.actualPct,underlyingWeightPct:insidePct,contributionPct:(p.actualPct/100)*insidePct})
     }
   }
-  return Object.entries(totals).map(([name, pct]) => ({ name, pct })).sort((a, b) => b.pct - a.pct)
+  return Object.entries(totals).map(([name, pct]) => ({ name, pct,contributors:contributors[name]??[] })).sort((a, b) => b.pct - a.pct)
 }
 
-export function computeSbrLookThrough(positions: Array<{ ticker: string; actualPct: number }>, now = new Date(), weightsAsOf = new Date(SBR_WEIGHTS_AS_OF)): SbrLookThrough {
+export function computeSbrLookThrough(positions: Array<{ ticker: string; actualPct: number }>, now = new Date(), weightsAsOf = new Date(SBR_WEIGHTS_AS_OF), refreshedWeights?: Record<string,{companyWeights?:Record<string,number>;sectorWeights?:Record<string,number>;geoWeights?:Record<string,number>}>): SbrLookThrough {
   // No securities means no inferred target exposure.
   const invested = positions.filter((p) => p.actualPct > 0)
-  const companies = aggregate(invested, COMPANIES)
-  const countries = aggregate(invested, COUNTRIES)
-  const industries = aggregate(invested, INDUSTRIES)
+  const companyTable={...COMPANIES},countryTable={...COUNTRIES},industryTable={...INDUSTRIES}
+  for(const [ticker,row] of Object.entries(refreshedWeights??{})){
+    if(row.companyWeights)companyTable[ticker]=row.companyWeights
+    if(row.geoWeights){const g=row.geoWeights;countryTable[ticker]={"United States":g.us??0,"International developed":g.intlDev??0,"Emerging markets":g.emerging??0,"Global / crypto":g.crypto??0}}
+    if(row.sectorWeights){const s=row.sectorWeights;industryTable[ticker]={Technology:s.digital??0,Semiconductors:s.semiconductor??0,"Other / overlapping themes":Math.max(0,100-(s.digital??0))}}
+  }
+  const companies = aggregate(invested, companyTable)
+  const countries = aggregate(invested, countryTable)
+  const industries = aggregate(invested, industryTable)
   const assets = aggregate(invested, ASSETS)
-  const technologyPct = industries.filter((x) => x.name === "Technology").reduce((s, x) => s + x.pct, 0)
-  const semiconductorPct = invested.reduce((sum, p) => { const t=p.ticker.toUpperCase()==="SMH.L"?"SMH":p.ticker.toUpperCase(); return sum + (p.actualPct / 100) * (SEMICONDUCTORS[t] ?? 0) }, 0)
+  const technologyPct = invested.reduce((sum,p)=>{const t=p.ticker.toUpperCase()==="SMH.L"?"SMH":p.ticker.toUpperCase();return sum+(p.actualPct/100)*(refreshedWeights?.[t]?.sectorWeights?.digital??(t==="SMH"?90:INDUSTRIES[t]?.Technology??0))},0)
+  const semiconductorPct = invested.reduce((sum, p) => { const t=p.ticker.toUpperCase()==="SMH.L"?"SMH":p.ticker.toUpperCase(); return sum + (p.actualPct / 100) * (refreshedWeights?.[t]?.sectorWeights?.semiconductor??SEMICONDUCTORS[t]??0) }, 0)
   const topCompany = companies[0] ?? { name: "—", pct: 0 }
   const topCountry = countries[0] ?? { name: "—", pct: 0 }
   const topIndustry = industries[0] ?? { name: "—", pct: 0 }

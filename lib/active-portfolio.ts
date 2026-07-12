@@ -35,5 +35,6 @@ export async function portfolioOwner(id: ConstitutionId) {
 export async function activePortfolioContext(session: SessionPayload) {
   const constitutionId = await activePortfolioId(session)
   const owner = await portfolioOwner(constitutionId)
-  return { constitutionId, owner: owner ?? { id: session.userId, name: session.name, email: session.email } }
+  if (!owner) throw new Error(`${constitutionId === "atlas-core" ? "Atlas Core" : "Silicon Brick Road"} owner is not configured.`)
+  return { constitutionId, owner }
 }

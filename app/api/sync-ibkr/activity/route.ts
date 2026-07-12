@@ -8,6 +8,7 @@ import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { CONSTITUTIONS } from "@/lib/constitutions"
+import { assertCanMutateOwner } from "@/lib/mutation-auth"
 
 export const maxDuration = 30
 
@@ -113,6 +114,7 @@ export async function PUT(req: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
   const active = await activePortfolioContext(session)
+  try { assertCanMutateOwner(session, active.owner.id) } catch { return NextResponse.json({ error: "Read-only portfolio access" }, { status: 403 }) }
 
   const body = await req.json() as {
     executions: Array<{
@@ -129,10 +131,25 @@ export async function PUT(req: Request) {
     }>
   }
 
+  // Client confirmation selects broker record IDs; it never supplies authoritative money.
+  // Re-fetch the Flex report and persist only matching server-side records.
+  const {token,positionsQuery,activityQuery}=ibkrCredentialsFor(active.constitutionId)
+  const queryId=activityQuery??positionsQuery
+  if(!token||!queryId)return NextResponse.json({error:"IBKR activity query is not configured"},{status:503})
+  const fresh=await fetchFlexActivity(token,queryId)
+  if(!fresh.success)return NextResponse.json({error:fresh.error},{status:422})
+  const selectedTrades=new Set((body.executions??[]).map(x=>x.tradeID))
+  const selectedDividends=new Set((body.dividends??[]).map(x=>x.transactionID))
+  const selectedLedger=new Set((body.ledger??[]).map(x=>x.externalId))
+  const allowed=new Set<string>([...CORE_TICKERS,...CONSTITUTIONS[active.constitutionId].funds.map(f=>f.ticker)])
+  const executions=fresh.executions.filter(x=>selectedTrades.has(x.tradeID)&&allowed.has(x.symbol.trim().toUpperCase())&&!isForexRow(x.symbol))
+  const dividends=fresh.dividends.filter(x=>selectedDividends.has(x.transactionID)&&allowed.has(x.symbol.trim().toUpperCase()))
+  const ledger=fresh.ledger.filter(x=>selectedLedger.has(x.externalId))
+
   // Reuse the shared importer (same dedupe-by-id + holding-sync the cron uses), so the manual
   // and automated paths can never diverge. Forex rows are filtered inside the importer.
   const { trades: tradesImported, dividends: dividendsImported, ledger: ledgerImported, contributions: contributionsImported, tickers } =
-    await importIbkrActivityForUser(active.owner.id, body.executions ?? [], body.dividends ?? [], body.ledger ?? [])
+    await importIbkrActivityForUser(active.owner.id, executions, dividends, ledger)
 
   if (tickers.length > 0) {
     for (const p of ["/", "/trades", "/contributions", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
