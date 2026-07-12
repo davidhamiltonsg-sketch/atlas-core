@@ -27,6 +27,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { redirect } from "next/navigation"
 import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
+import { BitcoinCycleBadge, getBitcoinCyclePhase } from "@/components/bitcoin-cycle-badge"
 
 // This is a personal, auth-gated dashboard whose server render includes live
 // date maths (dealing-window and contribution countdowns). Pin it to dynamic so
@@ -294,6 +295,9 @@ async function getDashboardData(userId: string) {
     latestPrice: p.latestPrice ?? 0,
   }))
 
+  // Determine current Bitcoin cycle phase for UI display
+  const btcCyclePhase = getBitcoinCyclePhase(new Date())
+
   const [marketSnapshot, recentExecutions] = await Promise.all([
     getLiveMarketPositions(),
     getRecentExecutions(userId, 1),
@@ -472,6 +476,7 @@ export default async function Dashboard() {
       <div className="mb-5 flex flex-wrap items-start gap-2">
         <RefreshPricesButton />
         <PortfolioUpdateButton label="Update Holdings" holdings={d.updateHoldings} />
+        <BitcoinCycleBadge phase={btcCyclePhase} />
         {d.dealingWindow.isOpen && (
           <span className="inline-flex items-center text-[10px] font-bold px-3 py-1.5 rounded-full border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400">
             DEALING WINDOW OPEN · CLOSES {d.dealingWindow.windowClosesLabel}

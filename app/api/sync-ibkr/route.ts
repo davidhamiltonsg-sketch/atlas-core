@@ -7,6 +7,7 @@ import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { instrumentIdentity } from "@/lib/instrument-identity"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
+import { canSyncWithIbkr, recordIbkrSync, getTimeUntilNextIbkrSync, formatTimeRemaining } from "@/lib/ibkr-rate-limiter"
 
 // Allow up to 30s for the FLEX polling loop
 export const maxDuration = 30
@@ -71,6 +72,18 @@ export async function PUT(req: Request) {
   const active = await activePortfolioContext(session)
   try { assertCanMutateOwner(session, active.owner.id) } catch { return NextResponse.json({ error: "Read-only portfolio access" }, { status: 403 }) }
 
+  // ── Rate Limiting Check ──────────────────────────────────────────────────
+  // Server-side enforcement: 6-hour minimum between IBKR syncs per user
+  const canSync = await canSyncWithIbkr(active.owner.id)
+  if (!canSync) {
+    const timeUntilNext = await getTimeUntilNextIbkrSync(active.owner.id)
+    const remaining = formatTimeRemaining(timeUntilNext)
+    return NextResponse.json(
+      { error: `IBKR sync rate limited: Please wait ${remaining} before syncing again` },
+      { status: 429 }
+    )
+  }
+
   const body = await req.json() as {
     positions: Array<{ holdingId?: string | null; symbol?: string; units: number; markPrice: number; positionValue: number; costBasis?: number | null; unrealizedPnl?: number | null }>
   }
@@ -131,9 +144,12 @@ export async function PUT(req: Request) {
     updated++
   }
 
-  for (const p of ["/", "/trades", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
+  for (const p of ["/", "/trades", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
     revalidatePath(p)
   }
+
+  // Record sync for rate limiting
+  await recordIbkrSync(active.owner.id)
 
   return NextResponse.json({ updated, created })
 }

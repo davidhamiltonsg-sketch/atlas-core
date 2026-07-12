@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { syncIbkrSnapshotsAllUsers, syncIbkrActivityAllUsers } from "@/lib/holdings-sync"
+import { recordIbkrSync } from "@/lib/ibkr-rate-limiter"
 import { authorizeCron } from "@/lib/cron-auth"
+import { db } from "@/lib/db"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -18,7 +20,16 @@ export async function GET(req: Request) {
   const result = await syncIbkrSnapshotsAllUsers()
   const activity = await syncIbkrActivityAllUsers()
   if ((result.ok && result.snapshots > 0) || (activity.ok && (activity.trades > 0 || activity.dividends > 0))) {
-    for (const p of ["/", "/portfolio", "/ytd", "/contributions", "/trades", "/governance", "/reports", "/forecast", "/holdings"]) revalidatePath(p)
+    for (const p of ["/", "/portfolio", "/ytd", "/contributions", "/trades", "/governance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) revalidatePath(p)
+
+    // Record sync for rate limiting (for all portfolio owners)
+    const portfolioOwners = await db.user.findMany({
+      where: { OR: [{ email: { contains: "@atlas-core" } }, { email: { contains: "@sbr" } }] },
+      select: { id: true }
+    })
+    for (const owner of portfolioOwners) {
+      await recordIbkrSync(owner.id)
+    }
   }
   return NextResponse.json({ ran: true, at: new Date().toISOString(), snapshots: result, activity })
 }

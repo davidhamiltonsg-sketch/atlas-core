@@ -73,6 +73,8 @@ export async function updateHoldingsManually(
   revalidatePath("/")
   revalidatePath("/reports")
   revalidatePath("/forecast")
+  revalidatePath("/risk")
+  revalidatePath("/mission-control")
 }
 
 // Apply screenshot-extracted holdings: update existing tickers AND create any new ones
@@ -114,7 +116,7 @@ export async function applyExtractedHoldings(
     updated++
   }
 
-  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd"]) revalidatePath(p)
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd", "/risk", "/mission-control"]) revalidatePath(p)
   return { updated, created }
 }
 
@@ -303,6 +305,8 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   revalidatePath("/reports")
   revalidatePath("/forecast")
   revalidatePath("/governance")
+  revalidatePath("/risk")
+  revalidatePath("/mission-control")
 
   const note = ibkrToken && ibkrQuery && !haveIbkr
     ? `IBKR sync unavailable (${ibkrError ?? "no positions returned"}) — prices updated from Yahoo; share counts unchanged.`

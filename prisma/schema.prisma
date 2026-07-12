@@ -30,6 +30,7 @@ model User {
   ibkrLedgerEntries      IbkrLedgerEntry[]
   dcaCashBanks           DcaCashBank[]
   dcaBankEntries         DcaBankEntry[]
+  ibkrSyncLogs           IbkrSyncLog[]
 }
 
 model DcaCashBank {
@@ -274,4 +275,17 @@ model ThrottleState {
   discretionaryChangesQ  Int       @default(0) // discretionary changes this quarter
   quarter                String    @default("2026-Q3") // "YYYY-QN"
   updatedAt              DateTime  @updatedAt
+}
+
+// ── IBKR Sync Rate Limiting ──────────────────────────────────────────────────
+// Server-side rate limit tracking for IBKR Flex API syncs (6-hour minimum interval).
+// Replaces client-side localStorage checks which can be bypassed.
+model IbkrSyncLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncedAt  DateTime @default(now()) // timestamp of successful sync
+  createdAt DateTime @default(now())
+
+  @@index([userId, syncedAt])
 }
