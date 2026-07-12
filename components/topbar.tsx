@@ -1,6 +1,7 @@
 "use client"
 
 import { Menu, LogOut, User } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { logoutAction } from "@/app/logout-action"
 import { selectPortfolio } from "@/app/actions/portfolio-selection"
 import type { ConstitutionId } from "@/lib/constitutions"
@@ -20,6 +21,7 @@ const VERSION_PILL: Record<ConstitutionId, { label: string; cls: string; dot: st
 
 export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId = "atlas-core" }: TopbarProps) {
   const pill = VERSION_PILL[constitutionId]
+  const pathname = usePathname()
   return (
     <header className="atlas-topbar flex h-[72px] shrink-0 items-center gap-4 border-b border-border bg-card/70 backdrop-blur-xl px-4 lg:px-7">
       <button
@@ -41,6 +43,7 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
       <div className="shrink-0 flex items-center gap-2">
         {userName && (
           <form action={selectPortfolio}>
+            <input type="hidden" name="returnTo" value={pathname} />
             <select
               name="portfolio"
               value={constitutionId}
