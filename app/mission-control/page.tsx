@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google"
 import { getSession } from "@/lib/session"
 import { constitutionForEmail, type ConstitutionId } from "@/lib/constitutions"
 import { db } from "@/lib/db"
@@ -27,12 +26,6 @@ export const metadata: Metadata = {
   description: "Live agent dispatch console for the Atlas governance engines.",
 }
 
-// The three brand fonts from the mission-control brief, exposed as CSS variables
-// the client component reads: Space Grotesk (display) · Inter (body) · JetBrains Mono (data).
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" })
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" })
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" })
-
 // Representative context shown when logged out (or with no snapshots yet) so the
 // console still reads as a real command centre. Clearly flagged SAMPLE in the UI.
 const SAMPLE_CONTEXT: PortfolioContext = {
@@ -45,11 +38,11 @@ const SAMPLE_CONTEXT: PortfolioContext = {
   live: false,
   variant: "atlas",
   holdings: [
-    { ticker: "IMID", name: "Global equity core", pct: 52, color: "#4A9EFF" },
-    { ticker: "IWQU", name: "World quality core", pct: 29, color: "#6366F1" },
+    { ticker: "VWRA", name: "Global equity core", pct: 70, color: "#4A9EFF" },
     { ticker: "EQAC", name: "Nasdaq-100 tilt", pct: 10, color: "#C9A84C" },
-    { ticker: "SMH", name: "UCITS semiconductor tilt", pct: 4, color: "#8B7FE8" },
+    { ticker: "SMH", name: "UCITS semiconductor tilt", pct: 5, color: "#8B7FE8" },
     { ticker: "BTC", name: "Bitcoin sleeve", pct: 5, color: "#E0913A" },
+    { ticker: "DBMFE", name: "Managed futures", pct: 10, color: "#2ECC9A" },
   ],
 }
 
@@ -819,9 +812,7 @@ export default async function MissionControlPage({ searchParams }: { searchParam
       : await loadAgentFindings(active.owner.id)
   }
 
-  const requiredTickers = active.constitutionId === "silicon-brick-road"
-    ? ["IMID", "EQAC", "SMH", "IB01"]
-    : ["IMID", "EQAC", "SMH", "IWQU"]
+  const requiredTickers = ["VWRA", "EQAC", "SMH", "BTC", "DBMFE"]
   const requiredLookThrough = await db.etfLookThrough.findMany({
         where: { ticker: { in: requiredTickers } },
         select: { ticker: true, updatedAt: true },
@@ -833,9 +824,9 @@ export default async function MissionControlPage({ searchParams }: { searchParam
     ? new Date(Math.min(...requiredLookThrough.map(row => row.updatedAt.getTime())))
     : null
 
-  if(!findings) return <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-[#07101f] text-white grid place-items-center p-6`}><div className="max-w-lg rounded-2xl border border-red-400/30 bg-red-500/5 p-6"><h1 className="text-xl font-bold">Mission Control could not reconcile live data</h1><p className="mt-2 text-sm text-white/65">No sample figures are shown. Refresh the IBKR data or check the production logs, then try again.</p></div></div>
+  if(!findings) return <div className="min-h-screen bg-[#07101f] text-white grid place-items-center p-6"><div className="max-w-lg rounded-2xl border border-red-400/30 bg-red-500/5 p-6"><h1 className="text-xl font-bold">Mission Control could not reconcile live data</h1><p className="mt-2 text-sm text-white/65">No sample figures are shown. Refresh the IBKR data or check the production logs, then try again.</p></div></div>
   return (
-    <div className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <div>
       <MissionControl context={context} findings={findings} lookThroughUpdatedAt={lookThroughUpdatedAt} />
     </div>
   )

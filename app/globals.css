@@ -5,6 +5,12 @@
    stops (--brand-a/b/c) drive every gradient, glow, aurora and ring in the
    app, so both portfolios re-skin from one place.                            */
 :root {
+  --font-geist-sans: "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+  --font-fraunces: Georgia, "Times New Roman", serif;
+  --font-ibm-plex-mono: "Cascadia Mono", Consolas, monospace;
+  --font-space-grotesk: "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif;
+  --font-inter: "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+  --font-jetbrains-mono: "Cascadia Mono", Consolas, monospace;
   --background:         258 45% 97.5%;   /* violet-tinted porcelain */
   --foreground:         260 42% 10%;     /* deep aubergine-navy */
   --card:               0   0%  100%;

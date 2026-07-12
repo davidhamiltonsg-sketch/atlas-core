@@ -6,27 +6,27 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 interface Asset { n: string; w: number; mu: number[]; s: number }
 
 const ATLAS_ASSETS: Asset[] = [
-  { n: 'IMID', w: 0.52, mu: [0.05, 0.085, 0.12], s: 0.15 },
-  { n: 'IWQU', w: 0.29, mu: [0.05, 0.09, 0.13], s: 0.16 },
-  { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.22 },
-  { n: 'SMH', w: 0.04, mu: [0.04, 0.115, 0.18], s: 0.32 },
+  { n: 'VWRA', w: 0.70, mu: [0.05, 0.085, 0.12], s: 0.16 },
+  { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.23 },
+  { n: 'SMH', w: 0.05, mu: [0.04, 0.115, 0.18], s: 0.30 },
   { n: 'IBIT', w: 0.05, mu: [-0.05,  0.12,   0.25  ], s: 0.70 },
+  { n: 'DBMFE', w: 0.10, mu: [0.00, 0.06, 0.10], s: 0.135 },
 ]
 
-// Planning correlation matrix for IMID/IWQU/EQAC/SMH/IBIT. It is an explicit model input,
+// Planning correlation matrix for VWRA/EQAC/SMH/IBIT/DBMFE. It is an explicit model input,
 // not a claim that future correlations are known or stationary.
 const CORR_5: number[][] = [
-  [1.00, 0.87, 0.78, 0.82, 0.18],
-  [0.92, 1.00, 0.82, 0.72, 0.18],
-  [0.87, 0.82, 1.00, 0.88, 0.22],
-  [0.78, 0.72, 0.88, 1.00, 0.24],
-  [0.18, 0.22, 0.24, 0.14, 1.00],
+  [1.00, 0.88, 0.78, 0.30, 0.00],
+  [0.88, 1.00, 0.82, 0.35, 0.00],
+  [0.78, 0.82, 1.00, 0.35, 0.00],
+  [0.30, 0.35, 0.35, 1.00, 0.00],
+  [0.00, 0.00, 0.00, 0.00, 1.00],
 ]
 // CIDX maps both UCITS tickers (VWRA/EQQQ/SEMI/VFEA) and their legacy US equivalents
 // (VT/QQQM/SMH/VWO) to the same correlation column — kept for backward data compatibility
 // so historical snapshots with old tickers still resolve to the correct matrix index.
 const CIDX: Record<string, number> = {
-  IMID: 0, VT: 0, IWQU: 1, EQAC: 2, QQQM: 2, SMH: 3, IBIT: 4, BTC: 4,
+  VWRA: 0, VT: 0, VWO: 0, EQAC: 1, QQQM: 1, SMH: 2, IBIT: 3, GBTC: 3, BTC: 3, DBMFE: 4,
 }
 
 // ── GBM math ──────────────────────────────────────────────────────────────────
@@ -596,7 +596,7 @@ export function ProbabilityEngine({
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           <strong>Methodology:</strong> GBM with Itô-corrected drift — S(t+Δt) = S(t)·exp[(μ−σ²/2)Δt + σ√Δt·Z], monthly steps.
           Correlated normals via Cholesky decomposition of the 2014–2024 empirical 5×5 correlation matrix.
-          Asset config: IMID 52% (σ=15%), IWQU 29% (σ=16%), EQAC 10% (σ=22%), SMH 4% (σ=32%), Bitcoin sleeve 5% (σ=70%).
+          Asset config: VWRA 70% (σ=16%), EQAC 10% (σ=23%), SMH 5% (σ=30%), IBIT 5% (σ=70%), DBMFE 10% (σ=13.5%). DBMFE correlation is a planning assumption, not guaranteed crisis behaviour.
           {scenario === 0 && ' Conservative μ: blended ~7.1% p.a.'}
           {scenario === 1 && ' Base μ: blended ~10.3% p.a.'}
           {scenario === 2 && ' Aggressive μ: blended ~13.9% p.a.'}

@@ -184,7 +184,7 @@ export async function sendMonthlyReminderEmail(
   const accentBg = isAtlas ? "#f5f3ff" : "#e0f2fe"
   const moniker = isAtlas ? "AC" : "SBR"
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
-  const tagline = isAtlas ? "Investment Constitution v3.1" : "Flexible medium-term growth · Constitution v3.2"
+  const tagline = isAtlas ? "Investment Constitution v10.4" : "Flexible medium-term growth · Constitution v10.2"
   const severityColor = nextMove.severity === "critical" ? "#dc2626"
     : nextMove.severity === "high" ? "#d97706"
     : nextMove.severity === "medium" ? "#0284c7"
@@ -334,7 +334,7 @@ export async function sendAnnualAuditEmail(
     <li>Review the governed 5% Bitcoin sleeve and its approved vehicle identity.</li>
     <li>Confirm broker (IBKR Singapore) and custodian risk is acceptable.</li>` : `
     <li>Confirm SBR still has no fixed spending date or mandatory target value.</li>
-    <li>Review IMID 80%, EQAC 10%, SMH 5% and IB01 5% against Dami's circumstances.</li>
+    <li>Review VWRA 65%, EQAC 15%, SMH 5%, Bitcoin 5% and DBMFE 10% against Dami's circumstances.</li>
     <li>If a real SGD use has emerged, document its amount, date and flexibility before changing risk.</li>
     <li>Review hidden-exposure factsheets — are provider holdings files current?</li>`
 
@@ -413,7 +413,7 @@ export async function sendPasswordResetEmail(
                   </td>
                   <td style="padding-left:12px;">
                     <div style="font-size:15px;font-weight:700;color:#1a1a2e;">Atlas Core</div>
-                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v3.1 · Atlas Core</div>
+                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.4 · Atlas Core</div>
                   </td>
                 </tr>
               </table>

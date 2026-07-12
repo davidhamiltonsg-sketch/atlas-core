@@ -210,8 +210,8 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         className="rounded-xl border border-sky-500/40 bg-gradient-to-r from-sky-500/[0.10] via-blue-500/[0.07] to-cyan-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-sky-500/[0.12] transition-colors group">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/20 shrink-0"><FileText className="h-4 w-4 text-sky-400" /></div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-sky-400">Silicon Brick Road — Investment Constitution (v3.2)</p>
-          <p className="text-xs text-muted-foreground">The complete flexible-horizon plan — four funds, whole-share cash bank, concentration rules and future exit protocol.</p>
+          <p className="text-xs font-bold text-sky-400">Silicon Brick Road — Investment Constitution (v10.2)</p>
+          <p className="text-xs text-muted-foreground">VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10 — whole-share cash bank, dynamic look-through and future exit protocol.</p>
         </div>
         <span className="text-xs font-semibold text-sky-400 group-hover:text-sky-300 shrink-0">Open ↗</span>
       </a>
@@ -229,6 +229,12 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
           <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">Real use appears</p><p className="text-xs font-bold">Write exit plan</p></div>
         </div>
       </div>
+
+      <section className="mb-5 grid gap-3 md:grid-cols-3" aria-label="SBR safety guardrails">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/[0.05] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-green-400">Income green</p><p className="mt-2 text-xs text-muted-foreground">Income secure and external emergency cash fully funded: scheduled DCA may continue. DCA reduces timing risk; it does not guarantee a profit or prevent loss.</p></div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Income amber</p><p className="mt-2 text-xs text-muted-foreground">Income uncertain or emergency cash being used: pause optional increases and rebuild liquidity outside SBR before adding risk.</p></div>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/[0.05] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-red-400">Income red</p><p className="mt-2 text-xs text-muted-foreground">Income lost or emergency reserve inadequate: suspend contributions. DBMFE is a managed-futures diversifier, not cash and not a capital guarantee.</p></div>
+      </section>
 
 
       {/* Exceptional Market Event — EME detected (portfolio down ≥30% from peak) */}
@@ -283,7 +289,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       {!hasBalance && (
         <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
           <p className="text-sm font-bold text-sky-400">SBR currently holds no securities</p>
-          <p className="text-xs text-muted-foreground mt-0.5">The approved target is IMID 80 · EQAC 10 · SMH 5 · IB01 5. Current exposure remains zero until an IBKR purchase settles; the first contribution routes to IMID.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">The approved target is VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10. Current exposure remains zero until an IBKR purchase settles; the first contribution routes to the furthest-underweight eligible holding.</p>
         </div>
       )}
 
@@ -445,7 +451,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Flexible growth mode — active</span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">There is no automatic value phase or spending deadline. De-risk only after Dami records a real SGD use, amount and date.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">There is no automatic value phase or spending deadline. De-risk only after Dami records a real SGD use, amount and date. Stale look-through data blocks concentration-led trades until refreshed.</p>
               </div>
               <a href="/governance" className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 shrink-0">
                 Read rules <ChevronRight className="h-3 w-3" />

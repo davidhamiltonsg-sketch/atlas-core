@@ -17,7 +17,7 @@ export type SbrBranch =
   | { tag: "standard"; fund: SbrPosition }
 
 export function getPhaseCaps(_phaseKey: string) {
-  return { smhHard: 8, combinedHard: 20, combinedWarning: 18, combinedResume: 17 }
+  return { smhHard: 15, combinedHard: 43, combinedWarning: 37.5, combinedResume: 35 }
 }
 
 function route(positions: SbrPosition[], totalValue: number, c: Constitution): SbrBranch {
@@ -68,7 +68,7 @@ export function computeSbrHealth(positions:SbrPosition[],totalValue:number,snaps
   const governance=breach?35:watch?75:100, risk=breach?25:watch?70:100
   const allocation=Math.max(0,100-positions.reduce((s,p)=>s+Math.min(20,Math.abs(p.actualPct-p.targetPct)*4),0))
   const freshness=snapshotAgeDays<=7?100:snapshotAgeDays<=35?75:snapshotAgeDays<=95?45:10
-  const liquidity=positions.find(p=>p.ticker==="IB01")?.actualPct! >= 3 ? 100 : 50
+  const liquidity=(positions.find(p=>p.ticker==="DBMFE")?.actualPct ?? 0) >= 5 ? 100 : 50
   const overall=Math.round(governance*.25+risk*.20+allocation*.15+freshness*.20+100*.10+liquidity*.10)
   return {overall,overallLabel:overall>=80?"Good standing":overall>=60?"Review recommended":"Action required",governance,risk,allocation,contribution:freshness,behavioural:100,liquidity,documentation:freshness}
 }

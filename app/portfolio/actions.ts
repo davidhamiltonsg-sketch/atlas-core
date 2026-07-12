@@ -11,7 +11,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
-const YF_TICKER_MAP: Record<string, string> = { IMID: "IMID.L", IWQU: "IWQU.L", EQAC: "EQAC.L", SMH: "SMH.L", IB01: "IB01.L" }
+const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQAC: "EQAC.L", SMH: "SMH.L", IBIT: "IBIT", BTC: "IBIT", DBMFE: "DBMFE.PA" }
 const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k, v]) => [v, k]))
 // Tickers whose Yahoo Finance price is already in SGD (no USD→SGD conversion needed).
 const YF_SGD_PRICED = new Set<string>()
@@ -353,7 +353,7 @@ For each holding visible, return a JSON array with objects containing:
 - value: total market value in SGD (number, as shown in the account base currency)
 
 Only include ETF/stock holdings, not cash. Return ONLY a valid JSON array, no explanation.
-Example: [{"ticker":"IMID","units":428,"price":42.52,"value":24560.84}]`,
+Example: [{"ticker":"VWRA","units":428,"price":142.52,"value":61038.56}]`,
             },
           ],
         },

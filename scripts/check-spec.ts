@@ -39,6 +39,12 @@ for (const f of ATLAS_SPEC.funds) {
   eq(`drift-low ${f.ticker}`, HARD_THRESHOLDS[f.ticker]?.low, f.driftLow)
   eq(`amber-high ${f.ticker}`, HARD_THRESHOLDS[f.ticker]?.amberHigh, f.amberHigh)
 }
+eq("Atlas registry tickers", ATLAS_CORE.funds.map(f => f.ticker), ATLAS_SPEC.funds.map(f => f.ticker))
+for (const f of ATLAS_SPEC.funds) {
+  const r = ATLAS_CORE.funds.find(x => x.ticker === f.ticker)
+  eq(`Atlas ${f.ticker} registry`, [r?.target, r?.rangeLow, r?.rangeHigh, r?.hardCap, r?.floor ?? null], [f.target, f.target-f.band, f.target+f.band, f.hardCap, f.hardFloor ?? null])
+  eq(`Atlas ${f.ticker} identity`, [f.isin ?? null, f.cusip ?? null], [f.ticker === "BTC" ? null : ({VWRA:"IE00BK5BQT80",EQAC:"IE00BFZXGZ54",SMH:"IE00BMC38736",DBMFE:"LU2951555403"} as Record<string,string>)[f.ticker], f.ticker === "BTC" ? "46438F101" : null])
+}
 eq("combined tech soft", COMBINED_TECH_RULE.softCeiling, ATLAS_SPEC.combinedTech.soft)
 eq("combined tech hard", COMBINED_TECH_RULE.hardCeiling, ATLAS_SPEC.combinedTech.hard)
 eq("Atlas currency (DCA)", DCA_PARAMS.currency, ATLAS_SPEC.currency)
@@ -59,6 +65,9 @@ for (const f of SBR_SPEC.funds) {
     [r?.target, r?.rangeLow, r?.rangeHigh, r?.hardCap, r?.floor ?? null],
     [f.target, f.rangeLow, f.rangeHigh, f.hardCap, f.floor ?? null])
 }
+eq("SBR identities", SBR_SPEC.funds.map(f => [f.ticker, f.isin ?? null, f.cusip ?? null]), [
+  ["VWRA","IE00BK5BQT80",null],["EQAC","IE00BFZXGZ54",null],["SMH","IE00BMC38736",null],["BTC",null,"46438F101"],["DBMFE","LU2951555403",null],
+])
 eq("SBR monthly", SBR.monthlyContribution, SBR_SPEC.monthlyContribution)
 eq("SBR target value", SBR.targetValue, SBR_SPEC.hasFixedTarget ? SBR_SPEC.targetValue : null)
 eq("SBR currency", SBR.currency, SBR_SPEC.currency)

@@ -286,20 +286,40 @@ export async function refreshLookThroughAction(): Promise<{
   // Any authenticated user can refresh (it's read-only data from Yahoo)
 
   const SOURCES = [
+    { ticker: "VWRA", yahoo: "VWRA.L", source: "https://www.vanguard.co.uk/professional/product/etf/equity/9679/ftse-all-world-ucits-etf-usd-accumulating", preset: null },
     { ticker: "IMID", yahoo: "IMID.L", source: "https://www.ssga.com/uk/en_gb/institutional/etfs/state-street-spdr-msci-all-country-world-investable-market-ucits-etf-acc-imid-gy" },
     { ticker: "EQAC", yahoo: "EQAC.L", source: "https://www.invesco.com/uk/en/financial-products/etfs/invesco-eqqq-nasdaq-100-ucits-etf-acc.html" },
     { ticker: "SMH", yahoo: "SMH.L", source: "https://www.vaneck.com/uk/en/semiconductor-etf" },
     { ticker: "IWQU", yahoo: "IWQU.L", source: "https://www.ishares.com/uk/individual/en/products/270054/ishares-msci-world-quality-factor-ucits-etf" },
     { ticker: "IB01", yahoo: "IB01.L", source: "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-01yr-ucits-etf" },
+    { ticker: "BTC", yahoo: null, source: "https://bitcoin.org/bitcoin.pdf", preset: "crypto" },
+    { ticker: "DBMFE", yahoo: null, source: "https://imgp.com/product/imgp-dbi-managed-futures-fund-r-eur-hedged/", preset: "managed_futures" },
   ] as const
   const updated: string[] = []
   const errors:  string[] = []
 
-  for (const { ticker, yahoo, source } of SOURCES) {
+  for (const row of SOURCES) {
+    const { ticker, yahoo, source } = row
+    const preset = "preset" in row ? row.preset : null
     try {
       let data: EtfData
 
-      if (ticker === "IB01") {
+      if (preset === "crypto") {
+        data = {
+          companyWeights: {},
+          sectorWeights: { semiconductor: 0, digital: 0, us: 0, ai: 0 },
+          geoWeights: { us: 0, intlDev: 0, emerging: 0, crypto: 100 },
+        }
+      } else if (preset === "managed_futures") {
+        // Managed futures are deliberately kept outside equity company/sector buckets.
+        // The source record proves freshness; the look-through engine exposes the sleeve
+        // explicitly rather than pretending its dynamic futures book is an equity country.
+        data = {
+          companyWeights: {},
+          sectorWeights: { semiconductor: 0, digital: 0, us: 0, ai: 0 },
+          geoWeights: { us: 0, intlDev: 0, emerging: 0, crypto: 0 },
+        }
+      } else if (ticker === "IB01") {
         // The official mandate is exclusively short-dated US Treasury securities.
         data = {
           companyWeights: {
@@ -310,7 +330,7 @@ export async function refreshLookThroughAction(): Promise<{
           geoWeights:     { us: 100, intlDev: 0, emerging: 0, crypto: 0 },
         }
       } else {
-        const result = await fetchYFHoldings(yahoo)
+        const result = await fetchYFHoldings(yahoo!)
         if (!result) {
           errors.push(`${ticker}: no data returned from Yahoo Finance`)
           continue

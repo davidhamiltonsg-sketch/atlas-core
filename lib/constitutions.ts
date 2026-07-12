@@ -15,7 +15,7 @@
 // can never drift from the spec / engine / served doc.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { ATLAS_SPEC, SBR_SPEC } from "@/lib/portfolio-spec"
 
 export type ConstitutionId = "atlas-core" | "silicon-brick-road"
 
@@ -83,7 +83,7 @@ export const ATLAS_CORE: Constitution = {
   id: "atlas-core",
   name: "Atlas Core — Investment Constitution",
   shortName: "Atlas Core",
-  version: "3.1",
+  version: "10.4",
   updated: "2026-07",
   motto: "Disciplina Supra Praedictio",
   objective: "A long-term retirement portfolio targeting 2045. Its job is to grow wealth by following a fixed set of rules instead of feelings, headlines, or random ideas. Not for trading or gambling — for staying invested until 2045 and letting compounding do the work.",
@@ -92,18 +92,21 @@ export const ATLAS_CORE: Constitution = {
   monthlyContribution: 3000,
   broker: "IBKR Singapore",
   docPath: "/atlas-core-constitution.html",
-  funds: [
-    { ticker: "IMID", name: "SPDR MSCI ACWI IMI UCITS ETF (Acc)", role: "The global market-cap core — developed, emerging and small-cap equities.", target: 52, rangeLow: 47, rangeHigh: 57, hardCap: 62, floor: 45, color: "#7c3aed" },
-    { ticker: "EQAC", name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", role: "A measured Nasdaq-100 growth tilt, capped so it never replaces global diversification.", target: 10, rangeLow: 7, rangeHigh: 13, hardCap: 15, floor: 5, color: "#a78bfa" },
-    { ticker: "SMH", name: "VanEck Semiconductor UCITS ETF", role: "A deliberately small semiconductor satellite identified by ISIN IE00BMC38736.", target: 4, rangeLow: 2, rangeHigh: 6, hardCap: 8, floor: 0, color: "#c026d3" },
-    { ticker: "IWQU", name: "iShares Edge MSCI World Quality Factor UCITS ETF (Acc)", role: "The second core building block: a systematic developed-market quality tilt, monitored for overlap with IMID.", target: 29, rangeLow: 24, rangeHigh: 34, hardCap: 35, floor: 20, color: "#6366f1" },
-    { ticker: "BTC", name: "Bitcoin sleeve", role: "All direct and listed Bitcoin products count together; price falls alone never authorise a sale.", target: 5, rangeLow: 3, rangeHigh: 7, hardCap: 8, color: "#f59e0b" },
-  ],
+  funds: ATLAS_SPEC.funds.map((f) => ({
+    ticker: f.ticker,
+    name: ({ VWRA: "Vanguard FTSE All-World UCITS ETF (Acc)", EQAC: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", SMH: "VanEck Semiconductor UCITS ETF", BTC: "Bitcoin sleeve — IBIT", DBMFE: "iMGP DBi Managed Futures Fund R EUR UCITS ETF" } as Record<string,string>)[f.ticker] ?? f.ticker,
+    role: ({ VWRA: "The broad global equity core.", EQAC: "A capped Nasdaq-100 growth tilt.", SMH: "A deliberately bounded semiconductor satellite.", BTC: "IBIT is the approved vehicle; GBTC counts with it during migration.", DBMFE: "A Luxembourg UCITS managed-futures diversifier; not cash or a guaranteed hedge." } as Record<string,string>)[f.ticker] ?? "",
+    target: f.target, rangeLow: f.target - f.band, rangeHigh: f.target + f.band,
+    hardCap: f.hardCap, ...(f.hardFloor !== null && f.hardFloor !== undefined ? { floor: f.hardFloor } : {}),
+    color: ({ VWRA: "#7c3aed", EQAC: "#a78bfa", SMH: "#c026d3", BTC: "#f59e0b", DBMFE: "#10b981" } as Record<string,string>)[f.ticker] ?? "#64748b",
+  })),
+  combined: { tickers: [...ATLAS_SPEC.combinedTech.tickers], warning: ATLAS_SPEC.combinedTech.soft, hard: ATLAS_SPEC.combinedTech.hard, resume: ATLAS_SPEC.combinedTech.soft, label: "Combined EQAC + SMH ceiling" },
   skipAtHighPct: 3,
   decisionLadder: [],
   rules: [
-    { category: "Authority", title: "The written constitution controls", description: "Atlas v3.1 governs. The app implements its thresholds and contribution-first decision process; any disagreement must be resolved in favour of the written constitution." },
-    { category: "Portfolio construction", title: "An 81% diversified core and 19% capped satellites", description: "Target IMID 52%, IWQU 29%, EQAC 10%, SMH 4% and Bitcoin 5%. Personal SGD liquidity is maintained outside Atlas. Look-through limits control repeated exposure across ETF labels." },
+    { category: "Authority", title: "The written constitution controls", description: "Atlas v10.4 governs. The app implements its thresholds and contribution-first decision process; any disagreement must be resolved in favour of the written constitution." },
+    { category: "Portfolio construction", title: "A broad core with bounded return sleeves", description: "Target VWRA 70%, EQAC 10%, SMH 5%, Bitcoin through IBIT 5% and DBMFE managed futures 10%. Personal SGD liquidity is maintained outside Atlas." },
+    { category: "Legacy migration", title: "History stays with the original instrument", description: "VT, VWO, QQQM, US-listed SMH and GBTC remain visible until authoritative sale settlement. Never rename them or transfer their cost basis. Settled proceeds enter the DCA cash bank before replacement purchases." },
     { category: "Contributions", title: "Repair drift with new money", description: "Route each contribution to the furthest-underweight eligible holding. Buy whole shares after commission and FX; unused cash carries in Atlas's separate DCA bank." },
     { category: "Look-through", title: "Measure underlying concentration", description: "Combine repeated company, country, technology and semiconductor exposure across funds. Stale data block concentration-led trades until refreshed." },
     { category: "Crash behaviour", title: "A drawdown is not a sell rule", description: "Continue contributions when personal liquidity is secure. Do not borrow, use margin or panic sell. Wait 72 hours before an unscheduled trade." },
@@ -116,10 +119,11 @@ export const ATLAS_CORE: Constitution = {
 // Presentation only — plain-English names, roles, colours, notes. Rule numbers (target,
 // range, cap, floor) come from SBR_SPEC.funds, merged in below.
 const SBR_PRESENTATION: Record<string, { name: string; role: string; color: string; note?: string }> = {
-  IMID: { name: "SPDR MSCI ACWI IMI UCITS ETF (Acc)", role: "The simple global core — most of the portfolio", color: "#38bdf8" },
+  VWRA: { name: "Vanguard FTSE All-World UCITS ETF (Acc)", role: "The simple global core — most of the portfolio", color: "#38bdf8" },
   EQAC: { name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", role: "A small Nasdaq-100 growth tilt", color: "#2563eb" },
-  SMH: { name: "VanEck Semiconductor UCITS ETF", role: "A small semiconductor satellite with an 8% cap", color: "#818cf8" },
-  IB01: { name: "iShares $ Treasury Bond 0-1yr UCITS ETF USD (Acc)", role: "Short Treasury reserve for rebalancing and a future transition", color: "#0891b2" },
+  SMH: { name: "VanEck Semiconductor UCITS ETF", role: "A bounded semiconductor satellite", color: "#818cf8" },
+  BTC: { name: "Bitcoin sleeve", role: "A capped asymmetric return sleeve", color: "#f59e0b" },
+  DBMFE: { name: "iMGP DBi Managed Futures Fund R EUR UCITS ETF", role: "A Luxembourg UCITS managed-futures diversifier with a governed floor", color: "#0891b2" },
 }
 
 const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({
@@ -137,7 +141,7 @@ const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({
 
 // Phase copy is presentation; the value bounds (min/max) are derived from SBR_SPEC.phases by key.
 const SBR_PHASE_COPY: Array<Omit<ConstitutionPhase, "min" | "max">> = [
-  { key: "GROWTH", label: "Flexible growth", range: "No fixed end date", selling: false, body: "Remain in growth mode until Dami records a genuine SGD use, amount and date. Market falls alone do not create an exit date.", targets: { IMID: 80, EQAC: 10, SMH: 5, IB01: 5 } },
+  { key: "GROWTH", label: "Flexible growth", range: "No fixed end date", selling: false, body: "Remain in growth mode until Dami records a genuine SGD use, amount and date. Market falls alone do not create an exit date.", targets: Object.fromEntries(SBR_SPEC.funds.map(f => [f.ticker, f.target])) },
 ]
 
 const SBR_PHASES: ConstitutionPhase[] = SBR_PHASE_COPY.map((p) => {
@@ -150,7 +154,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   id: "silicon-brick-road",
   name: "Silicon Brick Road — Investment Constitution",
   shortName: "Silicon Brick Road",
-  version: "3.2",
+  version: "10.2",
   updated: "2026-07",
   motto: "Discipline Over Prediction",
   objective: "Grow medium-term wealth through a simple global portfolio with no required end date. A future spending need must be written down before de-risking begins.",
@@ -167,7 +171,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   phases: SBR_PHASES,
   decisionLadder: [
     { n: 1, title: "Is any holding above a hard cap or below a required floor?", detail: "Pause additions to the breached holding. Route new cash to the furthest-underweight eligible core or reserve. Document a correction; do not sell automatically." },
-    { n: 2, title: "Is EQAC plus SMH above 20%?", detail: "Pause both satellites and direct new contributions to IMID or IB01 until the combined allocation is back within the mandate." },
+    { n: 2, title: `Is EQAC plus SMH above ${SBR_SPEC.combined.hard}%?`, detail: "Pause both satellites and direct new contributions to the furthest-underweight eligible holding until the combined allocation is back within the mandate." },
     { n: 3, title: "Is look-through data stale or a concentration trigger active?", detail: "Refresh the source data. Data older than 95 days block concentration-led trades. A confirmed trigger pauses the overlapping satellite; it does not force a sale." },
     { n: 4, title: "Has Dami recorded a real SGD use, amount and date?", detail: "If no, remain in flexible growth mode. If yes, write a liability-matching transition plan before changing risk." },
     { n: 5, title: "Is a fund below its soft band?", detail: "Put the available whole-share contribution into the furthest-underweight eligible fund. Carry unused cash in SBR's separate DCA bank." },
@@ -175,10 +179,10 @@ export const SILICON_BRICK_ROAD: Constitution = {
   ],
   rules: [
     { category: "The Ground Rules", title: "Flexible medium-term growth", description: "SBR has no fixed end date or pre-assigned spending purpose. It remains in growth mode until Dami writes down a genuine use, SGD amount and date." },
-    { category: "How to Split Your Money", title: "One broad core and three helpers", description: "Target IMID 80%, EQAC 10%, SMH 5% and IB01 5%. All four approved vehicles are Irish-domiciled accumulating UCITS share classes identified by ISIN." },
+    { category: "How to Split Your Money", title: "One broad core and four bounded sleeves", description: "Target VWRA 65%, EQAC 15%, SMH 5%, Bitcoin 5% and DBMFE managed futures 10%. Approved funds are identified by immutable instrument identity, not ticker alone." },
     { category: "Keeping Things in Balance", title: "Use contributions before selling", description: "Route each contribution to the furthest-underweight eligible holding. Soft bands guide new cash; hard caps require a documented correction. Market falls alone never force a sale." },
-    { category: "Regular Investing", title: "Whole shares and the DCA cash bank", description: "Buy whole shares after reserving commission and FX. Unused contribution cash carries forward in SBR's separate SGD bank and is never treated as invested or as IB01." },
-    { category: "What You Actually Own", title: "Look through every ETF", description: "Combine repeated exposure across IMID, EQAC and SMH. Watch/review levels: company 7/8%, technology 38/43%, semiconductors 18/22%, country 68/72%, and data age 35/95 days." },
+    { category: "Regular Investing", title: "Whole shares and the DCA cash bank", description: "Buy whole shares after reserving commission and FX. Unused contribution cash carries forward in SBR's separate SGD bank and is never treated as invested." },
+    { category: "What You Actually Own", title: "Look through every fund", description: "Combine repeated exposure across VWRA, EQAC, SMH and DBMFE. Data freshness and concentration limits govern additions to overlapping sleeves." },
     { category: "Staying Disciplined", title: "Crash protocol", description: "A sharp correction is accepted risk. Continue contributions if personal liquidity is secure; do not borrow, use margin or panic sell. Wait 72 hours before an unscheduled sale." },
     { category: "Future Spending", title: "Define the liability before de-risking", description: "Record the purpose, SGD amount, earliest and latest date, and flexibility after a market fall. Only then should required money transition toward suitable SGD-safe assets." },
     { category: "Changing the Rules", title: "Changes require evidence and cooling-off", description: "Material allocation changes need a written case and 30-day cooling-off period. Recent performance, fear or a persuasive forecast is not sufficient evidence." },
@@ -189,7 +193,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
     { category: "Allocation discipline", weight: 15, assessed: "Contribution routed to the furthest-underweight eligible holding." },
     { category: "Contribution discipline", weight: 15, assessed: "Contribution and DCA-bank carry-forward recorded accurately." },
     { category: "Behavioural discipline", weight: 10, assessed: "No prediction-led trading; crash and 72-hour rules followed." },
-    { category: "Liquidity and currency safety", weight: 10, assessed: "Personal SGD liquidity remains outside SBR; IB01 and FX risks understood." },
+    { category: "Liquidity and currency safety", weight: 10, assessed: "Personal SGD liquidity remains outside SBR; investment and FX risks are understood." },
     { category: "Documentation", weight: 5, assessed: "Trades, source freshness, exceptions and any future liability are current." },
   ],
 }

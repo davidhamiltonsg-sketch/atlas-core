@@ -2,7 +2,7 @@
  * Silicon Brick Road — provision Dami's account (dutszm@gmail.com) from the CLI.
  *
  * Sets Dami's password from the `dami_key` env var, switches him to the SBR contribution
- * framework (min SGD 1,000/mo), and provisions the current IMID / EQAC / SMH / IB01 mandate.
+ * framework (min SGD 1,000/mo), and provisions the current VWRA / EQAC / SMH / BTC / DBMFE mandate.
  * Idempotent. The logic is shared with the admin route
  * (/api/admin/provision-dami) via lib/provision-dami.ts.
  *
@@ -23,7 +23,7 @@ async function main() {
   console.log("Silicon Brick Road — provisioning dutszm@gmail.com\n")
   const result = await provisionDami(prisma)
   if (!result.ok) { console.error("  ✗", result.error); process.exit(1) }
-  console.log(`  ✓ password set from dami_key · min SGD 1,000/mo · ${result.holdings} SBR holdings (IMID/EQAC/SMH/IB01)`)
+  console.log(`  ✓ password set from dami_key · min SGD 1,000/mo · ${result.holdings} SBR holdings (VWRA/EQAC/SMH/BTC/DBMFE)`)
   console.log("\nDone. Dami logs in at /login with", result.email, "and the dami_key password.")
 }
 

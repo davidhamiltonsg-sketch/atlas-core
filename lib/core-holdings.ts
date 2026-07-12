@@ -20,10 +20,9 @@ export interface CoreHoldingDefault {
 // violet→purple→fuchsia family (CVD-validated vs dark + light surfaces; every mark in the
 // app is also direct-labelled by ticker). BTC/IBIT keep semantic amber, SGOV green.
 const PRESENTATION: Record<string, { name: string; color: string }> = {
-  IMID: { name: "SPDR MSCI ACWI IMI UCITS ETF (Acc)", color: "#7c3aed" },
+  DBMFE: { name: "iMGP DBi Managed Futures Fund R EUR UCITS ETF", color: "#10b981" },
   EQAC: { name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", color: "#a78bfa" },
   SMH: { name: "VanEck Semiconductor UCITS ETF", color: "#c026d3" },
-  IWQU: { name: "iShares Edge MSCI World Quality Factor UCITS ETF (Acc)", color: "#6366f1" },
   DTLA: { name: "iShares $ Treasury Bond 20+yr UCITS ETF USD (Acc)", color: "#10b981" },
   VWRA: { name: "Vanguard FTSE All-World UCITS ETF",          color: "#7c3aed" },
   VFEA: { name: "Vanguard FTSE Emerging Markets UCITS ETF",   color: "#8b5cf6" },

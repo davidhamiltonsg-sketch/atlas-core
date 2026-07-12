@@ -28,12 +28,15 @@ export function DriftNotifications({ alerts, constitutionName = "Atlas Core" }: 
   // Check notification support and stored preference on mount
   useEffect(() => {
     if (!("Notification" in window)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPermission("unsupported")
       return
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPermission(Notification.permission)
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === "true" && Notification.permission === "granted") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEnabled(true)
     }
   }, [])
@@ -69,7 +72,7 @@ export function DriftNotifications({ alerts, constitutionName = "Atlas Core" }: 
         tag: "atlas-soft-drift",
       })
     }
-  }, [enabled, alerts, permission])
+  }, [enabled, alerts, permission, constitutionName])
 
   async function toggleNotifications() {
     if (permission === "unsupported") return

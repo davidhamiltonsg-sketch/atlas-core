@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "build": "prisma generate && next build",
+    "generate:constitutions": "npx tsx scripts/generate-constitutions.ts",
+    "build": "npm run generate:constitutions && prisma generate && next build",
     "start": "node scripts/init-db.mjs && next start",
     "lint": "eslint",
     "seed": "npx tsx prisma/seed.ts",
@@ -16,7 +17,7 @@
     "check:portfolio-v2": "npx tsx scripts/check-portfolio-v2.ts",
     "check:valuation": "npx tsx scripts/check-valuation.ts",
     "check:current-runtime": "npx tsx scripts/check-current-runtime.ts",
-    "check": "npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npm run check:valuation && npm run check:current-runtime && npx tsc --noEmit"
+    "check": "npm run generate:constitutions && npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npm run check:valuation && npm run check:current-runtime && npx tsc --noEmit"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

@@ -5,7 +5,7 @@ import { createCommitteeMinute } from "@/app/actions/sbr-committee"
 
 const SBR_ARTICLES = [
   "Hard-cap review",
-  "IB01 floor review",
+  "DBMFE floor review",
   "EQAC plus SMH ceiling",
   "Look-through concentration review",
   "Future SGD use documented",

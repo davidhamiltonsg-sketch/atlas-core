@@ -5,7 +5,7 @@ import { SILICON_BRICK_ROAD as SBR } from "./constitutions"
 // Shared Silicon Brick Road provisioning for Dami (dutszm@gmail.com). Used by both the CLI
 // (prisma/seed-sbr.ts) and the admin route (/api/admin/provision-dami) so the two never drift.
 // Sets Dami's password from `dami_key`, switches his contribution settings to SBR, and
-// non-destructively upserts the current four-fund mandate. Existing history is never deleted.
+// non-destructively upserts the current five-sleeve mandate. Existing history is never deleted.
 export type ProvisionResult =
   | { ok: true; holdings: number; email: string }
   | { ok: false; error: string }

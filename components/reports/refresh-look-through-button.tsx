@@ -7,6 +7,7 @@ import { refreshLookThroughAction } from "@/app/reports/actions"
 export function RefreshLookThroughButton({ lastUpdated, compact = false }: { lastUpdated: Date | null; compact?: boolean }) {
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(lastUpdated)
 
   function handleRefresh() {
     setResult(null)
@@ -15,14 +16,15 @@ export function RefreshLookThroughButton({ lastUpdated, compact = false }: { las
       if (res.error) {
         setResult({ ok: false, msg: res.error })
       } else {
+        if (!res.errors?.length) setRefreshedAt(new Date())
         const warnings = res.errors?.length ? ` (${res.errors.join("; ")})` : ""
         setResult({ ok: true, msg: `Updated ${res.updated?.join(", ")}${warnings}` })
       }
     })
   }
 
-  const ageLabel = lastUpdated
-    ? `Updated ${lastUpdated.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}`
+  const ageLabel = refreshedAt
+    ? `Oldest required source checked ${refreshedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}`
     : "Never refreshed — using estimates"
 
   return (

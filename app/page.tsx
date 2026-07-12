@@ -7,24 +7,19 @@ import { getSession } from "@/lib/session"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { computePortfolioHealth } from "@/lib/health"
-import { HealthMethodology } from "@/components/health-methodology"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { computeLadder } from "@/lib/ladder"
 import { getLiveMarketPositions } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { evaluateGovernance } from "@/lib/governance-status"
-import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 import { isActuallyUsSited, isInScope } from "@/lib/approved-alternatives"
 import { getRecentExecutions } from "@/lib/execution-actions"
-import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
 import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { SbrDashboard } from "@/components/sbr/sbr-dashboard"
-import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
-import { DecisionLadderCard } from "@/components/cockpit/decision-ladder-card"
-import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
+import type { ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { AnimatedNumber } from "@/components/animated-number"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { activePortfolioContext } from "@/lib/active-portfolio"
@@ -461,17 +456,6 @@ export default async function Dashboard() {
 
   const d = await getDashboardData(active.owner.id)
 
-  // Build SealDimension array for GovernanceSeal. Each dimension's raw score is 0–100;
-  // the badge shows its WEIGHTED contribution (rawScore/100 × weight) out of that weight,
-  // so the four badges sum to the overall score (Art. XXII weights: 40/25/25/10) instead
-  // of printing a 0–100 value against a smaller weight cap (e.g. "78/40").
-  const weighted = (score: number, weight: number) => Math.round((score / 100) * weight)
-  const sealDimensions: SealDimension[] = [
-    { label: "Structural",    score: weighted(d.health.structural.score, 40),    maxScore: 40, status: d.health.structural.status,    citation: d.health.structural.citation },
-    { label: "Behavioural",   score: weighted(d.health.behavioural.score, 25),   maxScore: 25, status: d.health.behavioural.status,   citation: d.health.behavioural.citation },
-    { label: "Concentration", score: weighted(d.health.concentration.score, 25), maxScore: 25, status: d.health.concentration.status, citation: d.health.concentration.citation },
-    { label: "Freshness",     score: weighted(d.health.freshness.score, 10),     maxScore: 10, status: d.health.freshness.status,     citation: d.health.freshness.citation },
-  ]
   const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
   const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
   const costedMarketValue = costedRows.reduce((sum,p)=>sum+p.value,0)
@@ -480,7 +464,7 @@ export default async function Dashboard() {
   const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
 
   return (
-    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v3.1" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.4" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-start gap-2">
@@ -587,41 +571,13 @@ export default async function Dashboard() {
 
           {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
           {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
-          <DecisionLadderCard
-            ladder={d.ladder}
-            monthlyContribution={d.monthlyContribution}
-            daysToWindow={d.dealingWindow.daysUntilOpen}
-            windowClosesLabel={d.dealingWindow.windowClosesLabel}
-          />
+          <section className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.ladder.headline}</h2><p>{d.ladder.instruction}</p></div><Link href="/mission-control?portfolio=atlas-core">Open Mission Control →</Link></section>
 
           {/* 2. Governance Seal — constitution health */}
-          <GovernanceSeal
-            overall={d.health.overall}
-            overallLabel={d.health.overallLabel}
-            dimensions={sealDimensions}
-            constitutionLabel="Art. XXII · Governance Score"
-            narrative={
-              d.hasBalance
-                ? `${d.hardBreaches > 0 ? d.hardBreaches + " hard breach" + (d.hardBreaches > 1 ? "es" : "") + " require immediate action. " : ""}${d.softBreaches > 0 ? d.softBreaches + " position" + (d.softBreaches > 1 ? "s" : "") + " outside tolerance. " : ""}${d.hardBreaches === 0 && d.softBreaches === 0 ? "All positions within bands. " : ""}Snapshot age: ${d.snapshotAgeDays <= 1 ? "current" : d.snapshotAgeDays + " days old"}.`
-                : "No portfolio balance yet. Enter your holdings to begin tracking."
-            }
-            href="/governance"
-          />
+          <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/constitution">Read constitution →</Link></section>
 
           {/* 3. Compliance Board — position bands */}
-          {d.hasBalance && (
-            <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />
-          )}
-
-          {/* ── WHAT IS HELD ─────────────────────────────────────────── */}
-          {d.hasBalance && (
-            <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} />
-          )}
-
-          {/* ── GOVERNANCE & COMPLIANCE ──────────────────────────────── */}
-          {d.hasBalance && d.govAlignment && (
-            <GovernanceAlignment data={d.govAlignment} />
-          )}
+          <section className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>2045 disciplined accumulation</h2><p>Target VWRA 70 · EQAC 10 · SMH 5 · IBIT 5 · DBMFE 10. Legacy instruments remain visible until sales settle.</p></div><Link href="/forecast">Open forecast →</Link></section>
 
           {/* ── WHAT YOU OWN ─────────────────────────────────────────── */}
           <Link href="/reports" className="group flex items-center gap-3 rounded-2xl border border-border bg-card/75 backdrop-blur-md px-5 py-4 card-elevated hover:bg-accent/40 hover:border-violet-500/30 hover:-translate-y-0.5 transition-all">
@@ -668,20 +624,6 @@ export default async function Dashboard() {
 
 
           {/* Health methodology */}
-          {d.hasBalance && (
-            <HealthMethodology
-              structural={d.health.structural.score}
-              behavioural={d.health.behavioural.score}
-              concentration={d.health.concentration.score}
-              execution={d.health.freshness.score}
-              hardBreaches={d.hardBreaches}
-              softBreaches={d.softBreaches}
-              maxDrift={d.maxDrift}
-              activeRules={d.activeRules}
-              totalRules={d.totalRules}
-              snapshotAgeDays={d.snapshotAgeDays}
-            />
-          )}
         </div>
       </div>
     </Shell>

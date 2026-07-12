@@ -14,6 +14,7 @@ export function MonthlyCheck({ lastCheckIso }: { lastCheckIso: string | null }) 
   const router = useRouter()
 
   const last = lastCheckIso ? new Date(lastCheckIso) : null
+  // eslint-disable-next-line react-hooks/purity
   const daysSince = last ? Math.floor((Date.now() - last.getTime()) / 86_400_000) : null
   const dueIn = daysSince === null ? 0 : Math.max(0, CADENCE_DAYS - daysSince)
   const due = dueIn === 0

@@ -39,7 +39,7 @@ export function computeLadder(positions: PositionInput[], _totalValue: number, o
     portfolioDrawdownPct: opts.portfolioDrawdownPct,
     drawdownDays: opts.drawdownDays,
   })
-  const legacy = positions.some((p) => p.value > 0 && !["IMID", "IWQU", "EQAC", "SMH", "BTC", "IBIT"].includes(p.ticker))
+  const legacy = positions.some((p) => p.value > 0 && !["VWRA", "EQAC", "SMH", "BTC", "IBIT", "DBMFE"].includes(p.ticker))
   const firedStep = move.severity === "critical" ? 1 : legacy ? 2 : move.ticker ? 3 : 4
   const steps = labels.map<LadderStep>((label, index) => {
     const step = index + 1
@@ -53,7 +53,7 @@ export function computeLadder(positions: PositionInput[], _totalValue: number, o
   return {
     firedStep, severity: move.severity, ticker: move.ticker, headline: move.action,
     instruction: move.what, rationale: move.why, when: move.when,
-    citation: "Atlas Core Constitution v3.1 · contribution-first decision ladder",
+    citation: "Atlas Core Constitution v10.4 · contribution-first decision ladder",
     steps, exceptions, isTerminal: move.severity === "none",
   }
 }

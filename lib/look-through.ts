@@ -8,8 +8,6 @@
 // Effective exposure for X = Σ over holdings of  (holding's % of NAV) × (ETF's % in X)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { ATLAS_SPEC } from "@/lib/portfolio-spec"
-
 // As-of date for the hand-entered ETF weight tables below. These are fact-sheet
 // approximations that drift as funds rebalance; they feed the §4 look-through caps (the
 // "highest law"), so a staleness signal matters. Update this date whenever the weights are
@@ -19,7 +17,9 @@ export const ETF_WEIGHTS_AS_OF = "2026-06-30"
 /** Age (days) of the ETF weight tables relative to `now`, and whether they are stale
  *  (older than `staleAfterDays`, default one quarter). Lets the UI flag §4 exposure as
  *  "based on weights last refreshed N days ago" instead of implying live precision. */
-export function lookThroughWeightsAge(now: Date, staleAfterDays = 95): { ageDays: number; stale: boolean } {
+export const LOOKTHROUGH_FRESH_DAYS = 35
+export const LOOKTHROUGH_STALE_DAYS = 75
+export function lookThroughWeightsAge(now: Date, staleAfterDays = LOOKTHROUGH_STALE_DAYS): { ageDays: number; stale: boolean } {
   const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(ETF_WEIGHTS_AS_OF).getTime()) / 86400000))
   return { ageDays, stale: ageDays > staleAfterDays }
 }
@@ -39,6 +39,7 @@ export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
   VWO:  { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
   VFEA: { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
   BTC:  {},
+  DBMFE: {},
   IBIT: {},
   SGOV: {},
 }
@@ -58,6 +59,7 @@ export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital
   VWO:  { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
   VFEA: { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
   BTC:  { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
+  DBMFE:{ semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
   IBIT: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
   SGOV: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
 }
@@ -77,26 +79,28 @@ export const ETF_GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emer
   VWO:  { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
   VFEA: { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
   BTC:  { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
+  DBMFE:{ us: 0,   intlDev: 0,  emerging: 0,   crypto: 0 },
   IBIT: { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
   SGOV: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
 }
 
 // Caps as written in the Governance Document (§4). Whole-number percent of NAV.
 export const LOOKTHROUGH_COMPANY_CAPS: Record<string, { soft: number; hard: number }> = {
-  Nvidia:{soft:7,hard:8},Microsoft:{soft:7,hard:8},Apple:{soft:7,hard:8},Amazon:{soft:7,hard:8},
-  Meta:{soft:7,hard:8},Alphabet:{soft:7,hard:8},Broadcom:{soft:7,hard:8},TSMC:{soft:7,hard:8},
+  Nvidia:{soft:7,hard:9},Microsoft:{soft:7,hard:9},Apple:{soft:7,hard:9},Amazon:{soft:7,hard:9},
+  Meta:{soft:7,hard:9},Alphabet:{soft:7,hard:9},Broadcom:{soft:7,hard:9},TSMC:{soft:7,hard:9},
 }
 
-// soft/hard derived from the single source (lib/portfolio-spec.ts); labels are presentation.
+// Cross-portfolio look-through review/hard limits. These classify estimated exposure;
+// they do not authorise an automatic sale (see hardSignalsActionable below).
 const SECTOR_LABELS: Record<string, string> = {
   semiconductor: "Semiconductor", digital: "Digital Economy", us: "US Market", ai: "AI Infrastructure",
 }
-export const LOOKTHROUGH_SECTOR_CAPS: Record<string, { label: string; soft: number; hard: number }> =
-  Object.fromEntries(
-    Object.entries(ATLAS_SPEC.lookThroughSectors).map(([k, v]) => [
-      k, { label: SECTOR_LABELS[k] ?? k, soft: v.soft, hard: v.hard },
-    ]),
-  )
+export const LOOKTHROUGH_SECTOR_CAPS: Record<string, { label: string; soft: number; hard: number }> = {
+  semiconductor: { label: "Semiconductor", soft: 25, hard: 30 },
+  digital: { label: "Technology", soft: 45, hard: 50 },
+  us: { label: "US Market", soft: 70, hard: 75 },
+  ai: { label: SECTOR_LABELS.ai, soft: 45, hard: 50 },
+}
 
 export type CapStatus = "ok" | "watch" | "breach"
 
@@ -112,6 +116,15 @@ export interface ExposureLine {
 export interface LookThroughResult {
   companies: ExposureLine[]
   sectors: ExposureLine[]
+  unclassifiedPct: number
+  managedFuturesPct: number
+  cryptoPct: number
+  ageDays: number
+  freshness: "fresh" | "review" | "stale"
+  stale: boolean
+  estimated: boolean
+  hardSignalsActionable: boolean
+  warnings: string[]
 }
 
 function statusFor(pct: number, soft: number, hard: number): CapStatus {
@@ -121,17 +134,34 @@ function statusFor(pct: number, soft: number, hard: number): CapStatus {
 }
 
 /** Compute effective company + sector exposure for the live portfolio. */
-export function computeLookThrough(positions: Array<{ ticker: string; actualPct: number }>): LookThroughResult {
+export function computeLookThrough(
+  positions: Array<{ ticker: string; actualPct: number }>,
+  now = new Date(),
+  sourceUpdatedAt?: Record<string, Date | string | null | undefined>,
+): LookThroughResult {
   const companyTotals: Record<string, number> = {}
   const sectorTotals: Record<string, number> = { semiconductor: 0, digital: 0, us: 0, ai: 0 }
 
+  let unclassifiedPct = 0, managedFuturesPct = 0, cryptoPct = 0
+  const requiredDates: Date[] = []
   for (const p of positions) {
+    const ticker = p.ticker.toUpperCase() === "SMH.L" ? "SMH" : p.ticker.toUpperCase()
     const w = p.actualPct / 100
-    const cw = ETF_COMPANY_WEIGHTS[p.ticker.toUpperCase()] ?? {}
+    if (ticker === "DBMFE") managedFuturesPct += p.actualPct
+    else if (ticker === "BTC" || ticker === "IBIT") cryptoPct += p.actualPct
+    else if (!ETF_SECTOR_WEIGHTS[ticker]) unclassifiedPct += p.actualPct
+    const supplied = sourceUpdatedAt?.[ticker]
+    if (p.actualPct > 0 && ticker !== "BTC" && ticker !== "IBIT" && ticker !== "DBMFE") {
+      // When a DB freshness map is supplied, a missing required fund is not silently
+      // replaced with today's/static estimate: it makes the set stale until refreshed.
+      const d = supplied ? new Date(supplied) : sourceUpdatedAt ? new Date(0) : new Date(ETF_WEIGHTS_AS_OF)
+      if (Number.isFinite(d.getTime())) requiredDates.push(d)
+    }
+    const cw = ETF_COMPANY_WEIGHTS[ticker] ?? {}
     for (const [co, pct] of Object.entries(cw)) {
       companyTotals[co] = (companyTotals[co] ?? 0) + w * pct
     }
-    const sw = ETF_SECTOR_WEIGHTS[p.ticker.toUpperCase()]
+    const sw = ETF_SECTOR_WEIGHTS[ticker]
     if (sw) {
       sectorTotals.semiconductor += w * sw.semiconductor
       sectorTotals.digital       += w * sw.digital
@@ -152,11 +182,20 @@ export function computeLookThrough(positions: Array<{ ticker: string; actualPct:
     return { key: k, label: cap.label, pct, soft: cap.soft, hard: cap.hard, status: statusFor(pct, cap.soft, cap.hard) }
   }).sort((a, b) => b.pct - a.pct)
 
-  return { companies, sectors }
+  const oldest = requiredDates.length ? new Date(Math.min(...requiredDates.map(d => d.getTime()))) : now
+  const ageDays = Math.max(0, Math.floor((now.getTime() - oldest.getTime()) / 86_400_000))
+  const freshness = ageDays > LOOKTHROUGH_STALE_DAYS ? "stale" : ageDays > LOOKTHROUGH_FRESH_DAYS ? "review" : "fresh"
+  const warnings: string[] = []
+  if (unclassifiedPct > 0) warnings.push(`${unclassifiedPct.toFixed(1)}% of NAV is unclassified; concentration totals are incomplete.`)
+  if (managedFuturesPct > 0) warnings.push(`${managedFuturesPct.toFixed(1)}% is managed futures and is reported separately from equity sectors.`)
+  if (freshness !== "fresh") warnings.push(`Oldest required source is ${ageDays} days old; refresh before a concentration-led allocation change.`)
+  warnings.push("Look-through values are estimates. They may pause or redirect contributions, but never create an automatic sell signal.")
+  return { companies, sectors, unclassifiedPct, managedFuturesPct, cryptoPct, ageDays, freshness, stale: freshness === "stale", estimated: true, hardSignalsActionable: false, warnings }
 }
 
 /** The single worst look-through breach (hard cap exceeded), if any — for the engine. */
 export function worstLookThroughBreach(lt: LookThroughResult): ExposureLine | null {
+  if (!lt.hardSignalsActionable || lt.stale || lt.unclassifiedPct > 0) return null
   const breaches = [...lt.companies, ...lt.sectors]
     .filter((l) => l.status === "breach")
     .sort((a, b) => (b.pct - b.hard) - (a.pct - a.hard))
@@ -168,9 +207,9 @@ export function worstLookThroughBreach(lt: LookThroughResult): ExposureLine | nu
  *  is a higher-priority Step-1 trim, not a soft warning). */
 export function worstLookThroughApproach(lt: LookThroughResult): ExposureLine | null {
   const all = [...lt.companies, ...lt.sectors]
-  if (all.some((l) => l.status === "breach")) return null
+  if (all.some((l) => l.status === "breach") && lt.hardSignalsActionable) return null
   const watching = all
-    .filter((l) => l.status === "watch")
+    .filter((l) => l.status === "watch" || l.status === "breach")
     .sort((a, b) => (b.pct - b.soft) - (a.pct - a.soft))
   return watching[0] ?? null
 }

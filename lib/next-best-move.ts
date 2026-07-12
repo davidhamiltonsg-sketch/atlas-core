@@ -33,7 +33,7 @@ export interface DcaPlan { allocations: DcaAllocation[]; headline: string; marke
 export { BITCOIN_TICKERS, BITCOIN_SLEEVE_TARGET_PCT, BITCOIN_RUNOFF_TICKER, BITCOIN_ACCUMULATION_TICKER, applyBitcoinSleeve }
 
 const governed = new Set(ATLAS_SPEC.funds.map((f) => f.ticker))
-const core = "IMID"
+const core = "VWRA"
 function techPct(positions: PositionInput[]) {
   return positions.filter((p) => (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
 }
@@ -68,7 +68,7 @@ export function computeMarketAwareDca(raw: PositionInput[], monthlyAmount: numbe
 
 export function computeNextBestMove(raw: PositionInput[], _monthlyAmount: number, opts: EngineOptions = {}): NextMove {
   const positions = applyBitcoinSleeve(raw)
-  if (!positions.some((p) => p.value > 0)) return { severity:"none",ticker:core,action:"Start with IMID",what:"Invest the first contribution in IMID.",why:"IMID is the broad global core.",when:"At the next permitted dealing window.",color:"#7c3aed" }
+  if (!positions.some((p) => p.value > 0)) return { severity:"none",ticker:core,action:"Start with VWRA",what:"Invest the first contribution in VWRA.",why:"VWRA is the broad global core.",when:"At the next permitted dealing window.",color:"#7c3aed" }
   if (opts.lookThroughBreach) {
     const b=opts.lookThroughBreach, ticker=b.trimTicker ?? "SMH"
     return { severity:"critical",ticker,action:`Pause ${ticker}`,what:`Refresh sources and correct ${b.label}, now ${b.pct.toFixed(1)}% versus its ${b.hard}% hard review level.`,why:"Look-through concentration overrides ticker-level comfort.",when:"Document the correction before trading.",color:"#ef4444" }

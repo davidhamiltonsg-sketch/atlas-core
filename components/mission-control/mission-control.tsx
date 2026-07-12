@@ -201,8 +201,8 @@ const ATLAS_AGENTS: AgentDef[] = [
     icon: Brain,
     accent: C.green,
     script: [
-      { t: 120, level: "info", msg: "Reading SBR constitution v3.2 · flexible growth" },
-      { t: 720, level: "data", msg: "Targets IMID 80 · EQAC 10 · SMH 5 · IB01 5" },
+      { t: 120, level: "info", msg: "Reading SBR constitution v10.2 · flexible growth" },
+      { t: 720, level: "data", msg: "Targets VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10" },
       { t: 1320, level: "data", msg: "Whole-share accrual bank: S$412 carried" },
       { t: 1900, level: "info", msg: "No spending transition is active" },
     ],
@@ -223,9 +223,9 @@ const SBR_AGENTS: AgentDef[] = [
     icon: Coins,
     accent: C.gold,
     script: [
-      { t: 120, level: "info", msg: "Splitting this month's savings across your four funds" },
+      { t: 120, level: "info", msg: "Routing this month's contribution across five governed sleeves" },
       { t: 700, level: "data", msg: "Buying only whole shares · carrying the rest forward" },
-      { t: 1300, level: "data", msg: "Whole-share plan uses IMID, EQAC, SMH and IB01" },
+      { t: 1300, level: "data", msg: "Whole-share plan uses VWRA, EQAC, SMH, BTC and DBMFE" },
     ],
     result: { status: "done", line: { t: 1800, level: "ok", msg: "Buy list ready — a little carries to next month" } },
   },
@@ -354,15 +354,17 @@ function clockNow() {
 }
 
 const COMMON_BUILDING_BLOCKS = [
-  { fund: "IMID · MSCI ACWI IMI", us: "62.8%", tech: "30.5%", semis: "~10%*", note: "SSGA fund page / factsheet", href: "https://www.ssga.com/uk/en_gb/institutional/etfs/state-street-spdr-msci-all-country-world-investable-market-ucits-etf-acc-imid-gy" },
+  { fund: "VWRA · FTSE All-World", us: "Dynamic", tech: "Dynamic", semis: "Dynamic", note: "Vanguard holdings / factsheet", href: "https://www.vanguard.co.uk/professional/product/etf/equity/9679/ftse-all-world-ucits-etf-usd-accumulating" },
   { fund: "EQAC · Nasdaq-100", us: "~97%", tech: "~60%*", semis: "~30%*", note: "Invesco fund page / index composition", href: "https://www.invesco.com/uk/en/financial-products/etfs/invesco-eqqq-nasdaq-100-ucits-etf-acc.html" },
   { fund: "SMH · Semiconductor UCITS", us: "~65%*", tech: "100%", semis: "100%", note: "VanEck holdings / factsheet", href: "https://www.vaneck.com/uk/en/semiconductor-etf" },
 ] as const
 const ATLAS_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
-  { fund: "IWQU · World quality factor", us: "~70%*", tech: "~30%*", semis: "~8%*", note: "iShares holdings / factsheet", href: "https://www.ishares.com/uk/individual/en/products/270054/ishares-msci-world-quality-factor-ucits-etf" },
+  { fund: "BTC · Bitcoin sleeve", us: "N/A", tech: "N/A", semis: "N/A", note: "Vehicle / custody source", href: "https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf" },
+  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "iMGP official fund page", href: "https://www.imgp.com/en/imgpfunds/fund/LU2951555585" },
 ] as const
 const SBR_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
-  { fund: "IB01 · US T-bills 0–1y", us: "100%", tech: "0%", semis: "0%", note: "iShares holdings / factsheet", href: "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-01yr-ucits-etf" },
+  { fund: "BTC · Bitcoin sleeve", us: "N/A", tech: "N/A", semis: "N/A", note: "Vehicle / custody source", href: "https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf" },
+  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "Fund holdings / factsheet", href: "https://www.google.com/search?q=DBMFE+fund+factsheet" },
 ] as const
 
 function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" | "sbr"; mono: string; lastUpdated: Date | null }) {
@@ -373,7 +375,7 @@ function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" |
   return <section className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
     <div className="flex flex-wrap items-start justify-between gap-3 mb-3"><div><SectionLabel mono={mono}>LOOK-THROUGH BASIS</SectionLabel><h2 className="text-sm font-semibold mt-1" style={{ color: C.text }}>Fund building blocks used</h2></div><RefreshLookThroughButton lastUpdated={lastUpdated} compact /></div>
     <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-[11px]"><thead><tr style={{ color: C.dim, borderBottom: `1px solid ${C.line}` }}><th className="py-2">Fund</th><th>US %</th><th>Info-tech %</th><th>Semis %</th><th>Source / note</th></tr></thead><tbody>{buildingBlocks.map(r=><tr key={r.fund} style={{ borderBottom: `1px solid ${C.line}` }}><td className="py-2 font-semibold">{r.fund}</td><td>{r.us}</td><td>{r.tech}</td><td>{r.semis}</td><td><a href={r.href} target="_blank" rel="noreferrer" className="underline underline-offset-2" style={{ color: C.blue }}>{r.note} ↗</a></td></tr>)}</tbody></table></div>
-    <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>* Estimated from index composition rather than a published single figure. IMID semiconductors are modelled at 8–11% (10% base). SMH US exposure reflects large non-US holdings including TSMC and ASML. Figures move with markets.</p>
+    <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>Exposure is calculated dynamically from the latest available holdings. Stale or missing source data blocks concentration-led trades. DBMFE is a managed-futures diversifier, not cash and not a capital guarantee; Bitcoin is reported outside equity country and sector percentages.</p>
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{rules.map(([lens,watch,review])=><div key={lens} className="rounded-lg border p-2" style={{ borderColor:C.line, background:C.navy }}><p className="text-[9px]" style={{color:C.dim}}>{lens}</p><p className={`${mono} mt-1 text-[10px]`}>WATCH {watch} · REVIEW {review}</p></div>)}</div>
     <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Data older than 95 days blocks concentration-led trades.</p>
   </section>

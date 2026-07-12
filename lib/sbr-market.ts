@@ -1,8 +1,7 @@
 /**
- * SBR market data — live prices for the four SBR funds.
+ * SBR market data — reference prices for the five SBR sleeves.
  *
- * All four SBR funds are non-US-listed:
- *   IMID, EQAC, SMH and IB01 London listings, fetched via Yahoo Finance.
+ * Brokerage values remain authoritative. Public quotes are overlays only.
  */
 
 import type { EngineMarket } from "@/lib/next-best-move"
@@ -53,7 +52,7 @@ async function fetchYahoo52wHigh(symbol: string): Promise<number> {
 export async function getSbrMarketData(): Promise<SbrMarketResult> {
   const asOf = new Date().toISOString()
 
-  const symbols={IMID:"IMID.L",EQAC:"EQAC.L",SMH:"SMH.L",IB01:"IB01.L"}
+  const symbols={VWRA:"VWRA.L",EQAC:"EQAC.L",SMH:"SMH.L",BTC:"IBIT",DBMFE:"DBMFE.PA"}
   const rows=await Promise.all(Object.entries(symbols).map(async([ticker,symbol])=>({ticker,price:await fetchYahooPrice(symbol),hi52:await fetchYahoo52wHigh(symbol)})))
 
   const positions: Record<string, { price: number; hi52: number }> = {}

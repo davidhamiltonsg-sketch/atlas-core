@@ -97,6 +97,8 @@ export default async function Portfolio() {
     return latest === null || dt > latest ? dt : latest
   }, null)
   const daysSinceUpdate = latestDate
+    // Server-rendered freshness is intentionally evaluated at request time.
+    // eslint-disable-next-line react-hooks/purity
     ? Math.floor((Date.now() - latestDate.getTime()) / 86_400_000)
     : null
 
@@ -215,7 +217,7 @@ export default async function Portfolio() {
                 {softBreaches} soft drift{softBreaches > 1 ? "s" : ""} — redirect contributions
               </p>
               <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-                Positions outside tolerance bands. Redirect next month's contributions to restore balance.
+                Positions outside tolerance bands. Redirect next month&apos;s contributions to restore balance.
               </p>
             </div>
             <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">Jump to row ↓</span>
@@ -253,7 +255,7 @@ export default async function Portfolio() {
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="px-5 py-3.5 border-b border-border bg-muted/20">
               <h2 className="text-sm font-semibold mb-0.5">Update Your Portfolio</h2>
-              <p className="text-xs text-muted-foreground">Keep your holdings current — choose how you'd like to enter new prices</p>
+              <p className="text-xs text-muted-foreground">Keep your holdings current — choose how you&apos;d like to enter new prices</p>
             </div>
             <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
               <div className="px-5 py-4 flex items-start gap-3">
@@ -263,7 +265,7 @@ export default async function Portfolio() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold mb-1">Type it in manually</p>
                   <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                    Click the pencil icon on any row below to edit that holding's units and price directly. Or use the button to update all holdings at once.
+                    Click the pencil icon on any row below to edit that holding&apos;s units and price directly. Or use the button to update all holdings at once.
                   </p>
                   <PortfolioUpdateButton
                     defaultMode="manual"

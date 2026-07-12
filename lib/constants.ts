@@ -19,9 +19,8 @@ import { ATLAS_SPEC } from "@/lib/portfolio-spec"
  */
 
 // Target weights (whole-number percent of NAV)
-// Bitcoin sleeve = BTC + IBIT combined = 5% (see §4.1). BTC is being transitioned into
-// IBIT (the more tax-effective vehicle) like-for-like: as the transition proceeds the BTC
-// target steps down and IBIT steps up by the same amount, keeping the sleeve at 5%.
+// Bitcoin sleeve = IBIT plus any temporary GBTC legacy exposure, combined at 5%.
+// This is an economic grouping only; instrument history and cost basis are never merged.
 // Derived from the single source (lib/portfolio-spec.ts) — SGOV is a buffer, not a target row.
 export const TICKER_TARGETS: Record<string, number> = Object.fromEntries(
   ATLAS_SPEC.funds.filter((f) => f.ticker !== "SGOV").map((f) => [f.ticker, f.target]),
@@ -55,11 +54,11 @@ export const HARD_THRESHOLDS: Record<string, { low?: number; high: number; amber
 // TICKER_TARGETS + HARD_THRESHOLDS + this profile — never hand-maintained — so the
 // displayed bands can never disagree with the numbers the engine enforces.
 export const POSITION_PROFILE: Record<string, { band: number; classification: string; color: string }> = {
-  IMID: { band: 5, classification: "Global Market Core",       color: "#7c3aed" },
-  IWQU: { band: 5, classification: "World Quality Core",       color: "#6366f1" },
-  EQAC: { band: 3, classification: "Nasdaq Growth Tilt",       color: "#a78bfa" },
-  SMH:  { band: 2, classification: "Semiconductor Satellite",  color: "#c026d3" },
-  BTC:  { band: 2, classification: "Bitcoin — Volatility Cap", color: "#f59e0b" },
+  VWRA: { band: 5, classification: "Global Market Core",       color: "#7c3aed" },
+  EQAC: { band: 2.5, classification: "Nasdaq Growth Tilt",     color: "#a78bfa" },
+  SMH:  { band: 1.25, classification: "Semiconductor Satellite", color: "#c026d3" },
+  BTC:  { band: 1.25, classification: "Bitcoin — IBIT",        color: "#f59e0b" },
+  DBMFE:{ band: 2.5, classification: "Managed Futures",        color: "#10b981" },
 }
 
 export interface GovernanceBandRow {
@@ -90,7 +89,7 @@ export function getGovernanceBandRow(ticker: string): GovernanceBandRow | null {
 }
 
 export const GOVERNANCE_BAND_ROWS: GovernanceBandRow[] =
-  (["IMID", "IWQU", "EQAC", "SMH", "BTC"] as const)
+  (["VWRA", "EQAC", "SMH", "BTC", "DBMFE"] as const)
     .map(getGovernanceBandRow)
     .filter((r): r is GovernanceBandRow => r !== null)
 

@@ -15,14 +15,14 @@ export interface AltVehicle {
 }
 
 export const APPROVED_ALTERNATIVES: Record<string, AltVehicle> = {
-  EQQQ: { tickers: ["CNDX"],  reason: "CNDX (Cboe-listed) is an interchangeable UCITS NASDAQ-100 vehicle. Same index and domicile as EQQQ." },
-  BTC:  { tickers: ["IBIT"],  reason: "Held via IBIT. Phased exit: hold until BTC recovers above cost basis × 1.15, then reassess." },
-  IBIT: { tickers: [],        reason: "Hold for now. Reassess when a lower-fee or UCITS Bitcoin ETF becomes available." },
+  EQAC: { tickers: ["CNDX"],  reason: "CNDX is an approved alternative Nasdaq-100 UCITS vehicle, subject to implementation review." },
+  BTC:  { tickers: ["IBIT"],  reason: "IBIT is the approved Atlas vehicle. GBTC is aggregated during migration; price recovery is never a timing rule." },
+  IBIT: { tickers: [],        reason: "Retain as the governed Bitcoin vehicle, subject to the combined 5% target and 8% cap." },
 }
 
 // Irish-UCITS alternatives (NOT US-sited → outside US estate tax). IBIT is excluded:
 // it is a US-domiciled ETF, so it still counts toward US-sited estate-tax exposure.
-export const UCITS_TICKERS = ["IMID", "EQAC", "SMH", "IWQU", "DTLA", "IB01", "VWRA", "VFEA", "EQQQ", "CNDX", "SEMI"] as const
+export const UCITS_TICKERS = ["VWRA", "EQAC", "SMH", "DBMFE", "CNDX"] as const
 
 /** Is this ticker a US-sited asset (relevant to US estate-tax exposure)? */
 export function isUsSited(ticker: string): boolean {
@@ -43,10 +43,10 @@ export function isActuallyUsSited(exposureId: string): boolean {
 // pre-approved alternative vehicle. Anything else held in the brokerage is "out of
 // scope" — it is still imported (so the portfolio stays accurate), but flagged as an
 // action so you can decide: keep & classify it, switch to an approved fund, or exit.
-export const CORE_TICKERS = ["IMID", "EQAC", "SMH", "IWQU", "BTC"] as const
+export const CORE_TICKERS = ["VWRA", "EQAC", "SMH", "BTC", "DBMFE"] as const
 
 // SBR-specific tickers: all UCITS/SGX from day one.
-export const SBR_TICKERS = ["IMID", "EQAC", "SMH", "IB01"] as const
+export const SBR_TICKERS = ["VWRA", "EQAC", "SMH", "BTC", "DBMFE"] as const
 
 export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
   ...CORE_TICKERS,
@@ -62,7 +62,7 @@ export function isInScope(ticker: string): boolean {
 
 // Reverse map: an alternative ticker → the core position it stands in for.
 export const ALTERNATIVE_TO_CORE: Record<string, string> = {
-  CNDX: "EQQQ",
+  CNDX: "EQAC",
   IBIT: "BTC",
 }
 

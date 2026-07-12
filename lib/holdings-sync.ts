@@ -40,7 +40,7 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
     created++
   }
   // Former governed rows remain visible for sale/cost-basis history but must not
-  // receive new contributions under v3.1.
+  // receive new contributions under v10.4.
   await db.holding.updateMany({
     where: { userId, ticker: { notIn: [...CORE_TICKERS, "IBIT"] }, instrumentStatus: "ACTIVE" },
     data: { targetPct: 0, hardCapPct: null, instrumentStatus: "LEGACY" },
@@ -139,7 +139,7 @@ export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
       await db.holding.update({ where: { id: h.id }, data: {
         displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
         isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
-        instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",
+        instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US", "GBTC"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",
       } })
       await upsertSnapshotToday(h.id, {
         units: pos.units, price: pos.markPrice, value: pos.positionValue,
@@ -149,7 +149,7 @@ export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
     }
     // A complete open-position report is authoritative. A previously open holding absent
     // from it is closed at zero so stale snapshots cannot inflate NAV after a full sale.
-    for(const h of holdings){if(!matchedHoldingIds.has(h.id)&&(h.snapshots[0]?.units??0)>0){await upsertSnapshotToday(h.id,{units:0,price:0,value:0,costBasis:0,unrealizedPnl:0});snapshots++}}
+    for(const h of holdings){if(!matchedHoldingIds.has(h.id)&&(h.snapshots[0]?.units??0)>0){await upsertSnapshotToday(h.id,{units:0,price:0,value:0,costBasis:0,unrealizedPnl:0});await db.holding.update({where:{id:h.id},data:{instrumentStatus:"CLOSED"}});snapshots++}}
     usersSynced++
   }
   if (usersSynced === 0) return { ok: false, reason: errors.join("; ") || "IBKR not configured", users: 0, snapshots: 0 }

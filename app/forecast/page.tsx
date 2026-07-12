@@ -16,7 +16,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
-const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
+const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
 const CONE_VOL_DEFAULT = 0.15 // fallback annual vol for the P10/P90 band when history is thin
 
 const SCENARIO_META = [
@@ -470,7 +470,7 @@ export default async function Forecast() {
                 { year: "2040", maxEquity: "90%", action: "Complete the 2040 portfolio review. Write a Distribution Plan — a document that says how you will draw money down from the portfolio in retirement." },
                 { year: "2041", maxEquity: "Review", action: "Confirm the 2045 use, currency and required amount before changing the growth portfolio." },
                 { year: "2042", maxEquity: "Review", action: "Create a separate liability-matched spending sleeve only for money likely to be used within three years." },
-                { year: "2043", maxEquity: "Review", action: "Fund the documented liability sleeve progressively; keep surplus capital under the v3.1 growth constitution." },
+                { year: "2043", maxEquity: "Review", action: "Fund the documented liability sleeve progressively; keep surplus capital under the v10.4 growth constitution." },
                 { year: "2044", maxEquity: "70%", action: "Final year of building the portfolio. Shift the focus from growth to keeping what you have safe and generating income." },
                 { year: "2045", maxEquity: "Per 2040 Review", action: "Retirement drawdown begins. Follow the Distribution Plan written in 2040." },
               ].map(({ year, maxEquity, action }) => (
@@ -486,7 +486,7 @@ export default async function Forecast() {
         <div className="px-5 py-3 border-t border-border bg-muted/20">
           <p className="text-[11px] text-muted-foreground">
             <span className="font-semibold text-foreground">Sell-down order when drawing down:</span>{" "}
-            Liability-matched cash first → Bitcoin → SMH → EQAC → IWQU → IMID last.
+            Liability-matched external cash first → Bitcoin → SMH → EQAC → VWRA; DBMFE remains a diversifier, not guaranteed capital.
             This sells the highest-concentration and highest-volatility positions first,
             keeping the broadest and cheapest holdings longest.
           </p>

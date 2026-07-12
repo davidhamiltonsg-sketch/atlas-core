@@ -185,13 +185,13 @@ async function main() {
     VALUES (?, ?, ?, ?, 'admin', ?, ?)
   `).run(adminId, adminEmail, adminName, passwordHash, now, now)
 
-  // Atlas Core Constitution v3.1 holdings. New databases begin empty; live values arrive from IBKR.
+  // Atlas Core Constitution v10.4 targets. New databases begin empty; live values arrive from IBKR.
   const holdings = [
-    { ticker: "IMID", name: "SPDR MSCI ACWI IMI UCITS ETF", targetPct: 52, hardCapPct: 62, toleranceBand: 5, color: "#6366f1", units: 0, price: 0, value: 0 },
-    { ticker: "IWQU", name: "iShares Edge MSCI World Quality Factor UCITS ETF", targetPct: 29, hardCapPct: 35, toleranceBand: 5, color: "#06b6d4", units: 0, price: 0, value: 0 },
-    { ticker: "EQAC", name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", targetPct: 10, hardCapPct: 15, toleranceBand: 3, color: "#8b5cf6", units: 0, price: 0, value: 0 },
-    { ticker: "SMH", name: "VanEck Semiconductor UCITS ETF", targetPct: 4, hardCapPct: 8, toleranceBand: 2, color: "#a78bfa", units: 0, price: 0, value: 0 },
-    { ticker: "BTC", name: "Bitcoin sleeve", targetPct: 5, hardCapPct: 8, toleranceBand: 2, color: "#f59e0b", units: 0, price: 0, value: 0 },
+    { ticker: "VWRA", name: "Vanguard FTSE All-World UCITS ETF Acc", targetPct: 70, hardCapPct: 80, toleranceBand: 5, color: "#6366f1", units: 0, price: 0, value: 0 },
+    { ticker: "EQAC", name: "Invesco EQQQ Nasdaq-100 UCITS ETF Acc", targetPct: 10, hardCapPct: 15, toleranceBand: 2.5, color: "#8b5cf6", units: 0, price: 0, value: 0 },
+    { ticker: "SMH", name: "VanEck Semiconductor UCITS ETF IE00BMC38736", targetPct: 5, hardCapPct: 10, toleranceBand: 1.25, color: "#a78bfa", units: 0, price: 0, value: 0 },
+    { ticker: "BTC", name: "Bitcoin sleeve — IBIT", targetPct: 5, hardCapPct: 8, toleranceBand: 1.25, color: "#f59e0b", units: 0, price: 0, value: 0 },
+    { ticker: "DBMFE", name: "iMGP DBi Managed Futures Fund R EUR UCITS ETF", targetPct: 10, hardCapPct: 15, toleranceBand: 2.5, color: "#10b981", units: 0, price: 0, value: 0 },
   ]
 
   for (const h of holdings) {
@@ -207,12 +207,12 @@ async function main() {
     `).run(sId, hId, h.units, h.price, h.value, now, now)
   }
 
-  // Governance rules derived from Atlas Core Constitution v3.1.
+  // Governance rules derived from Atlas Core Constitution v10.4.
   const rules = [
-    ["Constitutional holdings", "IMID 52%, IWQU 29%, EQAC 10%, SMH 4%, Bitcoin sleeve 5%.", "Portfolio"],
+    ["Constitutional holdings", "VWRA 70%, EQAC 10%, SMH 5%, Bitcoin through IBIT 5%, DBMFE managed futures 10%.", "Portfolio"],
     ["Contribution-first rebalancing", "Route settled cash to the furthest-underweight eligible holding; sell only for a hard breach or approved legacy migration.", "Rebalancing"],
     ["Whole-share DCA bank", "Reserve commission, buy whole shares, and carry unused proceeds into the next contribution cycle.", "Rebalancing"],
-    ["Combined growth-satellite limit", "EQAC plus SMH: 16% watch level and 18% hard cap. EQAC plus SMH plus Bitcoin: 24% hard cap.", "Overlap & Concentration"],
+    ["Combined growth-satellite limit", "EQAC plus SMH: 18.75% watch and 25% hard review. Look-through limits remain controlling.", "Overlap & Concentration"],
     ["Look-through limits", "Refresh company, sector, industry, asset and country sources quarterly. Look-through limits override ticker-level comfort.", "Overlap & Concentration"],
     ["Rebalancing Priority Order", "Step 1: redirect contributions. Step 2: pause accumulation in overweight. Step 3: selective trimming only at hard thresholds. Step 4: avoid wholesale redesign.", "Rebalancing"],
     ["Review cadence", "Monthly reconciliation and DCA; quarterly source refresh; annual constitutional review.", "Rebalancing"],

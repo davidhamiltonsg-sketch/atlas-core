@@ -248,7 +248,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
         <div>
           <p className="text-xs font-semibold mb-0.5">Silicon Brick Road — Re-provision Dami</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Preserves Dami&apos;s existing holdings and editable contribution settings, ensures IMID / EQAC / SMH / IB01 are configured, and refreshes the password from the <code className="text-[11px] bg-muted px-1 py-0.5 rounded">dami_key</code> environment variable.
+            Preserves Dami&apos;s existing holdings and editable contribution settings, ensures VWRA / EQAC / SMH / Bitcoin / DBMFE are configured, and refreshes the password from the <code className="text-[11px] bg-muted px-1 py-0.5 rounded">dami_key</code> environment variable.
           </p>
           {provisionMsg && (
             <p className={`mt-2 text-xs font-medium ${provisionState === "ok" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
