@@ -20,7 +20,7 @@
  *   clearFxCache();
  */
 
-import { getUsdSgdRate } from "@/lib/finnhub"
+import { getUsdSgdRate } from "@/lib/holdings-sync"
 
 interface CachedRate {
   rate: number

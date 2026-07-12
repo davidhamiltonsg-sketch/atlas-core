@@ -458,14 +458,14 @@ export default async function Dashboard() {
 
     const d = await getDashboardData(active.owner.id)
 
-  const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
-  const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
-  const costedMarketValue = costedRows.reduce((sum,p)=>sum+p.value,0)
-  const valuationComplete = d.holdingsRows.filter(p=>p.value>0).every(p=>p.unrealisedSgd!==null)
-  const totalUnrealised = totalCostBasis > 0 && valuationComplete ? costedMarketValue - totalCostBasis : null
-  const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
+    const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
+    const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
+    const costedMarketValue = costedRows.reduce((sum,p)=>sum+p.value,0)
+    const valuationComplete = d.holdingsRows.filter(p=>p.value>0).every(p=>p.unrealisedSgd!==null)
+    const totalUnrealised = totalCostBasis > 0 && valuationComplete ? costedMarketValue - totalCostBasis : null
+    const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
 
-  return (
+    return (
     <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.4" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Toolbar */}
@@ -599,6 +599,7 @@ export default async function Dashboard() {
 
       </div>
     </Shell>
+    )
   } finally {
     clearFxCache()
   }

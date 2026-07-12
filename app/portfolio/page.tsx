@@ -89,57 +89,57 @@ export default async function Portfolio() {
     const targetSleeveCount = getConstitution(active.constitutionId).funds.length
     const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
 
-  const snapshotDate = holdings[0]?.latestSnapshot
-    ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
-        day: "numeric", month: "short", year: "numeric",
-      })
-    : "—"
-
-  const latestDate = holdings.reduce<Date | null>((latest, h) => {
-    const d = h.latestSnapshot?.date
-    if (!d) return latest
-    const dt = new Date(d)
-    return latest === null || dt > latest ? dt : latest
-  }, null)
-  const daysSinceUpdate = latestDate
-    // Server-rendered freshness is intentionally evaluated at request time.
-    // eslint-disable-next-line react-hooks/purity
-    ? Math.floor((Date.now() - latestDate.getTime()) / 86_400_000)
-    : null
-
-  const withinCount = holdings.filter((h) => h.withinBand && !h.overCap).length
-  const hardBreaches = holdings.filter((h) => h.isHard).length
-  const softBreaches = holdings.filter((h) => h.isSoft).length
-
-  // Merge BTC+IBIT into one sleeve entry for visual display (donut, bars, drift summary)
-  const btcSlot = holdings.find(h => h.ticker === "BTC")
-  const ibitSlot = holdings.find(h => h.ticker === "IBIT")
-  const displaySlots = (btcSlot && ibitSlot)
-    ? holdings
-        .filter(h => h.ticker !== "IBIT")
-        .map(h => h.ticker !== "BTC" ? h : {
-          ...h,
-          name: "Bitcoin sleeve",
-          value: h.value + ibitSlot.value,
-          actualPct: h.actualPct + ibitSlot.actualPct,
-          targetPct: BITCOIN_SLEEVE_TARGET_PCT,
-          drift: (h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT,
-          withinBand: Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) <= h.toleranceBand,
-          isSoft: !h.isHard && Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) > h.toleranceBand,
+    const snapshotDate = holdings[0]?.latestSnapshot
+      ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
+          day: "numeric", month: "short", year: "numeric",
         })
-    : holdings
+      : "—"
 
-  const donutData = displaySlots.map((h) => ({
-    ticker: h.ticker,
-    name: h.name,
-    actualPct: h.actualPct,
-    targetPct: h.targetPct,
-    color: h.color,
-    value: h.value,
-  }))
+    const latestDate = holdings.reduce<Date | null>((latest, h) => {
+      const d = h.latestSnapshot?.date
+      if (!d) return latest
+      const dt = new Date(d)
+      return latest === null || dt > latest ? dt : latest
+    }, null)
+    const daysSinceUpdate = latestDate
+      // Server-rendered freshness is intentionally evaluated at request time.
+      // eslint-disable-next-line react-hooks/purity
+      ? Math.floor((Date.now() - latestDate.getTime()) / 86_400_000)
+      : null
 
-  return (
-    <Shell title="Position Ledger" subtitle={`${isSbr ? "Silicon Brick Road" : "Atlas Core"} · ownership, basis and governed bands`} userName={session.name} isAdmin={session.role === "admin"} constitutionId={active.constitutionId}>
+    const withinCount = holdings.filter((h) => h.withinBand && !h.overCap).length
+    const hardBreaches = holdings.filter((h) => h.isHard).length
+    const softBreaches = holdings.filter((h) => h.isSoft).length
+
+    // Merge BTC+IBIT into one sleeve entry for visual display (donut, bars, drift summary)
+    const btcSlot = holdings.find(h => h.ticker === "BTC")
+    const ibitSlot = holdings.find(h => h.ticker === "IBIT")
+    const displaySlots = (btcSlot && ibitSlot)
+      ? holdings
+          .filter(h => h.ticker !== "IBIT")
+          .map(h => h.ticker !== "BTC" ? h : {
+            ...h,
+            name: "Bitcoin sleeve",
+            value: h.value + ibitSlot.value,
+            actualPct: h.actualPct + ibitSlot.actualPct,
+            targetPct: BITCOIN_SLEEVE_TARGET_PCT,
+            drift: (h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT,
+            withinBand: Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) <= h.toleranceBand,
+            isSoft: !h.isHard && Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) > h.toleranceBand,
+          })
+      : holdings
+
+    const donutData = displaySlots.map((h) => ({
+      ticker: h.ticker,
+      name: h.name,
+      actualPct: h.actualPct,
+      targetPct: h.targetPct,
+      color: h.color,
+      value: h.value,
+    }))
+
+    return (
+      <Shell title="Position Ledger" subtitle={`${isSbr ? "Silicon Brick Road" : "Atlas Core"} · ownership, basis and governed bands`} userName={session.name} isAdmin={session.role === "admin"} constitutionId={active.constitutionId}>
       <div className="portfolio-deck">
       <section className="portfolio-deck-hero">
         <div><p>LIVE POSITION LEDGER</p><h1>{hasBalance ? "What you own, without the noise." : "Your governed portfolio is ready."}</h1><span>{hasBalance ? "Target holdings lead. Historic and migrating instruments remain in the audit trail without crowding today’s portfolio." : "The target architecture is in place. Your first confirmed IBKR snapshot will activate performance, basis and drift controls."}</span></div>
@@ -495,6 +495,7 @@ export default async function Portfolio() {
       </div>
       </div>
     </Shell>
+      )
   } finally {
     clearFxCache()
   }
