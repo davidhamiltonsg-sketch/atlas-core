@@ -1,1 +1,1640 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas Core — Investment Constitution v10.4</title><link rel="stylesheet" href="/constitution-app.css"><link rel="stylesheet" href="/constitution-etf.css"><link rel="stylesheet" href="/constitution-learning.css"></head><body class=""><main class="page constitution"><header class="top"><div class="brand">Atlas Core · Constitution v10.4</div><nav><a class="download-action" href="/downloads/atlas-core-constitution-v10.4.html" download>Download</a><a href="/">Cockpit</a><a href="/mission-control?portfolio=atlas-core">Mission Control</a></nav></header><section class="hero"><div><div class="eyebrow">Owner-governed investment policy</div><h1>Compound with discipline. Migrate without erasing history.</h1><p class="lede">A long-term retirement portfolio targeting 2045. Its job is to grow wealth by following a fixed set of rules instead of feelings, headlines, or random ideas. Not for trading or gambling — for staying invested until 2045 and letting compounding do the work.</p></div></section><div class="decision-strip"><div><small>Canonical target</small><strong>VWRA 70 · EQAC 10 · SMH 5 · BTC 5 · DBMFE 10</strong></div><div><small>Owner</small><strong>David</strong></div><div><small>Status</small><strong>No guarantee</strong></div></div><article id="authority"><div class="eyebrow">Article I · Authority</div><h2>The constitution controls the application</h2><p>This is the governing policy for Atlas Core. The cockpit, contribution engine, forecasts, alerts and reports implement it. If software and document disagree, stop the affected instruction and correct the software. A dashboard is evidence and guidance, not permission to improvise.</p><p>Targets are planning assumptions, never promises. Regular investing and managed futures do not guarantee profit, crisis protection or capital preservation.</p></article><article id="portfolio"><div class="eyebrow">Article II · Portfolio</div><h2>Approved building blocks</h2><table class="bands"><thead><tr><th>Fund and immutable identity</th><th>Target</th><th>Soft band</th><th>Hard floor / cap</th><th>Job</th></tr></thead><tbody><tr><td><b>VWRA</b><small>Vanguard FTSE All-World UCITS ETF (USD) Acc · IE00BK5BQT80 · Ireland · LSE</small></td><td>70%</td><td>65–75%</td><td>0% / 80%</td><td>The broad global equity core.</td></tr><tr><td><b>EQAC</b><small>Invesco EQQQ Nasdaq-100 UCITS ETF Acc · IE00BFZXGZ54 · Ireland · LSE</small></td><td>10%</td><td>7.5–12.5%</td><td>5% / 15%</td><td>A capped Nasdaq-100 growth tilt.</td></tr><tr><td><b>SMH</b><small>VanEck Semiconductor UCITS ETF · IE00BMC38736 · Ireland · LSE (not US SMH)</small></td><td>5%</td><td>3.75–6.25%</td><td>0% / 10%</td><td>A deliberately bounded semiconductor satellite.</td></tr><tr><td><b>BTC</b><small>Bitcoin sleeve · approved Atlas vehicle IBIT · CUSIP 46438F101 · not UCITS</small></td><td>5%</td><td>3.75–6.25%</td><td>0% / 8%</td><td>IBIT is the approved vehicle; GBTC counts with it during migration.</td></tr><tr><td><b>DBMFE</b><small>iMGP DBi Managed Futures Fund R EUR UCITS ETF · LU2951555403 · Luxembourg · Euronext Paris</small></td><td>10%</td><td>7.5–12.5%</td><td>5% / 15%</td><td>A Luxembourg UCITS managed-futures diversifier; not cash or a guaranteed hedge.</td></tr></tbody></table><div class="plain"><b>How to read a band</b> A target is the intended long-run share. A soft band guides new contributions. A hard floor or cap requires a documented review but does not place a trade. For a 5% Bitcoin target, 3.75–6.25% is the normal contribution range; at 8%, stop adding and review—do not sell automatically.</div><div class="plain"><b>Identity rule</b> A ticker is insufficient because different investments can share one. Match the permanent security number (ISIN or CUSIP), legal name, exchange and IBKR contract number (conid). DBMFE is a Luxembourg managed-futures UCITS fund. It may take long and short positions through futures across equity, bond, currency and commodity markets. It is not cash, an equity-factor ETF, a bond substitute or a guaranteed hedge. Bitcoin products are not UCITS.</div></article><article id="dca"><div class="eyebrow">Article III · Contributions</div><h2>Contribution-first, whole-share regular investing</h2><ol><li>Add the new contribution and previously unused cash to this portfolio’s separate cash bank.</li><li>Reserve estimated currency-conversion cost and broker commission.</li><li>Exclude any sleeve paused by a confirmed rule or data-quality problem.</li><li>Route money to the eligible sleeve furthest below its target.</li><li>Buy whole units and reconcile the plan to confirmed IBKR executions.</li><li>Carry every unused cent. Never show banked cash as invested.</li></ol><div class="worked-example"><h3>Worked contribution example</h3><p>Suppose the cash bank holds S$80 and the new contribution is S$1,000, giving S$1,080. The selected ETF is quoted at US$225, the confirmed conversion rate is S$1.35 per US dollar, and commission is S$5. One unit costs S$303.75 before commission. Three units cost S$911.25 plus S$5 commission, so the confirmed debit is S$916.25 and S$163.75 carries forward.</p><p>If IBKR fills only two units, debit only S$612.50 (two units plus the S$5 commission) and carry S$467.50. An execution ID may be recorded once only, so refreshing or retrying cannot debit the bank twice.</p></div></article><article id="lookthrough"><div class="eyebrow">Article IV · Look-through</div><h2>Govern the risks underneath the labels</h2><p>“Look-through” means adding the underlying holdings of every fund. If VWRA and EQAC both own the same company, both exposures count. Combine company, country, technology and semiconductor exposure using the latest published holdings. Classify Bitcoin as crypto and DBMFE as managed futures rather than forcing them into equity tables.</p><table class="bands"><thead><tr><th>Measure</th><th>Watch</th><th>Hard review</th><th>Response</th></tr></thead><tbody><tr><td>Single company</td><td>7%</td><td>9%</td><td>Pause overlapping satellites; refresh.</td></tr><tr><td>Information technology</td><td>45%</td><td>50%</td><td>Route cash away from deliberate overlap.</td></tr><tr><td>Semiconductors</td><td>25%</td><td>30%</td><td>Pause SMH and overlapping growth additions.</td></tr><tr><td>United States</td><td>70%</td><td>75%</td><td>Review index-driven versus deliberate exposure.</td></tr><tr><td>Bitcoin</td><td>7%</td><td>8%</td><td>Pause additions; no automatic sale.</td></tr><tr><td>Unclassified</td><td>1%</td><td>3%</td><td>Block concentration-led instructions.</td></tr><tr><td>Oldest required source</td><td>35 days</td><td>75 days</td><td>Mark stale and disable concentration-led trades.</td></tr></tbody></table><p>A watch level is an early warning. A hard-review level requires investigation and a written response. Neither creates an automatic order. Estimated or stale data can restrict a trade but cannot compel a sale.</p></article><article id="behaviour"><div class="eyebrow">Article V · Behaviour and liquidity</div><h2>Survive the plan</h2><ul><li><b>Green:</b> income secure and external SGD reserve funded—continue.</li><li><b>Amber:</b> income uncertain or reserve used—pause optional increases and rebuild liquidity.</li><li><b>Red:</b> income lost or reserve inadequate—suspend contributions.</li></ul><p>No leverage, margin, prediction-led changes or panic sales. Wait 72 hours before an unscheduled discretionary sale unless delay creates legal or operational danger. Personality labels are not investment rules; observable liquidity and behaviour are.</p></article><article id="governance"><div class="eyebrow">Article VI · Governance</div><h2>Reviews and amendments</h2><ul><li><b>Monthly:</b> reconcile IBKR holdings, cash, executions, dividends, fees, currency conversions and adjustments.</li><li><b>Quarterly:</b> review bands, underlying exposures, source freshness, fund status and contribution capacity.</li><li><b>Annually:</b> review objective, external liquidity, tax/legal circumstances, beneficiaries and vehicles.</li><li><b>Amendment:</b> written evidence, version increment and 30-day cooling-off except genuine emergencies.</li></ul><p>Archive old constitutions as history, but never allow them to remain active runtime instructions.</p></article><article id="glossary"><div class="eyebrow">Plain-English reference</div><h2>Short glossary</h2><dl><dt><b>Accumulating (Acc)</b></dt><dd>The fund reinvests distributions inside the fund instead of paying them as cash.</dd><dt><b>UCITS</b></dt><dd>A regulated European fund framework. It does not mean risk-free, and listed Bitcoin products are not UCITS funds.</dd><dt><b>DCA or regular investing</b></dt><dd>Investing contributions on a schedule. It spreads entry dates and supports discipline, but may underperform investing a lump sum immediately.</dd><dt><b>FX</b></dt><dd>Foreign exchange: converting one currency into another, including its rate and cost.</dd><dt><b>Satellite</b></dt><dd>A deliberately smaller holding added around the broad core to tilt risk or return.</dd><dt><b>Realised correlation</b></dt><dd>How investments actually moved together over a measured past period. It can change and is not a promise.</dd></dl></article><article id="migration"><div class="eyebrow">Article VII · Legacy migration</div><h2>Change instruments without rewriting history</h2><table class="bands"><tbody><tr><td>VT</td><td>Legacy global equity; settled proceeds route by current deficits, normally toward VWRA.</td></tr><tr><td>VWO</td><td>Legacy emerging markets; future exposure is inside VWRA.</td></tr><tr><td>QQQM</td><td>Legacy Nasdaq; replacement exposure is governed through EQAC.</td></tr><tr><td>US SMH</td><td>Separate from IE00BMC38736; replace only through sale and new purchase.</td></tr><tr><td>GBTC</td><td>Counts with IBIT against the Bitcoin cap until sold.</td></tr><tr><td>IBIT</td><td>Retain as approved Atlas Bitcoin vehicle; it is not legacy.</td></tr></tbody></table><ol><li>Keep original rows, units, broker cost basis, realised result and history.</li><li>Never rename an old security or transfer its cost basis to a replacement.</li><li>Lifecycle: pending sale → sold/unsettled → confirmed settled cash → reinvested.</li><li>Only authoritative settled cash enters the migration bank.</li><li>Show current, migration and target views separately.</li></ol><div class="worked-example"><h3>Worked migration and accounting example</h3><p>Assume QQQM has a broker cost basis of S$20,000 and is sold for S$24,000 after all sale costs. QQQM records a S$4,000 realised gain and remains in history as a closed legacy instrument. The app does not rename it EQAC and does not move its S$20,000 basis.</p><p>When IBKR confirms the S$24,000 as settled cash, it enters the migration bank. The engine then measures every target deficit. It may allocate some cash to VWRA or DBMFE before EQAC; QQQM does not automatically convert one-for-one into EQAC. Any EQAC purchase begins with its own execution price, commission and new cost basis. Portfolio lifetime reporting connects both instruments through the cash ledger without merging their histories.</p></div></article><article><div class="eyebrow">Article VIII · Destination</div><h2>2045 is a planning horizon, not a promise</h2><p>The 70% global core anchors Atlas; EQAC and SMH are capped growth tilts; IBIT is speculative; and 10% DBMFE seeks trend diversification. DBMFE may lose alongside equities and has limited ETF live history.</p></article><div class="signature"><h2>Owner acknowledgement</h2><p>I understand the risks, external-liquidity requirement, contribution-first rules and absence of any guaranteed return or hedge.</p><p>Name: ____________________ &nbsp; Date: ____________________ &nbsp; Version: 10.4</p></div><footer class="footer">Canonical investment policy statement · Review tax, estate, legal and suitability matters with licensed advisers.</footer></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atlas Core — Investment Constitution v10.4 Expanded</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; --color-text: #1a1a1a; --color-bg: #ffffff; --color-border: #e0e0e0; --color-accent: #0052cc; --color-soft: #666; --color-warning: #ff6b35; --color-danger: #dc2626; --color-success: #059669; }
+html.dark-mode { --color-text: #f0f0f0; --color-bg: #1a1a1a; --color-border: #444; --color-soft: #aaa; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--color-text); background: var(--color-bg); line-height: 1.6; }
+main { max-width: 900px; margin: 0 auto; padding: 0; }
+header.top { padding: 2rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.brand { font-size: 1.2rem; font-weight: 600; }
+nav { display: flex; gap: 1.5rem; }
+nav a { color: var(--color-accent); text-decoration: none; font-size: 0.9rem; }
+nav a:hover { text-decoration: underline; }
+.theme-toggle { cursor: pointer; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); }
+.hero { padding: 3rem 2rem; background: linear-gradient(135deg, var(--color-accent) 0%, rgba(0,82,204,0.1) 100%); }
+.hero h1 { font-size: 2.2rem; margin-bottom: 1rem; color: var(--color-text); }
+.hero p.lede { font-size: 1.1rem; color: var(--color-soft); max-width: 700px; }
+.eyebrow { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); font-weight: 600; margin-bottom: 0.5rem; }
+article { padding: 3rem 2rem; border-bottom: 1px solid var(--color-border); }
+article h2 { font-size: 1.8rem; margin-bottom: 1.5rem; margin-top: 0; }
+article h3 { font-size: 1.3rem; margin: 2rem 0 1rem; }
+article h4 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; font-weight: 600; }
+article > p { margin-bottom: 1rem; }
+article > ol, article > ul { margin-left: 2rem; margin-bottom: 1rem; }
+article li { margin-bottom: 0.75rem; }
+.decision-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 2rem; background: var(--color-border); }
+.decision-strip > div { padding: 1rem; }
+.decision-strip small { display: block; font-size: 0.75rem; color: var(--color-soft); margin-bottom: 0.5rem; }
+.decision-strip strong { display: block; font-size: 1.1rem; font-weight: 600; }
+table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; }
+table th { background: var(--color-border); padding: 1rem; text-align: left; font-weight: 600; }
+table td { padding: 1rem; border-bottom: 1px solid var(--color-border); }
+table tr:hover { background: var(--color-border); }
+table b { display: block; margin-bottom: 0.25rem; }
+table small { display: block; font-size: 0.8rem; color: var(--color-soft); margin-top: 0.25rem; }
+.bands { font-size: 0.9rem; }
+.plain { background: var(--color-border); padding: 1.5rem; border-left: 4px solid var(--color-accent); margin: 1.5rem 0; }
+.worked-example { background: var(--color-border); padding: 2rem; margin: 2rem 0; border-radius: 4px; }
+.worked-example h3 { margin-top: 0; }
+.worked-example p { margin-bottom: 1rem; }
+.warning-box { background: rgba(255, 107, 53, 0.1); border-left: 4px solid var(--color-warning); padding: 1.5rem; margin: 1.5rem 0; }
+.warning-box strong { color: var(--color-warning); }
+.success-box { background: rgba(5, 150, 105, 0.1); border-left: 4px solid var(--color-success); padding: 1.5rem; margin: 1.5rem 0; }
+.app-description { background: var(--color-border); padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px; border-left: 4px solid var(--color-accent); }
+.app-description strong { display: block; margin-bottom: 0.5rem; font-size: 1rem; }
+.app-description em { display: block; font-size: 0.9rem; color: var(--color-soft); margin-top: 0.5rem; }
+dl { margin: 1.5rem 0; }
+dt { font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+dd { margin-left: 1.5rem; margin-bottom: 1rem; color: var(--color-soft); }
+.signature { padding: 3rem 2rem; background: var(--color-border); }
+.signature h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+.signature p { margin-bottom: 1rem; }
+footer { padding: 2rem; text-align: center; color: var(--color-soft); font-size: 0.9rem; border-top: 1px solid var(--color-border); }
+.toc { position: sticky; top: 0; background: var(--color-bg); padding: 1rem 2rem; border-bottom: 1px solid var(--color-border); z-index: 100; }
+.toc h3 { margin: 0; font-size: 0.9rem; margin-bottom: 0.75rem; }
+.toc ul { list-style: none; margin: 0; }
+.toc li { margin: 0.25rem 0; }
+.toc a { color: var(--color-accent); text-decoration: none; font-size: 0.85rem; }
+.toc a:hover { text-decoration: underline; }
+@media (max-width: 768px) {
+  header.top { flex-direction: column; align-items: flex-start; }
+  nav { flex-direction: column; gap: 0.75rem; }
+  .hero h1 { font-size: 1.6rem; }
+  article { padding: 2rem 1rem; }
+  table { font-size: 0.85rem; }
+  table th, table td { padding: 0.75rem; }
+  .decision-strip { grid-template-columns: 1fr; }
+}
+@media print {
+  header.top, nav, .toc, .theme-toggle { display: none; }
+  article { page-break-inside: avoid; }
+  body { font-size: 12pt; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Atlas Core · Constitution v10.4 Expanded</div>
+  <nav>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+    <a href="#cockpit">Cockpit</a>
+    <a href="#examples">Examples</a>
+    <a href="#faq">FAQ</a>
+    <a href="#glossary">Glossary</a>
+  </nav>
+</header>
+
+<div class="toc">
+  <h3>Quick Navigation</h3>
+  <ul>
+    <li><a href="#authority">I. Authority</a></li>
+    <li><a href="#portfolio">II. Portfolio & Bands</a></li>
+    <li><a href="#dca">III. Contributions</a></li>
+    <li><a href="#lookthrough">IV. Look-Through</a></li>
+    <li><a href="#behaviour">V. Liquidity & Behavior</a></li>
+    <li><a href="#governance">VI. Governance</a></li>
+    <li><a href="#cockpit">VII. App Guide: Cockpit</a></li>
+    <li><a href="#portfolio-page">VIII. App Guide: Portfolio</a></li>
+    <li><a href="#contributions-flow">IX. App Guide: Contributions</a></li>
+    <li><a href="#mission-control">X. Mission Control</a></li>
+    <li><a href="#alerts">XI. Alerts & Notifications</a></li>
+    <li><a href="#examples">XII. Worked Examples</a></li>
+    <li><a href="#faq">XIII. FAQ</a></li>
+    <li><a href="#glossary">XIV. Glossary</a></li>
+  </ul>
+</div>
+
+<main class="page constitution">
+
+<section class="hero">
+  <div>
+    <div class="eyebrow">Owner-governed investment policy</div>
+    <h1>Compound with discipline. Migrate without erasing history.</h1>
+    <p class="lede">A long-term retirement portfolio targeting 2045. Its job is to grow wealth by following a fixed set of rules instead of feelings, headlines, or random ideas. Not for trading or gambling — for staying invested until 2045 and letting compounding do the work. This expanded constitution covers the rules, their reasoning, and how to use the Atlas Core application to implement them.</p>
+  </div>
+</section>
+
+<div class="decision-strip">
+  <div><small>Canonical target</small><strong>VWRA 70 · EQAC 10 · SMH 5 · BTC 5 · DBMFE 10</strong></div>
+  <div><small>Owner</small><strong>David</strong></div>
+  <div><small>Status</small><strong>No guarantee</strong></div>
+  <div><small>Version</small><strong>v10.4 Expanded</strong></div>
+</div>
+
+<article id="authority">
+<div class="eyebrow">Article I · Authority</div>
+<h2>The constitution controls the application</h2>
+
+<p>This document is the governing policy for Atlas Core. The cockpit, contribution engine, forecasts, alerts, and reports all implement it. If software and document disagree, stop the affected instruction and correct the software. A dashboard is evidence and guidance, never permission to improvise or override a rule.</p>
+
+<h3>Why rules, not feelings?</h3>
+<p>Market crashes feel like catastrophes. Rallies feel like certainty. Neither is true. A written constitution removes the need to make emotional decisions under stress. When you've already decided your rules in calm moments, a market crisis becomes a checklist instead of a panic.</p>
+
+<p>Targets are planning assumptions, never promises. Regular investing and managed futures do not guarantee profit, crisis protection, or capital preservation. Past performance does not indicate future results. This constitution acknowledges that markets are unpredictable and that the best response is disciplined adherence to a pre-written policy, not reaction to headlines or social media.</p>
+
+<h3>Scope of authority</h3>
+<p>This constitution governs:</p>
+<ul>
+  <li>Which funds and instruments are eligible for purchase</li>
+  <li>How much of the portfolio may be in each fund (soft and hard limits)</li>
+  <li>How to evaluate underlying holdings across fund boundaries (look-through)</li>
+  <li>How contributions are routed to specific funds</li>
+  <li>When reviews are mandatory and what they must cover</li>
+  <li>How to amend the constitution itself</li>
+</ul>
+
+<p>It does NOT govern:</p>
+<ul>
+  <li>When you personally choose to withdraw funds (outside emergencies)</li>
+  <li>Major life changes (career change, inheritance, marriage) that require expert advice</li>
+  <li>Tax strategy or legal structure (consult licensed advisers)</li>
+  <li>Your personal spending or savings rate</li>
+</ul>
+</article>
+
+<article id="portfolio">
+<div class="eyebrow">Article II · Portfolio Structure & Bands</div>
+<h2>Approved building blocks and their constraints</h2>
+
+<p>Atlas Core holds exactly five approved instruments. Each serves a specific role, and each has three numerical constraints: a target (the ideal long-term share), a soft band (the normal contribution range), and hard limits (floor and cap that trigger required reviews).</p>
+
+<h3>Understanding targets, bands, and limits</h3>
+
+<p><strong>Target:</strong> The intended long-run equilibrium. For VWRA at 70%, this means that after many years of regular contributions and market movements, roughly 70% of the portfolio should be in VWRA. It is not a promise or a current state—just the long-term aim.</p>
+
+<p><strong>Soft band:</strong> The normal range for new contributions. If VWRA is at 68% (below its 65–75% soft band), new money goes toward VWRA. If VWRA is at 77% (above the band), new money avoids VWRA until it drifts back down. The soft band creates gentle pressure toward equilibrium without forcing trades.</p>
+
+<p><strong>Hard limits:</strong> A floor (minimum) and cap (maximum). Hitting a hard limit does NOT trigger an automatic sale or purchase. Instead, it requires you to stop, investigate, write down what you found, and decide whether to act. This is a pause point, not an order.</p>
+
+<h3>The five approved instruments</h3>
+
+<table class="bands">
+  <thead>
+    <tr>
+      <th>Fund and immutable identity</th>
+      <th>Target</th>
+      <th>Soft band</th>
+      <th>Hard floor / cap</th>
+      <th>Job and philosophy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <b>VWRA</b><br>
+        <small>Vanguard FTSE All-World UCITS ETF (USD) Acc · IE00BK5BQT80 · Ireland · LSE</small>
+      </td>
+      <td>70%</td>
+      <td>65–75%</td>
+      <td>0% / 80%</td>
+      <td>The broad global equity core. VWRA holds ~3,500 companies across all developed and emerging markets. It is the anti-picking strategy: you own the entire global opportunity set at low cost. It anchors the portfolio and removes the need to guess which countries will outperform.</td>
+    </tr>
+    <tr>
+      <td>
+        <b>EQAC</b><br>
+        <small>Invesco EQQQ Nasdaq-100 UCITS ETF Acc · IE00BFZXGZ54 · Ireland · LSE</small>
+      </td>
+      <td>10%</td>
+      <td>7.5–12.5%</td>
+      <td>5% / 15%</td>
+      <td>A capped Nasdaq-100 growth tilt. EQAC holds the 100 largest non-financial stocks traded on Nasdaq, heavily weighted toward US technology. Because VWRA already owns these stocks, EQAC is an overlay—it increases your bet on US tech growth compared to global market weights. The 15% hard cap prevents over-concentration in a single sector or region.</td>
+    </tr>
+    <tr>
+      <td>
+        <b>SMH</b><br>
+        <small>VanEck Semiconductor UCITS ETF · IE00BMC38736 · Ireland · LSE (not US SMH)</small>
+      </td>
+      <td>5%</td>
+      <td>3.75–6.25%</td>
+      <td>0% / 10%</td>
+      <td>A deliberately bounded semiconductor satellite. Semiconductors are fundamental to modern technology, and SMH is a concentrated bet on companies like TSMC, Intel, and ASML. Because VWRA and EQAC already own semiconductors, SMH amplifies that exposure. The 10% hard cap keeps it satellite-sized, never core.</td>
+    </tr>
+    <tr>
+      <td>
+        <b>BTC</b><br>
+        <small>Bitcoin sleeve · approved Atlas vehicle IBIT · CUSIP 46438F101 · not UCITS</small>
+      </td>
+      <td>5%</td>
+      <td>3.75–6.25%</td>
+      <td>0% / 8%</td>
+      <td>IBIT is the approved vehicle for Bitcoin exposure; GBTC counts with it during migration. Bitcoin is speculative and asymmetric—it can lose 50% quickly and may be uncorrelated with traditional equities. At 5%, it's small enough that a total loss would be survivable but large enough to matter on a very good year. Do not treat it as crisis insurance or emergency cash.</td>
+    </tr>
+    <tr>
+      <td>
+        <b>DBMFE</b><br>
+        <small>iMGP DBi Managed Futures Fund R EUR UCITS ETF · LU2951555403 · Luxembourg · Euronext Paris</small>
+      </td>
+      <td>10%</td>
+      <td>7.5–12.5%</td>
+      <td>5% / 15%</td>
+      <td>A Luxembourg UCITS managed-futures diversifier. DBMFE holds dynamically managed positions in equity, bond, currency, and commodity futures across global markets. Managed futures strategies aim to reduce correlation with equities and traditional assets during market dislocations, but this is historical observation, not a guarantee. DBMFE may lose alongside equities and has limited ETF live history.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>How to read a band (visual in Cockpit)</h3>
+
+<div class="plain">
+  <b>Soft band guidance:</b> A target is the intended long-run share. A soft band guides new contributions. A hard floor or cap requires a documented review but does not place a trade. For a 5% Bitcoin target, 3.75–6.25% is the normal contribution range; at 8%, stop adding and review—do not sell automatically. Think of soft bands as "gentle nudges" and hard limits as "yellow lights requiring investigation."
+</div>
+
+<h3>Identity rule: matching funds correctly</h3>
+
+<p>A ticker is insufficient because different investments can share one. For example, there is a VanEck Semiconductor ETF listed in the US (ticker SMH, CUSIP 81569G505) and a separate VanEck Semiconductor UCITS ETF in Europe (IE00BMC38736). They are different funds with different holdings and tax treatment. The identity rule requires matching:</p>
+
+<ul>
+  <li><b>ISIN or CUSIP</b> – the permanent security identifier</li>
+  <li><b>Legal name</b> – the official fund name registered with regulators</li>
+  <li><b>Exchange</b> – where it trades (LSE, Euronext, etc.)</li>
+  <li><b>IBKR contract ID (conid)</b> – the unique identifier in your broker system</li>
+</ul>
+
+<p>Why? Because a "migration" from US SMH to IE00BMC38736 is not a simple ticker swap—it is a taxable sale and a new purchase, each with cost basis, realised gains/losses, and new commissions. The app enforces this precision.</p>
+
+<h3>DBMFE is not cash, a hedge, or a guarantee</h3>
+
+<p>DBMFE is a managed-futures UCITS fund that may take long and short positions through futures across equity, bond, currency, and commodity markets. It is not a money-market fund, a bond fund, or a guaranteed hedge against stock losses. In some markets, it may lose alongside equities. In others, it may be uncorrelated or even positive. Its value is in diversification of return sources, not guaranteed protection. Do not treat it as emergency cash.</p>
+</article>
+
+<article id="dca">
+<div class="eyebrow">Article III · Contributions and Cash Management</div>
+<h2>Contribution-first, whole-share regular investing</h2>
+
+<p>Contributions are the engine of portfolio growth. Unlike trying to time markets or predict crashes, a discipline of regular contributions lets you participate in both bull and bear markets without emotion. This article governs how new money enters the portfolio.</p>
+
+<h3>The six-step contribution process</h3>
+
+<ol>
+  <li><b>Add to cash bank:</b> The new contribution and any previously unused cash combine in this portfolio's separate cash bank (segregated from personal spending money).</li>
+  <li><b>Reserve for costs:</b> Subtract estimated currency-conversion cost and broker commission before calculating how many shares you can buy.</li>
+  <li><b>Exclude paused sleeves:</b> Any fund currently paused by a confirmed rule violation or data-quality problem is ineligible to receive new money.</li>
+  <li><b>Route to largest deficit:</b> Money goes to the eligible fund furthest below its target allocation.</li>
+  <li><b>Whole shares only:</b> Buy only whole units, reconcile against confirmed IBKR executions, and never show fractional holdings as invested.</li>
+  <li><b>Carry forward unused cash:</b> Every unused cent stays in the cash bank, never vanishes. This prevents "rounding away" small amounts.</li>
+</ol>
+
+<h3>Why contribution-first?</h3>
+
+<p>A contribution-first system removes the need to time or predict markets. Instead of asking "Is now a good time to buy?", the rule is simple: "Add new money to the fund that is furthest below target." This ensures that:</p>
+
+<ul>
+  <li>You buy more shares when prices are low (target is further away)</li>
+  <li>You buy fewer shares when prices are high (target is closer)</li>
+  <li>You never sell just to rebalance (which triggers taxes and costs)</li>
+  <li>You avoid the paralysis of trying to guess market direction</li>
+</ul>
+
+<h3>Whole shares and currency cost</h3>
+
+<p>You can only buy whole units. If your cash bank has S$1,000 and VWRA costs S$300 per share (after currency conversion and commission), you can buy 3 shares for S$900 and must carry forward S$100. This prevents "fractional share tricks" that obscure true holdings. IBKR tracks the exact cost basis and execution ID for every purchase.</p>
+
+<h3>Worked contribution example</h3>
+
+<div class="worked-example">
+  <h3>Example: S$1,000 contribution with multi-fund routing</h3>
+
+  <p><b>Starting state:</b></p>
+  <ul>
+    <li>Cash bank: S$80 (carried forward from last month)</li>
+    <li>New contribution: S$1,000</li>
+    <li>Total available: S$1,080</li>
+    <li>Estimated commission: S$5 per execution</li>
+    <li>FX rate: S$1.35 per US dollar</li>
+  </ul>
+
+  <p><b>Current holdings and targets:</b></p>
+  <ul>
+    <li>VWRA: S$70,000 portfolio value, 70% target → S$49,000 target amount → at target</li>
+    <li>EQAC: S$8,000 portfolio value, 10% target → S$7,000 target amount → S$1,000 below target</li>
+    <li>SMH: S$3,000 portfolio value, 5% target → S$3,500 target amount → S$500 below target</li>
+    <li>BTC: S$4,000 portfolio value, 5% target → S$3,500 target amount → at target</li>
+    <li>DBMFE: S$8,000 portfolio value, 10% target → S$7,000 target amount → S$1,000 above target</li>
+  </ul>
+
+  <p><b>Largest deficit: EQAC at S$1,000 below target.</b></p>
+
+  <p>EQAC quote: US$225 per share. In SGD: S$225 × 1.35 = S$303.75 per share before commission.</p>
+
+  <p>Three shares cost: S$303.75 × 3 = S$911.25, plus S$5 commission = S$916.25. This is within the S$1,080 cash bank.</p>
+
+  <p><b>Confirmed IBKR execution:</b> Only 2 shares filled (market conditions). Debit: S$607.50 (two units) + S$5 commission = S$612.50.</p>
+
+  <p><b>Reconciliation:</b></p>
+  <ul>
+    <li>Debit confirmed: S$612.50</li>
+    <li>Remaining in cash bank: S$1,080 - S$612.50 = S$467.50 (carried forward)</li>
+    <li>EQAC position: +2 shares, new cost basis recorded with execution ID</li>
+    <li>Next contribution will re-evaluate deficits and may route to SMH or another fund</li>
+  </ul>
+
+  <p>Note: The app records the execution ID exactly once. Refreshing or retrying the contribution cannot double-debit the cash bank.</p>
+</div>
+
+<h3>What if a contribution is very small?</h3>
+
+<p>If your contribution is S$100 and transaction costs are S$5-10, the effective amount invested might be tiny. The app carries forward the full amount until a subsequent contribution makes purchase viable. This prevents "dribbling" money into fractional shares and ensures each purchase has meaningful size and recorded cost basis.</p>
+</article>
+
+<article id="lookthrough">
+<div class="eyebrow">Article IV · Look-Through and Underlying Concentration</div>
+<h2>Govern the risks underneath the labels</h2>
+
+<p>"Look-through" means ignoring fund boundaries and adding up the underlying holdings of every fund. If VWRA and EQAC both own Apple, both positions count toward your total Apple exposure. This reveals hidden concentrations that labels alone would miss.</p>
+
+<h3>Why look-through matters</h3>
+
+<p>At the fund level, you might think your portfolio is diversified: 70% global equity, 10% Nasdaq growth, 5% semiconductors, etc. But underlying those funds are individual companies. Both VWRA and EQAC own Microsoft, Apple, Nvidia, and ASML. VWRA, EQAC, and SMH all own semiconductor manufacturers. Ignoring these overlaps creates invisible concentration risk.</p>
+
+<p>Look-through converts "I own 5 funds" into "I own 1,500+ individual securities with these overlap patterns." This is the reality you are taking risk on, not the fund labels.</p>
+
+<h3>The five look-through measures</h3>
+
+<table class="bands">
+  <thead>
+    <tr>
+      <th>Measure</th>
+      <th>Watch level</th>
+      <th>Hard review level</th>
+      <th>Response</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Single company</b></td>
+      <td>7%</td>
+      <td>9%</td>
+      <td>Pause overlapping satellites; refresh data and recalculate.</td>
+    </tr>
+    <tr>
+      <td><b>Information technology</b></td>
+      <td>45%</td>
+      <td>50%</td>
+      <td>Route cash away from deliberate overlap (avoid EQAC and SMH additions).</td>
+    </tr>
+    <tr>
+      <td><b>Semiconductors</b></td>
+      <td>25%</td>
+      <td>30%</td>
+      <td>Pause SMH and overlapping growth additions; consider DBMFE or VWRA focus.</td>
+    </tr>
+    <tr>
+      <td><b>United States</b></td>
+      <td>70%</td>
+      <td>75%</td>
+      <td>Review whether US exposure is index-driven (expected) or concentrated in deliberate overlays (EQAC, SMH).</td>
+    </tr>
+    <tr>
+      <td><b>Bitcoin</b></td>
+      <td>7%</td>
+      <td>8%</td>
+      <td>Pause new Bitcoin additions; do not automatically sell.</td>
+    </tr>
+    <tr>
+      <td><b>Unclassified holdings</b></td>
+      <td>1%</td>
+      <td>3%</td>
+      <td>Block concentration-led trades (contributions routed by deficit) until classification is resolved.</td>
+    </tr>
+    <tr>
+      <td><b>Oldest required data source</b></td>
+      <td>35 days</td>
+      <td>75 days</td>
+      <td>Mark data as stale and disable concentration-led trades.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Understanding the response levels</h3>
+
+<p><b>Watch level:</b> An early warning. The Cockpit highlights it in yellow, but no action is required. It signals that you are approaching a boundary and should be aware of it.</p>
+
+<p><b>Hard review level:</b> A pause point. When you hit this level, stop new contributions to overlapping funds, write down what you observe, investigate why the concentration happened, and decide whether to act. For example, if semiconductors hit 30% because prices soared, you might simply carry forward to your next review. If EQAC purchases pushed you there, you might pause EQAC and SMH additions.</p>
+
+<p><b>Key clarification:</b> Neither a watch nor a hard review creates an automatic order to sell. Estimated or stale data can restrict a trade but cannot compel a sale. You always decide after investigation.</p>
+
+<h3>Data freshness and staleness</h3>
+
+<p>Look-through calculations depend on published fund holdings, typically updated quarterly. If VWRA's latest holdings are 75 days old, the app marks that data as stale. When data is stale, concentration-led rules (routing money to largest deficit) are disabled until fresh data is available. This prevents decisions based on outdated information.</p>
+
+<p>In your Cockpit, a "Data from 60 days ago" warning means holdings were last published 60 days ago. If you see "Data > 75 days old," you will not be able to execute concentration-led contributions until you refresh the holdings (usually by clicking "Refresh holdings" in the app).</p>
+
+<h3>Worked look-through example</h3>
+
+<div class="worked-example">
+  <h3>Example: Semiconductor concentration discovery</h3>
+
+  <p>Your portfolio holds S$100,000 across five funds. You check look-through and discover:</p>
+
+  <ul>
+    <li>TSMC: S$4,500 (4.5%)</li>
+    <li>Intel: S$2,000 (2%)</li>
+    <li>ASML: S$2,500 (2.5%)</li>
+    <li>Samsung: S$2,000 (2%)</li>
+    <li>Other semiconductors: S$1,000 (1%)</li>
+    <li><b>Total semiconductors: 12%</b></li>
+  </ul>
+
+  <p>You are well below the 25% watch level, so no action is required. But you now understand that roughly 1 in 8 SGD is in semiconductor companies. If a semiconductor cycle turn happens, you know the impact.</p>
+
+  <p>Later, a market rally pushes semiconductors to S$26,500 (26.5%). You hit the hard review level (25% watch, 30% hard cap). You stop and investigate:</p>
+
+  <ul>
+    <li>Did prices rise? (Yes, a chip shortage rally boosted TSMC and others.)</li>
+    <li>Did new contributions go to SMH? (No, you routed to VWRA and DBMFE.)</li>
+    <li>Is the concentration dangerous? (Probably not—it's market-driven, not concentrated in one company.)</li>
+  </ul>
+
+  <p>Decision: Carry forward. On the next contribution, preferentially route money away from EQAC and SMH (the overlapping growth funds) and toward VWRA or DBMFE to dilute the semiconductor weight. Alternatively, if prices drop later and semiconductors fall to 20%, the watch level releases and you resume normal contribution routing.</p>
+</div>
+</article>
+
+<article id="behaviour">
+<div class="eyebrow">Article V · Behaviour, Liquidity, and Emotional Discipline</div>
+<h2>Survive the plan without panic selling</h2>
+
+<p>Market crashes are normal. Recessions happen. External emergencies occur. This article governs how personal liquidity and income stability interact with your investment rules. The goal is to ensure you never panic-sell during a downturn because you didn't keep enough liquid reserves.</p>
+
+<h3>Three liquidity states</h3>
+
+<ul>
+  <li><b>Green:</b> Income is secure (employment stable, business profitable) and you maintain an external SGD cash reserve (typically 6–12 months of spending) outside the portfolio. Continue normal contributions.</li>
+  <li><b>Amber:</b> Income is uncertain (contract work, business volatility, one earner in a two-person household) or your external reserve has been partly used (unexpected medical expense, home repair). Pause optional or discretionary increases and focus on rebuilding the external reserve.</li>
+  <li><b>Red:</b> Income is lost (involuntary job loss, business failure) or your external reserve is inadequate (depleted below 3 months). Suspend contributions entirely until income is restored and the reserve is rebuilt.</li>
+</ul>
+
+<h3>Why external reserve matters</h3>
+
+<p>If a market crash coincides with job loss or a health emergency, panic selling becomes seductive: "I need cash, the portfolio is down 40%, I should sell now and wait for recovery." This is the exact moment when selling locks in losses. An external reserve (savings held in a local bank account or money-market fund, not in your investment portfolio) prevents this trap. You cover the emergency without touching investments.</p>
+
+<h3>Behaviour rules—absolute prohibitions</h3>
+
+<ul>
+  <li><b>No leverage or margin:</b> Never borrow to invest. Margin calls force sales at the worst moments.</li>
+  <li><b>No prediction-led changes:</b> If you think a recession is coming, that is a prediction, not a constitutional rule. Contributions follow the plan; they do not pause based on your market outlook.</li>
+  <li><b>No panic sales:</b> A market drop is not a reason to sell. A rule violation or data problem is.</li>
+  <li><b>Wait 72 hours:</b> Before an unscheduled, discretionary sale (one not required by the constitution), wait three days. This gives emotion time to settle. If after 72 hours you still believe the sale is right, execute it.</li>
+</ul>
+
+<p>Exception: Immediate sales are allowed if delay creates legal or operational danger (e.g., a fund is being liquidated by its administrator, regulatory action requires unwinding a position, or a tax law change creates an urgent deadline).</p>
+
+<h3>Personality labels are not rules</h3>
+
+<p>Words like "conservative" or "aggressive" are labels, not investment rules. They describe mood, not mechanics. This constitution ignores personality and focuses instead on observable facts: your income stability, your liquid reserves, the fund band violations, and the data freshness. Follow the rules regardless of how you feel.</p>
+</article>
+
+<article id="governance">
+<div class="eyebrow">Article VI · Governance, Reviews, and Amendments</div>
+<h2>Reviews and constitutional changes</h2>
+
+<p>A written constitution is only useful if you actually follow it and update it when life changes. This article describes the review schedule and amendment process.</p>
+
+<h3>Review schedule</h3>
+
+<ul>
+  <li><b>Monthly:</b> Reconcile IBKR holdings, cash, executions, dividends, fees, currency conversions, and any adjustments. Verify that the software matches your account. Check that no data integrity issues have emerged. Time: 15–30 minutes.</li>
+
+  <li><b>Quarterly (every 3 months):</b> Review bands and underlying exposures. Are you drifting toward the edge of any soft band? Check look-through concentrations: semiconductors, US exposure, single-company risk. Review data source freshness: are holdings more than 60 days old? Check fund status: has any fund closed, merged, or changed strategy? Assess contribution capacity: will you be able to contribute as planned? Time: 1–2 hours.</li>
+
+  <li><b>Annually (every 12 months):</b> Big-picture review. Has your investment objective changed (still targeting 2045, or has a major event shifted your timeline)? Check external liquidity: is your reserve still adequate? Review tax and legal circumstances: any change to your residency, citizenship, or tax status? Review beneficiaries and succession planning: if something happened to you, who would manage this portfolio and according to which rules? Time: 2–3 hours.</li>
+</ul>
+
+<h3>Amendment process</h3>
+
+<p>The constitution can be amended, but deliberately so:</p>
+
+<ol>
+  <li><b>Write the evidence:</b> Document why the amendment is needed. "I think Bitcoin is better now" is not evidence. "My household income rose 30% and my external reserve is now 2 years of spending instead of 1" is evidence. Or: "A new fund launched that outperforms our current choice on every metric."</li>
+
+  <li><b>Draft the amendment:</b> Be specific. "Increase EQAC target to 12%" is clear. "Maybe add more tech exposure" is vague.</li>
+
+  <li><b>Version increment:</b> Change from v10.4 to v10.5 (or a larger jump if the change is major).</li>
+
+  <li><b>30-day cooling-off:</b> Unless a genuine emergency exists, let the proposed amendment sit for 30 days. Re-read it. Sleep on it. Market gyrations will make it feel urgent; the 30-day rule prevents amending constitutions every time prices move.</li>
+
+  <li><b>Execute:</b> After 30 days, if you still agree, update the document, date it, and the app implements the new version immediately.</li>
+
+  <li><b>Archive old versions:</b> Keep old constitutions as history (they explain past decisions), but never allow them to remain active runtime instructions. The app points to exactly one current constitution.</li>
+</ol>
+
+<h3>Genuine emergencies</h3>
+
+<p>In rare cases, 30-day cooling-off is waived. Examples:</p>
+<ul>
+  <li>A fund is being liquidated by its administrator (immediate response required).</li>
+  <li>Regulatory action or tax law changes create an urgent deadline.</li>
+  <li>A major change to your life (disability, inheritance, career loss) requires portfolio restructuring.</li>
+</ul>
+
+<p>Even in emergencies, document the reason. Do not use "emergency" as an excuse to panic-trade.</p>
+</article>
+
+<article id="cockpit">
+<div class="eyebrow">Article VII · How to Use the App: Cockpit Dashboard</div>
+<h2>Understanding your portfolio at a glance</h2>
+
+<p>When you log in to Atlas Core, you land on the Cockpit. This is your daily command center. Here is what you see and what it means.</p>
+
+<h3>Cockpit layout and visual hierarchy</h3>
+
+<div class="app-description">
+  <strong>Top row: Portfolio snapshot</strong>
+  <em>Large numbers showing total portfolio value, YTD return percentage, and date of last sync with IBKR. At a glance: Is your portfolio growing or shrinking? When was data last refreshed?</em>
+</div>
+
+<p><b>Example readings:</b></p>
+<ul>
+  <li>"Total portfolio: S$500,000 | YTD return: +8.3% | Data from 2 hours ago" means your portfolio is worth half a million and is up 8.3% so far this year. Data is fresh.</li>
+  <li>"Total portfolio: S$420,000 | YTD return: -12.1% | Data from 120 days ago" means prices have fallen and data is very stale. Time to refresh holdings.</li>
+</ul>
+
+<h3>Allocation view: Current vs. target</h3>
+
+<div class="app-description">
+  <strong>Allocation bars (colored circles or horizontal bars)</strong>
+  <em>Five sections, one per fund. Each shows current percentage, target percentage, soft band (shaded range), and hard limits (outer boundaries). The visual instantly shows whether you are in band, approaching limits, or hitting them.</em>
+</div>
+
+<p><b>Color scheme:</b></p>
+<ul>
+  <li><b>Green:</b> Current allocation is within soft band. Normal state.</li>
+  <li><b>Yellow:</b> Current allocation is within hard limits but outside soft band. Gentle warning; next contributions will nudge you back.</li>
+  <li><b>Orange:</b> Current allocation is approaching or at hard limit. Investigation required; do not add money to this fund until you understand why.</li>
+  <li><b>Red:</b> Current allocation has exceeded hard limit. Stop and investigate immediately.</li>
+</ul>
+
+<p><b>Example Cockpit reading:</b></p>
+<div class="worked-example">
+  <p>VWRA shows: 72% current | 70% target | 65–75% soft band (shown as gray zone) | 0–80% hard limits (shown as outer boundaries)</p>
+
+  <p>Interpretation: VWRA is at 72%, which is within the soft band (65–75%). This is normal. The next contribution will prefer other funds (furthest below target), which is correct.</p>
+
+  <p>SMH shows: 8% current | 5% target | 3.75–6.25% soft band | 0–10% hard limits</p>
+
+  <p>Interpretation: SMH is at 8%, outside and above the soft band. The cockpit colors this yellow as a gentle warning. The next contribution will avoid SMH and route to EQAC or DBMFE. If SMH drifts to 10% (hard cap), the cockpit turns it orange, and you must stop and review before the next contribution.</p>
+</div>
+
+<h3>Status lights</h3>
+
+<div class="app-description">
+  <strong>Liquidity status (green / amber / red light)</strong>
+  <em>A single indicator showing whether you are in a position to contribute. Green = continue. Amber = pause discretionary increases, rebuild external reserve. Red = suspend contributions entirely.</em>
+</div>
+
+<h3>Watch and review alerts</h3>
+
+<div class="app-description">
+  <strong>Concentration alerts (if any)</strong>
+  <em>If any look-through measure hits watch level (yellow) or hard review level (red), the Cockpit displays it: "Semiconductors at 24% (watch level 25%)" or "Apple at 9% (hard review level 9%)."</em>
+</div>
+
+<p>When you see an alert:</p>
+<ol>
+  <li>Click the alert to see the detailed look-through breakdown.</li>
+  <li>Verify the numbers and understand the cause (market price movement, new contributions, or data update).</li>
+  <li>Decide: Do nothing, or pause specific fund additions until the concentration normalizes.</li>
+  <li>Document your decision in the Cockpit (e.g., "Semiconductors high due to TSMC rally; resuming SMH additions in Q3 when rebalancing opportunity arises").</li>
+</ol>
+
+<h3>Quick stats panel</h3>
+
+<div class="app-description">
+  <strong>Summary cards showing:</strong>
+  <em>• Cash available for next contribution | • Months since last quarterly review | • Days since last data refresh | • Next rebalancing opportunity (if any)</em>
+</div>
+
+<p>These cards help you stay on top of maintenance tasks without searching.</p>
+
+<h3>Data freshness warning</h3>
+
+<p>If holdings data is older than 35 days, the Cockpit displays a yellow warning: "Holdings data is 50 days old. Refresh to enable concentration-led contributions." If older than 75 days, it's red: "Holdings are stale. Concentration-led trades are disabled."</p>
+
+<p>To refresh: Click "Refresh holdings from fund documents" and the app fetches the latest published holdings from each fund provider (usually within 24 hours).</p>
+
+<h3>From Cockpit to decision</h3>
+
+<p>The Cockpit is a dashboard, not an order form. Reading it should answer these questions in 2 minutes:</p>
+<ul>
+  <li>Is my portfolio healthy or in trouble?</li>
+  <li>Are there any alerts or warnings I should address?</li>
+  <li>Am I ready to contribute, or should I pause?</li>
+  <li>When was my data last refreshed?</li>
+</ul>
+
+<p>If you see red flags, click deeper into the Portfolio page for detailed holdings and look-through breakdowns.</p>
+</article>
+
+<article id="portfolio-page">
+<div class="eyebrow">Article VIII · How to Use the App: Portfolio Page</div>
+<h2>Detailed holdings and performance view</h2>
+
+<p>The Portfolio page is where you explore details. The Cockpit shows 5,000 feet; the Portfolio page shows 500 feet. Here you see every holding, its cost basis, current value, drift from target, and profit/loss.</p>
+
+<h3>Fund-level holdings table</h3>
+
+<p><b>Each fund gets a collapsible section showing:</b></p>
+<ul>
+  <li><b>Ticker:</b> The fund's trading symbol (VWRA, EQAC, etc.)</li>
+  <li><b>Quantity:</b> How many shares you own</li>
+  <li><b>Avg. cost:</b> Your average cost per share (includes all purchases, weighted)</li>
+  <li><b>Current price:</b> The latest price from IBKR or the fund provider</li>
+  <li><b>Current value:</b> Quantity × current price (unrealized value)</li>
+  <li><b>Gain/loss:</b> Current value minus original cost basis (in SGD and %)</li>
+  <li><b>Last purchase:</b> Date of your most recent purchase of this fund</li>
+  <li><b>Last price update:</b> When the price was last refreshed (usually daily)</li>
+</ul>
+
+<p><b>Example fund section:</b></p>
+<div class="worked-example">
+  <p>VWRA</p>
+  <ul>
+    <li>Quantity: 287 shares</li>
+    <li>Avg. cost: S$280.50 / share</li>
+    <li>Current price: S$305.20 / share</li>
+    <li>Current value: S$287 × S$305.20 = S$87,694</li>
+    <li>Gain/loss: S$87,694 - (287 × S$280.50) = S$7,108 gain (8.8%)</li>
+    <li>% of portfolio: 72.4% (aligned with 70% target)</li>
+  </ul>
+
+  <p>Interpretation: You bought VWRA at an average of S$280.50 and it's now at S$305.20. You are up S$7,108 on this position. It represents 72.4% of your portfolio, slightly above the 70% target but well within the 65–75% soft band.</p>
+</div>
+
+<h3>Bands visualization on the Portfolio page</h3>
+
+<p>For each fund, a horizontal bar shows:</p>
+<ul>
+  <li>The soft band (shaded gray zone)</li>
+  <li>Hard limits (outer boundaries)</li>
+  <li>Current allocation (colored dot or slider)</li>
+  <li>Target (white or dashed line in the middle of soft band)</li>
+</ul>
+
+<p>This visual makes it instant to see whether you are in band or drifting.</p>
+
+<h3>Look-through section</h3>
+
+<p>Below the fund holdings, a separate section shows underlying company concentrations:</p>
+
+<p><b>Single-company exposure:</b></p>
+<table class="bands">
+  <thead>
+    <tr>
+      <th>Company</th>
+      <th>Exposure %</th>
+      <th>Watch level</th>
+      <th>Hard level</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Nvidia</td>
+      <td>5.2%</td>
+      <td>7%</td>
+      <td>9%</td>
+      <td>Normal</td>
+    </tr>
+    <tr>
+      <td>Apple</td>
+      <td>4.8%</td>
+      <td>7%</td>
+      <td>9%</td>
+      <td>Normal</td>
+    </tr>
+    <tr>
+      <td>Microsoft</td>
+      <td>4.6%</td>
+      <td>7%</td>
+      <td>9%</td>
+      <td>Normal</td>
+    </tr>
+    <tr>
+      <td>Tesla</td>
+      <td>2.1%</td>
+      <td>7%</td>
+      <td>9%</td>
+      <td>Normal</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><b>Sector and geography breakdowns:</b></p>
+<ul>
+  <li>Information technology: 48.3% (watch 45%, hard 50%) — Normal</li>
+  <li>Semiconductors: 22.1% (watch 25%, hard 30%) — Normal</li>
+  <li>United States: 71.2% (watch 70%, hard 75%) — At watch, next contribution avoids US-heavy funds</li>
+</ul>
+
+<p>When you see a concentration approaching watch or hard levels, the Portfolio page highlights it in yellow or red. Click to see which funds are contributing to the exposure.</p>
+
+<h3>Performance and reporting tabs</h3>
+
+<p><b>Performance tab:</b> Shows YTD return, 1-year return, since-inception return, calendar-year performance breakdown, and comparison to a benchmark (e.g., 70% VWRA + 30% bonds for a diversified reference).</p>
+
+<p><b>Reporting tab:</b> Shows dividend income received, fees paid to IBKR, currency conversion gains/losses, and any corporate actions (splits, mergers, distributions).</p>
+
+<h3>Using Portfolio page to prepare for review</h3>
+
+<p>Before your quarterly or annual review, spend 15 minutes on the Portfolio page to answer:</p>
+<ul>
+  <li>Are any funds outside their soft band? Are they approaching hard limits?</li>
+  <li>Are any look-through measures in the yellow zone?</li>
+  <li>What is my largest single-company exposure? Is it diversified across the funds?</li>
+  <li>Is data fresh (< 35 days old)?</li>
+  <li>What is my realized gain/loss? (Relevant for tax planning with an adviser.)</li>
+</ul>
+
+<p>Then move to Mission Control for the formal review checklist.</p>
+</article>
+
+<article id="contributions-flow">
+<div class="eyebrow">Article IX · How to Use the App: Contribution Flow</div>
+<h2>Step-by-step guide to making a contribution</h2>
+
+<p>A contribution in Atlas Core is not as simple as "transfer money and buy." The app implements the six-step process from Article III. Here is what you see and do.</p>
+
+<h3>Step 1: Enter contribution amount</h3>
+
+<div class="app-description">
+  <strong>Contribution input form</strong>
+  <em>A modal appears with a text field: "Enter contribution amount (SGD)". You type the amount (e.g., 5000). The form shows the current cash bank balance and calculates how much cash is available for investment after costs.</em>
+</div>
+
+<p><b>Example:</b> You have S$200 in the cash bank from last month. You contribute S$5,000. The form shows: "New contribution: S$5,000 | Current cash: S$200 | Total available: S$5,200."</p>
+
+<h3>Step 2: Reserve for costs</h3>
+
+<div class="app-description">
+  <strong>Automatic cost calculation</strong>
+  <em>The app deducts estimated FX cost (typically 0.1–0.2% of the amount being converted) and broker commission (S$5 per execution, up to 3 executions depending on routing). The form shows: "Gross amount: S$5,200 | Estimated costs: S$15 | Net for investment: S$5,185."</em>
+</div>
+
+<p>These are estimates. Actual costs may vary slightly based on IBKR's latest FX rates and the number of executions needed.</p>
+
+<h3>Step 3: Check eligible funds</h3>
+
+<div class="app-description">
+  <strong>Eligibility check</strong>
+  <em>The app checks each fund against the contribution rules (Article III.3). Funds may be excluded if: (a) already at hard cap, (b) paused by a look-through hard review, or (c) affected by stale data. The form displays which funds are eligible and why any are excluded.</em>
+</div>
+
+<p><b>Example:</b></p>
+<ul>
+  <li>VWRA: Eligible (at 70% target, in soft band)</li>
+  <li>EQAC: Eligible (at 9%, below 10% target)</li>
+  <li>SMH: Excluded — Currently at 9.5% (hard cap is 10%, approaching limit)</li>
+  <li>BTC: Eligible (at 4.8%, below target)</li>
+  <li>DBMFE: Excluded — Semiconductors at 26% (hard review level 30%, concentrated)</li>
+</ul>
+
+<h3>Step 4: Route to largest deficit</h3>
+
+<div class="app-description">
+  <strong>Automatic deficit calculation and routing</strong>
+  <em>The app calculates how far each eligible fund is below its target. Money goes to the furthest-below fund in this order.</em>
+</div>
+
+<p><b>Current state example:</b></p>
+<ul>
+  <li>VWRA: 70% current, 70% target → S$0 deficit (at target)</li>
+  <li>EQAC: 9% current, 10% target → S$1,000 deficit (furthest below)</li>
+  <li>BTC: 4.8% current, 5% target → S$500 deficit</li>
+</ul>
+
+<p>Router picks EQAC (largest deficit). The form shows:</p>
+<p>"Next contribution will go to: EQAC (currently 1% below target). Expected purchase: ~16 shares at S$325/share (conversion + commission)."</p>
+
+<h3>Step 5: Confirm and review routing plan</h3>
+
+<div class="app-description">
+  <strong>Detailed execution plan</strong>
+  <em>Before final confirmation, you see a preview: which fund(s) will receive money, how many shares will be purchased at the current price, and how much cash will be carried forward.</em>
+</div>
+
+<p><b>Example plan:</b></p>
+<div class="worked-example">
+  <p><b>Contribution plan summary:</b></p>
+  <ul>
+    <li>Gross contribution: S$5,200</li>
+    <li>Estimated costs: S$15</li>
+    <li>Available for investment: S$5,185</li>
+  </ul>
+
+  <p><b>Routing:</b></p>
+  <ul>
+    <li>EQAC: 16 shares @ S$323/share = S$5,168</li>
+    <li>Carry forward: S$17</li>
+  </ul>
+
+  <p><b>After contribution:</b></p>
+  <ul>
+    <li>EQAC will be: 16 shares × S$325 (current price) ≈ S$5,200 added</li>
+    <li>Portfolio allocation: EQAC will move from 9% to ~9.8%</li>
+  </ul>
+
+  <p>You review this plan. If it looks right, you click "Confirm and execute." If you see something odd (e.g., wrong fund chosen), you can cancel and investigate.</p>
+</div>
+
+<h3>Step 6: Execution and reconciliation</h3>
+
+<div class="app-description">
+  <strong>Execution status modal</strong>
+  <em>The app shows: "Submitting to IBKR... " then once filled: "Order #123456 filled: 16 EQAC @ S$323.15 avg. | Debit: S$5,170.40 | Cash bank updated: -S$5,170.40 | Carry forward: S$29.60 | Awaiting settlement (T+2)."</em>
+</div>
+
+<p><b>What happens next:</b></p>
+<ul>
+  <li><b>T+0 (today):</b> Order is submitted and filled (or partially filled if market was illiquid).</li>
+  <li><b>T+2 (two days):</b> IBKR settles the purchase. The shares move to your account.</li>
+  <li><b>T+3 (three days):</b> The app reconciles: did the number of shares match the plan? Update cost basis and execution ID.</li>
+</ul>
+
+<p>If only a partial fill occurs (e.g., you ordered 16 shares but only 14 filled), the app adjusts the cash debit. The remaining S$5,170.40 - (actual cost) stays in the cash bank and carries forward to the next contribution.</p>
+
+<h3>Troubleshooting a contribution</h3>
+
+<p><b>Q: The app says "Contribution suspended — liquidity is red." What do I do?</b></p>
+<p>A: You must restore your external SGD reserve before the app allows new contributions. Once your reserve is back to 6+ months of spending and income is stable, change your liquidity status to green, and contributions resume.</p>
+
+<p><b>Q: The app says "SMH and DBMFE are excluded due to concentration." Can I contribute anyway?</b></p>
+<p>A: No. The app enforces Article IV (look-through). If semiconductors are at 26% and the hard review level is 30%, the app will not let you add more to SMH or DBMFE. Wait for the next quarterly refresh when concentrations may have normalized due to price movements, or make an amendment to the constitution if you believe the limits need adjusting.</p>
+
+<p><b>Q: The contribution went through but now my cash shows negative?</b></p>
+<p>A: This suggests a reconciliation error. Click "Sync with IBKR" to force a refresh of your account balance. If the problem persists, contact your broker to verify the transaction settled correctly.</p>
+</article>
+
+<article id="mission-control">
+<div class="eyebrow">Article X · How to Use the App: Mission Control</div>
+<h2>Monthly, quarterly, and annual review checklists</h2>
+
+<p>Mission Control is the formal review center. It provides checklists and guidance for your monthly, quarterly, and annual reviews as described in Article VI (Governance).</p>
+
+<h3>Monthly reconciliation (15–30 minutes)</h3>
+
+<div class="app-description">
+  <strong>Monthly checklist in Mission Control</strong>
+  <em>A form-based checklist appears with these items, each with a checkbox:</em>
+</div>
+
+<ul>
+  <li><input type="checkbox"> Sync IBKR account (check holdings, cash, settled trades)</li>
+  <li><input type="checkbox"> Verify portfolio value matches IBKR (no data discrepancies)</li>
+  <li><input type="checkbox"> Review recent transactions (executions, dividends, fees, currency conversions)</li>
+  <li><input type="checkbox"> Check cash bank balance (reconcile to app)</li>
+  <li><input type="checkbox"> Verify no unreconciled orders (all trades settled and booked)</li>
+  <li><input type="checkbox"> Note any adjustments (dividends reinvested, corporate actions, fees deducted)</li>
+</ul>
+
+<p>As you complete each task, you check the box. The form automatically timestamps each checkbox. At the end of the month, you see: "Monthly reconciliation completed on 2026-01-31. All checks passed."</p>
+
+<p><b>If a check fails:</b> For example, IBKR shows a trade that the app does not know about. You click "Report discrepancy" and the app creates a note: "Manual VWRA purchase on 2026-01-15 (50 shares) not found in app. Action: Manually add transaction with cost basis S$14,000." You come back after updating and the check passes.</p>
+
+<h3>Quarterly review (1–2 hours)</h3>
+
+<div class="app-description">
+  <strong>Quarterly checklist in Mission Control</strong>
+  <em>A longer form with 15+ items covering portfolio health, fund status, data freshness, and contribution readiness:</em>
+</div>
+
+<ol>
+  <li><input type="checkbox"> Review fund allocations (all within soft bands?)
+  <li><input type="checkbox"> Check look-through concentrations (single company, sector, geography)</li>
+  <li><input type="checkbox"> Verify data freshness (holdings < 35 days old?)</li>
+  <li><input type="checkbox"> Review hard-limit violations (if any, document reason and decision)</li>
+  <li><input type="checkbox"> Check fund status (any closures, mergers, strategy changes announced?)</li>
+  <li><input type="checkbox"> Assess contribution capacity for next quarter</li>
+  <li><input type="checkbox"> Review realised gains/losses and note for tax planning</li>
+  <li><input type="checkbox"> Verify external SGD reserve is adequate (6+ months spending?)</li>
+  <li><input type="checkbox"> Confirm income stability (green/amber/red status accurate?)</li>
+  <li><input type="checkbox"> Note any major market events (crashes, rallies, recessions) and your response</li>
+  <li><input type="checkbox"> Document any rule violations and whether they remain unresolved</li>
+  <li><input type="checkbox"> Plan next quarter's contributions (expected amount, timing)</li>
+</ol>
+
+<p><b>Example quarterly findings:</b></p>
+<div class="worked-example">
+  <p>Q1 2026 quarterly review completed on March 31:</p>
+  <ul>
+    <li>EQAC drifted to 12% (soft band 7.5–12.5%) — at edge of soft band, next contribution routes away</li>
+    <li>Semiconductors at 24% (watch 25%) — approaching watch level; monitor in Q2</li>
+    <li>Holdings data from Feb 28 (30 days old) — refresh in April before making new contributions</li>
+    <li>Apple exposure hit 7.2% (watch 7%) — yellow alert; not a violation, just monitor</li>
+    <li>External reserve at S$50,000 (8 months spending) — adequate, remain green</li>
+    <li>No rule violations or hard-limit hits this quarter</li>
+    <li>Planned contribution for Q2: S$5,000 (income stable)</li>
+  </ul>
+
+  <p>Action items for Q2:</p>
+  <ul>
+    <li>Refresh holdings data in April</li>
+    <li>Make S$5,000 contribution, routing to VWRA and BTC (furthest below targets)</li>
+    <li>Monitor semiconductor exposure; if rises above 25%, pause SMH additions</li>
+  </ul>
+</div>
+
+<h3>Annual review (2–3 hours)</h3>
+
+<div class="app-description">
+  <strong>Annual checklist in Mission Control</strong>
+  <em>The deepest review, covering strategic questions and life changes:</em>
+</div>
+
+<ol>
+  <li><input type="checkbox"> Confirm investment objective (still targeting 2045 retirement?)</li>
+  <li><input type="checkbox"> Review major life events (job change, marriage, inheritance, relocation)</li>
+  <li><input type="checkbox"> Verify beneficiaries are current (if something happens to you, who inherits this portfolio?)</li>
+  <li><input type="checkbox"> Check succession planning (has an executor/trustee been named?)</li>
+  <li><input type="checkbox"> Review tax circumstances (residency, citizenship, tax treaties changed?)</li>
+  <li><input type="checkbox"> Consult with licensed advisers on tax/legal/insurance matters</li>
+  <li><input type="checkbox"> Assess whether external SGD reserve remains appropriate</li>
+  <li><input type="checkbox"> Summarize year's performance (return %, major events, lessons learned)</li>
+  <li><input type="checkbox"> Consider whether any portfolio rules need amending (if so, start 30-day process)</li>
+  <li><input type="checkbox"> Plan contributions for the coming year</li>
+  <li><input type="checkbox"> Document annual review outcome (constitution unchanged, or new version dated)</li>
+</ol>
+
+<p><b>Example annual review:</b></p>
+<div class="worked-example">
+  <p>2025 annual review completed on December 31:</p>
+  <ul>
+    <li>Investment objective: Still targeting 2045 retirement. No change.</li>
+    <li>Major events: Changed jobs in July (brief income uncertainty; status moved to amber, now back to green). Married in October; spouse will manage this portfolio if you die.</li>
+    <li>Beneficiary: Spouse (name updated)</li>
+    <li>Executor: Brother (named in will)</li>
+    <li>Tax circumstances: Now non-resident for tax purposes due to move. Must consult tax adviser on reporting requirements.</li>
+    <li>External reserve: S$65,000 (12 months spending); still adequate</li>
+    <li>2025 performance: +12.4% (outperformed benchmark +10% due to tech rally)</li>
+    <li>Lessons: Market crashes feel scary but contributions during the March dip recovered by June. Discipline works.</li>
+    <li>Amendment: Consider increasing EQAC from 10% to 12% due to improved Nasdaq outlook. Proposal drafted; 30-day cooling-off period starts. Will finalize in January 2026.</li>
+    <li>Contributions: Plan S$20,000 for 2026 (modest raise plus bonus allocation)</li>
+  </ul>
+
+  <p>Constitution version: Remains v10.4. Proposed amendment (v10.5 with EQAC 10%→12%) pending 30-day review.</p>
+</div>
+
+<h3>Amendment workflow in Mission Control</h3>
+
+<p>If you draft an amendment (e.g., "Increase EQAC target to 12%"), Mission Control helps you track it:</p>
+
+<ul>
+  <li><b>Proposed:</b> You write the amendment and the reason. The app dates it and starts a 30-day countdown.</li>
+  <li><b>Cooling-off:</b> For 30 days, the proposed amendment is visible but not yet active. You can review, modify, or cancel it.</li>
+  <li><b>Finalize:</b> After 30 days, you confirm and the app updates the constitution to the new version, effective immediately.</li>
+  <li><b>Archive:</b> The old version (v10.4) is archived in the history; future reports reference the new v10.5.</li>
+</ul>
+
+<p>If an emergency amendment is needed, you can skip the 30-day wait by checking a box: "Genuine emergency: regulatory change requires immediate action." This must be documented.</p>
+</article>
+
+<article id="alerts">
+<div class="eyebrow">Article XI · Alerts and Notifications</div>
+<h2>Understanding and responding to app warnings</h2>
+
+<p>Atlas Core Cockpit displays alerts and notifications. Here is what each means and when to act.</p>
+
+<h3>Alert categories and severity</h3>
+
+<table class="bands">
+  <thead>
+    <tr>
+      <th>Alert type</th>
+      <th>Severity (color)</th>
+      <th>What it means</th>
+      <th>Action required</th>
+      <th>Timeline</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Soft band watch</b></td>
+      <td>Yellow</td>
+      <td>A fund is outside soft band but within hard limits.</td>
+      <td>Route next contribution elsewhere; no urgent action.</td>
+      <td>By next contribution</td>
+    </tr>
+    <tr>
+      <td><b>Hard limit approach</b></td>
+      <td>Orange</td>
+      <td>A fund is very close to a hard limit.</td>
+      <td>Stop contributing to that fund; document reason.</td>
+      <td>Before next contribution</td>
+    </tr>
+    <tr>
+      <td><b>Hard limit exceeded</b></td>
+      <td>Red</td>
+      <td>A fund has exceeded a hard floor or cap.</td>
+      <td>Investigate immediately; plan corrective action.</td>
+      <td>Within 1 week</td>
+    </tr>
+    <tr>
+      <td><b>Look-through watch</b></td>
+      <td>Yellow</td>
+      <td>Single company, sector, or region approaching watch level.</td>
+      <td>Monitor; pause overlapping fund additions.</td>
+      <td>By next contribution</td>
+    </tr>
+    <tr>
+      <td><b>Look-through hard review</b></td>
+      <td>Red</td>
+      <td>Concentration at or exceeding hard review level.</td>
+      <td>Investigate; document findings; plan response.</td>
+      <td>Before next contribution</td>
+    </tr>
+    <tr>
+      <td><b>Data stale</b></td>
+      <td>Yellow (>35 days)</td>
+      <td>Holdings data is older than 35 days.</td>
+      <td>Refresh when convenient; concentration-led trades still allowed.</td>
+      <td>Before quarterly review</td>
+    </tr>
+    <tr>
+      <td><b>Data very stale</b></td>
+      <td>Red (>75 days)</td>
+      <td>Holdings data is older than 75 days.</td>
+      <td>Refresh immediately; concentration-led contributions disabled.</td>
+      <td>Before next contribution</td>
+    </tr>
+    <tr>
+      <td><b>Liquidity amber</b></td>
+      <td>Amber</td>
+      <td>External reserve used or income uncertain.</td>
+      <td>Pause optional contributions; rebuild reserve.</td>
+      <td>Before next contribution</td>
+    </tr>
+    <tr>
+      <td><b>Liquidity red</b></td>
+      <td>Red</td>
+      <td>External reserve depleted or income lost.</td>
+      <td>Suspend all contributions until income restored.</td>
+      <td>Immediately</td>
+    </tr>
+    <tr>
+      <td><b>Dividend pending</b></td>
+      <td>Blue (info)</td>
+      <td>A fund is about to pay a distribution (usually quarterly).</td>
+      <td>No action; distribution is reinvested automatically if accumulating ETF.</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td><b>Fund status change</b></td>
+      <td>Red</td>
+      <td>A fund has closed, merged, or changed strategy.</td>
+      <td>Assess impact and plan transition (sale and reinvestment).</td>
+      <td>Within 2 weeks</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Handling a hard limit alert</h3>
+
+<p><b>Scenario:</b> EQAC has drifted to 15.5% (hard cap is 15%). The Cockpit shows a red alert: "EQAC at 15.5% (hard cap 15%). Stop contributions and investigate."</p>
+
+<p><b>Your response:</b></p>
+<ol>
+  <li>Click the alert to open the detailed view.</li>
+  <li>Verify: Did prices rise (EQAC soared, pushing allocation up)? Or did you keep buying (contributions kept going to EQAC)? Or a data refresh recalculated allocations?</li>
+  <li>Document: Write in the app, "EQAC hard cap hit. Cause: Nasdaq rally (prices up 18% since last review). EQAC purchases paused. Next contribution routes to VWRA."</li>
+  <li>Decide: Do nothing (prices may fall later), or pause EQAC additions. There is no automatic order; you decide after investigation.</li>
+  <li>Take action: If you pause EQAC, the app enforces it on the next contribution.</li>
+</ol>
+
+<p>The key: Hitting a hard limit is a stop sign, not a sell signal. Investigate, document, and decide—but do not panic-sell.</p>
+
+<h3>Handling a look-through concentration alert</h3>
+
+<p><b>Scenario:</b> Apple exposure has hit 7% (watch level is 7%, hard review is 9%). Yellow alert appears.</p>
+
+<p><b>Your response:</b></p>
+<ol>
+  <li>Click the alert to see the breakdown: Which funds hold Apple? (VWRA 3%, EQAC 3%, SMH 1%)</li>
+  <li>Assess: Is this a problem? Apple is a large holding globally; 7% is not unusual for a world-equity portfolio. It is just a watch-level notification.</li>
+  <li>Decide: No action needed this month. On the next contribution, prefer VWRA and DBMFE over EQAC and SMH to dilute Apple weight. If Apple hits 9% (hard review), then you stop and formally investigate.</li>
+  <li>Document: "Apple at watch level due to weight in VWRA and EQAC. No action; monitoring."</li>
+</ol>
+
+<h3>Notifications (non-alert updates)</h3>
+
+<div class="app-description">
+  <strong>Info notifications (blue badges)</strong>
+  <em>These are not alerts requiring action, just updates: "Dividend from VWRA processed on 2026-01-15: S$48 reinvested." "DBMFE ex-date approaching on 2026-02-01." "Quarterly review due in 2 weeks."</em>
+</div>
+
+<p>These appear in a separate Notifications panel and help you stay informed without creating false urgency.</p>
+
+<h3>Setting alert sensitivity</h3>
+
+<p>In Settings, you can adjust when alerts fire:</p>
+<ul>
+  <li><b>Strict:</b> Alert at 5% from hard limit (e.g., hard cap is 15%, alert at 14.25%)</li>
+  <li><b>Normal:</b> Alert at 10% from hard limit (default)</li>
+  <li><b>Relaxed:</b> Alert only at hard limit</li>
+</ul>
+
+<p>The default "normal" setting gives you time to notice and respond before hitting an actual limit.</p>
+</article>
+
+<article id="examples">
+<div class="eyebrow">Article XII · Worked Examples</div>
+<h2>Real scenarios and how to handle them in the app</h2>
+
+<p>Theory is one thing; seeing how the constitution works in practice is another. These seven examples walk through common situations.</p>
+
+<h3>Example 1: First contribution of S$5,000 with current allocations</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> You've just opened Atlas Core. Your portfolio has S$50,000 (inherited) already invested. No contributions yet. You want to add S$5,000.</p>
+
+  <p><b>Current state:</b></p>
+  <ul>
+    <li>VWRA: S$30,000 (60% of portfolio)</li>
+    <li>EQAC: S$10,000 (20%)</li>
+    <li>SMH: S$3,000 (6%)</li>
+    <li>BTC: S$4,000 (8%)</li>
+    <li>DBMFE: S$3,000 (6%)</li>
+  </ul>
+
+  <p><b>Targets:</b> VWRA 70%, EQAC 10%, SMH 5%, BTC 5%, DBMFE 10%</p>
+
+  <p><b>Deficits (how far below target each fund is):</b></p>
+  <ul>
+    <li>VWRA: Currently 60%, target 70% → S$5,000 below (70% of S$50k = S$35k, currently S$30k)</li>
+    <li>EQAC: Currently 20%, target 10% → S$5,000 above (no deficit; over-allocated)</li>
+    <li>SMH: Currently 6%, target 5% → S$500 above</li>
+    <li>BTC: Currently 8%, target 5% → S$1,500 above</li>
+    <li>DBMFE: Currently 6%, target 10% → S$2,000 below</li>
+  </ul>
+
+  <p><b>Largest deficit: VWRA at S$5,000 below target.</b></p>
+
+  <p><b>App execution:</b> You enter S$5,000 in the Cockpit contribution form. The app calculates costs (FX + commission ≈ S$10). Available for investment: S$4,990. VWRA is trading at S$280/share. S$4,990 ÷ S$280 = 17 whole shares (S$4,760). Carry forward S$230.</p>
+
+  <p><b>Result:</b> After contribution, VWRA is +17 shares. New portfolio value: S$55,000. VWRA allocation: (S$30,000 + S$4,760) ÷ S$55,000 = 63.2% (moved toward 70% target, still below). App confirms the execution ID and updates your cost basis.</p>
+
+  <p><b>Key lesson:</b> Even though you had S$5,000 to contribute, the routing logic sent it all to VWRA (the largest deficit), not split across all funds. This is correct—fill the biggest need first.</p>
+</div>
+
+<h3>Example 2: Market crash -30% scenario—what to do in the app</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> Your portfolio is worth S$150,000. The market crashes 30% overnight (imagine a geopolitical crisis or financial panic). Your portfolio value is now S$105,000. External reserve: S$40,000 (8 months spending). Income: Secure. You want to know: "Should I sell? Should I stop contributing? What does the app tell me?"</p>
+
+  <p><b>App behavior:</b></p>
+  <ul>
+    <li>Cockpit shows: "Portfolio: S$105,000 | YTD return: -30% | Data from 1 hour ago (markets are volatile, but data is fresh)"</li>
+    <li>Allocation view: All bands are still within limits (prices fell equally across funds, so allocations stayed proportional)</li>
+    <li>Liquidity status: Still green (income secure, reserve intact)</li>
+    <li>Alerts: None for hard limits, but yellow notice: "Market volatility detected. Review before making trades."</li>
+  </ul>
+
+  <p><b>What the app does NOT do:</b> It does not panic-sell. It does not send an alert "SELL EVERYTHING!" It does not prevent contributions. The constitution rules are mechanical and ignore headlines.</p>
+
+  <p><b>What you should do:</b></p>
+  <ol>
+    <li>Open the Cockpit and verify data is fresh (yes, 1 hour ago).</li>
+    <li>Check liquidity status (green = income secure + reserve adequate). No pause needed.</li>
+    <li>Check bands (all within limits). No hard limits hit.</li>
+    <li>If you can contribute as planned, the app routes money to the largest deficit (probably VWRA and EQAC fell less due to relative weights, or fell equally).</li>
+    <li>Go to Mission Control and document: "Market crash -30% on [date]. Caused by [reason]. Response: Continue contributions (income stable). No panic sales (no rule violations). Portfolio value dropped to S$105,000. Awaiting recovery."</li>
+  </ol>
+
+  <p><b>Outcome:</b> You contribute your planned S$2,000. At depressed prices, this buys more shares than usual. By the time markets recover to -15% and then even (zero), your recent contributions have appreciated. This is dollar-cost averaging in action.</p>
+
+  <p><b>Key lesson:</b> The constitution's contribution-first rule means market crashes are buying opportunities, not sell signals. The app enforces this discipline automatically.</p>
+</div>
+
+<h3>Example 3: EQAC drifts to 12% hard cap (15%)—quarterly rebalancing</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> Over Q1, Nasdaq rallies 25%. EQAC price rises faster than the rest of the portfolio. At your quarterly review (end of March), you check the Cockpit and see EQAC at 12% (target 10%, soft band 7.5–12.5%, hard cap 15%). It's within the soft band but near the top. In April, prices continue rising and EQAC hits 12.5% (edge of soft band). By mid-May, it's at 13.5% (outside soft band, inside hard limits).</p>
+
+  <p><b>App alerts:</b></p>
+  <ul>
+    <li>End of March: Yellow alert "EQAC at 12%. Monitor and route next contribution elsewhere."</li>
+    <li>Mid-May: Orange alert "EQAC at 13.5% (outside soft band). Stop contributions to EQAC."</li>
+  </ul>
+
+  <p><b>Your response:</b> You have a S$2,000 contribution ready for May. You go to the contribution form. EQAC is excluded due to being outside the soft band. The app routes the S$2,000 to VWRA and DBMFE (next largest deficits). EQAC pauses.</p>
+
+  <p><b>What's really happening:</b> The market rally caused EQAC to drift. Your response (route away from it) is automatic and requires no action on your part. If Nasdaq falls back and EQAC allocation drops to 11%, it re-enters the soft band and becomes eligible for contributions again.</p>
+
+  <p><b>No active rebalancing (selling):</b> The constitution does NOT require you to sell EQAC to bring it back to target. Instead, new contributions naturally provide rebalancing pressure. This is elegant because it avoids selling (which triggers taxes and costs) and lets time and new money do the work.</p>
+
+  <p><b>Timeline:</b></p>
+  <ul>
+    <li>March: EQAC 12% → yellow alert</li>
+    <li>May: EQAC 13.5% → orange alert → contributions paused</li>
+    <li>July: Markets normalize, EQAC back to 11.5% → soft band re-entered → contributions resume</li>
+    <li>By year-end: Through your continued contributions to VWRA and DBMFE, EQAC is back to 10%</li>
+  </ul>
+
+  <p><b>Key lesson:</b> Soft bands create natural rebalancing without forcing sales. The app enforces this with quiet discipline.</p>
+</div>
+
+<h3>Example 4: DBMFE hits hard floor (5%), concentration review required</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> Your portfolio is S$200,000. DBMFE allocation falls to 5% due to underperformance. You review in Q3 and see DBMFE exactly at the hard floor. Red alert: "DBMFE at 5% (hard floor 5%). Review required."</p>
+
+  <p><b>Investigation:</b></p>
+  <ul>
+    <li>Has DBMFE lost money? Yes, managed futures had a poor year (equities rallied, futures did not participate).</li>
+    <li>Has there been a fund issue? No, the fund is still operational and following its mandate.</li>
+    <li>Did contributions avoid DBMFE? Possibly; if other funds had larger deficits, money went elsewhere.</li>
+    <li>Is DBMFE still a good diversifier? Historically yes, but recent performance is weak.</li>
+  </ul>
+
+  <p><b>Documentation in Mission Control:</b> "DBMFE at hard floor (5%) due to managed futures underperformance in high-equity-growth year (Nasdaq rally). Fund is operational. Decision: Continue contributions to DBMFE through normal deficit routing to maintain 10% target. If underperformance persists beyond 12 months, evaluate replacement fund in annual review."</p>
+
+  <p><b>App behavior:</b> Once you document this decision, the alert clears (it was just a stop sign, not a prohibition). Contributions resume normal routing. If DBMFE consistently underperforms, you might propose an amendment in the next annual review to replace it—but that is a big decision requiring the 30-day cooling-off period.</p>
+
+  <p><b>Key lesson:</b> Hard limits are investigation points, not automatic sells or freeze points. You review and decide based on facts, not emotion.</p>
+</div>
+
+<h3>Example 5: Fund closure scenario—how to execute sale and reinvest</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> In July, VanEck announces that SMH (VanEck Semiconductors) will close. Fund holders have until December 31 to exit. Your portfolio holds 50 shares of SMH (IE00BMC38736) worth S$8,000.</p>
+
+  <p><b>App alerts:</b> Red alert appears: "SMH (IE00BMC38736) is closing. Holder funds must exit by 2026-12-31. Required action: Sell and reinvest."</p>
+
+  <p><b>Your response:</b></p>
+  <ol>
+    <li>Go to Portfolio page, SMH section.</li>
+    <li>Click "Liquidate fund (closure)."</li>
+    <li>App shows: "Selling 50 SMH @ current price (S$160/share) = S$8,000 gross, S$7,995 after commission."</li>
+    <li>Confirm the sale. Order goes to IBKR.</li>
+    <li>T+2: The S$7,995 settles as cash in your account.</li>
+    <li>The S$7,995 enters the cash bank (special "migration bank" for closure proceeds).</li>
+  </ol>
+
+  <p><b>Reinvestment:</b> Now you have S$7,995 in cash designated for the SMH replacement. SMH was a 5% satellite in the portfolio. Where should it go?</p>
+
+  <p>At the next contribution, the app treats this S$7,995 as part of the contribution flow. It calculates current deficits. Options:</p>
+  <ul>
+    <li>If semiconductors remain important to your thesis, you could allocate S$7,995 to EQAC (which holds ASML, QCOM, Broadcom—all semiconductor companies) or keep it broadly diversified by routing to VWRA.</li>
+    <li>If you want to replace with a different semiconductor ETF, you could propose an amendment to add a new fund.</li>
+    <li>The simplest path: Let the deficit rule route it. If VWRA is furthest below target, S$7,995 goes there.</li>
+  </ul>
+
+  <p><b>Timeline:</b></p>
+  <ul>
+    <li>July: Closure announced</li>
+    <li>September: You sell SMH, proceeds to cash bank</li>
+    <li>October: You contribute S$2,000 + S$7,995 closure proceeds = S$9,995 deployed via deficit routing</li>
+    <li>December 31: SMH liquidation is complete industry-wide; your position is already reinvested</li>
+  </ul>
+
+  <p><b>Cost basis tracking:</b> The app records: SMH sale at S$160/share = S$8,000 gross. This triggers a capital-gains or capital-loss calculation based on your original SMH cost basis. The reinvestment (e.g., into VWRA) is a separate purchase with a new cost basis.</p>
+
+  <p><b>Key lesson:</b> The app handles fund closures explicitly. Your job is to verify the reinvestment makes sense and let the constitutional rules handle the routing.</p>
+</div>
+
+<h3>Example 6: Annual review walkthrough—everything in one place</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> It's December 31, 2025. Time for annual review. You open Mission Control and click "Annual Review."</p>
+
+  <p><b>Checklist appears:</b></p>
+
+  <p><b>Part 1: Investment Objective</b></p>
+  <ul>
+    <li>Current objective: Retire in 2045. Major life events this year? No. Objective changed? No. ✓</li>
+  </ul>
+
+  <p><b>Part 2: Performance Summary</b></p>
+  <ul>
+    <li>2025 return: +12.4%</li>
+    <li>Since-inception return: +42% (3 years)</li>
+    <li>Largest drawdown: -8% (March 2025, recovered in 6 weeks)</li>
+    <li>Contributions made: S$20,000 (all executed, no gaps)</li>
+    <li>Dividends received: S$1,800 (reinvested)</li>
+    <li>Fees paid: S$240 (IBKR commission + fund costs)</li>
+  </ul>
+
+  <p><b>Part 3: Holdings Health</b></p>
+  <ul>
+    <li>All funds within soft bands? Yes ✓</li>
+    <li>Any hard-limit violations? No ✓</li>
+    <li>Look-through concentrations normal? Yes; Apple at 6.8%, semiconductors at 22%, US at 71% ✓</li>
+    <li>Data fresh (< 35 days)? Yes, refreshed Dec 15 ✓</li>
+  </ul>
+
+  <p><b>Part 4: External Liquidity and Behavior</b></p>
+  <ul>
+    <li>External SGD reserve: S$65,000 (12 months spending) ✓</li>
+    <li>Liquidity status: Green (income stable) ✓</li>
+    <li>Any panic selling this year? No. No margin calls? No. Contributions consistent? Yes ✓</li>
+  </ul>
+
+  <p><b>Part 5: Governance and Amendments</b></p>
+  <ul>
+    <li>Constitution version: v10.4 (unchanged since inception)</li>
+    <li>Any amendments proposed? One under cooling-off: EQAC 10%→12%. Will finalize in Jan 2026.</li>
+    <li>Past amendments: None (new portfolio)</li>
+  </ul>
+
+  <p><b>Part 6: Tax and Legal</b></p>
+  <ul>
+    <li>Residency changed? No</li>
+    <li>Tax status changed? No</li>
+    <li>Consulted tax/legal adviser? Recommend scheduling Q1 2026</li>
+    <li>Beneficiaries current? Yes; spouse named, brother is executor</li>
+  </ul>
+
+  <p><b>Part 7: Next Year's Plan</b></p>
+  <ul>
+    <li>Contributions planned for 2026: S$24,000 (raise + bonus reallocation)</li>
+    <li>Any known life changes? Possible home purchase in 2027 (not yet certain)</li>
+    <li>Review frequency: Continue monthly (15 min) + quarterly (1 hour) + annual (2 hours)</li>
+  </ul>
+
+  <p><b>Outcome:</b> Review complete. Constitution remains v10.4. Amendment v10.5 (EQAC increase) still cooling-off; will finalize early Jan. Portfolio is healthy; continue as planned.</p>
+
+  <p><b>Key lesson:</b> Annual review is thorough but manageable if you've kept up with monthly/quarterly reviews. It forces you to step back and check the big picture.</p>
+</div>
+
+<h3>Example 7: Amendment proposal—new rule change with 30-day cooling-off</h3>
+
+<div class="worked-example">
+  <p><b>Setup:</b> It's October 2025. You've been researching managed futures and think DBMFE (10% target) should increase to 12%. Reason: Market correlation research shows managed futures increasingly valuable during equity downturns, and DBMFE's track record supports this. However, this is a material change to your portfolio. You start the amendment process.</p>
+
+  <p><b>Step 1: Draft Amendment (Oct 15)</b></p>
+  <p>In Mission Control, you click "Propose amendment to constitution." Form appears:</p>
+  <ul>
+    <li>Current rule: "Article II: DBMFE target 10%, soft band 7.5–12.5%, hard limits 5% / 15%"</li>
+    <li>Proposed rule: "Article II: DBMFE target 12%, soft band 9–15%, hard limits 5% / 18%"</li>
+    <li>Reason: "Managed futures shown value during equity drawdowns (March 2025 was 8% loss for equities, +2% for DBMFE). Research from [source] supports increasing allocation from 10% to 12% as portfolio matures."</li>
+    <li>Rationale: "DBMFE diversification benefit outweighs the cost of 2% reallocation from VWRA (70% to 68%)."</li>
+  </ul>
+
+  <p><b>Step 2: 30-Day Cooling-Off (Oct 15 – Nov 14)</b></p>
+  <p>The app displays:</p>
+  <ul>
+    <li>Proposed amendment visible: "v10.5 draft: DBMFE 10%→12%, VWRA 70%→68%"</li>
+    <li>Countdown: "30 days | 28 days remaining | 14 days remaining"</li>
+    <li>Status: "Draft (not yet active)"</li>
+    <li>You can edit, modify, or cancel at any time during cooling-off</li>
+  </ul>
+
+  <p><b>Market events during cooling-off:</b> In late October, equities rally 12% and managed futures lag. You think, "Maybe I shouldn't increase DBMFE after all." The cooling-off period is working—it's preventing knee-jerk reactions.</p>
+
+  <p><b>Step 3: Decision (Nov 14)</b></p>
+  <p>The countdown hits zero. You have two choices:</p>
+
+  <ul>
+    <li><b>Confirm (finalize):</b> Click "Finalize amendment." The app updates to v10.5 immediately. New targets: DBMFE 12%, VWRA 68%. Future contributions use these targets. Cockpit shows the new bands.</li>
+    <li><b>Cancel:</b> Delete the proposed amendment. Constitution stays at v10.4. No change.</li>
+  </ul>
+
+  <p>You decide: "Managed futures still make sense on a long-term view. The rally doesn't change the fundamental diversification benefit." You confirm.</p>
+
+  <p><b>Step 4: Implementation (Nov 15 onwards)</b></p>
+  <p>Constitution is now v10.5:</p>
+  <ul>
+    <li>New targets in effect</li>
+    <li>Next contribution routes to largest deficit under NEW targets (VWRA now 68%, DBMFE now 12%)</li>
+    <li>Look-through concentrations and bands use new allocation</li>
+    <li>Old v10.4 is archived as history but no longer active</li>
+  </ul>
+
+  <p><b>Why cooling-off matters:</b> If you'd amended on impulse (Oct 15), the proposal would have already been live by Oct 20 when the rally occurred. The 30-day wait lets emotions settle and market noise pass. By day 30, you've had time to research, reflect, and either confirm or cancel with a clear head.</p>
+
+  <p><b>Key lesson:</b> The 30-day amendment process is a feature, not a bug. It prevents constitution churn from market mood swings.</p>
+</div>
+</article>
+
+<article id="faq">
+<div class="eyebrow">Article XIII · Frequently Asked Questions</div>
+<h2>Answers to common questions about the constitution and app</h2>
+
+<h3>Portfolio strategy questions</h3>
+
+<h4>Q: What's the difference between a soft band and a hard limit?</h4>
+<p><b>A:</b> A soft band is a normal operating range. When a fund is in its soft band, the portfolio is healthy and contributions flow normally. A hard limit is a boundary that triggers investigation. Hitting it does not force a trade but requires you to stop, review, and decide. Think of soft bands as "cruise speed" and hard limits as "yellow traffic lights requiring attention."</p>
+
+<p><b>In the app:</b> Green circles = soft band. Orange circles = approaching hard limit. Red circles = hard limit exceeded.</p>
+
+<h4>Q: Why does EQAC (Nasdaq) have a hard cap at 15%? Why not let it grow larger?</h4>
+<p><b>A:</b> Nasdaq (EQAC) is concentrated in US technology. If it grows to 20%+ of your portfolio, you are making a directional bet that US tech will outperform rest-of-world. That is a forecast, not a rule-based portfolio. The 15% hard cap keeps EQAC a satellite (an overlay on top of your global core), not a core position. It prevents the portfolio from drifting into "guess which sector will win" territory.</p>
+
+<h4>Q: Bitcoin is speculative. Why include it at all?</h4>
+<p><b>A:</b> Bitcoin at 5% is small enough that a 100% loss would hurt but not break the portfolio. Yet it is large enough to matter in a strong Bitcoin bull year (+200% has happened). The asymmetry can pay off over a 20-year horizon. If you believe Bitcoin has zero chance of ever rising significantly again, you should amend the constitution to reduce or remove it. But the constitutional 5% bet says: "I am willing to take a speculative but bounded position in case Bitcoin proves to be an important asset class."</p>
+
+<h4>Q: Why is DBMFE required to have a 5% hard floor? Why not let it go to zero?</h4>
+<p><b>A:</b> The 5% floor says: "Managed futures are valuable enough to require a permanent position." If you later disagree, you amend the constitution. But forcing a minimum keeps you from panic-selling managed futures in a bad year and forgetting to rebuild them. It enforces discipline.</p>
+
+<h3>App and contribution questions</h3>
+
+<h4>Q: Why did my contribution go only to one fund instead of spreading across all five?</h4>
+<p><b>A:</b> The app routes each contribution to the single fund furthest below its target. This is efficient: it fills the biggest gap first, then the next contribution fills the second-biggest gap, and so on. Spreading small contributions across all five funds would leave each in a worse position. By concentration, you reach targets faster.</p>
+
+<h4>Q: The app says I can't contribute because "Liquidity is red." What do I do?</h4>
+<p><b>A:</b> Your external SGD reserve is depleted or income is lost. The constitution requires you to rebuild the reserve before you can add to investments. This is not a punishment—it is protection. If you contribute now and then face an emergency, you might be forced to sell investments at the worst time. Fix the liquidity problem first (rebuild emergency reserve or restore income), update your status to green, and contributions resume.</p>
+
+<h4>Q: Can I contribute a fractional amount, like S$2,500.50?</h4>
+<p><b>A:</b> Yes, you can contribute any amount. But you can only buy whole shares. If your contribution is S$2,500.50 and costs are S$10, you have S$2,490.50 for investment. At S$280/share, you can buy 8 whole shares (S$2,240), carrying forward S$250.50. This unpredictability is why we accumulate small balances and make contributions large enough to buy meaningful share quantities.</p>
+
+<h4>Q: The app says "holdings data is stale." Do I have to stop contributing?</h4>
+<p><b>A:</b> If data is 35–75 days old, contributions continue, but concentration-led trading (pausing funds due to look-through alerts) is disabled. If data is > 75 days old, no concentration-led trades are allowed. You should refresh holdings (usually 24 hours via fund websites). Once refreshed, contributions resume full functionality.</p>
+
+<h3>Market and emotion questions</h3>
+
+<h4>Q: The market crashed 30%. Shouldn't I sell and wait for recovery?</h4>
+<p><b>A:</b> No. The constitution has no rule for market-timing. Selling because prices fell is panic selling, not a constitutional response. If (a) a fund exceeds its hard limit, or (b) an external emergency forces you to raise cash, then you sell. Otherwise, you continue contributions and let dollar-cost averaging (regular buying at all prices) do its work. Historically, investors who sold during crashes regretted it when recovery came.</p>
+
+<h4>Q: I read an article saying Nasdaq is overvalued. Should I reduce EQAC?</h4>
+<p><b>A:</b> No. That is a prediction. The constitution ignores predictions. If Nasdaq does become overvalued, prices will fall, EQAC allocation will drop (due to price movement), and the soft band will naturally push new contributions away from it. No need to sell or forecast. If you believe the long-term fundamentals have shifted, that is a reason to amend the constitution—but only after the 30-day cooling-off period to prevent impulsive changes.</p>
+
+<h4>Q: How do I know if my portfolio is healthy?</h4>
+<p><b>A:</b> Open the Cockpit. If you see:</p>
+<ul>
+  <li>All five funds in green (soft bands)</li>
+  <li>Liquidity status green</li>
+  <li>No hard-limit alerts or red concentration warnings</li>
+  <li>Data fresh (< 35 days old)</li>
+  <li>No unreconciled transactions</li>
+</ul>
+<p>Then your portfolio is healthy. If you see orange or red, investigate and document. Healthy portfolios need 5 minutes on the Cockpit monthly; troubled ones need active review.</p>
+
+<h3>Governance and amendment questions</h3>
+
+<h4>Q: How do I override or appeal an alert?</h4>
+<p><b>A:</b> Hard alerts (red) cannot be ignored; you must investigate and document. Soft alerts (yellow) are informational; you can acknowledge them. The app does not have an "override" button. If you believe a rule is wrong, propose an amendment. Otherwise, follow the constitution. This is the discipline that makes the system work.</p>
+
+<h4>Q: Can I make an amendment immediately without waiting 30 days?</h4>
+<p><b>A:</b> Only in genuine emergencies: fund closure, regulatory change with a deadline, or major life upheaval (disability, loss of income). Check the "Genuine emergency" box, document the reason, and the amendment becomes active immediately. But do not use "emergency" as an excuse to re-weight the portfolio every time markets move.</p>
+
+<h4>Q: What if I want to withdraw money from the portfolio?</h4>
+<p><b>A:</b> The constitution does not prevent withdrawals. It says: if you need cash, (1) use your external reserve first, (2) if the reserve is exhausted, then withdraw from the portfolio. The app tracks which positions to liquidate based on tax efficiency and rebalancing. Withdrawals are separate from the constitution's main purpose (growing wealth through contributions). Document any withdrawal in Mission Control.</p>
+
+<h4>Q: Can the constitution change?</h4>
+<p><b>A:</b> Yes, intentionally. Use the amendment process: (1) draft written reason, (2) propose change, (3) wait 30 days, (4) finalize. This prevents impulsive changes driven by market noise. Old versions are archived as history.</p>
+
+<h3>Technical and integration questions</h3>
+
+<h4>Q: How often does the app sync with IBKR?</h4>
+<p><b>A:</b> Automatically every 2 hours during market hours. You can manually refresh by clicking "Sync now." Always sync before making a contribution to ensure data is current.</p>
+
+<h4>Q: What if the app disagrees with my IBKR account?</h4>
+<p><b>A:</b> Reconcile monthly. Open Mission Control > Monthly Review > "Sync IBKR account." If numbers still disagree, contact your broker to verify. The app is evidence and guidance, not the source of truth; IBKR account statements are the canonical record.</p>
+
+<h4>Q: Can I use the app on mobile?</h4>
+<p><b>A:</b> Yes. The app is responsive and works on iPhone, iPad, and Android. The mobile view prioritizes Cockpit and quick contribution entry. Detailed Portfolio and Mission Control are better on desktop but accessible on mobile.</p>
+</article>
+
+<article id="glossary">
+<div class="eyebrow">Article XIV · Expanded Glossary</div>
+<h2>Technical and investment terms explained in plain English</h2>
+
+<dl>
+
+<dt><b>Accumulating (Acc)</b></dt>
+<dd>A fund structure in which dividends or interest are reinvested inside the fund rather than paid out as cash. All five Atlas Core approved funds are accumulating, meaning their value includes both capital appreciation and reinvested distributions. If you buy 100 shares of VWRA today, in 10 years you will still hold 100 shares, but they will be worth more because dividends were reinvested.</dd>
+
+<dt><b>UCITS</b></dt>
+<dd>Undertakings for Collective Investment in Transferable Securities. A European regulatory framework for investment funds that allows them to be sold across EU member states. UCITS funds have limits on leverage, concentration, and derivatives use. It does not mean risk-free (you can lose money in UCITS), and it does not mean guaranteed returns. Bitcoin products are not UCITS even if listed on European exchanges.</dd>
+
+<dt><b>DCA (Dollar-Cost Averaging)</b></dt>
+<dd>Regular investing of a fixed amount on a fixed schedule (monthly, quarterly). Instead of investing S$100,000 all at once, you invest S$5,000 every month for 20 months. DCA averages your entry prices—you buy more shares when prices are low, fewer when prices are high. It does not guarantee profit (you could have bought all at the lowest price), but it removes the pressure to time the market and supports discipline.</dd>
+
+<dt><b>FX (Foreign Exchange)</b></dt>
+<dd>The conversion of one currency into another. Most Atlas funds are priced in USD; you contribute in SGD. FX cost (typically 0.1–0.2%) is deducted when converting SGD to USD for purchases and USD back to SGD for sales. The app calculates and reserves for FX costs before investment.</dd>
+
+<dt><b>Satellite</b></dt>
+<dd>A deliberately smaller holding added around the broad core to tilt return or risk. EQAC, SMH, and BTC are satellites around the VWRA core. A satellite is smaller than the core and serves a specific purpose (Nasdaq growth tilt, semiconductor bet, crypto exposure) rather than general diversification.</dd>
+
+<dt><b>Realised correlation</b></dt>
+<dd>How two investments actually moved together over a measured past period. If equities fell 30% and DBMFE rose 2%, their realised correlation is negative (they moved opposite). Correlation can change; past correlation does not predict future correlation. The app tracks realised correlation but does not use it to make investment decisions.</dd>
+
+<dt><b>Soft band</b></dt>
+<dd>A normal operating range for a fund allocation. Within the soft band, the portfolio is healthy and contributions flow according to deficit routing. VWRA's soft band is 65–75% (target 70%).</dd>
+
+<dt><b>Hard limit (floor and cap)</b></dt>
+<dd>A boundary that triggers a required review. Hitting a hard floor (minimum) or cap (maximum) requires investigation and documentation but does not force a trade. VWRA's hard limits are 0% floor and 80% cap.</dd>
+
+<dt><b>Look-through</b></dt>
+<dd>Analyzing the underlying holdings of every fund and combining them to measure total portfolio concentration. If VWRA owns 2% Apple and EQAC owns 3% Apple, your total Apple exposure is 5%. Look-through prevents hidden concentrations from building up.</dd>
+
+<dt><b>Watch level</b></dt>
+<dd>An early warning threshold for look-through concentrations. Hitting watch level (yellow alert) means you are approaching a boundary; no action required, but monitoring recommended. Single-company watch level is 7%.</dd>
+
+<dt><b>Hard review level</b></dt>
+<dd>A concentration boundary that requires investigation and documentation. Hitting this level (red alert) does not force a sale but requires you to understand why and plan a response. Single-company hard review level is 9%.</dd>
+
+<dt><b>Conid (Contract ID)</b></dt>
+<dd>A unique identifier assigned by IBKR to every tradeable security. The app uses conid (not just ticker or ISIN) to ensure you are holding the exact security specified in the constitution (e.g., VWRA UCITS from Dublin, not a similar-sounding US fund).</dd>
+
+<dt><b>ISIN (International Securities Identification Number)</b></dt>
+<dd>A unique 12-character code assigned to every security. VWRA UCITS is IE00BK5BQT80. ISIN is immutable and permanent; tickers can change.</dd>
+
+<dt><b>CUSIP</b></dt>
+<dd>Committee on Uniform Securities Identification Procedures; a 9-character identifier used in North America for securities. IBIT (iShares Bitcoin Trust) has CUSIP 46438F101. Used for matching US-listed securities.</dd>
+
+<dt><b>Reconciliation</b></dt>
+<dd>Comparing app records to IBKR account statements and correcting discrepancies. Monthly reconciliation ensures the app's view of your holdings matches your actual account.</dd>
+
+<dt><b>Drawdown</b></dt>
+<dd>A temporary peak-to-trough decline in portfolio value during a downturn. A 30% drawdown means the portfolio fell 30% from its highest point (even if it later recovered). Historically, markets have experienced 20%+ drawdowns multiple times per decade.</dd>
+
+<dt><b>Cost basis</b></dt>
+<dd>The original price you paid for an investment, including fees and commissions. If you buy 10 shares at S$280 with S$5 commission, your cost basis is S$2,805 (10 × S$280.50). Cost basis is used to calculate capital gains when you sell.</dd>
+
+<dt><b>Capital gain / loss</b></dt>
+<dd>The difference between the price you paid (cost basis) and the current value (or sale price). If you bought at S$280 and the current price is S$305, you have a S$25/share unrealised gain. If you sell at S$305, the gain becomes realised.</dd>
+
+<dt><b>Liquidity</b></dt>
+<dd>The ability to quickly convert an investment into cash. Stocks and ETFs are highly liquid; you can sell them in seconds. Bitcoin is liquid on exchanges. Illiquid assets are hard to sell quickly without significant discount. The "liquidity status" (green/amber/red) refers to your external cash reserve, not market liquidity.</dd>
+
+<dt><b>Cockpit</b></dt>
+<dd>The main dashboard of the Atlas app. It shows portfolio value, allocations, band status, liquidity, and active alerts. The place to check your portfolio's health in 2 minutes.</dd>
+
+<dt><b>Mission Control</b></dt>
+<dd>The governance and review center of the app. It provides checklists for monthly, quarterly, and annual reviews, and manages constitutional amendments.</dd>
+
+<dt><b>Margin</b></dt>
+<dd>Borrowing from your broker to invest. A margin call forces you to sell during downturns to cover the loan. The constitution prohibits margin; all investments must be from personal capital.</dd>
+
+<dt><b>Amendment</b></dt>
+<dd>A formal change to the constitution. Amendments require written reason, 30-day cooling-off (unless emergency), and version increment (v10.4 to v10.5). Old versions are archived.</dd>
+
+<dt><b>Equity</b></dt>
+<dd>Ownership in a company via stock. When you own VWRA, you indirectly own tiny pieces of thousands of companies.</dd>
+
+<dt><b>Bond / Fixed Income</b></dt>
+<dd>A loan to a company or government. Bondholders receive fixed interest payments. Atlas Core does not include bonds as a dedicated sleeve; DBMFE (managed futures) may take bond futures positions.</dd>
+
+<dt><b>Cryptocurrency</b></dt>
+<dd>Digital money (e.g., Bitcoin) based on cryptographic proof rather than central-bank backing. Bitcoin is the largest cryptocurrency by market value. It is speculative and volatile but uncorrelated with traditional assets.</dd>
+
+</dl>
+</article>
+
+<article id="migration">
+<div class="eyebrow">Article XV · Legacy Migration Appendix</div>
+<h2>Transitioning from older investments to the constitutional portfolio</h2>
+
+<p>If you have existing investments before starting Atlas Core, this appendix governs how to migrate them.</p>
+
+<table class="bands">
+  <tbody>
+    <tr>
+      <td><b>VT (Vanguard Total World)</b></td>
+      <td>Legacy global equity; settled proceeds route by current deficits, normally toward VWRA.</td>
+    </tr>
+    <tr>
+      <td><b>VWO (Vanguard Emerging Markets)</b></td>
+      <td>Legacy emerging markets; future exposure is inside VWRA (which includes EM companies).</td>
+    </tr>
+    <tr>
+      <td><b>QQQM (Invesco Nasdaq Mini)</b></td>
+      <td>Legacy Nasdaq; replacement exposure is governed through EQAC.</td>
+    </tr>
+    <tr>
+      <td><b>US SMH (VanEck Semiconductor US)</b></td>
+      <td>Separate from IE00BMC38736 UCITS version; replace only through sale and new purchase.</td>
+    </tr>
+    <tr>
+      <td><b>GBTC (Grayscale Bitcoin Trust)</b></td>
+      <td>Counts with IBIT against the Bitcoin cap until sold.</td>
+    </tr>
+    <tr>
+      <td><b>IBIT (iShares Bitcoin Trust)</b></td>
+      <td>Retain as approved Atlas Bitcoin vehicle; it is not legacy.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>When migrating, never rename an old security or transfer its cost basis to a replacement. VT and QQQM remain in your history as closed positions; their proceeds route to new constitutional holdings via deficit logic.</p>
+</article>
+
+</main>
+
+<div class="signature">
+<h2>Owner Acknowledgement</h2>
+<p>I understand the risks, external-liquidity requirement, contribution-first rules, and absence of any guaranteed return or hedge. I have read this expanded constitution and the app documentation and agree to follow these rules in managing my portfolio.</p>
+<p>Name: ____________________ &nbsp; Date: ____________________ &nbsp; Version: 10.4 Expanded</p>
+</div>
+
+<footer class="footer">
+<p>Canonical investment policy statement and app user guide.</p>
+<p>Review tax, estate, legal, and suitability matters with licensed advisers.</p>
+<p>Last updated: 2026-07-12 | Version: 10.4 Expanded</p>
+</footer>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  html.classList.toggle('dark-mode');
+  localStorage.setItem('theme', html.classList.contains('dark-mode') ? 'dark' : 'light');
+}
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.classList.add('dark-mode');
+}
+</script>
+
+</body>
+</html>
