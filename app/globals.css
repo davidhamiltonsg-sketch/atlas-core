@@ -178,6 +178,44 @@ body {
 }
 .atlas-mobile-nav svg { width: 18px; height: 18px; }
 
+.atlas-flightdeck {
+  background:
+    radial-gradient(700px 300px at 18% 0%, hsl(var(--brand-a) / .18), transparent 62%),
+    linear-gradient(145deg, hsl(257 30% 10% / .98), hsl(222 38% 7% / .98));
+  box-shadow: 0 28px 90px rgb(0 0 0 / .38), inset 0 1px 0 rgb(255 255 255 / .04);
+  color: #eef2ff;
+}
+.atlas-flightdeck-head { display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding:25px 28px 20px;border-bottom:1px solid rgb(255 255 255 / .08); }
+.atlas-flightdeck-head h2 { margin:5px 0 4px;font:600 clamp(26px,4vw,44px)/1 var(--font-fraunces);letter-spacing:-.035em; }
+.atlas-flightdeck-head p:not(.atlas-kicker) { margin:0;color:#94a3b8;font-size:12px; }
+.atlas-kicker,.atlas-panel-title span,.atlas-value-stats span,.atlas-command-line span,.atlas-flightdeck-foot span { color:#8190a7;font:700 9px/1.3 var(--font-ibm-plex-mono);letter-spacing:.18em;text-transform:uppercase; }
+.atlas-freshness { display:flex;align-items:center;gap:8px;color:#94a3b8;font:600 10px var(--font-ibm-plex-mono);white-space:nowrap; }
+.atlas-freshness span { width:7px;height:7px;border-radius:50%;background:#5ee0ae;box-shadow:0 0 16px #5ee0ae; }
+.atlas-freshness span.warn { background:#f6bd60;box-shadow:0 0 16px #f6bd60; }
+.atlas-flightdeck-grid { display:grid;grid-template-columns:minmax(290px,.85fr) minmax(380px,1.35fr) minmax(260px,.65fr); }
+.atlas-value-bay,.atlas-chart-bay,.atlas-orbit-bay { min-width:0;padding:26px 28px;border-right:1px solid rgb(255 255 255 / .08); }
+.atlas-orbit-bay { border-right:0;color:inherit;text-decoration:none; }
+.atlas-total { display:block;margin:10px 0 22px;font:700 clamp(34px,4vw,55px)/1 var(--font-geist-sans);letter-spacing:-.055em; }
+.atlas-value-stats { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 0;border-block:1px solid rgb(255 255 255 / .08); }
+.atlas-value-stats span { display:block;letter-spacing:.08em; }
+.atlas-value-stats b { display:block;margin-top:7px;font:650 12px var(--font-ibm-plex-mono); }
+.up { color:#5ee0ae!important; }.down { color:#ff7c8e!important; }
+.atlas-command-line { margin-top:20px;padding:16px;border:1px solid hsl(var(--brand-a) / .32);background:linear-gradient(110deg,hsl(var(--brand-a) / .13),transparent); }
+.atlas-command-line b { display:block;margin-top:7px;font:600 17px var(--font-fraunces); }
+.atlas-command-line p { margin:5px 0 0;color:#a7b2c4;font-size:11px;line-height:1.55; }
+.atlas-panel-title { display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:18px; }
+.atlas-panel-title span,.atlas-panel-title b { display:block; }.atlas-panel-title b { margin-top:6px;font:600 14px var(--font-geist-sans); }
+.atlas-panel-title strong { font:700 11px var(--font-ibm-plex-mono); }.atlas-panel-title em { color:#a78bfa;font:600 10px var(--font-geist-sans);font-style:normal; }
+.atlas-chart-bay .recharts-responsive-container { min-height:250px; }
+.atlas-empty-chart { min-height:250px;display:grid;place-items:center;align-content:center;gap:12px;color:#718096;text-align:center;font-size:11px; }
+.atlas-empty-chart svg { width:24px;height:24px;color:#a78bfa; }
+.atlas-orbit-bay .recharts-responsive-container { min-height:230px; }
+.atlas-flightdeck-foot { display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid rgb(255 255 255 / .08);background:rgb(0 0 0 / .14); }
+.atlas-flightdeck-foot div { padding:16px 28px;border-right:1px solid rgb(255 255 255 / .08); }.atlas-flightdeck-foot div:last-child{border-right:0}
+.atlas-flightdeck-foot span { display:block;letter-spacing:.09em; }.atlas-flightdeck-foot b { display:block;margin-top:6px;font:650 12px var(--font-ibm-plex-mono); }
+@media(max-width:1180px){.atlas-flightdeck-grid{grid-template-columns:1fr 1fr}.atlas-orbit-bay{grid-column:1/-1;border-top:1px solid rgb(255 255 255 / .08)}.atlas-chart-bay{border-right:0}.atlas-flightdeck-foot{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){.atlas-flightdeck-head{padding:21px;flex-direction:column}.atlas-flightdeck-grid{grid-template-columns:1fr}.atlas-value-bay,.atlas-chart-bay,.atlas-orbit-bay{padding:22px;border-right:0;border-top:1px solid rgb(255 255 255 / .08)}.atlas-value-bay{border-top:0}.atlas-value-stats{grid-template-columns:1fr 1fr}.atlas-flightdeck-foot{grid-template-columns:1fr 1fr}.atlas-flightdeck-foot div{padding:14px 18px}.atlas-total{font-size:36px}}
+
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

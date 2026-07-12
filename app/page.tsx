@@ -496,6 +496,10 @@ export default async function Dashboard() {
     { label: "Concentration", score: weighted(d.health.concentration.score, 25), maxScore: 25, status: d.health.concentration.status, citation: d.health.concentration.citation },
     { label: "Freshness",     score: weighted(d.health.freshness.score, 10),     maxScore: 10, status: d.health.freshness.status,     citation: d.health.freshness.citation },
   ]
+  const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
+  const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
+  const totalUnrealised = totalCostBasis > 0 ? d.totalValue - totalCostBasis : null
+  const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
 
   return (
     <Shell title="Cockpit" subtitle="Atlas Core — Constitution v3.1" userName={session.name} isAdmin={session.role === "admin"}>
@@ -550,6 +554,55 @@ export default async function Dashboard() {
           <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">Review →</span>
         </a>
       )}
+
+      {/* ── ATLAS FLIGHT DECK — portfolio first, governance second ─────── */}
+      <section className="atlas-flightdeck mb-6 overflow-hidden rounded-[28px] border border-violet-400/20">
+        <div className="atlas-flightdeck-head">
+          <div>
+            <p className="atlas-kicker">ATLAS CORE · LIVE PORTFOLIO POSITION</p>
+            <h2>Where we are now.</h2>
+            <p>Performance, ownership and the next constitution-permitted action in one view.</p>
+          </div>
+          <div className="atlas-freshness">
+            <span className={d.daysSinceUpdate !== null && d.daysSinceUpdate > 3 ? "warn" : "ok"} />
+            {d.daysSinceUpdate === null ? "Awaiting first sync" : `IBKR snapshot · ${d.daysSinceUpdate === 0 ? "today" : `${d.daysSinceUpdate}d old`}`}
+          </div>
+        </div>
+
+        <div className="atlas-flightdeck-grid">
+          <div className="atlas-value-bay">
+            <p className="atlas-kicker">TOTAL PORTFOLIO VALUE</p>
+            <strong className="atlas-total"><AnimatedNumber value={d.totalValue} currency="SGD" /></strong>
+            <div className="atlas-value-stats">
+              <div><span>Cost basis</span><b>{totalCostBasis > 0 ? formatCurrency(totalCostBasis, "SGD") : "Awaiting ledger"}</b></div>
+              <div><span>Unrealised P&amp;L</span><b className={totalUnrealised !== null && totalUnrealised < 0 ? "down" : "up"}>{totalUnrealised === null ? "—" : `${totalUnrealised >= 0 ? "+" : "−"}${formatCurrency(Math.abs(totalUnrealised), "SGD")}`}</b></div>
+              <div><span>Total return</span><b className={totalReturnPct !== null && totalReturnPct < 0 ? "down" : "up"}>{totalReturnPct === null ? "—" : `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}</b></div>
+            </div>
+            <div className="atlas-command-line">
+              <span>CONSTITUTION SAYS</span>
+              <b>{d.ladder.headline}</b>
+              <p>{d.ladder.instruction}</p>
+            </div>
+          </div>
+
+          <div className="atlas-chart-bay">
+            <div className="atlas-panel-title"><div><span>PERFORMANCE</span><b>Portfolio value history</b></div>{d.valueChange !== null && <strong className={d.valueChange >= 0 ? "up" : "down"}>{d.valueChange >= 0 ? "+" : "−"}{formatCurrency(Math.abs(d.valueChange), "SGD")}</strong>}</div>
+            {d.historyPoints.length >= 2 ? <PortfolioHistoryChart data={d.historyPoints} /> : <div className="atlas-empty-chart"><Activity /><span>Performance history will appear after two complete IBKR snapshots.</span></div>}
+          </div>
+
+          <Link href="/portfolio" className="atlas-orbit-bay">
+            <div className="atlas-panel-title"><div><span>POSITION</span><b>Actual versus target</b></div><em>Open portfolio →</em></div>
+            <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD" />
+          </Link>
+        </div>
+
+        <div className="atlas-flightdeck-foot">
+          <div><span>Next contribution</span><b>{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "SGD")}</b></div>
+          <div><span>DCA cash bank</span><b>{formatCurrency(d.cashBankBalance, "SGD")}</b></div>
+          <div><span>Portfolio health</span><b>{d.health.overall}/100 · {d.health.overallLabel}</b></div>
+          <div><span>2045 base case</span><b>{d.base2045 >= 1_000_000 ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M` : `S$${(d.base2045 / 1_000).toFixed(0)}K`}</b></div>
+        </div>
+      </section>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-5 min-w-0 reveal-stack">
