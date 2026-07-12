@@ -7,7 +7,7 @@ import { redirect } from "next/navigation"
 import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } from "@/components/charts/forecast-chart-panel"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
-import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection } from "@/lib/forecast"
+import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection, effectiveMonthlyRate, yearsToHorizon } from "@/lib/forecast"
 import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { activePortfolioContext } from "@/lib/active-portfolio"
@@ -66,7 +66,7 @@ async function getSbrForecastData(userId: string) {
   const monthly = owner?.monthlyContribution ?? SBR_SPEC.monthlyContribution
   const futureValue = (years: number, annualRate: number) => {
     const months = years * 12
-    const monthlyRate = annualRate / 12
+    const monthlyRate = effectiveMonthlyRate(annualRate)
     let value = totalValue
     for (let month = 0; month < months; month++) value = value * (1 + monthlyRate) + monthly
     return value
@@ -182,7 +182,8 @@ export default async function Forecast() {
 
   // Build year-by-year chart data (current year → 2045)
   const chartData: ExtendedForecastPoint[] = []
-  for (let yr = 0; yr <= 19; yr++) {
+  const remainingYears = yearsToHorizon(2045, startYear)
+  for (let yr = 0; yr <= remainingYears; yr++) {
     const year = startYear + yr
     const conservative = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.conservative, yr, CONTRIBUTION_GROWTH_RATE)
     const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)

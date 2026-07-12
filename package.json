@@ -16,8 +16,9 @@
     "check:ingest": "npx tsx scripts/check-ingest.ts",
     "check:portfolio-v2": "npx tsx scripts/check-portfolio-v2.ts",
     "check:valuation": "npx tsx scripts/check-valuation.ts",
+    "check:forecast-governance": "npx tsx scripts/check-forecast-governance.ts",
     "check:current-runtime": "npx tsx scripts/check-current-runtime.ts",
-    "check": "npm run generate:constitutions && npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npm run check:valuation && npm run check:current-runtime && npx tsc --noEmit"
+    "check": "npm run generate:constitutions && npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npm run check:valuation && npm run check:forecast-governance && npm run check:current-runtime && npx tsc --noEmit"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

@@ -233,12 +233,12 @@ const SBR_AGENTS: AgentDef[] = [
     id: "balance",
     name: "Balance Check",
     codename: "BALANCE",
-    blurb: "Keeps the four funds near their targets",
+    blurb: "Keeps the five portfolio sleeves near their targets",
     icon: Gauge,
     accent: C.blue,
     script: [
       { t: 120, level: "info", msg: "Weighing each fund against its guide-rails" },
-      { t: 720, level: "data", msg: "Global 80% · Nasdaq 10% · chips 5% · Treasury bills 5%" },
+      { t: 720, level: "data", msg: "Targets VWRA 65% · EQAC 15% · SMH 5% · Bitcoin 5% · DBMFE 10%" },
       { t: 1320, level: "warn", msg: "Chip-maker fund sitting a little high" },
     ],
     result: { status: "alert", line: { t: 1800, level: "warn", msg: "One fund a bit high — even it out over the next month" } },
@@ -364,20 +364,18 @@ const ATLAS_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
 ] as const
 const SBR_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
   { fund: "BTC · Bitcoin sleeve", us: "N/A", tech: "N/A", semis: "N/A", note: "Vehicle / custody source", href: "https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf" },
-  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "Fund holdings / factsheet", href: "https://www.google.com/search?q=DBMFE+fund+factsheet" },
+  { fund: "DBMFE · Managed futures", us: "Strategy", tech: "Strategy", semis: "Strategy", note: "iMGP official fund page", href: "https://www.imgp.com/en/imgpfunds/fund/LU2951555585" },
 ] as const
 
 function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" | "sbr"; mono: string; lastUpdated: Date | null }) {
   const buildingBlocks = variant === "atlas" ? ATLAS_BUILDING_BLOCKS : SBR_BUILDING_BLOCKS
-  const rules = variant === "atlas"
-    ? [["US country", "65%", "70%"], ["Info technology", "40%", "45%"], ["Semiconductors", "20%", "25%"], ["Single company", "7%", "8%"]]
-    : [["US country", "68%", "72%"], ["Info technology", "38%", "43%"], ["Semiconductors", "18%", "22%"], ["Single company", "7%", "8%"]]
+  const rules = [["US country", "70%", "75%"], ["Info technology", "45%", "50%"], ["Semiconductors", "25%", "30%"], ["Single company", "7%", "9%"]]
   return <section className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
     <div className="flex flex-wrap items-start justify-between gap-3 mb-3"><div><SectionLabel mono={mono}>LOOK-THROUGH BASIS</SectionLabel><h2 className="text-sm font-semibold mt-1" style={{ color: C.text }}>Fund building blocks used</h2></div><RefreshLookThroughButton lastUpdated={lastUpdated} compact /></div>
     <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-[11px]"><thead><tr style={{ color: C.dim, borderBottom: `1px solid ${C.line}` }}><th className="py-2">Fund</th><th>US %</th><th>Info-tech %</th><th>Semis %</th><th>Source / note</th></tr></thead><tbody>{buildingBlocks.map(r=><tr key={r.fund} style={{ borderBottom: `1px solid ${C.line}` }}><td className="py-2 font-semibold">{r.fund}</td><td>{r.us}</td><td>{r.tech}</td><td>{r.semis}</td><td><a href={r.href} target="_blank" rel="noreferrer" className="underline underline-offset-2" style={{ color: C.blue }}>{r.note} ↗</a></td></tr>)}</tbody></table></div>
     <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>Exposure is calculated dynamically from the latest available holdings. Stale or missing source data blocks concentration-led trades. DBMFE is a managed-futures diversifier, not cash and not a capital guarantee; Bitcoin is reported outside equity country and sector percentages.</p>
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{rules.map(([lens,watch,review])=><div key={lens} className="rounded-lg border p-2" style={{ borderColor:C.line, background:C.navy }}><p className="text-[9px]" style={{color:C.dim}}>{lens}</p><p className={`${mono} mt-1 text-[10px]`}>WATCH {watch} · REVIEW {review}</p></div>)}</div>
-    <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Data older than 95 days blocks concentration-led trades.</p>
+    <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Warn when the oldest required source is more than 35 days old; after 75 days, block concentration-led trades until the source is refreshed.</p>
   </section>
 }
 
@@ -490,13 +488,13 @@ export function MissionControl({ context, findings, lookThroughUpdatedAt = null 
 
   return (
     <div
-      className="min-h-screen w-full"
-      style={{ background: C.navy, color: C.text, fontFamily: "var(--font-inter)" }}
+      className="mc-console min-h-[70vh] w-full overflow-hidden border"
+      style={{ background: "var(--deck-surface)", borderColor: "var(--deck-line)", color: C.text, fontFamily: "var(--font-geist-sans)" }}
     >
       {/* Top command bar */}
       <header
-        className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b px-4 py-3 backdrop-blur"
-        style={{ borderColor: C.line, background: "rgba(10,15,30,0.82)" }}
+        className="flex items-center justify-between gap-4 border-b px-4 py-3"
+        style={{ borderColor: "var(--deck-line)", background: "var(--deck-rail)" }}
       >
         <div className="flex items-center gap-3">
           <Link

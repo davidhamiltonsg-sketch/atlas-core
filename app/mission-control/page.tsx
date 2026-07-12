@@ -17,6 +17,7 @@ import { HARD_THRESHOLDS } from "@/lib/constants"
 import { getLiveMarketPositions } from "@/lib/finnhub"
 import { activePortfolioContext, portfolioOwner } from "@/lib/active-portfolio"
 import { redirect } from "next/navigation"
+import { Shell } from "@/components/shell"
 
 // Mission Control is a personal, auth-gated console — never statically cached.
 export const dynamic = "force-dynamic"
@@ -802,6 +803,7 @@ export default async function MissionControlPage({ searchParams }: { searchParam
   const active = requestedId
     ? { constitutionId: requestedId, owner: await portfolioOwner(requestedId) ?? cookieActive!.owner }
     : cookieActive
+  const constitutionId = active.constitutionId
   const context = await loadPortfolioContext(active ? { constitutionId: active.constitutionId, userId: active.owner.id } : undefined)
 
   let findings: Record<string, AgentFinding> | null = null
@@ -824,10 +826,10 @@ export default async function MissionControlPage({ searchParams }: { searchParam
     ? new Date(Math.min(...requiredLookThrough.map(row => row.updatedAt.getTime())))
     : null
 
-  if(!findings) return <div className="min-h-screen bg-[#07101f] text-white grid place-items-center p-6"><div className="max-w-lg rounded-2xl border border-red-400/30 bg-red-500/5 p-6"><h1 className="text-xl font-bold">Mission Control could not reconcile live data</h1><p className="mt-2 text-sm text-white/65">No sample figures are shown. Refresh the IBKR data or check the production logs, then try again.</p></div></div>
+  if(!findings) return <Shell title="Mission Control" subtitle={context.label} userName={session.name} isAdmin={session.role==="admin"} constitutionId={constitutionId}><div className="deck-ledger p-6"><h1>Mission Control could not reconcile live data</h1><p>No sample figures are shown. Refresh the IBKR data or check the production logs, then try again.</p></div></Shell>
   return (
-    <div>
+    <Shell title="Mission Control" subtitle={`${context.label} · live governance`} userName={session.name} isAdmin={session.role==="admin"} constitutionId={constitutionId}>
       <MissionControl context={context} findings={findings} lookThroughUpdatedAt={lookThroughUpdatedAt} />
-    </div>
+    </Shell>
   )
 }

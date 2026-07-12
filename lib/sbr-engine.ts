@@ -62,13 +62,14 @@ export function computeSbrDca(positions:SbrPosition[],monthly:number,_opts:SbrEn
 }
 
 export interface SbrHealth { overall:number; overallLabel:"Good standing"|"Review recommended"|"Action required"; governance:number; risk:number; allocation:number; contribution:number; behavioural:number; liquidity:number; documentation:number }
-export function computeSbrHealth(positions:SbrPosition[],totalValue:number,snapshotAgeDays:number,c:Constitution=SILICON_BRICK_ROAD):SbrHealth {
+export function computeSbrHealth(positions:SbrPosition[],totalValue:number,snapshotAgeDays:number,c:Constitution=SILICON_BRICK_ROAD,externalLiquidityVerified=false):SbrHealth {
   if(totalValue<=0) return {overall:0,overallLabel:"Action required",governance:0,risk:0,allocation:0,contribution:0,behavioural:0,liquidity:0,documentation:0}
   const b=route(positions,totalValue,c), breach=b.tag==="hard_cap"||b.tag==="floor"||b.tag==="combined_hard", watch=b.tag==="combined_watch"||b.tag==="underweight"
   const governance=breach?35:watch?75:100, risk=breach?25:watch?70:100
   const allocation=Math.max(0,100-positions.reduce((s,p)=>s+Math.min(20,Math.abs(p.actualPct-p.targetPct)*4),0))
   const freshness=snapshotAgeDays<=7?100:snapshotAgeDays<=35?75:snapshotAgeDays<=95?45:10
-  const liquidity=(positions.find(p=>p.ticker==="DBMFE")?.actualPct ?? 0) >= 5 ? 100 : 50
+  // DBMFE diversifies market risk; it is not the owner's external emergency reserve.
+  const liquidity=externalLiquidityVerified ? 100 : 0
   const overall=Math.round(governance*.25+risk*.20+allocation*.15+freshness*.20+100*.10+liquidity*.10)
   return {overall,overallLabel:overall>=80?"Good standing":overall>=60?"Review recommended":"Action required",governance,risk,allocation,contribution:freshness,behavioural:100,liquidity,documentation:freshness}
 }

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
-import { FileText, ChevronRight, TrendingUp } from "lucide-react"
+import { Activity, ChevronRight, TrendingUp } from "lucide-react"
 import { getSbrMarketData } from "@/lib/sbr-market"
 import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
@@ -11,11 +11,10 @@ import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import { DownloadReportCard } from "@/components/reports/download-report-card"
 import { HoldingsTable, type HoldingRow } from "@/components/dashboard/holdings-table"
-import { GovernanceAlignment } from "@/components/dashboard/governance-alignment"
 import { getRecentExecutions } from "@/lib/execution-actions"
 import type { GovAlignment } from "@/lib/governance-status"
-import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
-import { ComplianceBoard, type ComplianceBandPosition } from "@/components/cockpit/compliance-board"
+import type { SealDimension } from "@/components/cockpit/governance-seal"
+import type { ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { AnimatedNumber } from "@/components/animated-number"
@@ -97,9 +96,9 @@ async function getSbrData(userId: string) {
   const growthRates = sbrBlendedGrowthRate(allocMap)
 
   // Governance status — shared with the PDF report so both surfaces agree.
-  const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue)
   const lookThroughAsOf=lookThroughSources.length===SBR_FUND_TICKERS.length?new Date(Math.min(...lookThroughSources.map(x=>x.updatedAt.getTime()))):new Date(0)
   const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf)
+  const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue, lookThroughAsOf)
 
   // Holdings rows
   const statusOf = (p: SbrPosition): HoldingRow["status"] => {
@@ -107,7 +106,7 @@ async function getSbrData(userId: string) {
     const soft = !hard && (p.actualPct < p.rangeLow || p.actualPct > p.rangeHigh)
     return hard ? "hard" : soft ? "soft" : "healthy"
   }
-  const holdingsRows: HoldingRow[] = holdingsSorted.map((h) => {
+  const holdingsRows: HoldingRow[] = holdingsSorted.filter(h=>SBR_FUND_TICKERS.includes(h.ticker)).map((h) => {
     const p = positions.find((x) => x.ticker === h.ticker)
     const cb = h.snapshots[0]
     const a = dcaByTicker.get(h.ticker)
@@ -142,7 +141,7 @@ async function getSbrData(userId: string) {
   }))
 
   // Donut data
-  const donutData = holdingsSorted.map((h) => {
+  const donutData = holdingsSorted.filter(h=>SBR_FUND_TICKERS.includes(h.ticker)).map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
     const fundColor = SBR.funds.find((f) => f.ticker === h.ticker)?.color ?? h.color
@@ -179,7 +178,7 @@ async function getSbrData(userId: string) {
     usdSgdRate, fxDeviation, fxOutOfBand,
     dealingWindow, windowOpen, nextWindowOpens,
     emeActive, emeMinuteFiled, drawdownPct,
-    accrualMap, cashBankBalance: cashBank?.balance ?? 0, lookThrough,
+    accrualMap, cashBankBalance: cashBank?.balance ?? 0, lookThrough, monthlyContribution,
   }
 }
 
@@ -190,6 +189,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
   const valuationComplete=positiveRows.every(row=>row.unrealisedSgd!==null)
   const totalUnrealised=valuationComplete?positiveRows.reduce((sum,row)=>sum+(row.unrealisedSgd??0),0):null
   const totalCostBasis=valuationComplete?positiveRows.reduce((sum,row)=>sum+row.value-(row.unrealisedSgd??0),0):null
+  const totalReturnPct=totalUnrealised!==null&&totalCostBasis!==null&&totalCostBasis>0?(totalUnrealised/totalCostBasis)*100:null
 
   // Convert SBR health dimensions to SealDimension format (weighted points)
   const sealDimensions: SealDimension[] = [
@@ -204,36 +204,58 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
   return (
     <Shell title="Your Plan" subtitle="Silicon Brick Road — flexible medium-term growth" userName={name} isAdmin={isAdmin}>
-
-      {/* Constitution banner */}
-      <a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer"
-        className="rounded-xl border border-sky-500/40 bg-gradient-to-r from-sky-500/[0.10] via-blue-500/[0.07] to-cyan-500/[0.06] p-4 mb-5 flex items-center gap-3 hover:from-sky-500/[0.12] transition-colors group">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/20 shrink-0"><FileText className="h-4 w-4 text-sky-400" /></div>
-        <div className="flex-1">
-          <p className="text-xs font-bold text-sky-400">Silicon Brick Road — Investment Constitution (v10.2)</p>
-          <p className="text-xs text-muted-foreground">VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10 — whole-share cash bank, dynamic look-through and future exit protocol.</p>
+      <section className="atlas-flightdeck mb-5 overflow-hidden border" aria-labelledby="sbr-position-heading">
+        <div className="atlas-flightdeck-head">
+          <div>
+            <p className="atlas-kicker">SILICON BRICK ROAD · LIVE PORTFOLIO POSITION</p>
+            <h2 id="sbr-position-heading">Where we are now.</h2>
+            <p>Value, performance, ownership and the next rule-permitted action in one view.</p>
+          </div>
+          <div className="atlas-freshness" aria-label={d.marketStale ? "Market data needs refreshing" : "Market data is current"}>
+            <span className={d.marketStale ? "warn" : "ok"} />
+            {d.marketStale ? "IBKR snapshot · refresh due" : "IBKR snapshot · current"}
+          </div>
         </div>
-        <span className="text-xs font-semibold text-sky-400 group-hover:text-sky-300 shrink-0">Open ↗</span>
-      </a>
 
-      {/* Flexible-horizon runway — no invented spending target or automatic phase. */}
-      <div className="rounded-2xl card-lux p-5 mb-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Where we are going</p>
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mt-2">
-          <div><p className="text-2xl font-black tabular-nums">{hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : "S$0 invested"}</p><p className="text-xs text-muted-foreground mt-1">Flexible medium-term compounding · no required end date</p></div>
-          <div className="text-left sm:text-right"><p className="text-xl font-black text-sky-400">9–10%</p><p className="text-[10px] text-muted-foreground">planning ambition, not a promise</p></div>
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">Now</p><p className="text-xs font-bold">Growth mode</p></div>
-          <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">During a fall</p><p className="text-xs font-bold">Stay invested</p></div>
-          <div className="rounded-lg bg-muted/25 p-2"><p className="text-[10px] text-muted-foreground">Real use appears</p><p className="text-xs font-bold">Write exit plan</p></div>
-        </div>
-      </div>
+        <div className="atlas-flightdeck-grid">
+          <div className="atlas-value-bay">
+            <p className="atlas-kicker">TOTAL PORTFOLIO VALUE</p>
+            <strong className="atlas-total"><AnimatedNumber value={d.totalValue} currency="SGD" /></strong>
+            <div className="atlas-value-stats">
+              <div><span>Cost basis</span><b>{totalCostBasis!==null?formatCurrency(totalCostBasis,"SGD"):"Needs reconciliation"}</b></div>
+              <div><span>Unrealised P&amp;L</span><b className={totalUnrealised!==null&&totalUnrealised<0?"down":"up"}>{totalUnrealised===null?"—":`${totalUnrealised>=0?"+":"−"}${formatCurrency(Math.abs(totalUnrealised),"SGD")}`}</b></div>
+              <div><span>Unrealised return</span><b className={totalReturnPct!==null&&totalReturnPct<0?"down":"up"}>{totalReturnPct===null?"Needs reconciliation":`${totalReturnPct>=0?"+":""}${totalReturnPct.toFixed(1)}%`}</b></div>
+            </div>
+            <div className="atlas-command-line">
+              <span>CONSTITUTION SAYS</span>
+              <b>{d.nextMove.action}</b>
+              <p>{d.nextMove.what}</p>
+            </div>
+          </div>
 
-      <section className="mb-5 grid gap-3 md:grid-cols-3" aria-label="SBR safety guardrails">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/[0.05] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-green-400">Income green</p><p className="mt-2 text-xs text-muted-foreground">Income secure and external emergency cash fully funded: scheduled DCA may continue. DCA reduces timing risk; it does not guarantee a profit or prevent loss.</p></div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Income amber</p><p className="mt-2 text-xs text-muted-foreground">Income uncertain or emergency cash being used: pause optional increases and rebuild liquidity outside SBR before adding risk.</p></div>
-        <div className="rounded-xl border border-red-500/30 bg-red-500/[0.05] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-red-400">Income red</p><p className="mt-2 text-xs text-muted-foreground">Income lost or emergency reserve inadequate: suspend contributions. DBMFE is a managed-futures diversifier, not cash and not a capital guarantee.</p></div>
+          <div className="atlas-chart-bay">
+            <div className="atlas-panel-title"><div><span>PERFORMANCE</span><b>Portfolio value history</b></div>{d.valueChange!==null&&<strong className={d.valueChange>=0?"up":"down"}>{d.valueChange>=0?"+":"−"}{formatCurrency(Math.abs(d.valueChange),"SGD")}</strong>}</div>
+            {d.historyPoints.length>=2?<PortfolioHistoryChart data={d.historyPoints}/>:<div className="atlas-empty-chart"><Activity aria-hidden="true"/><span>Performance history will appear after two complete IBKR snapshots.</span></div>}
+          </div>
+
+          <Link href="/portfolio" className="atlas-orbit-bay" aria-label="Open SBR holdings and activity">
+            <div className="atlas-panel-title"><div><span>POSITION</span><b>Actual versus target</b></div><em>Open portfolio →</em></div>
+            <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD"/>
+          </Link>
+        </div>
+
+        <div className="atlas-flightdeck-foot">
+          <div><span>Next contribution</span><b>{formatCurrency(d.monthlyContribution,"SGD")}</b></div>
+          <div><span>DCA cash bank</span><b>{formatCurrency(d.cashBankBalance,"SGD")}</b></div>
+          <div><span>Portfolio health</span><b>{d.health.overall}/100</b></div>
+          <div><span>Horizon</span><b>Flexible · no end date</b></div>
+        </div>
+      </section>
+
+      <section className="mb-5 grid gap-3 lg:grid-cols-3" aria-label="What to do, why, and where SBR is going">
+        <article className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.nextMove.action}</h2><p>{d.nextMove.what}</p></div><Link href="/portfolio">Review activity →</Link></article>
+        <article className="atlas-command-band"><div><span>WHY</span><h2>{d.nextMove.why}</h2><p>{d.nextMove.when??"At the next permitted contribution window."}</p></div><Link href="/mission-control?portfolio=silicon-brick-road">Open Mission Control →</Link></article>
+        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 15 · SMH 5 · IBIT 5 · DBMFE 10. A real SGD use must be documented before risk changes.</p></div><a href="/silicon-brick-road.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
       </section>
 
 
@@ -285,145 +307,13 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         </div>
       )}
 
-      {/* Empty-state welcome — covers both "nothing entered yet" and "funds set but showing S$0" */}
-      {!hasBalance && (
-        <div className="mb-5 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-5 py-4">
-          <p className="text-sm font-bold text-sky-400">SBR currently holds no securities</p>
-          <p className="text-xs text-muted-foreground mt-0.5">The approved target is VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10. Current exposure remains zero until an IBKR purchase settles; the first contribution routes to the furthest-underweight eligible holding.</p>
-        </div>
-      )}
-
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+      <div className="grid gap-5">
         <div className="space-y-5 min-w-0 reveal-stack">
 
-          {/* 1. This month — the single decision Dami needs, first on the page */}
-          {hasBalance && (
-            <div className="rounded-2xl ring-hero overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">This month</p>
-                  <p className="text-base font-semibold mt-0.5">{d.nextMove.action}</p>
-                </div>
-                <span className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
-                  d.nextMove.severity === "critical" || d.nextMove.severity === "high" ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400" :
-                  d.nextMove.severity === "medium" ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400" :
-                  "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400"
-                }`}>
-                  {d.nextMove.severity === "none" ? "On track" :
-                   d.nextMove.severity === "medium" ? "Heads up" :
-                   d.nextMove.severity === "high" ? "Important" : "Act now"}
-                </span>
-              </div>
-
-              {/* Where the money goes this month */}
-              {d.dca.overlayNote && (
-                <p className="px-5 pt-3 text-[11px] text-amber-500 leading-relaxed">{d.dca.overlayNote}</p>
-              )}
-              <div className="divide-y divide-border/60">
-                {d.dca.allocations.map((a) => {
-                  const accrual = d.accrualMap[a.ticker] ?? 0
-                  return (
-                    <div key={a.ticker} className="px-5 py-3 flex items-center gap-3">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: a.color }} />
-                      <span className="font-bold text-sm w-14">{a.ticker}</span>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs text-muted-foreground block">{a.reason}</span>
-                        {accrual > 0 && (
-                          <span className="text-[10px] text-sky-400 mt-0.5 block">
-                            Banking {formatCurrency(accrual, "SGD")} toward the next whole share
-                          </span>
-                        )}
-                      </div>
-                      <span className={`text-sm font-bold tabular-nums ${a.amount > 0 ? "text-green-500" : "text-muted-foreground"}`}>
-                        {a.amount > 0 ? `+${formatCurrency(a.amount, "SGD")}` : formatCurrency(0, "SGD")}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Why, in plain English */}
-              <div className="m-4 rounded-lg border border-border bg-muted/30 p-4">
-                <p className="text-xs leading-relaxed mb-1.5">{d.nextMove.what}</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">{d.nextMove.why}</p>
-                {d.nextMove.when && (
-                  <p className="text-[11px] text-muted-foreground/70 mt-2 pt-2 border-t border-border">{d.nextMove.when}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 2. KPI strip — portfolio snapshot above the fold, before compliance details */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <a href="/ytd" className="rounded-2xl card-lux p-4 flex flex-col gap-2 group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Portfolio Value</span>
-                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </div>
-              <p className="text-xl font-black tabular-nums gradient-text"><AnimatedNumber value={d.totalValue} currency="SGD" /></p>
-              {d.valueChange !== null
-                ? <p className={`text-[11px] tabular-nums font-medium ${d.valueChange >= 0 ? "text-green-500" : "text-red-500"}`}>{d.valueChange >= 0 ? "▲" : "▼"} {formatCurrency(Math.abs(d.valueChange), "SGD")}</p>
-                : <p className="text-[11px] text-muted-foreground">SGD · base currency</p>}
-            </a>
-            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Cost basis</span>
-              <p className="text-xl font-black tabular-nums">{totalCostBasis!==null?formatCurrency(totalCostBasis,"SGD"):"—"}</p>
-              <p className="text-[11px] text-muted-foreground">{valuationComplete?"IBKR open positions":"Needs reconciliation"}</p>
-            </div>
-            <div className="rounded-2xl card-lux p-4 flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Unrealised P&amp;L</span>
-              <p className={`text-xl font-black tabular-nums ${totalUnrealised===null?"text-muted-foreground":totalUnrealised>=0?"text-green-500":"text-red-500"}`}>{totalUnrealised===null?"—":`${totalUnrealised>=0?"+":""}${formatCurrency(totalUnrealised,"SGD")}`}</p>
-              <p className="text-[11px] text-muted-foreground">{valuationComplete?"Unrealised only":"Needs reconciliation"}</p>
-            </div>
-            <a href="/governance" className={`rounded-2xl border bg-card/75 backdrop-blur-md p-4 card-elevated flex flex-col gap-2 hover:bg-accent/40 hover:-translate-y-0.5 transition-all group ${
-              d.govAlignment.overall === "breach" ? "border-red-500/30" : d.govAlignment.overall === "watch" ? "border-amber-400/40" : "border-border hover:border-primary/30"
-            }`}>
-              <span className="text-xs font-medium text-muted-foreground">Governance</span>
-              <p className={`text-xl font-black tabular-nums ${d.govAlignment.overall === "breach" ? "text-red-500" : d.govAlignment.overall === "watch" ? "text-amber-500" : "text-green-500"}`}>
-                {d.govAlignment.breaches + d.govAlignment.watches === 0 ? "OK" : <AnimatedNumber value={d.govAlignment.breaches + d.govAlignment.watches} />}
-              </p>
-              <p className="text-[11px] text-muted-foreground">{d.govAlignment.breaches} breach · {d.govAlignment.watches} watch</p>
-            </a>
-          </div>
-
-          {/* 3. What is held — above the fold, before compliance instrumentation */}
+          {/* Position ledger follows the command hierarchy without repeating the hero KPIs. */}
           {hasBalance && <HoldingsTable positions={d.holdingsRows} totalValue={d.totalValue} priceStale={d.marketStale} contributionCurrency="SGD" plainEnglish />}
 
-          {/* ── COMPLIANCE DETAILS — admin/governance view only ── */}
-          {/* Governance instrumentation (Seal, Compliance Board, full rule checklist)    */}
-          {/* is shown only to the admin operator (David). Dami sees the plain-English    */}
-          {/* ritual surface above and the condensed health summary in the sidebar.        */}
-          {isAdmin && (
-            <>
-              {/* Committee minute — quarterly record of any rule-triggered decision */}
-              {!d.emeActive && (
-                <div className="rounded-xl border border-border bg-card/50 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Decision Journal</p>
-                  <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-                    File a committee minute any time a rule-triggered decision is made (quarterly de-risk sells, rule changes, drawdown response).
-                    This is the audit trail required by the constitution.
-                  </p>
-                  <CommitteeMinuteForm />
-                </div>
-              )}
-              <GovernanceSeal
-                overall={d.health.overall}
-                overallLabel={d.health.overallLabel}
-                dimensions={sealDimensions}
-                constitutionLabel="Your plan — health score"
-                lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
-                narrative={
-                  hasBalance
-                    ? `Flexible growth mode. ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached. " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " item" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
-                    : "No portfolio balance yet. Enter your holdings to begin tracking."
-                }
-                href="/governance"
-                hrefLabel="View plan →"
-              />
-              {hasBalance && <ComplianceBoard positions={d.complianceBands} totalValue={d.totalValue} />}
-              {hasBalance && <GovernanceAlignment data={d.govAlignment} />}
-            </>
-          )}
+          {isAdmin && !d.emeActive && <section className="atlas-command-band"><div><span>DECISION JOURNAL</span><h2>Record a governed exception</h2><p>Use this only after a rule has triggered a decision. The minute records the authority and audit trail.</p></div><CommitteeMinuteForm /></section>}
 
           {/* Portfolio-level look-through — actual holdings only, never target weights. */}
           <div className="rounded-2xl card-lux p-5">
@@ -476,8 +366,8 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
 
         </div>
 
-        {/* Right sidebar */}
-        <div className="space-y-5 reveal-stack">
+        {/* Detailed allocation/history/FX instrumentation has moved out of the cockpit hierarchy. */}
+        <div className="hidden" aria-hidden="true">
           {/* Allocation donut */}
           <Link href="/portfolio" className="group block rounded-2xl card-lux p-5 relative overflow-hidden">
             <div className="flex items-start justify-between gap-2 mb-1">

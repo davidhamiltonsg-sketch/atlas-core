@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 import { getSession, createSession } from "@/lib/session"
+import { activePortfolioContext } from "@/lib/active-portfolio"
+import { assertCanMutateOwner } from "@/lib/mutation-auth"
 
 export async function updateProfileAction(formData: FormData) {
   const session = await getSession()
@@ -34,6 +36,8 @@ export async function updateProfileAction(formData: FormData) {
 export async function updateContributionSettingsAction(formData: FormData) {
   const session = await getSession()
   if (!session) return { error: "Unauthenticated." }
+  const active = await activePortfolioContext(session)
+  try { assertCanMutateOwner(session, active.owner.id) } catch (error) { return { error: error instanceof Error ? error.message : "Read-only access." } }
 
   const monthly = parseFloat(formData.get("monthlyContribution") as string)
   const annual = parseFloat(formData.get("annualLumpSum") as string)
@@ -46,7 +50,7 @@ export async function updateContributionSettingsAction(formData: FormData) {
   if (isNaN(rfr) || rfr < 0 || rfr > 1) return { error: "Risk-free rate must be between 0 and 1." }
 
   await db.user.update({
-    where: { id: session.userId },
+    where: { id: active.owner.id },
     data: { monthlyContribution: monthly, annualLumpSum: annual, contributionGrowthRate: growth, riskFreeRate: rfr, updatedAt: new Date() },
   })
 

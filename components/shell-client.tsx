@@ -6,6 +6,7 @@ import { Topbar } from "./topbar"
 import type { ConstitutionId } from "@/lib/constitutions"
 import Link from "next/link"
 import { LayoutDashboard, Radar, ShieldCheck, Wallet, BarChart3 } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 interface ShellClientProps {
   title: string
@@ -18,6 +19,14 @@ interface ShellClientProps {
 
 export function ShellClient({ title, subtitle, userName, isAdmin = false, constitutionId = "atlas-core", children }: ShellClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+  const mobileLinks = [
+    { href: "/", label: "Overview", icon: LayoutDashboard, active: pathname === "/" },
+    { href: `/mission-control?portfolio=${constitutionId}`, label: "Mission", icon: Radar, active: pathname === "/mission-control" },
+    { href: "/portfolio", label: "Activity", icon: Wallet, active: pathname === "/portfolio" },
+    { href: "/risk", label: "Risk", icon: BarChart3, active: pathname === "/risk" },
+    { href: "/governance", label: "Rules", icon: ShieldCheck, active: pathname === "/governance" },
+  ]
 
   return (
     <div data-theme={constitutionId === "silicon-brick-road" ? "sbr" : "atlas-core"} className="atlas-shell command-shell flex h-dvh min-h-dvh overflow-hidden print:block print:h-auto print:overflow-visible">
@@ -32,11 +41,7 @@ export function ShellClient({ title, subtitle, userName, isAdmin = false, consti
         />
         <main className="atlas-stage command-stage flex-1 overflow-y-auto px-4 pb-24 pt-5 lg:px-10 lg:pb-12 print:block print:h-auto print:overflow-visible print:p-0 reveal-stack"><div className="mx-auto w-full max-w-[1600px]">{children}</div></main>
         <nav className="atlas-mobile-nav fixed inset-x-3 bottom-[max(.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 rounded-2xl border border-border bg-card/90 p-1.5 shadow-2xl backdrop-blur-xl lg:hidden" aria-label="Primary navigation">
-          <Link href="/" aria-label="Overview"><LayoutDashboard /><span>Overview</span></Link>
-          <Link href={`/mission-control?portfolio=${constitutionId}`} aria-label="Mission Control"><Radar /><span>Mission</span></Link>
-          <Link href="/portfolio" aria-label="Activity"><Wallet /><span>Activity</span></Link>
-          <Link href="/risk" aria-label="Risk"><BarChart3 /><span>Risk</span></Link>
-          <Link href="/governance" aria-label="Constitution"><ShieldCheck /><span>Rules</span></Link>
+          {mobileLinks.map(({href,label,icon:Icon,active})=><Link key={label} href={href} aria-label={label} aria-current={active?"page":undefined} className={active?"is-active":undefined}><Icon /><span>{label}</span></Link>)}
         </nav>
       </div>
     </div>

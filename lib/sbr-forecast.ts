@@ -9,6 +9,7 @@
  */
 
 import { SBR_SPEC, type ReturnAssumption } from "@/lib/portfolio-spec"
+import { effectiveMonthlyRate } from "@/lib/forecast"
 
 export type SbrGrowthRates = ReturnAssumption
 
@@ -16,8 +17,6 @@ export type SbrGrowthRates = ReturnAssumption
 export const SBR_ASSET_EXPECTED_RETURNS: Record<string, SbrGrowthRates> = Object.fromEntries(
   SBR_SPEC.funds.filter(f => f.expectedReturn).map(f => [f.ticker, f.expectedReturn!])
 )
-
-const FALLBACK_RATES: SbrGrowthRates = { conservative: 0.03, base: 0.07, aggressive: 0.11 }
 
 /**
  * Blends per-fund expected-return assumptions by the ACTUAL current allocation (not the
@@ -40,7 +39,9 @@ export function sbrBlendedGrowthRate(allocPct: Record<string, number>): SbrGrowt
     weight += w
   }
 
-  if (weight <= 0) return FALLBACK_RATES
+  if (weight <= 0) {
+    return sbrBlendedGrowthRate(Object.fromEntries(SBR_SPEC.funds.map(f => [f.ticker, f.target])))
+  }
   return { conservative: conservative / weight, base: base / weight, aggressive: aggressive / weight }
 }
 
@@ -63,7 +64,7 @@ export function requiredAnnualReturn(
   let lo = 0, hi = 3.0
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2
-    const mr = mid / 12
+    const mr = effectiveMonthlyRate(mid)
     let value = currentValue
     for (let m = 0; m < horizonMonths; m++) value = value * (1 + mr) + monthlyContribution
     if (value >= targetValue) hi = mid
@@ -84,7 +85,7 @@ export function monthsToTarget(
   targetValue: number
 ): number | null {
   if (targetValue <= 0 || currentValue >= targetValue) return 0
-  const monthlyRate = annualRate / 12
+  const monthlyRate = effectiveMonthlyRate(annualRate)
   let value = currentValue
   for (let m = 1; m <= MAX_MONTHS; m++) {
     value = value * (1 + monthlyRate) + monthlyContribution

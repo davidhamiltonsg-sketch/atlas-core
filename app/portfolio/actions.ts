@@ -9,6 +9,7 @@ import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { assertCanMutateOwner } from "@/lib/mutation-auth"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
 const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQAC: "EQAC.L", SMH: "SMH.L", IBIT: "IBIT", BTC: "IBIT", DBMFE: "DBMFE.PA" }
@@ -44,6 +45,7 @@ export async function updateHoldingsManually(
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
   const active = await activePortfolioContext(session)
+  assertCanMutateOwner(session, active.owner.id)
 
   const usdSgdRate = await getUsdSgdRate()
 
@@ -84,6 +86,7 @@ export async function applyExtractedHoldings(
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
   const active = await activePortfolioContext(session)
+  assertCanMutateOwner(session, active.owner.id)
   const constitutionId = active.constitutionId
   const ownerId = active.owner.id
   const isSbr = constitutionId === "silicon-brick-road"
@@ -128,6 +131,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
   const active = await activePortfolioContext(session)
+  assertCanMutateOwner(session, active.owner.id)
   const constitutionId = active.constitutionId
   const ownerId = active.owner.id
   if (constitutionId === "atlas-core") {

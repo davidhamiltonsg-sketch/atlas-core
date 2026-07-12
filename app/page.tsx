@@ -261,23 +261,22 @@ async function getDashboardData(userId: string) {
   const daysToContribution = Math.ceil((nextContribution.getTime() - todayMidnight.getTime()) / 86_400_000)
   const nextContributionLabel = nextContribution.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 
-  const donutData = holdings.map((h) => {
+  const donutData = holdings.filter(h=>["VWRA","EQAC","SMH","BTC","IBIT","GBTC","DBMFE"].includes(h.ticker)).map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  // Collapse BTC + IBIT into one Bitcoin-sleeve slice (one 7% position).
+  // Surface one governed Bitcoin sleeve; GBTC history stays separate in Activity.
   {
-    const btc = donutData.find((d) => d.ticker === "BTC")
-    const ibit = donutData.find((d) => d.ticker === "IBIT")
-    if (btc && ibit) {
+    const bitcoin = donutData.filter((d) => ["BTC","IBIT","GBTC"].includes(d.ticker))
+    if (bitcoin.length) {
       const merged = {
-        ticker: "BTC", name: "Bitcoin sleeve (BTC + IBIT)",
-        actualPct: btc.actualPct + ibit.actualPct, targetPct: BITCOIN_SLEEVE_TARGET_PCT,
-        color: btc.color, value: btc.value + ibit.value,
+        ticker: "BTC", name: "Bitcoin sleeve · IBIT target",
+        actualPct: bitcoin.reduce((sum,row)=>sum+row.actualPct,0), targetPct: BITCOIN_SLEEVE_TARGET_PCT,
+        color: bitcoin[0].color, value: bitcoin.reduce((sum,row)=>sum+row.value,0),
       }
-      const rest = donutData.filter((d) => d.ticker !== "BTC" && d.ticker !== "IBIT")
+      const rest = donutData.filter((d) => !["BTC","IBIT","GBTC"].includes(d.ticker))
       rest.push(merged)
       rest.sort((a, b) => b.actualPct - a.actualPct)
       donutData.length = 0
@@ -342,23 +341,22 @@ async function getDashboardData(userId: string) {
     aggregate: false as boolean,
   }))
 
-  // Collapse BTC + IBIT into a single Bitcoin-sleeve row. Value, cost basis and
-  // unrealised P/L are additive across the two vehicles; per-instrument shares/price are
+  // Collapse Bitcoin instruments into one economic sleeve. Instrument history remains
+  // separate in storage; the aggregate is reconciled only when every positive row has basis.
   // not, so the row is flagged `aggregate` and the table renders "—" for those cells.
   {
-    const btc = holdingsRows.find((r) => r.ticker === "BTC")
-    const ibit = holdingsRows.find((r) => r.ticker === "IBIT")
-    if (btc && ibit) {
-      const value = btc.value + ibit.value
-      const anyCost = btc.unrealisedSgd !== null || ibit.unrealisedSgd !== null
-      const unrealisedSgd = anyCost ? (btc.unrealisedSgd ?? 0) + (ibit.unrealisedSgd ?? 0) : null
-      const costBasis = (btc.value - (btc.unrealisedSgd ?? 0)) + (ibit.value - (ibit.unrealisedSgd ?? 0))
-      const unrealisedPct = anyCost && costBasis > 0 ? (unrealisedSgd! / costBasis) * 100 : null
-      const sleevePct = btc.actualPct + ibit.actualPct
-      const cap = HARD_THRESHOLDS["IBIT"]?.high ?? 8
+    const bitcoinRows = holdingsRows.filter((r) => ["BTC", "IBIT", "GBTC"].includes(r.ticker))
+    if (bitcoinRows.length > 1) {
+      const value = bitcoinRows.reduce((sum,r)=>sum+r.value,0)
+      const reconciled = bitcoinRows.filter(r=>r.value>0).every(r=>r.unrealisedSgd!==null)
+      const unrealisedSgd = reconciled ? bitcoinRows.reduce((sum,r)=>sum+(r.unrealisedSgd ?? 0),0) : null
+      const costBasis = reconciled ? bitcoinRows.reduce((sum,r)=>sum+r.value-(r.unrealisedSgd ?? 0),0) : 0
+      const unrealisedPct = unrealisedSgd !== null && costBasis > 0 ? (unrealisedSgd / costBasis) * 100 : null
+      const sleevePct = bitcoinRows.reduce((sum,r)=>sum+r.actualPct,0)
+      const cap = 8
       const status: ActionStatus = sleevePct > cap ? "hard" : Math.abs(sleevePct - BITCOIN_SLEEVE_TARGET_PCT) > 1 ? "soft" : "healthy"
       const sleeve = {
-        ticker: "BTC", name: "Bitcoin sleeve · BTC + IBIT", color: btc.color,
+        ticker: "BTC", name: `Bitcoin sleeve · ${bitcoinRows.map(r=>r.ticker).join(" + ")}`, color: bitcoinRows[0].color,
         units: 0, value, latestPrice: 0, priceChangePct: null, priceHistory: [] as number[],
         avgCostUsd: null as number | null, unrealisedSgd, unrealisedPct,
         actualPct: sleevePct, targetPct: BITCOIN_SLEEVE_TARGET_PCT, toleranceBand: 1,
@@ -366,7 +364,7 @@ async function getDashboardData(userId: string) {
         thisMonth: dcaByTicker.get("IBIT") ?? dcaByTicker.get("BTC") ?? null,
         aggregate: true as boolean,
       }
-      const rest = holdingsRows.filter((r) => r.ticker !== "BTC" && r.ticker !== "IBIT")
+      const rest = holdingsRows.filter((r) => !["BTC", "IBIT", "GBTC"].includes(r.ticker))
       rest.push(sleeve)
       const ord: Record<ActionStatus, number> = { hard: 0, soft: 1, healthy: 2 }
       rest.sort((a, b) => ord[a.status] - ord[b.status])
@@ -510,7 +508,7 @@ export default async function Dashboard() {
               {d.outOfScopeTickers.join(", ")} {d.outOfScopeTickers.length > 1 ? "are" : "is"} held but not in your plan
             </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-              Decide what to do: keep it and set a target, switch to an approved alternative, or sell it.
+              Follow the migration: retain IBIT, keep each legacy row and cost basis intact, and use replacement cash only after IBKR confirms settlement.
             </p>
           </div>
           <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">Review →</span>
@@ -566,7 +564,7 @@ export default async function Dashboard() {
         </div>
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+      <div className="grid gap-5">
         <div className="space-y-5 min-w-0 reveal-stack">
 
           {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
@@ -574,10 +572,12 @@ export default async function Dashboard() {
           <section className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.ladder.headline}</h2><p>{d.ladder.instruction}</p></div><Link href="/mission-control?portfolio=atlas-core">Open Mission Control →</Link></section>
 
           {/* 2. Governance Seal — constitution health */}
-          <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/constitution">Read constitution →</Link></section>
+          <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/governance">Read constitution →</Link></section>
 
           {/* 3. Compliance Board — position bands */}
           <section className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>2045 disciplined accumulation</h2><p>Target VWRA 70 · EQAC 10 · SMH 5 · IBIT 5 · DBMFE 10. Legacy instruments remain visible until sales settle.</p></div><Link href="/forecast">Open forecast →</Link></section>
+
+          <section className="deck-ledger" aria-labelledby="atlas-ledger-title"><div className="deck-ledger-head"><div><span>TARGET POSITION LEDGER</span><h2 id="atlas-ledger-title">Current target holdings</h2><p>Closed and migrating instruments remain in Activity, not in this target view.</p></div><Link href="/portfolio">Open history and activity →</Link></div><div className="deck-ledger-scroll"><table><thead><tr><th>Asset</th><th>Allocation</th><th>Units</th><th>Current price</th><th>Market value</th><th>Cost basis</th><th>Unrealised P/L</th></tr></thead><tbody>{d.holdingsRows.filter(row=>["VWRA","EQAC","SMH","BTC","IBIT","DBMFE"].includes(row.ticker)).map(row=>{const basis=row.unrealisedSgd===null?null:row.value-row.unrealisedSgd;return <tr key={row.ticker}><td><b>{row.ticker}</b><small>{row.name}</small></td><td>{row.actualPct.toFixed(1)}%</td><td>{row.aggregate?"—":row.units.toLocaleString("en-SG",{maximumFractionDigits:4})}</td><td>{row.aggregate?"—":formatCurrency(row.latestPrice,"SGD")}</td><td><b>{formatCurrency(row.value,"SGD")}</b></td><td>{basis===null?"Needs reconciliation":formatCurrency(basis,"SGD")}</td><td className={row.unrealisedSgd!==null&&row.unrealisedSgd<0?"down":"up"}>{row.unrealisedSgd===null?"—":`${row.unrealisedSgd>=0?"+":"−"}${formatCurrency(Math.abs(row.unrealisedSgd),"SGD")}`}</td></tr>})}</tbody></table></div></section>
 
           {/* ── WHAT YOU OWN ─────────────────────────────────────────── */}
           <Link href="/reports" className="group flex items-center gap-3 rounded-2xl border border-border bg-card/75 backdrop-blur-md px-5 py-4 card-elevated hover:bg-accent/40 hover:border-violet-500/30 hover:-translate-y-0.5 transition-all">
@@ -593,38 +593,6 @@ export default async function Dashboard() {
 
         </div>
 
-        {/* Right sidebar */}
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start reveal-stack">
-
-          {/* 2045 goal + contribution countdown */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl card-lux p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">2045 Base Case</p>
-              <p className="text-lg font-black tabular-nums gradient-text leading-tight">
-                {d.base2045 >= 1_000_000
-                  ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M`
-                  : `S$${(d.base2045 / 1_000).toFixed(0)}K`}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-1">{(d.baseRate * 100).toFixed(1)}% p.a. · {d.yearsTo2045} yr</p>
-              <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bar-brand bar-fill opacity-90" style={{ width: `${d.base2045 > 0 ? Math.min(100, (d.totalValue / d.base2045) * 100) : 0}%` }} />
-              </div>
-            </div>
-            <div className="rounded-2xl card-lux p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Next Contribution</p>
-              <p className="text-lg font-black tabular-nums leading-tight">
-                {d.daysToContribution === 0 ? "Today" : `${d.daysToContribution}d`}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-1">{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "SGD")}</p>
-              <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bar-brand bar-fill opacity-90" style={{ width: `${Math.max(5, 100 - (d.daysToContribution / 31) * 100)}%` }} />
-              </div>
-            </div>
-          </div>
-
-
-          {/* Health methodology */}
-        </div>
       </div>
     </Shell>
   )

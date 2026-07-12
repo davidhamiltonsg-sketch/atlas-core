@@ -18,6 +18,15 @@ export type AssetReturnAssumption = ReturnAssumption
 
 export const FORECAST_BENCHMARKS_AS_OF = ATLAS_SPEC.forecastBenchmarksAsOf
 
+export function effectiveMonthlyRate(annualRate: number): number {
+  if (annualRate <= -1) throw new RangeError("annualRate must be greater than -100%")
+  return Math.pow(1 + annualRate, 1 / 12) - 1
+}
+
+export function yearsToHorizon(horizonYear: number, currentYear = new Date().getFullYear()): number {
+  return Math.max(0, horizonYear - currentYear)
+}
+
 // Derived from ATLAS_SPEC.funds — the spec is the single source of truth for return assumptions.
 export const ASSET_EXPECTED_RETURNS: Record<string, AssetReturnAssumption> = Object.fromEntries(
   ATLAS_SPEC.funds.filter(f => f.expectedReturn).map(f => [f.ticker, f.expectedReturn!])
@@ -91,7 +100,7 @@ export function projectPortfolio(
   contributionGrowthRate: number
 ): number {
   let value = currentValue
-  const monthlyRate = annualRate / 12
+  const monthlyRate = effectiveMonthlyRate(annualRate)
   for (let year = 0; year < years; year++) {
     const contribution = monthlyContribution * Math.pow(1 + contributionGrowthRate, year)
     for (let month = 0; month < 12; month++) {

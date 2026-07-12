@@ -7,13 +7,13 @@ import {
 import type { SbrPosition } from "@/lib/sbr-engine"
 import type { GovAlignment, Align } from "@/lib/governance-status"
 
-export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: number): GovAlignment {
+export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: number, weightsAsOf?: Date, now = new Date()): GovAlignment {
   if (totalValue <= 0) return { checks: [], breaches: 0, watches: 0, overall: "ok" }
   const st = (breach: boolean, watch: boolean): Align => breach ? "breach" : watch ? "watch" : "ok"
   const actual = new Map(positions.map((p) => [p.ticker === "SMH.L" ? "SMH" : p.ticker, p.actualPct]))
   const combined = (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
   const equity = (actual.get("VWRA") ?? 0) + (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
-  const lt = computeSbrLookThrough(positions)
+  const lt = computeSbrLookThrough(positions, now, weightsAsOf)
   const rangeDrift = SBR.funds.filter((f) => {
     const pct = actual.get(f.ticker) ?? 0
     return pct < f.rangeLow || pct > f.rangeHigh
@@ -30,7 +30,7 @@ export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: numb
     { id: "semiconductor-lt", label: `Semiconductors stay below ${SBR_SEMICONDUCTOR_LIMIT}%`, status: st(lt.semiconductorPct >= SBR_SEMICONDUCTOR_LIMIT, lt.semiconductorPct >= SBR_SEMICONDUCTOR_WATCH), detail: `${lt.semiconductorPct.toFixed(1)}% (watch ${SBR_SEMICONDUCTOR_WATCH}%, review ${SBR_SEMICONDUCTOR_LIMIT}%)` },
     { id: "country-lt", label: `No country reaches ${SBR_COUNTRY_LIMIT}%`, status: st(lt.topCountry.pct >= SBR_COUNTRY_LIMIT, lt.topCountry.pct >= SBR_COUNTRY_WATCH), detail: `${lt.topCountry.name} is ${lt.topCountry.pct.toFixed(1)}% (watch ${SBR_COUNTRY_WATCH}%, review ${SBR_COUNTRY_LIMIT}%)` },
     { id: "asset", label: "Equity remains within the high-risk mandate", status: st(equity > (SBR.totalEquityMaxPct ?? 100), equity > (SBR.totalEquityMaxPct ?? 100) - 2), detail: `Equity ${equity.toFixed(1)}%; managed futures ${(actual.get("DBMFE") ?? 0).toFixed(1)}%` },
-    { id: "freshness", label: "Underlying fund data is current", status: st(lt.ageDays > 95, lt.ageDays > 35), detail: `Look-through data age ${lt.ageDays} days` },
+    { id: "freshness", label: "Underlying fund data is current", status: st(lt.stale, lt.freshness === "review"), detail: `Oldest required look-through source is ${lt.ageDays} days old` },
     { id: "ranges", label: "Each fund is inside its soft band", status: st(false, rangeDrift.length > 0), detail: rangeDrift.length ? `Contribution routing needed: ${rangeDrift.map(f => f.ticker).join(", ")}` : "All four funds are within range" },
   ]
   const breaches = checks.filter((c) => c.status === "breach").length
