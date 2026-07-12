@@ -101,9 +101,13 @@ async function loadPortfolioContext(active?: { constitutionId: "atlas-core" | "s
     const driftAlerts = withPct.filter(r => r.targetPct > 0 && Math.abs(r.pct - r.targetPct) > r.toleranceBand).length
     const cashPct = withPct.filter(r => ["SGOV", "CASH", "SGD"].includes(r.ticker.toUpperCase())).reduce((s, r) => s + r.pct, 0)
 
-    const holdingsOut = withPct
+    const targetTickers=new Set(constitution.funds.map(f=>f.ticker))
+    const targetRows=withPct.filter(r=>targetTickers.has(r.ticker.toUpperCase())||r.ticker.toUpperCase()==="IBIT")
+    const bitcoinRows=targetRows.filter(r=>["BTC","IBIT"].includes(r.ticker.toUpperCase()))
+    const nonBitcoin=targetRows.filter(r=>!["BTC","IBIT"].includes(r.ticker.toUpperCase()))
+    const displayRows=bitcoinRows.length?[...nonBitcoin,{...bitcoinRows[0],ticker:"BTC",name:"Bitcoin sleeve — IBIT",pct:bitcoinRows.reduce((s,r)=>s+r.pct,0),value:bitcoinRows.reduce((s,r)=>s+r.value,0)}]:nonBitcoin
+    const holdingsOut = displayRows
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, 8)
       .map(r => ({ ticker: r.ticker, name: r.name, pct: r.pct, color: r.color }))
 
     return {
