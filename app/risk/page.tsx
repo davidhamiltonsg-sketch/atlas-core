@@ -7,6 +7,10 @@ import { redirect } from "next/navigation"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
 import { ATLAS_TARGET_HHI, ATLAS_HHI_THRESHOLDS, atlasConcentrationLabel } from "@/lib/spec-derived"
+import { SBR_SPEC } from "@/lib/portfolio-spec"
+
+const SBR_TARGET_HHI=SBR_SPEC.funds.reduce((sum,f)=>sum+(f.target/100)**2,0)
+const SBR_HHI_THRESHOLDS={onTarget:SBR_TARGET_HHI+0.04,drifting:SBR_TARGET_HHI+0.08}
 
 // ─── Risk Math ─────────────────────────────────────────────────────────────────
 
@@ -35,15 +39,16 @@ function hhi(weights: number[]): number {
   return weights.reduce((s, w) => s + w * w, 0)
 }
 
-function hhiLabel(h: number): { label: string; color: string } {
-  const label = atlasConcentrationLabel(h)
+function hhiLabel(h: number,isSbr=false): { label: string; color: string } {
+  const t=isSbr?SBR_HHI_THRESHOLDS:ATLAS_HHI_THRESHOLDS
+  const label = isSbr?(h<=t.onTarget?"On Target":h<=t.drifting?"Drifting":"Concentrated"):atlasConcentrationLabel(h)
   const color = label === "On Target" ? "text-green-500" : label === "Drifting" ? "text-yellow-400" : "text-red-500"
   return { label, color }
 }
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
-async function getRiskData(userId: string) {
+async function getRiskData(userId: string,isSbr=false) {
   const [holdings, user] = await Promise.all([
     db.holding.findMany({
       where: { userId },
@@ -184,11 +189,10 @@ async function getRiskData(userId: string) {
   // Bitcoin sleeve: BTC + IBIT are ONE 7% position (BTC run-off, IBIT accumulation). Show the
   // effective sleeve target so the weight bars/table don't read BTC as "underweight vs 7%" while
   // IBIT reads "overweight vs 0%" — consistent with the cockpit, reports, and governance surfaces.
-  const sleeveTargets = new Map(
+  const sleeveTargets = new Map((isSbr?holdingStats.map(h=>({ticker:h.ticker,targetPct:h.targetPct})):
     applyBitcoinSleeve(
       holdingStats.map(h => ({ ticker: h.ticker, actualPct: totalValue > 0 ? (h.latestValue / totalValue) * 100 : 0, targetPct: h.targetPct }))
-    ).map(p => [p.ticker, p.targetPct])
-  )
+    )).map(p => [p.ticker, p.targetPct]))
   for (const h of holdingStats) h.targetPct = sleeveTargets.get(h.ticker) ?? h.targetPct
 
   return {
@@ -243,7 +247,8 @@ export default async function RiskPage() {
   const session = await getSession()
   if (!session) redirect("/login")
   const active = await activePortfolioContext(session)
-  const data = await getRiskData(active.owner.id)
+  const isSbr=active.constitutionId==="silicon-brick-road"
+  const data = await getRiskData(active.owner.id,isSbr)
 
   const hasData = data.dataPoints >= 2
   // Sharpe requires 12+ periods. Annualised volatility (and the VaR derived from it) needs
@@ -257,7 +262,9 @@ export default async function RiskPage() {
   const volInfo = hasEnoughForVol ? volLabel(data.annualisedVol) : null
   const sharpeInfo = data.sharpe !== null ? sharpeLabel(data.sharpe) : null
   const ddInfo = hasData ? ddLabel(data.maxDrawdown) : null
-  const hhiInfo = hhiLabel(data.hhiScore)
+  const hhiInfo = hhiLabel(data.hhiScore,isSbr)
+  const targetHhi=isSbr?SBR_TARGET_HHI:ATLAS_TARGET_HHI
+  const hhiThresholds=isSbr?SBR_HHI_THRESHOLDS:ATLAS_HHI_THRESHOLDS
 
   return (
     <Shell title="Risk Metrics" subtitle="Volatility, drawdown, and concentration analysis" userName={session.name} isAdmin={session.role === "admin"}>
@@ -347,7 +354,7 @@ export default async function RiskPage() {
               {data.hhiScore.toFixed(3)}
             </p>
             <p className={`text-[11px] font-semibold mt-0.5 ${hhiInfo.color}`}>{hhiInfo.label}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Target: {ATLAS_TARGET_HHI.toFixed(3)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Target: {targetHhi.toFixed(3)}</p>
           </div>
         </div>
 
@@ -488,9 +495,9 @@ export default async function RiskPage() {
                 <p className={`text-xs font-semibold mt-1 ${hhiInfo.color}`}>{hhiInfo.label}</p>
               </div>
               <div className="text-right text-xs text-muted-foreground space-y-1">
-                <p>&lt;{ATLAS_HHI_THRESHOLDS.onTarget.toFixed(2)} — On Target</p>
-                <p>{ATLAS_HHI_THRESHOLDS.onTarget.toFixed(2)}–{ATLAS_HHI_THRESHOLDS.drifting.toFixed(2)} — Drifting</p>
-                <p>&gt;{ATLAS_HHI_THRESHOLDS.drifting.toFixed(2)} — Concentrated</p>
+                <p>&lt;{hhiThresholds.onTarget.toFixed(2)} — On Target</p>
+                <p>{hhiThresholds.onTarget.toFixed(2)}–{hhiThresholds.drifting.toFixed(2)} — Drifting</p>
+                <p>&gt;{hhiThresholds.drifting.toFixed(2)} — Concentrated</p>
               </div>
             </div>
 

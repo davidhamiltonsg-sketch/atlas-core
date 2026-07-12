@@ -60,7 +60,9 @@ export async function getSbrMarketData(): Promise<SbrMarketResult> {
 
   for(const row of rows)if(row.price>0)positions[row.ticker]={price:row.price,hi52:row.hi52}
 
-  const stale = Object.keys(positions).length === 0
+  // A portfolio-level "fresh" badge is allowed only when every governed building block
+  // returned a usable quote. Partial success must remain visibly stale.
+  const stale = rows.some(row => row.price <= 0)
 
   return { positions, stale, asOf }
 }

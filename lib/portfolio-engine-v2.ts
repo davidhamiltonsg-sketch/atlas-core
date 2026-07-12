@@ -69,12 +69,16 @@ export function decidePortfolio(c: Constitution, positions: GovernedPosition[], 
     .sort((a, b) => ((actual.get(b.ticker) ?? 0) - (b.hardCap ?? 100)) - ((actual.get(a.ticker) ?? 0) - (a.hardCap ?? 100)))[0]
   if (hardBreach) {
     const pct = actual.get(hardBreach.ticker) ?? 0
+    const breached = new Set(c.funds.filter(f => f.hardCap !== null && (actual.get(f.ticker) ?? 0) > f.hardCap).map(f => f.ticker))
+    const candidates = c.funds.filter(f => !breached.has(f.ticker) && (f.hardCap === null || (actual.get(f.ticker) ?? 0) < f.hardCap))
     const core = c.funds[0]
+    const destination = candidates.find(f => f.ticker === core.ticker) ??
+      candidates.sort((a,b) => ((actual.get(a.ticker) ?? 0)-a.target)-((actual.get(b.ticker) ?? 0)-b.target))[0] ?? null
     return {
       state: "invested",
       legacyTickers: [],
       move: move("critical", hardBreach.ticker, `Pause ${hardBreach.ticker} purchases`, `${hardBreach.ticker} is ${pct.toFixed(1)}%, above its ${hardBreach.hardCap}% hard cap. Document a correction; do not make an automatic market order.`, "Hard limits require review, while new cash is routed away from the breached holding.", hardBreach.color),
-      contribution: allocationPlan(c, monthly, core, `A hard cap is breached; route new money to ${core.ticker}.`),
+      contribution: allocationPlan(c, monthly, destination, destination ? `A hard cap is breached; route new money to ${destination.ticker}.` : "All governed funds are ineligible; bank the contribution pending review."),
     }
   }
 

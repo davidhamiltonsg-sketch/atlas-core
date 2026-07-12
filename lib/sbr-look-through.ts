@@ -63,7 +63,7 @@ function aggregate(positions: Array<{ ticker: string; actualPct: number }>, tabl
   return Object.entries(totals).map(([name, pct]) => ({ name, pct })).sort((a, b) => b.pct - a.pct)
 }
 
-export function computeSbrLookThrough(positions: Array<{ ticker: string; actualPct: number }>, now = new Date()): SbrLookThrough {
+export function computeSbrLookThrough(positions: Array<{ ticker: string; actualPct: number }>, now = new Date(), weightsAsOf = new Date(SBR_WEIGHTS_AS_OF)): SbrLookThrough {
   // No securities means no inferred target exposure.
   const invested = positions.filter((p) => p.actualPct > 0)
   const companies = aggregate(invested, COMPANIES)
@@ -75,7 +75,7 @@ export function computeSbrLookThrough(positions: Array<{ ticker: string; actualP
   const topCompany = companies[0] ?? { name: "—", pct: 0 }
   const topCountry = countries[0] ?? { name: "—", pct: 0 }
   const topIndustry = industries[0] ?? { name: "—", pct: 0 }
-  const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(SBR_WEIGHTS_AS_OF).getTime()) / 86_400_000))
+  const ageDays = Math.max(0, Math.floor((now.getTime() - weightsAsOf.getTime()) / 86_400_000))
   const warnings: string[] = []
   if (topCompany.pct >= SBR_SINGLE_COMPANY_WATCH) warnings.push(`${topCompany.name} is ${topCompany.pct.toFixed(1)}% look-through`)
   if (technologyPct >= SBR_TECHNOLOGY_WATCH) warnings.push(`Technology-related industries are ${technologyPct.toFixed(1)}%`)

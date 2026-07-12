@@ -34,6 +34,9 @@ eq("SBR routes to furthest-underweight IMID", [d.state, d.move.ticker], ["invest
 d = decidePortfolio(SILICON_BRICK_ROAD, [p("IMID", 74), p("EQAC", 16), p("SMH", 5), p("IB01", 5)])
 eq("SBR hard cap pauses EQAC and routes core", [d.move.severity, d.move.ticker, d.contribution.allocations.find(a => a.amount > 0)?.ticker], ["critical", "EQAC", "IMID"])
 
+d = decidePortfolio(SILICON_BRICK_ROAD, [p("IMID", 91), p("EQAC", 4), p("SMH", 2), p("IB01", 3)])
+eq("SBR capped core cannot receive contribution", [d.move.severity, d.move.ticker, d.contribution.allocations.find(a => a.amount > 0)?.ticker], ["critical", "IMID", "EQAC"])
+
 d = decidePortfolio(ATLAS_CORE, [p("VT", 40), p("QQQM", 30), p("VWO", 15), p("SMH_US", 10), p("BTC", 5)])
 eq("Atlas legacy holdings enter transition", [d.state, d.legacyTickers], ["transition", ["VT", "QQQM", "VWO", "SMH_US"]])
 

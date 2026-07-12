@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { sendMonthlyReminderEmail, emailConfigured } from "@/lib/email"
-import { computeSbrNextMove, sbrPhase, type SbrPosition } from "@/lib/sbr-engine"
+import { computeSbrNextMove, type SbrPosition } from "@/lib/sbr-engine"
 import { computeLadder } from "@/lib/ladder"
 import { getDealingWindow } from "@/lib/constitution"
 import { authorizeCron } from "@/lib/cron-auth"
@@ -65,9 +65,7 @@ export async function GET(req: Request) {
           .filter((p): p is SbrPosition => p !== null)
 
         const nextMove = computeSbrNextMove(positions, totalValue)
-        const phase = sbrPhase(totalValue)
-
-        const r = await sendMonthlyReminderEmail(u.email, u.name, "silicon-brick-road", nextMove, { key: phase.key, label: phase.label })
+        const r = await sendMonthlyReminderEmail(u.email, u.name, "silicon-brick-road", nextMove)
         results.push({ userId: u.id, emailed: !r.skipped, reason: r.skipped ? r.reason : undefined })
 
       } else {
@@ -97,7 +95,7 @@ export async function GET(req: Request) {
           color: "#7c3aed",
         }
 
-        const r = await sendMonthlyReminderEmail(u.email, u.name, "atlas-core", nextMove, undefined, dealingWindow)
+        const r = await sendMonthlyReminderEmail(u.email, u.name, "atlas-core", nextMove, dealingWindow)
         results.push({ userId: u.id, emailed: !r.skipped, reason: r.skipped ? r.reason : undefined })
       }
     } catch (e) {

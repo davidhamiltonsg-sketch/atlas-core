@@ -173,7 +173,6 @@ export async function sendMonthlyReminderEmail(
   toName: string,
   portfolio: "atlas-core" | "silicon-brick-road",
   nextMove: NextMove,
-  phase?: { key: string; label: string },
   dealingWindow?: { opens: string; closes: string },
 ) {
   if (!emailConfigured()) return { skipped: true as const, reason: "RESEND_API_KEY not set" }

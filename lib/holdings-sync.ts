@@ -270,6 +270,7 @@ export async function importIbkrActivityForUser(
   let ledgerImported = 0
   let contributionsImported = 0
   const affected = new Set<string>()
+  const bankMovements: Array<Parameters<typeof recordDcaBankMovement>[0]> = []
 
   // Heal any already-doubled trades using this report as the source of truth (removes the
   // duplicates a prior re-import under new tradeIDs left behind). Only keys the report covers are
@@ -307,12 +308,11 @@ export async function importIbkrActivityForUser(
         date: tradeDate, note: `[ibkr:${e.tradeID}]`,
       },
     })
-    const signedBankMovement = e.buySell === "BUY"
-      ? -(amountSgd + (e.commission ?? 0) * e.fxRate)
-      : Math.max(0, amountSgd - (e.commission ?? 0) * e.fxRate)
-    await recordDcaBankMovement({
-      userId, constitutionId, currency: "SGD", type: e.buySell === "BUY" ? "PURCHASE" : "ADJUSTMENT",
-      amount: signedBankMovement, externalId: `ibkr-trade:${e.tradeID}`,
+    // Only purchases consume the contribution carry-forward bank. Sale proceeds remain
+    // brokerage cash until a separately reported cash movement authoritatively credits it.
+    if (e.buySell === "BUY") bankMovements.push({
+      userId, constitutionId, currency: "SGD", type: "PURCHASE",
+      amount: -(amountSgd + (e.commission ?? 0) * e.fxRate), externalId: `ibkr-trade:${e.tradeID}`,
       description: `${e.buySell} ${e.quantity} ${identity.displayTicker}`, date: tradeDate,
     })
     // A "contribution" is new cash put to work, not any security purchase — buying with
@@ -382,13 +382,22 @@ export async function importIbkrActivityForUser(
         },
       })
       contributionsImported++
-      await recordDcaBankMovement({
+      bankMovements.push({
         userId, constitutionId, currency: "SGD", type: "CONTRIBUTION", amount: signed,
         externalId: `ibkr-cash:${entry.externalId}`, description: entry.description || entry.category,
         date: parseFlexDate(entry.date),
       })
     }
   }
+
+  // Replay the immutable sub-ledger in economic order, independent of which Flex section
+  // happened to be parsed first. Same-day cash credits precede purchases.
+  bankMovements.sort((a,b) => {
+    const time=(a.date?.getTime()??0)-(b.date?.getTime()??0)
+    if(time!==0)return time
+    return a.type==="CONTRIBUTION"&&b.type!=="CONTRIBUTION"?-1:b.type==="CONTRIBUTION"&&a.type!=="CONTRIBUTION"?1:0
+  })
+  for(const movement of bankMovements) await recordDcaBankMovement(movement)
 
   if (affected.size > 0) {
     const fx = await getUsdSgdRate()

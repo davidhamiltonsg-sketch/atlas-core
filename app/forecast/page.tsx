@@ -8,14 +8,10 @@ import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } 
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection } from "@/lib/forecast"
-import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
-import { sbrPhase } from "@/lib/sbr-engine"
+import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { activePortfolioContext } from "@/lib/active-portfolio"
-import { SBR_TARGET_RATES, SBR_ASSET_EXPECTED_RETURNS, sbrBrickRoadPhases } from "@/lib/spec-derived"
-import { EquityCurve, type ProjectionPoint } from "@/components/sbr/equity-curve"
-import { ScenarioCards, type Scenario } from "@/components/sbr/scenario-cards"
-import { BrickRoad } from "@/components/sbr/brick-road"
+import { SBR_ASSET_EXPECTED_RETURNS } from "@/lib/spec-derived"
 import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 
@@ -55,21 +51,11 @@ async function getForecastData(userId: string) {
 // ── SBR forecast helpers ──────────────────────────────────────────────────────
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
-const SBR_SEED = 10000
-const SBR_HORIZON_MONTHS = 60
-
-const SBR_SCENARIOS: Scenario[] = [
-  { name: "Strong",       rate: SBR_TARGET_RATES.aggressive, probability: 15, color: "green", description: "All four funds beat their long-run average for three straight years." },
-  { name: "Base",         rate: SBR_TARGET_RATES.base,       probability: 30, color: "sky",   description: "The most likely path — steady global growth, a few dips, recovery." },
-  { name: "Conservative", rate: SBR_TARGET_RATES.conservative, probability: 45, color: "amber", description: "Below-average returns — still clears the goal with discipline." },
-  { name: "Severe bear",  rate: null,                        probability: 10, color: "red",   description: "A prolonged downturn — the floor kicks in and the purchase waits." },
-]
-
 async function getSbrForecastData(userId: string) {
-  const holdings = await db.holding.findMany({
-    where: { userId, ticker: { in: SBR_FUND_TICKERS } },
-    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
-  })
+  const [holdings, owner] = await Promise.all([
+    db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 1 } } }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
+  ])
   const totalValue = holdings.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
   const allocMap: Record<string, number> = {}
   for (const h of holdings) {
@@ -77,93 +63,38 @@ async function getSbrForecastData(userId: string) {
     allocMap[h.ticker] = totalValue > 0 ? (value / totalValue) * 100 : 0
   }
   const growthRates = sbrBlendedGrowthRate(allocMap)
-  const target = SBR_SPEC.targetValue
-  const monthly = SBR_SPEC.monthlyContribution
-
-  const monthsToGoal = {
-    conservative: monthsToTarget(totalValue, monthly, growthRates.conservative, target),
-    base: monthsToTarget(totalValue, monthly, growthRates.base, target),
-    aggressive: monthsToTarget(totalValue, monthly, growthRates.aggressive, target),
+  const monthly = owner?.monthlyContribution ?? SBR_SPEC.monthlyContribution
+  const futureValue = (years: number, annualRate: number) => {
+    const months = years * 12
+    const monthlyRate = annualRate / 12
+    let value = totalValue
+    for (let month = 0; month < months; month++) value = value * (1 + monthlyRate) + monthly
+    return value
   }
-
-  // months already invested — approximate from contributions data
-  const trades = await db.trade.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } } })
-  const firstTrade = trades.length > 0
-    ? trades.reduce((earliest, t) => (t.date < earliest ? t.date : earliest), trades[0].date)
-    : null
-  const monthsElapsed = firstTrade
-    ? Math.max(0, Math.floor((Date.now() - new Date(firstTrade).getTime()) / (30.44 * 24 * 60 * 60 * 1000)))
-    : 0
-
-  // build month-by-month projection points
-  const horizonMonths = Math.max(SBR_HORIZON_MONTHS, (monthsToGoal.conservative ?? SBR_HORIZON_MONTHS) + 6)
-  const points: ProjectionPoint[] = []
-  for (let m = 0; m <= horizonMonths; m++) {
-    const mr_c = growthRates.conservative / 12
-    const mr_b = growthRates.base / 12
-    const mr_a = growthRates.aggressive / 12
-    const fv = (rate: number) => {
-      let v = totalValue
-      for (let i = 0; i < m; i++) v = v * (1 + rate) + monthly
-      return v
-    }
-    points.push({
-      month: m,
-      conservative: m === 0 ? totalValue : fv(mr_c),
-      base: m === 0 ? totalValue : fv(mr_b),
-      aggressive: m === 0 ? totalValue : fv(mr_a),
-      invested: totalValue + monthly * m,
-    })
-  }
-
-  const phase = sbrPhase(totalValue)
-
-  return {
-    totalValue, growthRates, monthsToGoal, monthsElapsed, points,
-    target, monthly, phase,
-  }
+  const horizons = [3, 5, 10].map(years => ({
+    years,
+    contributed: totalValue + monthly * years * 12,
+    conservative: futureValue(years, growthRates.conservative),
+    base: futureValue(years, growthRates.base),
+    aggressive: futureValue(years, growthRates.aggressive),
+  }))
+  return { totalValue, growthRates, monthly, horizons }
 }
 
 async function SbrForecast({ userId, userName, isAdmin }: { userId: string; userName: string; isAdmin: boolean }) {
   const d = await getSbrForecastData(userId)
-  const hasBalance = d.totalValue > 0
-
-  function monthsToLabel(months: number | null): string {
-    if (months === null) return "50+ years away at this rate"
-    if (months === 0) return "already there"
-    const dt = new Date()
-    dt.setDate(1)
-    dt.setMonth(dt.getMonth() + months)
-    return dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
-  }
-
-  const phases = sbrBrickRoadPhases(d.target)
-
   return (
-    <Shell title="Where the Road Leads" subtitle="Projections and scenarios for your home deposit" userName={userName} isAdmin={isAdmin}>
-
-      {/* Hero stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+    <Shell title="Where SBR Could Go" subtitle="Flexible-horizon scenarios — ranges, not promises or deadlines" userName={userName} isAdmin={isAdmin}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 mb-6">
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Portfolio Now</p>
-          <p className="mt-1 text-xl font-black tabular-nums">
-            {hasBalance ? <AnimatedNumber value={d.totalValue} currency="SGD" /> : <span className="text-muted-foreground">—</span>}
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Phase {d.phase.key}</p>
+          <p className="mt-1 text-xl font-black tabular-nums"><AnimatedNumber value={d.totalValue} currency="SGD" /></p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Flexible growth mode</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-          <p className="text-xs text-muted-foreground">Goal</p>
-          <p className="mt-1 text-xl font-black tabular-nums gradient-text">
-            <AnimatedNumber value={d.target} currency="SGD" />
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Home deposit target</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 card-elevated">
-          <p className="text-xs text-muted-foreground">Base Case ETA</p>
-          <p className="mt-1 text-xl font-black tabular-nums text-sky-400">
-            {d.monthsToGoal.base !== null ? monthsToLabel(d.monthsToGoal.base) : "—"}
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{(d.growthRates.base * 100).toFixed(1)}% p.a. blended</p>
+          <p className="text-xs text-muted-foreground">Base planning return</p>
+          <p className="mt-1 text-xl font-black tabular-nums text-sky-400">{(d.growthRates.base * 100).toFixed(1)}%</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Blended from actual holdings</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 card-elevated">
           <p className="text-xs text-muted-foreground">Monthly</p>
@@ -174,52 +105,12 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
         </div>
       </div>
 
-      {/* Time-to-goal range */}
-      {hasBalance && (
-        <div className="mb-5 rounded-xl border border-sky-500/20 bg-sky-500/[0.04] p-4">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            At SGD {d.monthly.toLocaleString()}/month and your current fund mix ({(d.growthRates.base * 100).toFixed(1)}% growth a year, blended from what you actually hold),
-            projected to reach your goal around <span className="font-semibold text-foreground">{monthsToLabel(d.monthsToGoal.base)}</span>
-            {" "}&mdash; could be as early as {monthsToLabel(d.monthsToGoal.aggressive)} or as late as {monthsToLabel(d.monthsToGoal.conservative)} depending on returns.
-          </p>
-        </div>
-      )}
-
-      {/* Brick Road */}
-      <div className="mb-5">
-        <BrickRoad
-          totalValue={d.totalValue}
-          targetValue={d.target}
-          currentPhase={d.phase.key}
-          phases={phases}
-          monthsToGoal={d.monthsToGoal.base}
-        />
+      <div className="mb-5 rounded-xl border border-sky-500/20 bg-sky-500/[0.04] p-4 text-xs leading-relaxed text-muted-foreground">
+        SBR has no fixed value target and no required end date. These illustrations show what the current balance plus S${d.monthly.toLocaleString()} monthly contributions could become. They are not probabilities, guarantees, valuations or trading signals.
       </div>
-
-      {/* Equity Curve */}
-      <div className="mb-5">
-        <EquityCurve
-          points={d.points}
-          currentMonth={d.monthsElapsed}
-          currentValue={d.totalValue}
-          targetValue={d.target}
-        />
-      </div>
-
-      {/* Scenario Cards */}
-      <div className="mb-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">What to expect at exit</p>
-        <p className="text-xs text-muted-foreground mb-4 max-w-xl leading-relaxed">
-          Four possible worlds. Probabilities sum to 100%. The floor &mdash; total capital invested &mdash; is the lowest the fund is structured to exit at.
-          Drag the slider to see how a different monthly amount changes the picture.
-        </p>
-        <ScenarioCards
-          scenarios={SBR_SCENARIOS}
-          defaultMonthly={d.monthly}
-          seedValue={SBR_SEED}
-          horizonMonths={SBR_HORIZON_MONTHS}
-          targetValue={d.target}
-        />
+      <div className="mb-5 overflow-x-auto rounded-xl border border-border bg-card p-5">
+        <h2 className="text-lg font-bold">Illustrative growth ranges</h2>
+        <table className="mt-4 w-full min-w-[620px] text-sm"><thead><tr className="text-left text-muted-foreground"><th className="py-2">Horizon</th><th>Cash contributed</th><th>Conservative</th><th>Base</th><th>Strong</th></tr></thead><tbody>{d.horizons.map(row => <tr key={row.years} className="border-t border-border"><td className="py-3 font-bold">{row.years} years</td><td>SGD {Math.round(row.contributed).toLocaleString()}</td><td>SGD {Math.round(row.conservative).toLocaleString()}</td><td className="font-bold text-sky-400">SGD {Math.round(row.base).toLocaleString()}</td><td>SGD {Math.round(row.aggressive).toLocaleString()}</td></tr>)}</tbody></table>
       </div>
 
       {/* Growth assumptions */}

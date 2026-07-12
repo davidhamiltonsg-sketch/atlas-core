@@ -208,6 +208,13 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   }
   const haveIbkr = Object.keys(posMap).length > 0
 
+  // London UCITS lines can be quoted in USD, GBP or GBp. Until quote metadata is
+  // resolved by ISIN/venue/currency, SBR valuation refreshes must use IBKR's base-currency
+  // position value and must never infer SGD value from an unlabelled Yahoo number.
+  if (constitutionId === "silicon-brick-road" && !haveIbkr) {
+    return { success: false, error: ibkrError ? `SBR requires an authoritative IBKR positions report: ${ibkrError}` : "SBR requires an authoritative IBKR positions report; public quote fallback is disabled." }
+  }
+
   if (Object.keys(priceMap).length === 0 && !haveIbkr) {
     return {
       success: false,
@@ -342,11 +349,11 @@ export async function extractFromScreenshot(
 For each holding visible, return a JSON array with objects containing:
 - ticker: the stock/ETF ticker symbol (string)
 - units: number of shares/units held (number)
-- price: current price per unit in USD (number)
+- price: current price per unit in the trading currency shown (number)
 - value: total market value in SGD (number, as shown in the account base currency)
 
 Only include ETF/stock holdings, not cash. Return ONLY a valid JSON array, no explanation.
-Example: [{"ticker":"VWRA","units":428,"price":155.52,"value":85209.84}]`,
+Example: [{"ticker":"IMID","units":428,"price":42.52,"value":24560.84}]`,
             },
           ],
         },

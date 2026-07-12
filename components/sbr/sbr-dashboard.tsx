@@ -6,8 +6,8 @@ import { FileText, ChevronRight, TrendingUp } from "lucide-react"
 import { getSbrMarketData } from "@/lib/sbr-market"
 import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
-import { computeSbrNextMove, computeSbrDca, computeSbrHealth, sbrPhase, type SbrPosition } from "@/lib/sbr-engine"
-import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
+import { computeSbrNextMove, computeSbrDca, computeSbrHealth, type SbrPosition } from "@/lib/sbr-engine"
+import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import { DownloadReportCard } from "@/components/reports/download-report-card"
 import { HoldingsTable, type HoldingRow } from "@/components/dashboard/holdings-table"
@@ -22,33 +22,13 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
-import { BrickRoad } from "@/components/sbr/brick-road"
-import { sbrBrickRoadPhases } from "@/lib/spec-derived"
 import { computeSbrLookThrough } from "@/lib/sbr-look-through"
+import { openPositionValuation } from "@/lib/valuation"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
-// Phase thresholds as fractions of the 120k target
-const PHASE_MARKS = [
-  { label: "I",   endFrac: 72000  / 120000 },
-  { label: "II",  endFrac: 96000 / 120000 },
-  { label: "III", endFrac: 114000 / 120000 },
-  { label: "IV",  endFrac: 1.0              },
-]
-
 function dimStatus(score: number): SealDimension["status"] {
   return score >= 90 ? "excellent" : score >= 75 ? "good" : score >= 55 ? "caution" : "critical"
-}
-
-// Turns a month count into a plain "Mon YYYY" label — null means the search bound (50
-// years) was hit without reaching the target; 0 means the target is already met.
-function monthsToLabel(months: number | null): string {
-  if (months === null) return "50+ years away at this rate"
-  if (months === 0) return "already there"
-  const d = new Date()
-  d.setDate(1) // avoid month rollover quirks (e.g. Jan 31 + 1 month)
-  d.setMonth(d.getMonth() + months)
-  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" })
 }
 
 // Annual SGD/USD reference rate used to detect currency drift (Art. VI FX policy).
@@ -57,28 +37,28 @@ const FX_REFERENCE_USDSGD = 1.35
 const FX_BAND_PCT = 5 // ±5% from reference triggers a note
 
 async function getSbrData(userId: string) {
-  const [holdings, market, recentExec, usdSgdRate, recentPhaseLog, cashBank, recentMinute] = await Promise.all([
-    // Filter to SBR tickers only — prevents Atlas Core holdings from bleeding into SBR views
-    db.holding.findMany({ where: { userId, ticker: { in: SBR_FUND_TICKERS } }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
+  const [holdings, market, recentExec, usdSgdRate, cashBank, recentMinute, owner, lookThroughSources] = await Promise.all([
+    // Dami's owner ledger is SBR. Load every open instrument so an out-of-plan brokerage
+    // holding remains visible and stays inside NAV/concentration denominators.
+    db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
     getRecentExecutions(userId, 1),
     getUsdSgdRate(),
-    db.behaviourLog.findFirst({
-      where: { userId, type: "sbr-phase-transition", date: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-      orderBy: { date: "desc" },
-    }),
     db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "silicon-brick-road", currency: "SGD" } } }),
     db.behaviourLog.findFirst({
       where: { userId, type: "committee-minute", date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
     }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
+    db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
   ])
   const fundOrder = SBR.funds.map((f) => f.ticker)
-  const holdingsSorted = [...holdings].sort((a, b) => fundOrder.indexOf(a.ticker) - fundOrder.indexOf(b.ticker))
+  const orderOf=(ticker:string)=>{const i=fundOrder.indexOf(ticker);return i<0?Number.MAX_SAFE_INTEGER:i}
+  const holdingsSorted = [...holdings].sort((a, b) => orderOf(a.ticker) - orderOf(b.ticker))
   const totalValue = holdings.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
 
   const priceMap = market.positions
-  const positions: SbrPosition[] = holdingsSorted.map((h) => {
+  const positions: SbrPosition[] = holdingsSorted.filter(h=>SBR_FUND_TICKERS.includes(h.ticker)).map((h) => {
     const fund = SBR.funds.find((f) => f.ticker === h.ticker)
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
@@ -105,9 +85,9 @@ async function getSbrData(userId: string) {
   }))
   const valueChange = timeline.length >= 2 ? timeline[timeline.length - 1].value - timeline[timeline.length - 2].value : null
 
-  const phase = sbrPhase(totalValue)
   const nextMove = computeSbrNextMove(positions, totalValue, { drawdownPct })
-  const dca = computeSbrDca(positions, SBR.monthlyContribution, { drawdownPct })
+  const monthlyContribution = owner?.monthlyContribution ?? SBR.monthlyContribution
+  const dca = computeSbrDca(positions, monthlyContribution, { drawdownPct })
   const dcaByTicker = new Map(dca.allocations.map((a) => [a.ticker, a]))
 
   // Time to goal — blended from the ACTUAL current fund mix (not target weights), so a
@@ -115,16 +95,11 @@ async function getSbrData(userId: string) {
   const allocMap: Record<string, number> = {}
   for (const p of positions) allocMap[p.ticker] = p.actualPct
   const growthRates = sbrBlendedGrowthRate(allocMap)
-  const target = SBR.targetValue ?? 120000
-  const monthsToGoal = {
-    conservative: monthsToTarget(totalValue, SBR.monthlyContribution, growthRates.conservative, target),
-    base:         monthsToTarget(totalValue, SBR.monthlyContribution, growthRates.base, target),
-    aggressive:   monthsToTarget(totalValue, SBR.monthlyContribution, growthRates.aggressive, target),
-  }
 
   // Governance status — shared with the PDF report so both surfaces agree.
   const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue)
-  const lookThrough = computeSbrLookThrough(positions)
+  const lookThroughAsOf=lookThroughSources.length===SBR_FUND_TICKERS.length?new Date(Math.min(...lookThroughSources.map(x=>x.updatedAt.getTime()))):new Date(0)
+  const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf)
 
   // Holdings rows
   const statusOf = (p: SbrPosition): HoldingRow["status"] => {
@@ -133,15 +108,26 @@ async function getSbrData(userId: string) {
     return hard ? "hard" : soft ? "soft" : "healthy"
   }
   const holdingsRows: HoldingRow[] = holdingsSorted.map((h) => {
-    const p = positions.find((x) => x.ticker === h.ticker)!
+    const p = positions.find((x) => x.ticker === h.ticker)
     const cb = h.snapshots[0]
     const a = dcaByTicker.get(h.ticker)
+    const valuation = openPositionValuation({
+      value: cb?.value ?? 0,
+      units: cb?.units ?? 0,
+      snapshotCostBasis: cb?.costBasis,
+      snapshotUnrealizedPnl: cb?.unrealizedPnl,
+      reconstructedCostBasis: null,
+      reconstructedAveragePrice: null,
+      reportingFxRate: cb?.currency === "SGD" ? 1 : usdSgdRate,
+    })
     return {
-      ticker: h.ticker, name: h.name, color: p.color, units: cb?.units ?? 0, value: p.value,
+      ticker: h.ticker, name: h.name, color: p?.color ?? h.color, units: cb?.units ?? 0, value: cb?.value ?? 0,
       latestPrice: cb?.price ?? 0, priceChangePct: null, priceHistory: [],
-      avgCostUsd: null, unrealisedSgd: null, unrealisedPct: null,
-      actualPct: p.actualPct, targetPct: h.targetPct, toleranceBand: h.toleranceBand,
-      hardCapPct: h.hardCapPct, status: statusOf(p),
+      avgCostUsd: valuation.averagePriceInstrumentCurrency,
+      unrealisedSgd: valuation.reconciles ? valuation.unrealizedPnl : null,
+      unrealisedPct: valuation.reconciles ? valuation.unrealizedReturnPct : null,
+      actualPct: totalValue>0?((cb?.value??0)/totalValue)*100:0, targetPct: p?.targetPct ?? 0, toleranceBand: p ? h.toleranceBand : 0,
+      hardCapPct: p ? h.hardCapPct : 0, status: p ? statusOf(p) : "hard",
       thisMonth: a ? { amount: a.amount, tag: a.tag, reason: a.reason } : null,
     }
   })
@@ -182,31 +168,23 @@ async function getSbrData(userId: string) {
   const emeActive = drawdownPct !== undefined && drawdownPct <= EME_THRESHOLD
   const emeMinuteFiled = recentMinute !== null
 
-  // Phase crossing — fired in last 7 days by the daily digest cron
-  const phaseCrossedRecently = recentPhaseLog !== null && !recentPhaseLog.note.includes("initial phase baseline")
-  const newPhaseFromLog = recentPhaseLog?.note?.match(/from Phase ([IVX]+) to Phase ([IVX]+)/)?.[2] ?? null
-
   // Accrual carry-forward map (SGD banked toward next whole share/lot)
   const accrualMap: Record<string, number> = {}
   for (const h of holdings) accrualMap[h.ticker] = h.accrualBalanceSgd ?? 0
 
   return {
-    totalValue, valueChange, phase, nextMove, dca, holdingsRows, govAlignment, health,
+    totalValue, valueChange, nextMove, dca, holdingsRows, govAlignment, health,
     marketStale: market.stale, marketAsOf: market.asOf, lastDone: recentExec[0] ?? null,
-    historyPoints, complianceBands, donutData, growthRates, monthsToGoal,
+    historyPoints, complianceBands, donutData, growthRates,
     usdSgdRate, fxDeviation, fxOutOfBand,
     dealingWindow, windowOpen, nextWindowOpens,
     emeActive, emeMinuteFiled, drawdownPct,
-    phaseCrossedRecently, newPhaseFromLog,
     accrualMap, cashBankBalance: cashBank?.balance ?? 0, lookThrough,
   }
 }
 
 export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; name: string; isAdmin: boolean }) {
   const d = await getSbrData(userId)
-  const target = SBR.targetValue ?? 120000
-  const valueFrac = target > 0 ? Math.min(1, d.totalValue / target) : 0
-  const progress = Math.round(valueFrac * 100)
   const hasBalance = d.totalValue > 0
 
   // Convert SBR health dimensions to SealDimension format (weighted points)
@@ -248,15 +226,6 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         </div>
       </div>
 
-      {/* Phase crossing celebration — fires for 7 days after the cron logs a transition */}
-      {hasBalance && d.phaseCrossedRecently && d.newPhaseFromLog && (
-        <div className="mb-5 rounded-xl border border-green-500/30 bg-green-500/[0.06] px-5 py-4">
-          <p className="text-sm font-bold text-green-400">You&apos;ve entered Phase {d.newPhaseFromLog}!</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            The rules change as you move up. Check the Phase details below and the Decision Engine output — the plan updates automatically.
-          </p>
-        </div>
-      )}
 
       {/* Exceptional Market Event — EME detected (portfolio down ≥30% from peak) */}
       {hasBalance && d.emeActive && (
@@ -435,7 +404,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 lowScoreWarning="⛔ Sort out the flagged rule before your next buy or sell."
                 narrative={
                   hasBalance
-                    ? `Phase ${d.phase.key} active (${d.phase.range}). ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached" + (d.govAlignment.breaches > 1 ? "" : "") + ". " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " thing" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
+                    ? `Flexible growth mode. ${d.govAlignment.breaches > 0 ? d.govAlignment.breaches + " rule breached. " : ""}${d.govAlignment.watches > 0 ? d.govAlignment.watches + " item" + (d.govAlignment.watches > 1 ? "s" : "") + " to watch. " : ""}${d.govAlignment.overall === "ok" ? "You're following all your rules." : ""}`
                     : "No portfolio balance yet. Enter your holdings to begin tracking."
                 }
                 href="/governance"
@@ -487,7 +456,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold">Road Report</p>
-              <p className="text-xs text-muted-foreground">Trajectory · phase progress · constitution checks · health scorecard</p>
+              <p className="text-xs text-muted-foreground">Flexible-horizon scenarios · constitution checks · health scorecard</p>
             </div>
             <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-sky-500 transition-colors shrink-0">Open →</span>
           </Link>

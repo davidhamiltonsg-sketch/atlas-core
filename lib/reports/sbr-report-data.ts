@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
-import { computeSbrNextMove, computeSbrHealth, sbrPhase, type SbrPosition, type SbrHealth } from "@/lib/sbr-engine"
+import { computeSbrNextMove, computeSbrHealth, type SbrPosition, type SbrHealth } from "@/lib/sbr-engine"
 import { computeSbrLookThrough, SBR_TECHNOLOGY_LIMIT, SBR_SINGLE_COMPANY_LIMIT, type SbrLookThrough } from "@/lib/sbr-look-through"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import type { NextMove } from "@/lib/next-best-move"
@@ -38,7 +38,6 @@ export interface SbrReportData {
   governance: GovAlignment
   lookThrough: SbrLookThrough
   nextMove: NextMove
-  phaseLabel: string
 }
 
 /**
@@ -55,17 +54,18 @@ export interface SbrReportData {
  * timing nuance. Acceptable for a periodic summary rather than a real-time surface.
  */
 export async function getSbrReportData(userId: string, period: ReportPeriod): Promise<SbrReportData> {
-  const holdings = await db.holding.findMany({
-    where: { userId, ticker: { in: SBR_FUND_TICKERS } },
-    include: { snapshots: { orderBy: { date: "desc" } } },
-  })
+  const [holdings,lookThroughSources] = await Promise.all([
+    db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" } } } }),
+    db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
+  ])
 
   const fundOrder = SBR.funds.map((f) => f.ticker)
-  const holdingsSorted = [...holdings].sort((a, b) => fundOrder.indexOf(a.ticker) - fundOrder.indexOf(b.ticker))
+  const orderOf=(ticker:string)=>{const i=fundOrder.indexOf(ticker);return i<0?Number.MAX_SAFE_INTEGER:i}
+  const holdingsSorted = [...holdings].sort((a, b) => orderOf(a.ticker) - orderOf(b.ticker))
   const totalValue = holdingsSorted.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0
 
-  const positions: SbrPosition[] = holdingsSorted.map((h) => {
+  const positions: SbrPosition[] = holdingsSorted.filter(h=>SBR_FUND_TICKERS.includes(h.ticker)).map((h) => {
     const fund = SBR.funds.find((f) => f.ticker === h.ticker)
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
@@ -77,13 +77,17 @@ export async function getSbrReportData(userId: string, period: ReportPeriod): Pr
     }
   })
 
-  const reportPositions: SbrReportPosition[] = positions.map((p) => {
-    const drift = p.actualPct - p.targetPct
-    const isHard = hasBalance && ((p.hardCap !== null && p.actualPct > p.hardCap) || (p.floor !== undefined && p.actualPct < p.floor))
-    const isSoft = hasBalance && !isHard && (p.actualPct < p.rangeLow || p.actualPct > p.rangeHigh)
+  const reportPositions: SbrReportPosition[] = holdingsSorted.map((h) => {
+    const p=positions.find(x=>x.ticker===h.ticker)
+    const value=h.snapshots[0]?.value??0
+    const actualPct=totalValue>0?value/totalValue*100:0
+    const targetPct=p?.targetPct??0
+    const drift = actualPct-targetPct
+    const isHard = hasBalance && (!p || ((p.hardCap !== null && actualPct > p.hardCap) || (p.floor !== undefined && actualPct < p.floor)))
+    const isSoft = hasBalance && !!p && !isHard && (actualPct < p.rangeLow || actualPct > p.rangeHigh)
     return {
-      ticker: p.ticker, name: p.name, color: p.color, value: p.value,
-      actualPct: p.actualPct, targetPct: p.targetPct, drift,
+      ticker: h.ticker, name: h.name, color: p?.color??h.color, value,
+      actualPct, targetPct, drift,
       status: isHard ? "hard" : isSoft ? "soft" : "healthy",
     }
   })
@@ -122,9 +126,9 @@ export async function getSbrReportData(userId: string, period: ReportPeriod): Pr
 
   const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
   const governance = evaluateSbrGovernance(positions, totalValue)
-  const lookThrough = computeSbrLookThrough(positions)
+  const lookThroughAsOf=lookThroughSources.length===SBR_FUND_TICKERS.length?new Date(Math.min(...lookThroughSources.map(x=>x.updatedAt.getTime()))):new Date(0)
+  const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf)
   const nextMove = computeSbrNextMove(positions, totalValue, { drawdownPct })
-  const phase = sbrPhase(totalValue)
 
   const now = new Date()
 
@@ -135,7 +139,6 @@ export async function getSbrReportData(userId: string, period: ReportPeriod): Pr
     totalValue, periodAgoValue, valueChangeAbs, valueChangePct,
     positions: reportPositions, driftAlerts, hardBreaches, softBreaches, maxDrift,
     health, governance, lookThrough, nextMove,
-    phaseLabel: phase.label,
   }
 }
 

@@ -10,7 +10,8 @@ import { BITCOIN_SLEEVE_TARGET_PCT, applyBitcoinSleeve } from "@/lib/next-best-m
 import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
-import { sbrBlendedGrowthRate, monthsToTarget } from "@/lib/sbr-forecast"
+import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
+import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { getCombinedTechCeiling } from "@/lib/cycle"
 import { HARD_THRESHOLDS } from "@/lib/constants"
@@ -699,28 +700,30 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
       }
     }
 
-    // 4. Safety — have any de-risking steps kicked in?
-    // SBR phases are value-based (not time-based): Phase II starts at SGD 72k.
+    // 4. Risk limits — allocation and concentration rules, never a value milestone.
     {
       const ts = spacedTimings(2)
-      const safetyThreshold = 72_000
       if (hasHoldings) {
-        if (totalValue >= safetyThreshold) {
+        const withPct = rows.map(r => ({ ...r, actualPct: (r.value / totalValue) * 100 }))
+        const capBreaches = withPct.filter(r => {
+          const fund = SBR_SPEC.funds.find(f => f.ticker === r.ticker)
+          return fund?.hardCap != null && r.actualPct > fund.hardCap
+        })
+        if (capBreaches.length > 0) {
           findings.safety = {
             script: [
-              { t: ts[0], level: "info", msg: "Checking your de-risking milestones" },
-              { t: ts[1], level: "warn", msg: `S$${Math.round(totalValue).toLocaleString()} is past the S$72K safety line` },
+              { t: ts[0], level: "info", msg: "Checking fund caps and concentration limits" },
+              { t: ts[1], level: "warn", msg: `${capBreaches.map(x => x.ticker).join(", ")} above constitutional cap` },
             ],
-            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: "Past the safety threshold — new money should start going to bonds" } },
+            result: { status: "alert", line: { t: resultT(ts), level: "warn", msg: "Pause affected purchases and route new cash to an eligible underweight fund" } },
           }
         } else {
-          const remaining = safetyThreshold - totalValue
           findings.safety = {
             script: [
-              { t: ts[0], level: "info", msg: "Checking whether any safety step has started" },
-              { t: ts[1], level: "data", msg: `S$${Math.round(remaining).toLocaleString()} to go before the first safety step` },
+              { t: ts[0], level: "info", msg: "Checking fund caps and concentration limits" },
+              { t: ts[1], level: "data", msg: "No automatic value-based de-risking rule exists" },
             ],
-            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: `Still in full-growth mode — safety kicks in at S$72K` } },
+            result: { status: "done", line: { t: resultT(ts), level: "ok", msg: "Current fund weights remain within their hard caps" } },
           }
         }
       } else {
@@ -729,42 +732,32 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
             { t: ts[0], level: "info", msg: "Looking for your fund value" },
             { t: ts[1], level: "data", msg: hasTrades ? "Trades recorded but no price data yet" : "No holdings yet — can't check milestones" },
           ],
-          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "Safety steps start when your fund reaches S$72K" } },
+          result: { status: "done", line: { t: resultT(ts), level: "info", msg: "No holdings yet — current concentration is zero" } },
         }
       }
     }
 
-    // 5. Goal — projection towards the home deadline
+    // 5. Flexible-horizon scenarios — no invented target, ETA or probability.
     {
       if (hasHoldings) {
         const allocMap: Record<string, number> = {}
         for (const r of rows) allocMap[r.ticker] = (r.value / totalValue) * 100
         const sbrRates = sbrBlendedGrowthRate(allocMap)
-        const target = 120_000
-        const monthly = 2_000
-        const baseMonths = monthsToTarget(totalValue, monthly, sbrRates.base, target)
-        const consMonths = monthsToTarget(totalValue, monthly, sbrRates.conservative, target)
-
-        const steps: Array<{ level: Level; msg: string }> = []
-        steps.push({ level: "info", msg: `Projecting S$${Math.round(totalValue).toLocaleString()} towards S$120K target` })
-        steps.push({ level: "data", msg: `Blended CAGR: ${(sbrRates.base * 100).toFixed(1)}% base · ${(sbrRates.conservative * 100).toFixed(1)}% conservative` })
-        if (baseMonths !== null) {
-          const baseYrs = (baseMonths / 12).toFixed(1)
-          steps.push({ level: "ok", msg: `Base case: ~${baseMonths} months (${baseYrs}yr) to S$120K at S$${monthly.toLocaleString()}/mo` })
-        } else {
-          steps.push({ level: "warn", msg: "Base case does not reach S$120K within 50 years at current rate" })
+        const monthly = SBR_SPEC.monthlyContribution
+        const project = (years: number, rate: number) => {
+          let value = totalValue
+          for (let i = 0; i < years * 12; i++) value = value * (1 + rate / 12) + monthly
+          return value
         }
-        if (consMonths !== null && consMonths !== baseMonths) {
-          steps.push({ level: "data", msg: `Conservative: ~${consMonths} months (${(consMonths / 12).toFixed(1)}yr) to S$120K` })
-        }
-
+        const steps: Array<{ level: Level; msg: string }> = [
+          { level: "info", msg: `Projecting flexible 5- and 10-year illustrations from S$${Math.round(totalValue).toLocaleString()}` },
+          { level: "data", msg: `Blended assumptions: ${(sbrRates.conservative * 100).toFixed(1)}% conservative · ${(sbrRates.base * 100).toFixed(1)}% base` },
+          { level: "data", msg: `Base illustration: S$${Math.round(project(5, sbrRates.base)).toLocaleString()} in 5y · S$${Math.round(project(10, sbrRates.base)).toLocaleString()} in 10y` },
+        ]
         const ts = spacedTimings(steps.length)
-        const resultMsg = baseMonths !== null
-          ? `~${baseMonths} months to S$120K at ${(sbrRates.base * 100).toFixed(1)}% p.a.`
-          : `S$${Math.round(totalValue).toLocaleString()} saved — target distant at current rate`
         findings.goal = {
           script: steps.map((s, i) => ({ t: ts[i], level: s.level, msg: s.msg })),
-          result: { status: "done", line: { t: resultT(ts), level: baseMonths !== null ? "ok" : "warn", msg: resultMsg } },
+          result: { status: "done", line: { t: resultT(ts), level: "ok", msg: "Scenario range refreshed — no deadline or trade signal created" } },
         }
       } else {
         const ts = spacedTimings(2)

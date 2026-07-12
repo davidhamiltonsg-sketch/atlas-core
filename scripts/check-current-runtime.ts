@@ -12,5 +12,10 @@ const proxy=fs.readFileSync("proxy.ts","utf8");for(const route of ["/holdings","
 const syncRoute=fs.readFileSync("app/api/sync-ibkr/route.ts","utf8");if(!syncRoute.includes("const fresh=await fetchFlexPositions"))failures.push("IBKR confirmation does not re-fetch authoritative server data")
 for(const file of ["app/api/reports/atlas/route.tsx","app/api/reports/sbr/route.tsx"]){if(!fs.readFileSync(file,"utf8").includes("activePortfolioContext"))failures.push(`${file}: report export is not active-owner scoped`)}
 for(const file of ["public/silicon-brick-road.html","public/downloads/silicon-brick-road-constitution-v3.2.html"]){const text=fs.readFileSync(file,"utf8");if(text.includes("preview.html"))failures.push(`${file}: links to a deleted preview`)}
+const sbrCriticalFiles=["app/forecast/page.tsx","app/mission-control/page.tsx","components/sbr/sbr-dashboard.tsx"]
+const staleSbr=[/home deposit/i,/S\$?120K/i,/72K/i,/sbr-phase-transition/i,/targetValue\s*\?\?\s*120000/i,/capital floor/i]
+for(const file of sbrCriticalFiles){const text=fs.readFileSync(file,"utf8");for(const p of staleSbr)if(p.test(text))failures.push(`${file}: stale SBR construct ${p}`)}
+const alternatives=fs.readFileSync("lib/approved-alternatives.ts","utf8")
+for(const ticker of ["IMID","EQAC","SMH","IB01"])if(!alternatives.match(new RegExp(`SBR_TICKERS[^\\n]*${ticker}`)))failures.push(`SBR governance universe missing ${ticker}`)
 if(failures.length)throw new Error(`Current-runtime guard failed:\n${failures.join("\n")}`)
 console.log("Current-runtime guard passed: no stale strategy and Atlas navigation remains bounded ✓")

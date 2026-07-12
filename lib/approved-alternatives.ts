@@ -46,7 +46,7 @@ export function isActuallyUsSited(exposureId: string): boolean {
 export const CORE_TICKERS = ["IMID", "EQAC", "SMH", "IWQU", "BTC"] as const
 
 // SBR-specific tickers: all UCITS/SGX from day one.
-export const SBR_TICKERS = ["VWRA", "EQQQ", "SEMI", "A35"] as const
+export const SBR_TICKERS = ["IMID", "EQAC", "SMH", "IB01"] as const
 
 export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
   ...CORE_TICKERS,

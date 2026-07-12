@@ -1,5 +1,5 @@
 import type { DcaPlan, DcaAllocation, NextMove } from "@/lib/next-best-move"
-import { SILICON_BRICK_ROAD, type Constitution, type ConstitutionPhase } from "@/lib/constitutions"
+import { SILICON_BRICK_ROAD, type Constitution } from "@/lib/constitutions"
 
 export interface SbrPosition {
   ticker: string; name: string; color: string; value: number; actualPct: number
@@ -20,10 +20,6 @@ export function getPhaseCaps(_phaseKey: string) {
   return { smhHard: 8, combinedHard: 20, combinedWarning: 18, combinedResume: 17 }
 }
 
-export function sbrPhase(_totalValue: number, c: Constitution = SILICON_BRICK_ROAD): ConstitutionPhase {
-  return c.phases?.[0] ?? { key: "GROWTH", label: "Flexible growth", range: "No fixed end date", min: 0, max: null, selling: false, body: "Remain invested until a genuine use is documented." }
-}
-
 function route(positions: SbrPosition[], totalValue: number, c: Constitution): SbrBranch {
   if (totalValue <= 0) return { tag: "empty" }
   const byGap = [...positions].sort((a,b) => (a.actualPct-a.targetPct)-(b.actualPct-b.targetPct))
@@ -42,21 +38,27 @@ export function sbrRoute(positions: SbrPosition[], totalValue: number, _opts: Sb
   return route(positions,totalValue,c)
 }
 
-function result(branch: SbrBranch, c: Constitution): { move: NextMove; selected: string } {
+function eligibleDestination(positions: SbrPosition[], excluded: Set<string>): SbrPosition | null {
+  return [...positions]
+    .filter(p => !excluded.has(p.ticker) && (p.hardCap === null || p.actualPct < p.hardCap))
+    .sort((a,b) => (a.actualPct-a.targetPct)-(b.actualPct-b.targetPct))[0] ?? null
+}
+
+function result(branch: SbrBranch, c: Constitution, positions: SbrPosition[]): { move: NextMove; selected: string | null } {
   const core=c.funds[0], combined=c.combined
   if(branch.tag==="empty") return { selected:core.ticker, move:{severity:"none",ticker:core.ticker,action:`Start with ${core.ticker}`,what:`Invest the first contribution in ${core.ticker}.`,why:"SBR currently holds no securities; the global core is the first building block.",when:"At the next permitted dealing window.",color:core.color} }
-  if(branch.tag==="hard_cap") return { selected:core.ticker, move:{severity:"critical",ticker:branch.fund.ticker,action:`Pause ${branch.fund.ticker}`,what:`${branch.fund.ticker} is ${branch.fund.actualPct.toFixed(1)}%, above its ${branch.cap}% hard cap.`,why:`Document the correction and route new cash to ${core.ticker}; no automatic sale is created.`,when:"Before the next contribution.",color:branch.fund.color} }
+  if(branch.tag==="hard_cap") { const destination=eligibleDestination(positions,new Set([branch.fund.ticker])); return { selected:destination?.ticker??null, move:{severity:"critical",ticker:branch.fund.ticker,action:`Pause ${branch.fund.ticker}`,what:`${branch.fund.ticker} is ${branch.fund.actualPct.toFixed(1)}%, above its ${branch.cap}% hard cap.`,why:destination?`Document the correction and route new cash to ${destination.ticker}; no automatic sale is created.`:"No governed fund is currently eligible for new cash; bank the contribution pending review.",when:"Before the next contribution.",color:branch.fund.color} } }
   if(branch.tag==="floor") return { selected:branch.fund.ticker, move:{severity:"high",ticker:branch.fund.ticker,action:`Restore ${branch.fund.ticker}`,what:`${branch.fund.ticker} is ${branch.fund.actualPct.toFixed(1)}%, below its ${branch.floor}% hard floor.`,why:"The documented reserve floor takes priority for new cash.",when:"At the next permitted dealing window.",color:branch.fund.color} }
-  if(branch.tag==="combined_hard" || branch.tag==="combined_watch") return { selected:core.ticker, move:{severity:branch.tag==="combined_hard"?"critical":"medium",ticker:core.ticker,action:"Pause growth satellites",what:`EQAC plus SMH is ${branch.combined.toFixed(1)}%. Route new cash to ${core.ticker}.`,why:`The combined ${combined?.warning}% watch and ${combined?.hard}% hard limits govern overlapping growth exposure.`,when:"Until the combined allocation is below the resume level.",color:core.color} }
+  if(branch.tag==="combined_hard" || branch.tag==="combined_watch") { const destination=eligibleDestination(positions,new Set(combined?.tickers??[])); return { selected:destination?.ticker??null, move:{severity:branch.tag==="combined_hard"?"critical":"medium",ticker:destination?.ticker??core.ticker,action:"Pause growth satellites",what:`EQAC plus SMH is ${branch.combined.toFixed(1)}%. ${destination?`Route new cash to ${destination.ticker}.`:"Bank new cash pending review."}`,why:`The combined ${combined?.warning}% watch and ${combined?.hard}% hard limits govern overlapping growth exposure.`,when:"Until the combined allocation is below the resume level.",color:destination?.color??core.color} } }
   return { selected:branch.fund.ticker, move:{severity:branch.tag==="underweight"?"medium":"none",ticker:branch.fund.ticker,action:`Route cash to ${branch.fund.ticker}`,what:`Direct the next contribution to ${branch.fund.ticker}.`,why:`It is ${branch.fund.actualPct.toFixed(1)}% versus its ${branch.fund.targetPct}% target and is the furthest-underweight eligible holding.`,when:"At the next permitted dealing window.",color:branch.fund.color} }
 }
 
-export function computeSbrNextMove(positions:SbrPosition[],totalValue:number,_opts:SbrEngineOpts={},c:Constitution=SILICON_BRICK_ROAD):NextMove { return result(route(positions,totalValue,c),c).move }
+export function computeSbrNextMove(positions:SbrPosition[],totalValue:number,_opts:SbrEngineOpts={},c:Constitution=SILICON_BRICK_ROAD):NextMove { return result(route(positions,totalValue,c),c,positions).move }
 
 export function computeSbrDca(positions:SbrPosition[],monthly:number,_opts:SbrEngineOpts={},c:Constitution=SILICON_BRICK_ROAD):DcaPlan {
-  const {selected,move}=result(route(positions,positions.reduce((s,p)=>s+p.value,0),c),c)
+  const {selected,move}=result(route(positions,positions.reduce((s,p)=>s+p.value,0),c),c,positions)
   const allocations=c.funds.map<DcaAllocation>(f=>({ticker:f.ticker,name:f.name,color:f.color,amount:f.ticker===selected?monthly:0,standardAmount:Math.round(monthly*f.target/100),tag:f.ticker===selected?"boosted":"zeroed",reason:f.ticker===selected?move.why:"Not selected by the contribution-first rule."}))
-  return {allocations,headline:`Route this contribution to ${selected}`,marketOverlayActive:move.severity==="critical",overlayNote:move.why}
+  return {allocations,headline:selected?`Route this contribution to ${selected}`:"Bank this contribution pending review",marketOverlayActive:move.severity==="critical",overlayNote:move.why}
 }
 
 export interface SbrHealth { overall:number; overallLabel:"Good standing"|"Review recommended"|"Action required"; governance:number; risk:number; allocation:number; contribution:number; behavioural:number; liquidity:number; documentation:number }

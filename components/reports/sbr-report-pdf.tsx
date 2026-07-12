@@ -57,7 +57,7 @@ export function SbrReportPdf({ data }: { data: SbrReportData }) {
         ) : (
           <BodyText>Not enough price history yet to compare against this period — check back after the next snapshot.</BodyText>
         )}
-        <BodyText style={{ color: "#6b6b7d" }}>Currently in {data.phaseLabel}.</BodyText>
+        <BodyText style={{ color: "#6b6b7d" }}>Flexible growth mode · no fixed end date.</BodyText>
 
         <SectionHeading theme={theme} title="What Needs to Be Done" subtitle="Silicon Brick Road decision steps" />
         <Callout tone={data.nextMove.severity === "critical" || data.nextMove.severity === "high" ? "critical" : data.nextMove.severity === "medium" ? "warning" : "good"}>

@@ -61,16 +61,4 @@ export const SBR_FUND_RATE_STRINGS: Record<string, string> = Object.fromEntries(
     ]),
 )
 
-export type BrickRoadPhase = { key: string; threshold: number; label: string }
-
-export function sbrBrickRoadPhases(target: number): BrickRoadPhase[] {
-  return SBR_SPEC.phases.map(p => ({
-    key: p.key,
-    threshold: p.max ?? target,
-    label: p.max !== null
-      ? `< ${formatCurrency(p.max, "SGD")}`
-      : `${formatCurrency(p.min, "SGD")}+`,
-  }))
-}
-
 export { SBR_ASSET_EXPECTED_RETURNS }

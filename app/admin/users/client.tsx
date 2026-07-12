@@ -29,7 +29,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
   const [provisionMsg, setProvisionMsg] = useState<string | null>(null)
 
   async function handleProvisionSbr() {
-    if (!confirm("Re-provision Dami's SBR account? This replaces his holdings with VWRA/EQQQ/SEMI/A35 and resets his password from dami_key.")) return
+    if (!confirm("Refresh Dami's SBR account configuration? Existing holdings and contribution settings will be preserved; the login secret is refreshed from dami_key.")) return
     setProvisionState("pending")
     setProvisionMsg(null)
     try {
@@ -248,7 +248,7 @@ export function AdminUsersClient({ users: initialUsers, currentUserId }: AdminUs
         <div>
           <p className="text-xs font-semibold mb-0.5">Silicon Brick Road — Re-provision Dami</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Replaces Dami&apos;s holdings with VWRA / EQQQ / SEMI / A35 (UCITS tickers) and resets his password from the <code className="text-[11px] bg-muted px-1 py-0.5 rounded">dami_key</code> env var. Run this once after a UCITS migration to push the correct tickers to the database.
+            Preserves Dami&apos;s existing holdings and editable contribution settings, ensures IMID / EQAC / SMH / IB01 are configured, and refreshes the password from the <code className="text-[11px] bg-muted px-1 py-0.5 rounded">dami_key</code> environment variable.
           </p>
           {provisionMsg && (
             <p className={`mt-2 text-xs font-medium ${provisionState === "ok" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>

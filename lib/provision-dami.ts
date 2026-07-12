@@ -20,7 +20,7 @@ export async function provisionDami(prisma: PrismaClient): Promise<ProvisionResu
   const passwordHash = await bcrypt.hash(key, 12)
   const user = await prisma.user.upsert({
     where: { email: EMAIL },
-    update: { passwordHash, monthlyContribution: SBR.monthlyContribution, annualLumpSum: 0, contributionGrowthRate: 0 },
+    update: { passwordHash },
     create: { email: EMAIL, name: "Dami", passwordHash, role: "user", monthlyContribution: SBR.monthlyContribution, annualLumpSum: 0, contributionGrowthRate: 0 },
   })
 
