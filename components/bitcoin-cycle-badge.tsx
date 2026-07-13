@@ -1,8 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-
-export type BitcoinCyclePhase = "pre-halving" | "post-halving-year-1" | "post-halving-year-2" | "bear"
+export type { BitcoinCyclePhase } from "@/lib/bitcoin-cycle"
 
 interface BitcoinCycleBadgeProps {
   phase: BitcoinCyclePhase
@@ -46,48 +45,3 @@ export function BitcoinCycleBadge({ phase }: BitcoinCycleBadgeProps) {
   )
 }
 
-/**
- * Determine Bitcoin cycle phase based on current date and halving dates.
- * Bitcoin halving occurs approximately every 4 years.
- *
- * Recent & upcoming halving dates:
- * - 2020-05-11: 3rd halving
- * - 2024-04-19: 4th halving
- * - 2028-04-19 (estimated): 5th halving
- *
- * Post-halving bull phases historically last 12-24 months.
- * Bear phases are defined as price < 50% of cycle high.
- */
-export function getBitcoinCyclePhase(currentDate: Date = new Date()): BitcoinCyclePhase {
-  // 4th halving: 2024-04-19
-  const LAST_HALVING = new Date("2024-04-19")
-  const NEXT_HALVING = new Date("2028-04-19")
-
-  const monthsSinceHalving = Math.floor(
-    (currentDate.getTime() - LAST_HALVING.getTime()) / (30.44 * 24 * 60 * 60 * 1000)
-  )
-
-  // Months until next halving
-  const monthsUntilHalving = Math.floor(
-    (NEXT_HALVING.getTime() - currentDate.getTime()) / (30.44 * 24 * 60 * 60 * 1000)
-  )
-
-  // Pre-halving: within 6 months of next halving
-  if (monthsUntilHalving <= 6) {
-    return "pre-halving"
-  }
-
-  // Post-halving phases (historically bull markets)
-  if (monthsSinceHalving >= 0 && monthsSinceHalving < 12) {
-    return "post-halving-year-1"
-  }
-
-  if (monthsSinceHalving >= 12 && monthsSinceHalving < 24) {
-    return "post-halving-year-2"
-  }
-
-  // Default: normal market (cap: 8%, not 6%)
-  // Note: Bear phase detection would require live price data (price < 50% of cycle high).
-  // For now, only the IBKR data will trigger bear phase via constitution rules.
-  return "bear"
-}

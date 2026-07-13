@@ -27,7 +27,8 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { redirect } from "next/navigation"
 import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
-import { BitcoinCycleBadge, getBitcoinCyclePhase } from "@/components/bitcoin-cycle-badge"
+import { BitcoinCycleBadge } from "@/components/bitcoin-cycle-badge"
+import { getBitcoinCyclePhase } from "@/lib/bitcoin-cycle"
 
 // This is a personal, auth-gated dashboard whose server render includes live
 // date maths (dealing-window and contribution countdowns). Pin it to dynamic so

@@ -1,4 +1,4 @@
-import { getBitcoinCyclePhase } from "@/components/bitcoin-cycle-badge"
+import { getBitcoinCyclePhase } from "@/lib/bitcoin-cycle"
 
 describe("Bitcoin Cycle Badge", () => {
   describe("getBitcoinCyclePhase", () => {
