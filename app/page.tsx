@@ -448,6 +448,7 @@ async function getDashboardData(userId: string) {
     complianceBands, ladder, dealingWindow,
     lastDone: recentExecutions[0] ?? null,
     cashBankBalance: cashBank?.balance ?? 0,
+    btcCyclePhase,
   }
 }
 
@@ -477,7 +478,7 @@ export default async function Dashboard() {
       <div className="mb-5 flex flex-wrap items-start gap-2">
         <RefreshPricesButton />
         <PortfolioUpdateButton label="Update Holdings" holdings={d.updateHoldings} />
-        <BitcoinCycleBadge phase={btcCyclePhase} />
+        <BitcoinCycleBadge phase={d.btcCyclePhase} />
         {d.dealingWindow.isOpen && (
           <span className="inline-flex items-center text-[10px] font-bold px-3 py-1.5 rounded-full border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400">
             DEALING WINDOW OPEN · CLOSES {d.dealingWindow.windowClosesLabel}
