@@ -22,11 +22,8 @@ export async function GET(req: Request) {
   if ((result.ok && result.snapshots > 0) || (activity.ok && (activity.trades > 0 || activity.dividends > 0))) {
     for (const p of ["/", "/portfolio", "/ytd", "/contributions", "/trades", "/governance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) revalidatePath(p)
 
-    // Record sync for rate limiting (for all portfolio owners)
-    const portfolioOwners = await db.user.findMany({
-      where: { OR: [{ email: { contains: "@atlas-core" } }, { email: { contains: "@sbr" } }] },
-      select: { id: true }
-    })
+    // Record sync for rate limiting — every user the sync actually covers.
+    const portfolioOwners = await db.user.findMany({ select: { id: true } })
     for (const owner of portfolioOwners) {
       await recordIbkrSync(owner.id)
     }

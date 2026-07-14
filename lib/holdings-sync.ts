@@ -40,7 +40,7 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
     created++
   }
   // Former governed rows remain visible for sale/cost-basis history but must not
-  // receive new contributions under v10.4.
+  // receive new contributions under v10.5.
   await db.holding.updateMany({
     where: { userId, ticker: { notIn: [...CORE_TICKERS, "IBIT"] }, instrumentStatus: "ACTIVE" },
     data: { targetPct: 0, hardCapPct: null, instrumentStatus: "LEGACY" },

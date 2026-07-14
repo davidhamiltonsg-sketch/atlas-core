@@ -184,7 +184,7 @@ export async function sendMonthlyReminderEmail(
   const accentBg = isAtlas ? "#f5f3ff" : "#e0f2fe"
   const moniker = isAtlas ? "AC" : "SBR"
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
-  const tagline = isAtlas ? "Investment Constitution v10.4" : "Flexible medium-term growth · Constitution v10.2"
+  const tagline = isAtlas ? "Investment Constitution v10.5" : "Flexible medium-term growth · Constitution v10.3"
   const severityColor = nextMove.severity === "critical" ? "#dc2626"
     : nextMove.severity === "high" ? "#d97706"
     : nextMove.severity === "medium" ? "#0284c7"
@@ -413,7 +413,7 @@ export async function sendPasswordResetEmail(
                   </td>
                   <td style="padding-left:12px;">
                     <div style="font-size:15px;font-weight:700;color:#1a1a2e;">Atlas Core</div>
-                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.4 · Atlas Core</div>
+                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.5 · Atlas Core</div>
                   </td>
                 </tr>
               </table>

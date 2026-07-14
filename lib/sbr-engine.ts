@@ -1,5 +1,6 @@
 import type { DcaPlan, DcaAllocation, NextMove } from "@/lib/next-best-move"
 import { SILICON_BRICK_ROAD, type Constitution } from "@/lib/constitutions"
+import { SBR_PHASE_CAPS, type SbrPhaseKey } from "@/lib/portfolio-spec"
 
 export interface SbrPosition {
   ticker: string; name: string; color: string; value: number; actualPct: number
@@ -16,8 +17,8 @@ export type SbrBranch =
   | { tag: "underweight"; fund: SbrPosition }
   | { tag: "standard"; fund: SbrPosition }
 
-export function getPhaseCaps(_phaseKey: string) {
-  return { smhHard: 15, combinedHard: 43, combinedWarning: 37.5, combinedResume: 35 }
+export function getPhaseCaps(phaseKey: string) {
+  return SBR_PHASE_CAPS[(phaseKey in SBR_PHASE_CAPS ? phaseKey : "GROWTH") as SbrPhaseKey]
 }
 
 function route(positions: SbrPosition[], totalValue: number, c: Constitution): SbrBranch {

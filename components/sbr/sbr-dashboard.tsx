@@ -259,7 +259,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       <section className="mb-5 grid gap-3 lg:grid-cols-3" aria-label="What to do, why, and where SBR is going">
         <article className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.nextMove.action}</h2><p>{d.nextMove.what}</p></div><Link href="/portfolio">Review activity →</Link></article>
         <article className="atlas-command-band"><div><span>WHY</span><h2>{d.nextMove.why}</h2><p>{d.nextMove.when??"At the next permitted contribution window."}</p></div><Link href="/mission-control?portfolio=silicon-brick-road">Open Mission Control →</Link></article>
-        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 15 · SMH 5 · IBIT 5 · DBMFE 10. A real SGD use must be documented before risk changes.</p></div><a href="/downloads/silicon-brick-road-constitution-v10.2.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
+        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 15 · SMH 5 · BTC 5 · DBMFE 10. A real SGD use must be documented before risk changes.</p></div><a href="/downloads/silicon-brick-road-constitution-v10.3.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
       </section>
 
 

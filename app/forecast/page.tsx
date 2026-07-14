@@ -482,7 +482,7 @@ export default async function Forecast() {
                 { year: "2040", maxEquity: "90%", action: "Complete the 2040 portfolio review. Write a Distribution Plan — a document that says how you will draw money down from the portfolio in retirement." },
                 { year: "2041", maxEquity: "Review", action: "Confirm the 2045 use, currency and required amount before changing the growth portfolio." },
                 { year: "2042", maxEquity: "Review", action: "Create a separate liability-matched spending sleeve only for money likely to be used within three years." },
-                { year: "2043", maxEquity: "Review", action: "Fund the documented liability sleeve progressively; keep surplus capital under the v10.4 growth constitution." },
+                { year: "2043", maxEquity: "Review", action: "Fund the documented liability sleeve progressively; keep surplus capital under the v10.5 growth constitution." },
                 { year: "2044", maxEquity: "70%", action: "Final year of building the portfolio. Shift the focus from growth to keeping what you have safe and generating income." },
                 { year: "2045", maxEquity: "Per 2040 Review", action: "Retirement drawdown begins. Follow the Distribution Plan written in 2040." },
               ].map(({ year, maxEquity, action }) => (
