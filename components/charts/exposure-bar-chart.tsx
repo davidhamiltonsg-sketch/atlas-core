@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
   Cell,
 } from "recharts"
 
@@ -25,10 +24,14 @@ interface Props {
   unit?: string
 }
 
+const SUCCESS = "hsl(var(--success))"
+const WARNING = "hsl(var(--warning))"
+const DANGER  = "hsl(var(--danger))"
+
 function barColor(status: string) {
-  if (status === "excessive") return "#ef4444"   /* red  */
-  if (status === "elevated")  return "#f59e0b"   /* amber */
-  return "#22c55e"                               /* green */
+  if (status === "excessive") return DANGER
+  if (status === "elevated")  return WARNING
+  return SUCCESS
 }
 
 function CustomTooltip({ active, payload }: {
@@ -47,16 +50,16 @@ function CustomTooltip({ active, payload }: {
           <span className="font-semibold text-foreground tabular-nums">{d.value.toFixed(1)}%</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-amber-500">Warning limit</span>
-          <span className="tabular-nums text-amber-500">{d.soft.toFixed(0)}%</span>
+          <span className="text-warning">Warning limit</span>
+          <span className="tabular-nums text-warning">{d.soft.toFixed(0)}%</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-red-500">Hard limit</span>
-          <span className="tabular-nums text-red-500">{d.hard.toFixed(0)}%</span>
+          <span className="text-danger">Hard limit</span>
+          <span className="tabular-nums text-danger">{d.hard.toFixed(0)}%</span>
         </div>
         <div className="flex justify-between gap-4 border-t border-border/50 pt-1 mt-1">
           <span className="text-muted-foreground">Headroom</span>
-          <span className={`tabular-nums font-semibold ${headroom < 0 ? "text-red-500" : headroom < 2 ? "text-amber-500" : "text-green-500"}`}>
+          <span className={`tabular-nums font-semibold ${headroom < 0 ? "text-danger" : headroom < 2 ? "text-warning" : "text-success"}`}>
             {headroom >= 0 ? "+" : ""}{headroom.toFixed(1)}%
           </span>
         </div>
@@ -65,10 +68,39 @@ function CustomTooltip({ active, payload }: {
   )
 }
 
+// Geometry Recharts hands a custom Bar `background` shape: the full-domain
+// rect for this row (x = plot left, width = plot width) plus the row's datum.
+interface ZoneShapeProps {
+  x: number
+  y: number
+  width: number
+  height: number
+  payload: ExposureBar
+}
+
 export function ExposureBarChart({ data, unit = "%" }: Props) {
-  const softCaps = [...new Set(data.map((d) => d.soft))]
-  const hardCaps = [...new Set(data.map((d) => d.hard))]
-  const maxVal   = Math.max(...data.map((d) => d.hard)) * 1.3
+  const maxVal = Math.max(...data.map((d) => d.hard)) * 1.3
+
+  // Per-row drift zones painted behind each value bar: 0→soft healthy tint,
+  // soft→hard warning tint, >hard danger tint, with a tick at each boundary.
+  // Rows keep their own caps — no shared ReferenceLines, which were wrong
+  // whenever soft/hard differed between rows.
+  const renderZones = (props: unknown) => {
+    const { x, y, width, height, payload } = props as ZoneShapeProps
+    const px = (v: number) => x + (Math.min(v, maxVal) / maxVal) * width
+    const softX = px(payload.soft)
+    const hardX = px(payload.hard)
+    return (
+      <g aria-hidden>
+        <rect x={x} y={y} width={softX - x} height={height} fill={SUCCESS} fillOpacity={0.08} />
+        <rect x={softX} y={y} width={Math.max(0, hardX - softX)} height={height} fill={WARNING} fillOpacity={0.10} />
+        <rect x={hardX} y={y} width={Math.max(0, x + width - hardX)} height={height} fill={DANGER} fillOpacity={0.10} />
+        {/* Boundary ticks — this row's own soft / hard caps */}
+        <rect x={softX - 0.75} y={y - 2} width={1.5} height={height + 4} fill={WARNING} fillOpacity={0.7} />
+        <rect x={hardX - 0.75} y={y - 2} width={1.5} height={height + 4} fill={DANGER} fillOpacity={0.7} />
+      </g>
+    )
+  }
 
   return (
     <div className="chart-enter">
@@ -102,6 +134,7 @@ export function ExposureBarChart({ data, unit = "%" }: Props) {
             dataKey="value"
             radius={[0, 5, 5, 0]}
             maxBarSize={22}
+            background={renderZones}
             isAnimationActive={true}
             animationBegin={100}
             animationDuration={900}
@@ -111,29 +144,6 @@ export function ExposureBarChart({ data, unit = "%" }: Props) {
               <Cell key={entry.name} fill={barColor(entry.status)} fillOpacity={0.85} />
             ))}
           </Bar>
-
-          {softCaps.map((cap) => (
-            <ReferenceLine
-              key={`soft-${cap}`}
-              x={cap}
-              stroke="#f59e0b"
-              strokeWidth={1.5}
-              strokeDasharray="4 3"
-              strokeOpacity={0.8}
-              label={{ value: `${cap}%`, position: "top", fontSize: 9, fill: "#f59e0b" }}
-            />
-          ))}
-          {hardCaps.map((cap) => (
-            <ReferenceLine
-              key={`hard-${cap}`}
-              x={cap}
-              stroke="#ef4444"
-              strokeWidth={1.5}
-              strokeDasharray="4 3"
-              strokeOpacity={0.8}
-              label={{ value: `${cap}%`, position: "top", fontSize: 9, fill: "#ef4444" }}
-            />
-          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>

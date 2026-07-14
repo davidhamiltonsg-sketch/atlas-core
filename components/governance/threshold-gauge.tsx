@@ -1,4 +1,5 @@
 import { displayTicker } from "@/lib/approved-alternatives"
+import { StatusChip } from "@/components/ui/status-chip"
 
 export interface ThresholdGaugeRow {
   ticker: string
@@ -25,13 +26,9 @@ export function ThresholdGauge({ rows, allocMap }: { rows: ThresholdGaugeRow[]; 
         const isHard = actual > t.hardHigh || (t.hardLow > 0 && actual < t.hardLow)
         const isSoft = !isHard && (actual > t.healthyHigh || (t.healthyLow > 0 && actual < t.healthyLow))
 
-        const barColor = isHard ? "#ef4444" : isSoft ? "#f59e0b" : "#22c55e"
+        const barColor = isHard ? "hsl(var(--danger))" : isSoft ? "hsl(var(--warning))" : "hsl(var(--success))"
         const statusLabel = isHard ? "Hard Breach" : isSoft ? "Soft Drift" : "Healthy"
-        const statusCls = isHard
-          ? "bg-red-500/10 text-red-500 ring-1 ring-red-500/20"
-          : isSoft
-          ? "bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20"
-          : "bg-green-500/10 text-green-500 ring-1 ring-green-500/20"
+        const chipStatus = isHard ? ("crit" as const) : isSoft ? ("warn" as const) : ("good" as const)
 
         // Bar scale: 0–max, where max = hardHigh + a little padding
         const scale = (t.hardHigh + 5) || 20
@@ -49,7 +46,7 @@ export function ThresholdGauge({ rows, allocMap }: { rows: ThresholdGaugeRow[]; 
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black tabular-nums" style={{ color: barColor }}>{actual.toFixed(1)}%</span>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusCls}`}>{statusLabel}</span>
+                <StatusChip status={chipStatus} label={statusLabel} />
               </div>
             </div>
 
@@ -58,28 +55,28 @@ export function ThresholdGauge({ rows, allocMap }: { rows: ThresholdGaugeRow[]; 
               {/* Hard zone overlay */}
               {t.hardLow > 0 && (
                 <div
-                  className="absolute inset-y-0 bg-red-500/10"
+                  className="absolute inset-y-0 bg-danger/10"
                   style={{ left: 0, width: pct(t.hardLow) }}
                 />
               )}
               <div
-                className="absolute inset-y-0 bg-red-500/10"
+                className="absolute inset-y-0 bg-danger/10"
                 style={{ left: pct(t.hardHigh), right: 0 }}
               />
               {/* Soft zone overlay */}
               {t.softLow > 0 && t.healthyLow > 0 && (
                 <div
-                  className="absolute inset-y-0 bg-amber-500/10"
+                  className="absolute inset-y-0 bg-warning/10"
                   style={{ left: pct(t.softLow), width: `calc(${pct(t.healthyLow)} - ${pct(t.softLow)})` }}
                 />
               )}
               <div
-                className="absolute inset-y-0 bg-amber-500/10"
+                className="absolute inset-y-0 bg-warning/10"
                 style={{ left: pct(t.healthyHigh), width: `calc(${pct(t.softHigh)} - ${pct(t.healthyHigh)})` }}
               />
               {/* Healthy zone overlay */}
               <div
-                className="absolute inset-y-0 bg-green-500/[0.08] bar-fill"
+                className="absolute inset-y-0 bg-success/[0.08] bar-fill"
                 style={{ left: pct(t.healthyLow), width: `calc(${pct(t.healthyHigh)} - ${pct(t.healthyLow)})` }}
               />
 
@@ -100,20 +97,20 @@ export function ThresholdGauge({ rows, allocMap }: { rows: ThresholdGaugeRow[]; 
             {/* Scale labels */}
             <div className="relative mt-1 h-3">
               {t.hardLow > 0 && (
-                <span className="absolute text-[9px] text-red-500/70" style={{ left: pct(t.hardLow) }}>
+                <span className="absolute text-[9px] text-danger/70" style={{ left: pct(t.hardLow) }}>
                   {t.hardLow}%
                 </span>
               )}
-              <span className="absolute text-[9px] text-amber-500/70" style={{ left: pct(t.healthyLow) }}>
+              <span className="absolute text-[9px] text-warning/70" style={{ left: pct(t.healthyLow) }}>
                 {t.healthyLow}%
               </span>
               <span className="absolute text-[9px] text-foreground/40 -translate-x-1/2" style={{ left: pct(t.target) }}>
                 {t.target}%
               </span>
-              <span className="absolute text-[9px] text-amber-500/70 -translate-x-full" style={{ left: pct(t.healthyHigh) }}>
+              <span className="absolute text-[9px] text-warning/70 -translate-x-full" style={{ left: pct(t.healthyHigh) }}>
                 {t.healthyHigh}%
               </span>
-              <span className="absolute text-[9px] text-red-500/70 -translate-x-full" style={{ left: pct(t.hardHigh) }}>
+              <span className="absolute text-[9px] text-danger/70 -translate-x-full" style={{ left: pct(t.hardHigh) }}>
                 {t.hardHigh}%
               </span>
             </div>

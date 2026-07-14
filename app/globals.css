@@ -150,6 +150,18 @@
   --color-card-foreground:   hsl(var(--card-foreground));
   --color-primary:           hsl(var(--primary));
   --color-primary-foreground:hsl(var(--primary-foreground));
+  /* Semantic status palette — exposed so components write bg-success/10,
+     text-danger, ring-warning/20, … instead of hardcoded palette classes.
+     Values flip with .dark and re-skin under [data-theme="sbr"] above. */
+  --color-success:           hsl(var(--success));
+  --color-warning:           hsl(var(--warning));
+  --color-danger:            hsl(var(--danger));
+  --color-info:              hsl(var(--info));
+  /* Cockpit tokens (Art. XXII palette, defined further down this file). */
+  --color-seal:              hsl(var(--seal));
+  --color-pass:              hsl(var(--pass));
+  --color-fire:              hsl(var(--fire));
+  --color-drift:             hsl(var(--drift));
   /* Phase 6: Fraunces (display serif) + IBM Plex Mono (data) */
   --font-sans:  var(--font-geist-sans);
   --font-serif: var(--font-fraunces);
@@ -272,13 +284,24 @@ body {
    the rest are no-ops so the page never flashes or nags. */
 
 @keyframes ring-red {
-  0%   { box-shadow: 0 0 0 0   rgb(239 68 68 / 0.35); }
-  70%  { box-shadow: 0 0 0 6px rgb(239 68 68 / 0);    }
-  100% { box-shadow: 0 0 0 0   rgb(239 68 68 / 0);    }
+  0%   { box-shadow: 0 0 0 0   hsl(var(--danger) / 0.35); }
+  70%  { box-shadow: 0 0 0 6px hsl(var(--danger) / 0);    }
+  100% { box-shadow: 0 0 0 0   hsl(var(--danger) / 0);    }
 }
 .pulse-red {
   border-radius: 99px;
   animation: ring-red 3.2s ease-out infinite;
+}
+/* Cockpit variant — the FIRED node on the decision ladder. Same single gentle
+   ring cadence as .pulse-red, driven by the --fire token. */
+@keyframes ring-fire {
+  0%   { box-shadow: 0 0 0 0   hsl(var(--fire) / 0.35); }
+  70%  { box-shadow: 0 0 0 6px hsl(var(--fire) / 0);    }
+  100% { box-shadow: 0 0 0 0   hsl(var(--fire) / 0);    }
+}
+.pulse-fire {
+  border-radius: 99px;
+  animation: ring-fire 3.2s ease-out infinite;
 }
 /* soft states: no animation — colour alone */
 .pulse-amber, .pulse-yellow, .pulse-orange { border-radius: 99px; }
@@ -288,8 +311,8 @@ body {
 
 /* Green — gentle breathing glow */
 @keyframes breathe-green {
-  0%, 100% { filter: drop-shadow(0 0 4px rgb(34 197 94 / 0.3)); }
-  50%       { filter: drop-shadow(0 0 12px rgb(34 197 94 / 0.6)); }
+  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--success) / 0.3)); }
+  50%       { filter: drop-shadow(0 0 12px hsl(var(--success) / 0.6)); }
 }
 .gauge-healthy {
   animation: breathe-green 3s ease-in-out infinite;
@@ -297,8 +320,8 @@ body {
 
 /* Amber — slow amber swell */
 @keyframes breathe-amber {
-  0%, 100% { filter: drop-shadow(0 0 4px rgb(245 158 11 / 0.3)); }
-  50%       { filter: drop-shadow(0 0 10px rgb(245 158 11 / 0.55)); }
+  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--warning) / 0.3)); }
+  50%       { filter: drop-shadow(0 0 10px hsl(var(--warning) / 0.55)); }
 }
 .gauge-warning {
   animation: breathe-amber 2.5s ease-in-out infinite;
@@ -306,11 +329,21 @@ body {
 
 /* Red — gentle swell (calmed: no flashing) */
 @keyframes breathe-red {
-  0%, 100% { filter: drop-shadow(0 0 4px rgb(239 68 68 / 0.3)); }
-  50%       { filter: drop-shadow(0 0 10px rgb(239 68 68 / 0.5)); }
+  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--danger) / 0.3)); }
+  50%       { filter: drop-shadow(0 0 10px hsl(var(--danger) / 0.5)); }
 }
 .gauge-critical {
   animation: breathe-red 2.8s ease-in-out infinite;
+}
+
+/* HealthGauge — semicircle arc sweeps in from empty on load. R is a fixed 63
+   in HealthGauge (never parameterised), so the arc length π·63 is a constant —
+   the "from" keyframe can hardcode it. `backwards` fill (no `forwards`) means
+   the arc settles on its real inline stroke-dashoffset the instant the
+   animation ends — same technique as .seal-ring-fill. */
+@keyframes gauge-arc-fill { from { stroke-dashoffset: 197.92033717615698; } }
+.gauge-arc-fill {
+  animation: gauge-arc-fill 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s backwards;
 }
 
 /* ─── Chart entry animations ──────────────────────────────────────────────── */
@@ -548,9 +581,9 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
 /* ─── Motion respect ──────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .ring-hero, .loadbar, .float-soft, .spin-slow, .chart-enter,
-  .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red,
+  .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red, .pulse-fire,
   .reveal-stack > *, .bar-fill, .skeleton::after, .btn-brand::after,
-  .seal-ring-fill, .marker-land, .animate-spin {
+  .seal-ring-fill, .gauge-arc-fill, .marker-land, .animate-spin {
     animation: none !important;
   }
   .card-lux, a.card-lux, .btn-brand, .btn-brand::after { transition: none !important; }

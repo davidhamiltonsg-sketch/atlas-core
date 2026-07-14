@@ -22,11 +22,22 @@ const stepStatusLabel: Record<StepStatus, string> = {
   not_reached: "—",
 }
 
+// Art. XXII cockpit palette: --pass step CLEAR · --fire step FIRED · --drift warning.
 const stepStatusColor: Record<StepStatus, string> = {
-  fired:       "text-amber-500 font-bold",
-  passed:      "text-green-500",
-  warning:     "text-amber-400",
+  fired:       "text-fire font-bold",
+  passed:      "text-pass",
+  warning:     "text-drift",
   not_reached: "text-muted-foreground/40",
+}
+
+// Numbered node on the stepper rail. The fired node gets a solid --fire fill and
+// the gentle .pulse-fire ring (a box-shadow animation — so no Tailwind ring here,
+// it would be overwritten mid-pulse); the rest are quiet tinted discs.
+const stepNodeStyle: Record<StepStatus, string> = {
+  fired:       "bg-fire text-white pulse-fire",
+  passed:      "bg-pass/15 text-pass ring-1 ring-pass/40",
+  warning:     "bg-drift/15 text-drift ring-1 ring-drift/40",
+  not_reached: "bg-muted text-muted-foreground/60",
 }
 
 /** Art. XIII Decision Ladder — 8-step display with instruction block. */
@@ -50,25 +61,37 @@ export function DecisionLadderCard({ ladder, monthlyContribution, daysToWindow, 
         ) : null}
       </div>
 
-      {/* 8 steps */}
-      <div className="divide-y divide-border/60">
-        {ladder.steps.map((step) => (
-          <div
-            key={step.step}
-            className={`px-5 py-2.5 flex items-center gap-3 ${step.status === "fired" ? "bg-amber-500/[0.05]" : ""}`}
-          >
-            <span className="font-data shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-              {step.step}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-medium ${step.status === "not_reached" ? "text-muted-foreground/50" : ""}`}>{step.label}</p>
-              {step.reason && <p className="text-[10px] text-muted-foreground truncate">{step.reason}</p>}
+      {/* 8 steps — vertical stepper: a spine connects the numbered nodes and is
+          coloured down to the deepest evaluated step, then falls to hairline. */}
+      <div className="py-1">
+        {(() => {
+          const deepest = ladder.steps.reduce(
+            (acc, s, i) => (s.status !== "not_reached" ? i : acc), -1)
+          return ladder.steps.map((step, i) => (
+            <div
+              key={step.step}
+              className={`relative px-5 py-2.5 flex items-center gap-3 ${step.status === "fired" ? "bg-fire/[0.05]" : ""}`}
+            >
+              {/* Rail segments above / below the node (node centre = 20px pad + 10px half-node) */}
+              {i > 0 && (
+                <span aria-hidden className={`absolute left-[29px] top-0 h-1/2 w-0.5 ${i <= deepest ? "bg-seal/40" : "bg-border"}`} />
+              )}
+              {i < ladder.steps.length - 1 && (
+                <span aria-hidden className={`absolute left-[29px] top-1/2 bottom-0 w-0.5 ${i < deepest ? "bg-seal/40" : "bg-border"}`} />
+              )}
+              <span className={`font-data relative z-10 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${stepNodeStyle[step.status]}`}>
+                {step.step}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-medium ${step.status === "not_reached" ? "text-muted-foreground/50" : ""}`}>{step.label}</p>
+                {step.reason && <p className="text-[10px] text-muted-foreground truncate">{step.reason}</p>}
+              </div>
+              <span className={`shrink-0 text-[10px] tabular-nums ${stepStatusColor[step.status]}`}>
+                {stepStatusLabel[step.status]}
+              </span>
             </div>
-            <span className={`shrink-0 text-[10px] tabular-nums ${stepStatusColor[step.status]}`}>
-              {stepStatusLabel[step.status]}
-            </span>
-          </div>
-        ))}
+          ))
+        })()}
       </div>
 
       {/* Instruction block */}

@@ -2,6 +2,8 @@ import { Card, CardHeader } from "@/components/ui/primitives"
 import { altLabelFor, isInScope } from "@/lib/approved-alternatives"
 import { formatCurrency } from "@/lib/utils"
 import { StaleBadge } from "@/components/stale-badge"
+import { StatusChip, type StatusChipStatus } from "@/components/ui/status-chip"
+import { Sparkline } from "@/components/charts/sparkline"
 
 export type HoldingStatus = "healthy" | "soft" | "hard"
 
@@ -45,16 +47,16 @@ function BandBar({ actualPct, targetPct, toleranceBand, hardCapPct, status }: {
   const hard = hardCapPct ?? targetPct + toleranceBand * 2
   const scale = Math.max(hard + 2, actualPct + 1, healthyHigh + 1)
   const pct = (v: number) => `${Math.min(100, Math.max(0, (v / scale) * 100))}%`
-  const dot = status === "hard" ? "#ef4444" : status === "soft" ? "#f59e0b" : "#22c55e"
+  const dot = status === "hard" ? "hsl(var(--danger))" : status === "soft" ? "hsl(var(--warning))" : "hsl(var(--success))"
   return (
     <div className="w-[120px]">
       <div className="relative h-3 rounded bg-muted overflow-hidden">
         {/* hard zone beyond the cap */}
         {hardCapPct !== null && (
-          <div className="absolute inset-y-0 bg-red-500/15" style={{ left: pct(hard), right: 0 }} />
+          <div className="absolute inset-y-0 bg-danger/15" style={{ left: pct(hard), right: 0 }} />
         )}
         {/* healthy zone */}
-        <div className="absolute inset-y-0 bg-green-500/20 bar-fill" style={{ left: pct(healthyLow), width: `calc(${pct(healthyHigh)} - ${pct(healthyLow)})` }} />
+        <div className="absolute inset-y-0 bg-success/20 bar-fill" style={{ left: pct(healthyLow), width: `calc(${pct(healthyHigh)} - ${pct(healthyLow)})` }} />
         {/* target tick */}
         <div className="absolute inset-y-0 w-px bg-foreground/30" style={{ left: pct(targetPct) }} />
         {/* current-weight dot */}
@@ -68,10 +70,10 @@ function BandBar({ actualPct, targetPct, toleranceBand, hardCapPct, status }: {
   )
 }
 
-const STATUS_CHIP: Record<HoldingStatus, { label: string; cls: string }> = {
-  healthy: { label: "Healthy",    cls: "bg-green-500/10 text-green-600 dark:text-green-400 ring-green-500/20" },
-  soft:    { label: "Drifting",   cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20" },
-  hard:    { label: "Over limit", cls: "bg-red-500/10 text-red-600 dark:text-red-400 ring-red-500/20" },
+const STATUS_CHIP: Record<HoldingStatus, { label: string; status: StatusChipStatus }> = {
+  healthy: { label: "Healthy",    status: "good" },
+  soft:    { label: "Drifting",   status: "warn" },
+  hard:    { label: "Over limit", status: "crit" },
 }
 
 // A concise plain-English "this month" cell from the DCA allocation.
@@ -80,7 +82,7 @@ function ThisMonth({ tm, currency }: { tm: HoldingRow["thisMonth"]; currency: st
   if (tm.amount > 0) {
     return (
       <div>
-        <div className="font-bold tabular-nums text-green-600 dark:text-green-400">+{formatCurrency(tm.amount, currency)}</div>
+        <div className="font-bold tabular-nums text-success">+{formatCurrency(tm.amount, currency)}</div>
         <div className="text-[10px] text-muted-foreground capitalize">{tm.tag === "dip-buy" ? "buy the dip" : tm.tag}</div>
       </div>
     )
@@ -102,7 +104,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
   // Plain-English column wording for Silicon Brick Road; institutional wording for Atlas Core.
   const L = plainEnglish
     ? { title: "Your Funds", subtitle: "What you hold, how it's doing, and what to buy this month", unreal: "Paper gain/loss", band: "Where it sits", footer: "and this month's plan" }
-    : { title: "Your Holdings", subtitle: "Shares · price · value · unrealised gain · position in its band · status · what to do this month", unreal: "Unrealised", band: "Position in band", footer: "band & action from the live plan" }
+    : { title: "Your Holdings", subtitle: "Trend · shares · price · value · unrealised gain · position in its band · status · what to do this month", unreal: "Unrealised", band: "Position in band", footer: "band & action from the live plan" }
 
   return (
     <Card>
@@ -112,10 +114,11 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
         right={priceStale ? <StaleBadge title="Live prices unavailable — values use the last verified prices." /> : undefined}
       />
       <div className="overflow-x-auto">
-        <table className="w-full text-xs min-w-[920px]">
+        <table className="w-full text-xs min-w-[1000px]">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30">
               <th className="px-5 py-2.5 font-semibold">Holding</th>
+              <th className="hidden sm:table-cell px-3 py-2.5 font-semibold">Trend</th>
               <th className="px-3 py-2.5 font-semibold text-right">Shares</th>
               <th className="px-3 py-2.5 font-semibold text-right">Price / Avg cost</th>
               <th className="px-3 py-2.5 font-semibold text-right">Value</th>
@@ -129,7 +132,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
             {positions.map((p) => {
               const alt = altLabelFor(p.ticker)
               const offScope = !isInScope(p.ticker)
-              const gainCls = p.unrealisedSgd === null ? "text-muted-foreground" : p.unrealisedSgd >= 0 ? "text-green-500" : "text-red-500"
+              const gainCls = p.unrealisedSgd === null ? "text-muted-foreground" : p.unrealisedSgd >= 0 ? "text-success" : "text-danger"
               const chip = STATUS_CHIP[p.status]
               return (
                 <tr key={p.ticker} className="hover:bg-accent/20 transition-colors">
@@ -138,9 +141,14 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
                       <span className="h-2 w-2 rounded-full shrink-0" style={{ background: p.color }} />
                       <span className="font-bold">{p.ticker}</span>
                       {alt && <span className="rounded-full bg-violet-500/10 text-violet-500 dark:text-violet-400 ring-1 ring-violet-500/20 px-1.5 py-0.5 text-[9px] font-semibold">{alt}</span>}
-                      {offScope && <span className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold">not in plan — review</span>}
+                      {offScope && <StatusChip status="warn" label="not in plan — review" className="px-1.5 text-[9px]" />}
                     </div>
                     <span className="text-[11px] text-muted-foreground">{p.name}</span>
+                  </td>
+                  <td className="hidden sm:table-cell px-3 py-3">
+                    {p.priceHistory.length >= 2
+                      ? <Sparkline data={p.priceHistory} />
+                      : <span className="text-[10px] text-muted-foreground/40">—</span>}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
                     {p.aggregate ? <span className="text-muted-foreground">—</span>
@@ -151,7 +159,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
                       <>
                         {p.latestPrice > 0 ? <div className="font-medium">${p.latestPrice.toFixed(2)}</div> : <span className="text-muted-foreground">—</span>}
                         {p.avgCostUsd != null && (
-                          <div className={`text-[10px] tabular-nums ${p.avgCostUsd > 0 && p.latestPrice > 0 ? (p.latestPrice >= p.avgCostUsd ? "text-green-500" : "text-red-500") : "text-muted-foreground"}`}>
+                          <div className={`text-[10px] tabular-nums ${p.avgCostUsd > 0 && p.latestPrice > 0 ? (p.latestPrice >= p.avgCostUsd ? "text-success" : "text-danger") : "text-muted-foreground"}`}>
                             avg ${p.avgCostUsd.toFixed(2)}
                           </div>
                         )}
@@ -177,7 +185,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
                     <BandBar actualPct={p.actualPct} targetPct={p.targetPct} toleranceBand={p.toleranceBand} hardCapPct={p.hardCapPct} status={p.status} />
                   </td>
                   <td className="px-3 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${chip.cls}`}>{chip.label}</span>
+                    <StatusChip status={chip.status} label={chip.label} />
                   </td>
                   <td className="px-5 py-3 text-right">
                     <ThisMonth tm={p.thisMonth} currency={contributionCurrency} />
@@ -189,10 +197,11 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
           <tfoot>
             <tr className="border-t border-border bg-muted/20 font-semibold">
               <td className="px-5 py-3">Total</td>
+              <td className="hidden sm:table-cell" />
               <td />
               <td />
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalValue, "SGD")}</td>
-              <td className={`px-3 py-3 text-right tabular-nums ${!valuationComplete ? "text-muted-foreground" : totalUnreal >= 0 ? "text-green-500" : "text-red-500"}`}>
+              <td className={`px-3 py-3 text-right tabular-nums ${!valuationComplete ? "text-muted-foreground" : totalUnreal >= 0 ? "text-success" : "text-danger"}`}>
                 {valuationComplete ? `${totalUnreal >= 0 ? "+" : ""}${formatCurrency(totalUnreal, "SGD")}` : "Needs reconciliation"}
               </td>
               <td colSpan={3} />

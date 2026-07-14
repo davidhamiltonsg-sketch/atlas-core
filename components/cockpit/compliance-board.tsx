@@ -31,17 +31,18 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
   const hardHighX  = toX(p.hardHigh)
   const actualX    = toX(p.actualPct)
 
-  // Zone color for the soft band
+  // Zone + marker colours from the cockpit tokens (Art. XXII palette):
+  // --pass healthy · --drift soft drift · --fire hard breach. Direction of a
+  // soft drift is carried by the ↓/↑ in the label, not by a separate hue.
   const softBandColor =
-    p.status === "hard"    ? "bg-red-500/20" :
-    p.status === "soft"    ? "bg-amber-400/20" :
-    "bg-green-500/15"
+    p.status === "hard"    ? "bg-fire/20" :
+    p.status === "soft"    ? "bg-drift/20" :
+    "bg-pass/15"
 
   const markerColor =
-    p.status === "hard"    ? "bg-red-500" :
-    p.status === "soft" && p.actualPct < p.targetPct ? "bg-amber-400" :
-    p.status === "soft"    ? "bg-orange-400" :
-    "bg-green-500"
+    p.status === "hard"    ? "bg-fire" :
+    p.status === "soft"    ? "bg-drift" :
+    "bg-pass"
 
   const statusLabel =
     p.status === "hard"    ? (p.actualPct < (p.hardLow ?? 0) ? "HARD ↓" : "HARD ↑") :
@@ -50,9 +51,9 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
     "OK"
 
   const statusStyle =
-    p.status === "hard"    ? "text-red-500" :
-    p.status === "soft"    ? "text-amber-500" :
-    "text-green-500"
+    p.status === "hard"    ? "text-fire" :
+    p.status === "soft"    ? "text-drift" :
+    "text-pass"
 
   return (
     <div className="flex items-center gap-4 py-3">
@@ -72,7 +73,7 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
       <div className="flex-1 relative h-5 bg-muted rounded-full overflow-hidden">
         {/* Hard low zone (red, left of hard floor) */}
         {hardLowX !== null && hardLowX > 0 && (
-          <div className="absolute top-0 left-0 h-full bg-red-500/20 rounded-l-full bar-fill" style={{ width: `${hardLowX}%` }} />
+          <div className="absolute top-0 left-0 h-full bg-fire/20 rounded-l-full bar-fill" style={{ width: `${hardLowX}%` }} />
         )}
         {/* Soft band (green/amber zone between soft low and soft high) */}
         <div
@@ -81,7 +82,7 @@ function BandRow({ p }: { p: ComplianceBandPosition }) {
         />
         {/* Hard high line */}
         <div
-          className="absolute top-0 h-full w-0.5 bg-red-500/60"
+          className="absolute top-0 h-full w-0.5 bg-fire/60"
           style={{ left: `${hardHighX}%` }}
         />
         {/* Target tick */}
