@@ -84,11 +84,11 @@ export async function GET(req: Request) {
       let emailed = false
       let reason: string | undefined
 
-      // Crash protocol: send a dedicated urgent email when the threshold is crossed.
-      const CRASH_THRESHOLD = -25
-      if (digest.drawdownPct !== null && digest.drawdownPct <= CRASH_THRESHOLD && emailConfigured()) {
+      // Crash discipline: send the dedicated urgent email once, when the −25% threshold
+      // is freshly crossed (the digest keeps reporting it daily while it stays breached).
+      if (digest.drawdownPct !== null && digest.crashNewlyTriggered && emailConfigured()) {
         try {
-          await sendCrashProtocolEmail(digest.user.email, digest.user.name, digest.drawdownPct, digest.sgovPct)
+          await sendCrashProtocolEmail(digest.user.email, digest.user.name, digest.drawdownPct)
           emailed = true
           reason = `crash protocol email sent (drawdown ${digest.drawdownPct.toFixed(1)}%)`
         } catch (e) {
