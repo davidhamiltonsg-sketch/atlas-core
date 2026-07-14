@@ -142,10 +142,11 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
   function handleConfirmScreenshot() {
     // Import EVERY extracted row — existing tickers update, new ones (e.g. IBIT or an
-    // out-of-scope ETF) are created so nothing is silently dropped.
+    // out-of-scope ETF) are created so nothing is silently dropped. The extracted SGD value
+    // travels along so non-USD-quoted lines (EUR DBMFE, GBp LSE) are valued correctly.
     const rows = extractedRows
       .filter((r) => r.units > 0 && r.price > 0)
-      .map((r) => ({ ticker: r.ticker, units: r.units, price: r.price }))
+      .map((r) => ({ ticker: r.ticker, units: r.units, price: r.price, value: r.value }))
 
     startTransition(async () => {
       await applyExtractedHoldings(rows)

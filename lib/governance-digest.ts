@@ -2,6 +2,9 @@ import {db} from "@/lib/db"
 import {computeLookThrough} from "@/lib/look-through"
 import {evaluateGovernance,type DigestItem} from "@/lib/governance-status"
 import {refreshedLookThroughData} from "@/lib/look-through-data"
+import {ibkrCredentialsFor} from "@/lib/ibkr-config"
+
+const SYNC_STALE_DAYS=3
 export type {DigestItem}
 export interface GovernanceDigest{user:{id:string;name:string;email:string};totalValue:number;snapshotAgeDays:number|null;items:DigestItem[];actionable:boolean;drawdownPct:number|null;crashNewlyTriggered:boolean}
 
@@ -33,6 +36,13 @@ export async function buildGovernanceDigest(userId:string):Promise<GovernanceDig
  const refreshed=await refreshedLookThroughData(),lookThrough=computeLookThrough(positions,new Date(),refreshed.updatedAt,refreshed.weights),alignment=evaluateGovernance({positions,bufferPct:0,lookThrough})
  const latest=holdings.reduce<Date|null>((x,h)=>h.snapshots[0]?.date&&(h.snapshots[0]?.value??0)>0&&(!x||h.snapshots[0].date<x)?h.snapshots[0].date:x,null);const age=latest?Math.floor((Date.now()-latest.getTime())/86400000):null
  const items:DigestItem[]=alignment.checks.filter(c=>c.status!=="ok").map(c=>({severity:c.status==="breach"?"breach":"watch",title:c.label,detail:c.detail}));if(age===null||age>7)items.push({severity:age===null||age>35?"breach":"watch",title:"IBKR data freshness",detail:age===null?"No position snapshot is available.":`Latest snapshot is ${age} days old.`})
+ // Sync-failure watch: IBKR Flex is configured but the last recorded successful sync is older
+ // than SYNC_STALE_DAYS (the cron runs daily) — the Flex token has most likely expired.
+ {const {token,positionsQuery}=ibkrCredentialsFor("atlas-core")
+  if(token&&positionsQuery){
+   const lastSync=await db.ibkrSyncLog.findFirst({where:{userId},orderBy:{syncedAt:"desc"},select:{syncedAt:true}})
+   const syncAgeDays=lastSync?Math.floor((Date.now()-lastSync.syncedAt.getTime())/86400000):null
+   if(syncAgeDays===null||syncAgeDays>SYNC_STALE_DAYS)items.push({severity:"watch",title:"IBKR sync may be broken — regenerate the Flex token",detail:syncAgeDays===null?"IBKR Flex is configured but no successful sync has ever been recorded.":`The last successful IBKR sync was ${syncAgeDays} days ago (syncs run daily). Flex tokens expire — regenerate the token in IBKR Client Portal and update the environment variable.`})}}
  const {drawdownPct,previousDrawdownPct}=await computeDrawdown(userId,totalValue)
  if(drawdownPct!==null&&drawdownPct<=DRAWDOWN_WATCH_PCT)items.push({severity:drawdownPct<=CRASH_DRAWDOWN_TRIGGER_PCT?"breach":"watch",title:"Portfolio drawdown",detail:`Portfolio is ${Math.abs(drawdownPct).toFixed(1)}% below its all-time high. ${drawdownPct<=CRASH_DRAWDOWN_TRIGGER_PCT?"Crash discipline applies: continue contributions, sell nothing, log the event.":"Glide-path or discretionary changes should wait until the drawdown clears 20%."}`})
  const crashNewlyTriggered=drawdownPct!==null&&drawdownPct<=CRASH_DRAWDOWN_TRIGGER_PCT&&(previousDrawdownPct===null||previousDrawdownPct>CRASH_DRAWDOWN_TRIGGER_PCT)

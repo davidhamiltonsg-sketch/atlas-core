@@ -10,6 +10,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
+import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
 const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQAC: "EQAC.L", SMH: "SMH.L", IBIT: "IBIT", BTC: "IBIT", DBMFE: "DBMFE.PA" }
@@ -18,24 +19,6 @@ const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k,
 const YF_SGD_PRICED = new Set<string>()
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
-
-// Fetch live USD→SGD exchange rate from Yahoo Finance (query1 → query2 fallback)
-async function getUsdSgdRate(): Promise<number> {
-  for (const host of YF_HOSTS) {
-    try {
-      const res = await fetch(
-        `https://${host}/v8/finance/chart/USDSGD=X?interval=1d&range=1d`,
-        { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
-      )
-      if (res.ok) {
-        const d = await res.json()
-        const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-        if (rate && rate > 0) return rate
-      }
-    } catch {}
-  }
-  return 1.35 // hardcoded fallback when both hosts unavailable
-}
 
 // Manual update: create new snapshots for one or more holdings.
 // Pass currency: "SGD" for an SGD-priced instrument to skip USD→SGD conversion.
@@ -47,7 +30,7 @@ export async function updateHoldingsManually(
   const active = await activePortfolioContext(session)
   assertCanMutateOwner(session, active.owner.id)
 
-  const usdSgdRate = await getUsdSgdRate()
+  const usdSgdRate = await getCachedUsdSgdRate()
 
   for (const u of updates) {
     // Verify holding belongs to this user
@@ -83,7 +66,7 @@ export async function updateHoldingsManually(
 const SBR_ALLOWED_TICKERS = new Set(SBR_SPEC.funds.map(f=>f.ticker))
 
 export async function applyExtractedHoldings(
-  rows: Array<{ ticker: string; units: number; price: number }>
+  rows: Array<{ ticker: string; units: number; price: number; value?: number }>
 ): Promise<{ updated: number; created: number }> {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
@@ -93,7 +76,7 @@ export async function applyExtractedHoldings(
   const ownerId = active.owner.id
   const isSbr = constitutionId === "silicon-brick-road"
 
-  const usdSgdRate = await getUsdSgdRate()
+  const usdSgdRate = await getCachedUsdSgdRate()
   let updated = 0
   let created = 0
 
@@ -111,8 +94,13 @@ export async function applyExtractedHoldings(
       })
       created++
     }
-    const fxMultiplier = usdSgdRate
-    await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: r.units * r.price * fxMultiplier })
+    // units × price × USDSGD is only correct for USD-quoted lines — DBMFE is EUR-quoted and
+    // LSE lines can print in GBp, so inferring SGD from an unlabelled quote misvalues them
+    // (same reasoning as the SBR refresh-path guard below). The vision extractor reads the
+    // account-base (SGD) value column directly; prefer it when present and sane, and fall
+    // back to the FX computation only when no usable extracted value exists.
+    const extractedSgd = typeof r.value === "number" && Number.isFinite(r.value) && r.value > 0 ? r.value : null
+    await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: extractedSgd ?? r.units * r.price * usdSgdRate })
     updated++
   }
 
@@ -230,7 +218,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
     }
   }
 
-  const usdSgdRate = await getUsdSgdRate()
+  const usdSgdRate = await getCachedUsdSgdRate()
 
   let updated = 0
   let unitsUpdated = 0

@@ -18,7 +18,7 @@ import type { ComplianceBandPosition } from "@/components/cockpit/compliance-boa
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { AnimatedNumber } from "@/components/animated-number"
-import { getUsdSgdRate } from "@/lib/holdings-sync"
+import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 import { computeSbrLookThrough } from "@/lib/sbr-look-through"
@@ -43,13 +43,13 @@ async function getSbrData(userId: string) {
     db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
     getRecentExecutions(userId, 1),
-    getUsdSgdRate(),
+    getCachedUsdSgdRate(),
     db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "silicon-brick-road", currency: "SGD" } } }),
     db.behaviourLog.findFirst({
       where: { userId, type: "committee-minute", date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
     }),
-    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true, sbrExternalLiquidityVerified: true } }),
     db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
   ])
   const fundOrder = SBR.funds.map((f) => f.ticker)
@@ -154,7 +154,9 @@ async function getSbrData(userId: string) {
 
   const latest = holdings.reduce<Date | null>((d, h) => { const s = h.snapshots[0]?.date; return s && (h.snapshots[0]?.value??0)>0 && (!d || s < d) ? s : d }, null)
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
-  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
+  // Liquidity pillar: the owner's Settings confirmation that an emergency fund exists OUTSIDE
+  // this portfolio — the portfolio itself must never score as emergency liquidity.
+  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays, SBR, owner?.sbrExternalLiquidityVerified ?? false)
 
   // FX strip — live rate vs annual reference
   const fxDeviation = ((usdSgdRate - FX_REFERENCE_USDSGD) / FX_REFERENCE_USDSGD) * 100
