@@ -17,7 +17,7 @@ interface TopbarProps {
 
 const VERSION_PILL: Record<ConstitutionId, { label: string; cls: string; dot: string }> = {
   "atlas-core":         { label: "v10.5", cls: "border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400", dot: "bg-violet-500" },
-  "silicon-brick-road": { label: "v10.3", cls: "border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
+  "silicon-brick-road": { label: "v10.4", cls: "border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
 }
 
 export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId = "atlas-core", canSwitchPortfolio = false }: TopbarProps) {

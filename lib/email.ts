@@ -184,7 +184,7 @@ export async function sendMonthlyReminderEmail(
   const accentBg = isAtlas ? "#f5f3ff" : "#e0f2fe"
   const moniker = isAtlas ? "AC" : "SBR"
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
-  const tagline = isAtlas ? "Investment Constitution v10.5" : "Flexible medium-term growth · Constitution v10.3"
+  const tagline = isAtlas ? "Investment Constitution v10.5" : "Flexible medium-term growth · Constitution v10.4"
   const severityColor = nextMove.severity === "critical" ? "#dc2626"
     : nextMove.severity === "high" ? "#d97706"
     : nextMove.severity === "medium" ? "#0284c7"
@@ -327,7 +327,7 @@ export async function sendAnnualAuditEmail(
     <li>Review the governed 5% Bitcoin sleeve and its approved vehicle identity.</li>
     <li>Confirm broker (IBKR Singapore) and custodian risk is acceptable.</li>` : `
     <li>Confirm SBR still has no fixed spending date or mandatory target value.</li>
-    <li>Review VWRA 65%, EQAC 15%, SMH 5%, Bitcoin 5% and DBMFE 10% against Dami's circumstances.</li>
+    <li>Review VWRA 65%, EQAC 10%, SMH 5%, Bitcoin 5%, DBMFE 10% and A35 5% against Dami's circumstances.</li>
     <li>If a real SGD use has emerged, document its amount, date and flexibility before changing risk.</li>
     <li>Review hidden-exposure factsheets — are provider holdings files current?</li>`
 

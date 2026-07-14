@@ -213,7 +213,7 @@ const SBR_AGENTS: AgentDef[] = [
     accent: C.blue,
     script: [
       { t: 120, level: "info", msg: "Weighing each fund against its guide-rails" },
-      { t: 720, level: "data", msg: "Targets VWRA 65% · EQAC 15% · SMH 5% · Bitcoin 5% · DBMFE 10%" },
+      { t: 720, level: "data", msg: "Targets VWRA 65% · EQAC 10% · SMH 5% · Bitcoin 5% · DBMFE 10% · A35 5%" },
       { t: 1320, level: "warn", msg: "Chip-maker fund sitting a little high" },
     ],
     result: { status: "alert", line: { t: 1800, level: "warn", msg: "One fund a bit high — even it out over the next month" } },

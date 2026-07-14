@@ -21,7 +21,7 @@ const PORTFOLIO_META: Record<ConstitutionId, { theme: string; name: string; vers
   "silicon-brick-road": {
     theme: "sbr",
     name: "Silicon Brick Road",
-    version: "v10.3 · Flexible growth · Sign in to continue",
+    version: "v10.4 · Flexible growth · Sign in to continue",
     placeholder: "you@example.com",
     footer: "Silicon Brick Road is a private savings dashboard. Access is restricted.",
   },

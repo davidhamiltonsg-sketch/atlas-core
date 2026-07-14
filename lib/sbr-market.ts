@@ -1,5 +1,5 @@
 /**
- * SBR market data — reference prices for the five SBR sleeves.
+ * SBR market data — reference prices for the six SBR sleeves.
  *
  * Brokerage values remain authoritative. Public quotes are overlays only.
  */
@@ -52,7 +52,7 @@ async function fetchYahoo52wHigh(symbol: string): Promise<number> {
 export async function getSbrMarketData(): Promise<SbrMarketResult> {
   const asOf = new Date().toISOString()
 
-  const symbols={VWRA:"VWRA.L",EQAC:"EQAC.L",SMH:"SMH.L",BTC:"IBIT",DBMFE:"DBMFE.PA"}
+  const symbols={VWRA:"VWRA.L",EQAC:"EQAC.L",SMH:"SMH.L",BTC:"IBIT",DBMFE:"DBMFE.PA",A35:"A35.SI"}
   const rows=await Promise.all(Object.entries(symbols).map(async([ticker,symbol])=>({ticker,price:await fetchYahooPrice(symbol),hi52:await fetchYahoo52wHigh(symbol)})))
 
   const positions: Record<string, { price: number; hi52: number }> = {}
