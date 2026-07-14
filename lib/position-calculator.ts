@@ -9,10 +9,8 @@
  * FIRST, then percentages are calculated on the consolidated positions.
  */
 
-import { BITCOIN_TICKERS } from "@/lib/constants"
-
-// Extended Bitcoin holdings including legacy GBTC
-const ALL_BITCOIN_TICKERS = ["BTC", "IBIT", "GBTC"] as const
+// Extended Bitcoin holdings: BITCOIN_TICKERS (BTC, IBIT) plus legacy GBTC
+const ALL_BITCOIN_TICKERS: readonly string[] = ["BTC", "IBIT", "GBTC"]
 
 export interface Holding {
   ticker: string
@@ -20,11 +18,11 @@ export interface Holding {
   value: number
   units?: number
   price?: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface Constitution {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -67,7 +65,7 @@ export function calculateAllocationPercentages(
  */
 function consolidateBitcoinSleeve(holdings: Holding[]): Holding[] {
   const bitcoinHoldings = holdings.filter((h) =>
-    ALL_BITCOIN_TICKERS.includes(h.ticker as any)
+    ALL_BITCOIN_TICKERS.includes(h.ticker)
   )
 
   if (bitcoinHoldings.length <= 1) {
@@ -93,7 +91,7 @@ function consolidateBitcoinSleeve(holdings: Holding[]): Holding[] {
 
   // Return non-Bitcoin holdings plus the consolidated Bitcoin position
   const nonBitcoin = holdings.filter(
-    (h) => !ALL_BITCOIN_TICKERS.includes(h.ticker as any)
+    (h) => !ALL_BITCOIN_TICKERS.includes(h.ticker)
   )
 
   return [...nonBitcoin, consolidatedBitcoin]

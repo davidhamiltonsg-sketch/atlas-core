@@ -57,21 +57,6 @@ const DEFAULT_RISK_FREE_RATE = 0.04
 
 type ActionStatus = "healthy" | "soft" | "hard"
 
-async function getUsdSgdRate(): Promise<number> {
-  try {
-    const res = await fetch(
-      "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d",
-      { headers: { "User-Agent": "Mozilla/5.0" }, next: { revalidate: 3600 } }
-    )
-    if (res.ok) {
-      const d = await res.json()
-      const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-      if (rate && rate > 0) return rate
-    }
-  } catch {}
-  return 1.35
-}
-
 /** Dealing window: opens 3rd business day after the 15th, closes last business day of month. */
 function getDealingWindow(today: { y: number; m: number; d: number }): {
   daysUntilOpen: number | null

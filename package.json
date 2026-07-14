@@ -10,7 +10,7 @@
     "lint": "eslint",
     "seed": "npx tsx prisma/seed.ts",
     "seed:sbr": "npx tsx prisma/seed-sbr.ts",
-    "migrate:portfolio-v2": "node scripts/migrate-portfolio-v2.mjs",
+    "test": "vitest run",
     "check:spec": "npx tsx scripts/check-spec.ts",
     "check:money": "npx tsx scripts/check-money.ts",
     "check:ingest": "npx tsx scripts/check-ingest.ts",
@@ -19,7 +19,8 @@
     "check:forecast-governance": "npx tsx scripts/check-forecast-governance.ts",
     "check:current-runtime": "npx tsx scripts/check-current-runtime.ts",
     "check:lookthrough": "npx tsx scripts/check-lookthrough-reconciliation.ts",
-    "check": "npm run generate:constitutions && npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npm run check:valuation && npm run check:forecast-governance && npm run check:lookthrough && npm run check:current-runtime && npx tsc --noEmit"
+    "check:sbr-boundary": "npx tsx scripts/check-sbr-boundary.ts",
+    "check": "npm run generate:constitutions && npm run check:spec && npm run check:money && npm run check:ingest && npm run check:portfolio-v2 && npm run check:valuation && npm run check:forecast-governance && npm run check:lookthrough && npm run check:sbr-boundary && npm run check:current-runtime && npx tsc --noEmit"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -62,6 +63,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

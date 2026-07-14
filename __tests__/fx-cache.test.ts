@@ -1,8 +1,12 @@
 /**
  * Unit tests for fx-cache.ts
- * Tests FX rate caching and TTL behavior
+ * Tests FX rate caching and TTL behavior.
+ *
+ * fx-cache owns the USD/SGD fetch (Yahoo Finance), so the network is mocked by
+ * stubbing global fetch with a Yahoo-shaped payload.
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import {
   getCachedUsdSgdRate,
   clearFxCache,
@@ -10,22 +14,29 @@ import {
   _testResetCache,
 } from "@/lib/fx-cache"
 
-// Mock for getUsdSgdRate from finnhub
 let mockFxRateValue = 1.35
 let mockFxRateCallCount = 0
 
-jest.mock("@/lib/finnhub", () => ({
-  getUsdSgdRate: jest.fn(async () => {
-    mockFxRateCallCount++
-    return mockFxRateValue
-  }),
-}))
+const fetchMock = vi.fn(async () => {
+  mockFxRateCallCount++
+  return {
+    ok: true,
+    json: async () => ({
+      chart: { result: [{ meta: { regularMarketPrice: mockFxRateValue } }] },
+    }),
+  } as unknown as Response
+})
 
 describe("fx-cache", () => {
   beforeEach(() => {
     _testResetCache()
     mockFxRateCallCount = 0
     mockFxRateValue = 1.35
+    vi.stubGlobal("fetch", fetchMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   describe("getCachedUsdSgdRate", () => {
@@ -78,7 +89,7 @@ describe("fx-cache", () => {
 
       // All should be 1.35
       rates.forEach((rate) => expect(rate).toBe(1.35))
-      // But only fetched once due to caching
+      // But only fetched once — concurrent callers share the in-flight fetch
       expect(mockFxRateCallCount).toBe(1)
     })
   })
@@ -167,12 +178,13 @@ describe("fx-cache", () => {
   })
 
   describe("Edge cases", () => {
-    it("should handle fallback rate from Finnhub", async () => {
-      mockFxRateValue = 1.35
-      const rate = await getCachedUsdSgdRate()
+    it("should fall back to 1.35 when every Yahoo host fails", async () => {
+      vi.stubGlobal("fetch", vi.fn(async () => {
+        throw new Error("network down")
+      }))
 
-      expect(rate).toBeGreaterThan(1.0)
-      expect(rate).toBeLessThan(2.0)
+      const rate = await getCachedUsdSgdRate()
+      expect(rate).toBe(1.35)
     })
 
     it("should not interfere with other calls", async () => {
@@ -184,7 +196,7 @@ describe("fx-cache", () => {
       // Clear for next request
       clearFxCache()
 
-      mockFxRateValue = 1.40
+      mockFxRateValue = 1.4
       const rate2 = await getCachedUsdSgdRate()
 
       expect(rate1).not.toBe(rate2)
@@ -212,7 +224,7 @@ describe("fx-cache", () => {
       clearFxCache()
 
       // Second page render (user navigates away and back)
-      mockFxRateValue = 1.40
+      mockFxRateValue = 1.4
       const rate2 = await getCachedUsdSgdRate()
       clearFxCache()
 
@@ -221,20 +233,9 @@ describe("fx-cache", () => {
       const rate3 = await getCachedUsdSgdRate()
 
       expect(rate1).toBe(1.35)
-      expect(rate2).toBe(1.40)
+      expect(rate2).toBe(1.4)
       expect(rate3).toBe(1.42)
       expect(mockFxRateCallCount).toBe(3)
     })
   })
 })
-
-// Mock jest if not available
-if (typeof jest === "undefined") {
-  global.jest = {
-    fn: (implementation?: any) => {
-      const mockFn = implementation || (() => {})
-      return mockFn as any
-    },
-    mock: () => {},
-  } as any
-}
