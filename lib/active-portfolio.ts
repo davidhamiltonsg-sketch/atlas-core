@@ -1,15 +1,26 @@
 import { cookies } from "next/headers"
 import { db } from "@/lib/db"
 import type { SessionPayload } from "@/lib/session"
-import { constitutionIdForEmail, type ConstitutionId } from "@/lib/constitutions"
+import { canViewAllPortfolios, constitutionIdForEmail, type ConstitutionId } from "@/lib/constitutions"
 
 const COOKIE = "active_portfolio"
 export const SBR_OWNER_EMAIL = process.env.SBR_OWNER_EMAIL ?? "dutszm@gmail.com"
 
-export async function activePortfolioId(session: SessionPayload): Promise<ConstitutionId> {
-  const value = (await cookies()).get(COOKIE)?.value
-  if (value === "atlas-core" || value === "silicon-brick-road") return value
+// The portfolio a user lands on by default: admins and mapped emails → Atlas Core,
+// the SBR owner → Silicon Brick Road.
+export function homePortfolioId(session: SessionPayload): ConstitutionId {
   return session.role === "admin" ? "atlas-core" : constitutionIdForEmail(session.email)
+}
+
+export async function activePortfolioId(session: SessionPayload): Promise<ConstitutionId> {
+  const home = homePortfolioId(session)
+  const value = (await cookies()).get(COOKIE)?.value
+  if (value === "atlas-core" || value === "silicon-brick-road") {
+    // Honor the switcher cookie only for the user's own portfolio, or for accounts
+    // permitted to view all portfolios (admins, cross-view emails).
+    if (value === home || canViewAllPortfolios(session.email, session.role)) return value
+  }
+  return home
 }
 
 export async function setActivePortfolio(id: ConstitutionId) {

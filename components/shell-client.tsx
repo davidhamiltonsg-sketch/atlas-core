@@ -14,10 +14,11 @@ interface ShellClientProps {
   userName?: string
   isAdmin?: boolean
   constitutionId?: ConstitutionId
+  canSwitchPortfolio?: boolean
   children: React.ReactNode
 }
 
-export function ShellClient({ title, subtitle, userName, isAdmin = false, constitutionId = "atlas-core", children }: ShellClientProps) {
+export function ShellClient({ title, subtitle, userName, isAdmin = false, constitutionId = "atlas-core", canSwitchPortfolio = false, children }: ShellClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const mobileLinks = [
@@ -38,6 +39,7 @@ export function ShellClient({ title, subtitle, userName, isAdmin = false, consti
           subtitle={subtitle}
           userName={userName}
           constitutionId={constitutionId}
+          canSwitchPortfolio={canSwitchPortfolio}
         />
         <main className="atlas-stage command-stage flex-1 overflow-y-auto px-4 pb-24 pt-5 lg:px-10 lg:pb-12 print:block print:h-auto print:overflow-visible print:p-0 reveal-stack"><div className="mx-auto w-full max-w-[1600px]">{children}</div></main>
         <nav className="atlas-mobile-nav fixed inset-x-3 bottom-[max(.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 rounded-2xl border border-border bg-card/90 p-1.5 shadow-2xl backdrop-blur-xl lg:hidden" aria-label="Primary navigation">

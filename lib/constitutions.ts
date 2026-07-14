@@ -71,6 +71,18 @@ export interface Constitution {
 // entries here as the Atlas Universe grows.
 const CONSTITUTION_BY_EMAIL: Record<string, ConstitutionId> = {
   "dutszm@gmail.com": "silicon-brick-road",
+  "admin@atlas.local": "atlas-core",
+  "davidhamiltonsg@gmail.com": "atlas-core",
+}
+
+// Accounts allowed to view every portfolio, not just their own. Atlas Core stays their
+// home portfolio; the topbar switcher lets them read SBR without owning it.
+const CROSS_VIEW_EMAILS = new Set(["admin@atlas.local", "davidhamiltonsg@gmail.com"])
+
+export function canViewAllPortfolios(email: string | undefined | null, role?: string): boolean {
+  if (role === "admin") return true
+  if (!email) return false
+  return CROSS_VIEW_EMAILS.has(email.trim().toLowerCase())
 }
 
 export function constitutionIdForEmail(email: string | undefined | null): ConstitutionId {

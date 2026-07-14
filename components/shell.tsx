@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/session"
 import { activePortfolioId } from "@/lib/active-portfolio"
 import { ShellClient } from "./shell-client"
-import type { ConstitutionId } from "@/lib/constitutions"
+import { canViewAllPortfolios, type ConstitutionId } from "@/lib/constitutions"
 
 interface ShellProps {
   title: string
@@ -18,8 +18,9 @@ interface ShellProps {
 export async function Shell({ title, subtitle, userName, isAdmin = false, constitutionId: requestedConstitutionId, children }: ShellProps) {
   const session = await getSession()
   const constitutionId = requestedConstitutionId ?? (session ? await activePortfolioId(session) : "atlas-core")
+  const canSwitchPortfolio = session ? canViewAllPortfolios(session.email, session.role) : false
   return (
-    <ShellClient title={title} subtitle={subtitle} userName={userName} isAdmin={isAdmin} constitutionId={constitutionId}>
+    <ShellClient title={title} subtitle={subtitle} userName={userName} isAdmin={isAdmin} constitutionId={constitutionId} canSwitchPortfolio={canSwitchPortfolio}>
       {children}
     </ShellClient>
   )
