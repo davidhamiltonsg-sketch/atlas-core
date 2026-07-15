@@ -165,8 +165,9 @@ export async function sendSbrDigestEmail(
 
 // ─── Monthly Contribution Reminder — both portfolios ──────────────────────
 /**
- * "What to buy this month" email — sent on the 14th before the dealing window opens.
- * Produces a clear one-action card so there's no ambiguity on the 15th.
+ * "What to buy this month" email — sent on the 14th, ahead of the dealing window
+ * (which opens the 3rd business day AFTER the 15th, never "tomorrow"). The copy is
+ * driven by the actual computed window dates so it can never contradict the app.
  */
 export async function sendMonthlyReminderEmail(
   toEmail: string,
@@ -197,6 +198,14 @@ export async function sendMonthlyReminderEmail(
       </td></tr>`
     : ""
 
+  // Intro driven by the real window dates — never a hardcoded "tomorrow" claim.
+  const intro = dealingWindow
+    ? `Hi ${toName} — your dealing window runs ${dealingWindow.opens} to ${dealingWindow.closes} this month. Here's what the rules say to do:`
+    : `Hi ${toName} — here's what the rules say to do this month:`
+  const footerLine = dealingWindow
+    ? `Monthly reminder — sent ahead of the ${dealingWindow.opens} dealing-window open. Discipline over prediction.`
+    : "Monthly reminder — your plan's one action for the month. Discipline over prediction."
+
   const { error } = await getResend().emails.send({
     from: FROM,
     to: toEmail,
@@ -215,7 +224,7 @@ export async function sendMonthlyReminderEmail(
         </tr></table>
       </td></tr>
       <tr><td style="padding:28px 32px;">
-        <p style="margin:0 0 20px;font-size:14px;color:#6b6b8a;">Hi ${toName} — your dealing window opens tomorrow. Here's what the rules say to do this month:</p>
+        <p style="margin:0 0 20px;font-size:14px;color:#6b6b8a;">${intro}</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="background:${accentBg};border-radius:12px;padding:20px;">
           <tr><td>
             <div style="font-size:11px;font-weight:700;color:${primaryColor};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">This month</div>
@@ -227,11 +236,11 @@ export async function sendMonthlyReminderEmail(
         </table>
         <table cellpadding="0" cellspacing="0" style="margin-top:24px;"><tr>
           <td style="background:${primaryColor};border-radius:10px;">
-            <a href="${APP_URL}" style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Open ${portfolioName}</a>
+            <a href="${APP_URL}/next" style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">See this month's move</a>
           </td></tr></table>
       </td></tr>
       <tr><td style="padding:16px 32px;border-top:1px solid ${borderColor};background:${accentBg};">
-        <p style="margin:0;font-size:11px;color:#9999b3;">Monthly reminder — sent the day before your dealing window opens. Discipline over prediction.</p>
+        <p style="margin:0;font-size:11px;color:#9999b3;">${footerLine}</p>
       </td></tr>
     </table>
   </td></tr></table>

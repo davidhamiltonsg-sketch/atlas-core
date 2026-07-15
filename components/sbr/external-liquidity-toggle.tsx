@@ -49,7 +49,7 @@ export function ExternalLiquidityToggle({ verified, canEdit }: ExternalLiquidity
             checked={checked}
             disabled={!canEdit || pending}
             onChange={(e) => handleChange(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-sky-500"
+            className="mt-0.5 h-4 w-4 accent-primary"
           />
           <span className="text-xs">
             <span className="font-semibold">I confirm my emergency fund outside this portfolio is funded.</span>
@@ -62,8 +62,8 @@ export function ExternalLiquidityToggle({ verified, canEdit }: ExternalLiquidity
         {msg && (
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs ${
             msg.type === "success"
-              ? "bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-400"
-              : "bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400"
+              ? "bg-success/10 border border-success/20 text-success"
+              : "bg-danger/10 border border-danger/20 text-danger"
           }`}>
             {msg.type === "success" ? <Check className="h-3.5 w-3.5 shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0" />}
             {msg.text}

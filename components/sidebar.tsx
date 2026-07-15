@@ -4,7 +4,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  PieChart,
   ShieldCheck,
   FileBarChart2,
   TrendingUp,
@@ -15,6 +14,7 @@ import {
   BarChart3,
   Radar,
   PiggyBank,
+  CalendarCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
@@ -35,6 +35,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
   "atlas-core": [
     { label: "Cockpit", items: [
       { href: "/", label: "Portfolio overview", icon: LayoutDashboard },
+      { href: "/next", label: "This month", icon: CalendarCheck },
       { href: "/mission-control", label: "Mission Control", icon: Radar },
     ] },
     { label: "Portfolio", items: [
@@ -51,6 +52,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
   "silicon-brick-road": [
     { label: "Cockpit", items: [
       { href: "/", label: "Portfolio overview", icon: LayoutDashboard },
+      { href: "/next", label: "What to do this month", icon: CalendarCheck },
       { href: "/mission-control", label: "Mission Control", icon: Radar },
     ] },
     { label: "Portfolio", items: [

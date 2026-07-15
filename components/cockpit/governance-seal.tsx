@@ -25,11 +25,13 @@ interface Props {
   hrefLabel?: string
 }
 
+// Two positive tiers share the --success hue at different intensities (the old
+// emerald "good" was a fourth status colour that existed nowhere else in the app).
 const dimBadgeColor = (status: SealDimension["status"]) => ({
-  excellent: "text-green-600 dark:text-green-400 border-green-500/30",
-  good:      "text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-  caution:   "text-amber-600 dark:text-amber-400 border-amber-500/30",
-  critical:  "text-red-600 dark:text-red-400 border-red-500/30",
+  excellent: "text-success border-success/40",
+  good:      "text-success/80 border-success/25",
+  caution:   "text-warning border-warning/30",
+  critical:  "text-danger border-danger/30",
 }[status])
 
 /** Circular governance score ring with dimension breakdown. Works for Atlas Core and SBR. */
@@ -39,13 +41,13 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - overall / 100)
   const scoreColor =
-    overall >= 80 ? "text-green-600 dark:text-green-400" :
-    overall >= 65 ? "text-amber-600 dark:text-amber-400" :
-    "text-red-600 dark:text-red-400"
+    overall >= 80 ? "text-success" :
+    overall >= 65 ? "text-warning" :
+    "text-danger"
   const ringColor =
-    overall >= 80 ? "stroke-green-500" :
-    overall >= 65 ? "stroke-amber-500" :
-    "stroke-red-500"
+    overall >= 80 ? "stroke-success" :
+    overall >= 65 ? "stroke-warning" :
+    "stroke-danger"
 
   const Wrapper = href ? Link : "div"
   const wrapperProps = href ? { href } : {}
@@ -97,7 +99,7 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
           ))}
         </div>
         {overall < 65 && (
-          <p className="font-data mt-2 text-[10px] font-bold text-red-600 dark:text-red-400 leading-snug">
+          <p className="font-data mt-2 text-[10px] font-bold text-danger leading-snug">
             {lowScoreWarning}
           </p>
         )}

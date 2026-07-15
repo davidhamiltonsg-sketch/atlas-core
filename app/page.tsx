@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Shell } from "@/components/shell"
-import { TrendingUp, Activity, AlertTriangle, FileBarChart2 } from "lucide-react"
+import { Activity, AlertTriangle, FileBarChart2 } from "lucide-react"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
 import { getSession } from "@/lib/session"
@@ -29,25 +29,14 @@ import { redirect } from "next/navigation"
 import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
 import { BitcoinCycleBadge } from "@/components/bitcoin-cycle-badge"
 import { getBitcoinCyclePhase } from "@/lib/bitcoin-cycle"
+import { sgtToday, sgtDateOnly, dealingWindowStatus } from "@/lib/sgt-date"
+import { money, convert } from "@/lib/money"
+import { StatusChip } from "@/components/ui/status-chip"
 
 // This is a personal, auth-gated dashboard whose server render includes live
 // date maths (dealing-window and contribution countdowns). Pin it to dynamic so
 // a countdown can never be frozen by an accidental static/edge cache.
 export const dynamic = "force-dynamic"
-
-// Calendar "today" in the portfolio's home timezone (Singapore — the app trades
-// in SGD against an SGD goal). The infra clock is UTC, so a plain `new Date()`
-// keeps reading the previous calendar day until 08:00 SGT — which made the
-// dealing-window countdown appear stuck a day behind. Anchor every day-count to
-// the Singapore wall-clock date instead.
-const APP_TZ = "Asia/Singapore"
-function sgtToday(): { y: number; m: number; d: number } {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: APP_TZ, year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date())
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value)
-  return { y: get("year"), m: get("month") - 1, d: get("day") }
-}
 
 // Fallback defaults (overridden by user DB settings)
 const DEFAULT_MONTHLY = 3000
@@ -56,46 +45,6 @@ const DEFAULT_GROWTH_RATE = 0.05
 const DEFAULT_RISK_FREE_RATE = 0.04
 
 type ActionStatus = "healthy" | "soft" | "hard"
-
-/** Dealing window: opens 3rd business day after the 15th, closes last business day of month. */
-function getDealingWindow(today: { y: number; m: number; d: number }): {
-  daysUntilOpen: number | null
-  windowClosesLabel: string | null
-  isOpen: boolean
-} {
-  const { y, m, d } = today
-
-  // 3rd business day after the 15th
-  let count = 0
-  let open = new Date(y, m, 15)
-  while (count < 3) {
-    open = new Date(open.getTime() + 86_400_000)
-    if (open.getDay() !== 0 && open.getDay() !== 6) count++
-  }
-
-  // Last business day of month
-  const last = new Date(y, m + 1, 0)
-  while (last.getDay() === 0 || last.getDay() === 6) last.setDate(last.getDate() - 1)
-
-  const todayMs  = new Date(y, m, d).getTime()
-  const openMs   = new Date(open.getFullYear(), open.getMonth(), open.getDate()).getTime()
-  const closeMs  = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime()
-
-  if (todayMs >= openMs && todayMs <= closeMs) {
-    return {
-      daysUntilOpen: null,
-      windowClosesLabel: last.toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase(),
-      isOpen: true,
-    }
-  } else if (todayMs < openMs) {
-    return {
-      daysUntilOpen: Math.round((openMs - todayMs) / 86_400_000),
-      windowClosesLabel: null,
-      isOpen: false,
-    }
-  }
-  return { daysUntilOpen: null, windowClosesLabel: null, isOpen: false }
-}
 
 async function getDashboardData(userId: string) {
   const [user, holdings, usdSgdRate, trades, cashBank] = await Promise.all([
@@ -210,6 +159,7 @@ async function getDashboardData(userId: string) {
   const sectorHardBreaches  = lookThrough.sectors.filter(s => s.status === "breach").length
   const health = computePortfolioHealth({ hardBreaches, softBreaches, maxDrift, companyHardBreaches, sectorHardBreaches, activeRules, totalRules, snapshotAgeDays })
 
+  // Owner plan settings are USD (Art. XIII: US$3,000/month + US$20,000 January; reporting is SGD).
   const monthlyContribution = user?.monthlyContribution ?? DEFAULT_MONTHLY
   const annualLumpSum = user?.annualLumpSum ?? DEFAULT_ANNUAL_LUMP_SUM
   const contributionGrowthRate = user?.contributionGrowthRate ?? DEFAULT_GROWTH_RATE
@@ -241,9 +191,9 @@ async function getDashboardData(userId: string) {
   }
   const onTrackPct = targetNow && targetNow > 0 ? (totalValue / targetNow) * 100 : null
 
-  // Contribution countdown — anchored to the Singapore calendar day (see sgtToday).
+  // Contribution countdown — anchored to the Singapore calendar day (see lib/sgt-date).
   const today = sgtToday()
-  const todayMidnight = new Date(today.y, today.m, today.d)
+  const todayMidnight = sgtDateOnly(today)
   const day15ThisMonth = new Date(today.y, today.m, 15)
   const nextContribution = todayMidnight < day15ThisMonth
     ? day15ThisMonth
@@ -415,7 +365,7 @@ async function getDashboardData(userId: string) {
   const outOfScopeTickers = positions.filter((p) => p.value > 0 && !isInScope(p.ticker)).map((p) => p.ticker.toUpperCase())
   const govAlignment = evaluateGovernance({ positions, bufferPct: 0, lookThrough, usSitedValueUsd })
 
-  const dealingWindow = getDealingWindow(today)
+  const dealingWindow = dealingWindowStatus(today)
 
   const updateHoldings = holdings.map((h) => ({
     id: h.id, ticker: h.ticker, name: h.name,
@@ -465,9 +415,7 @@ export default async function Dashboard() {
         <PortfolioUpdateButton label="Update Holdings" holdings={d.updateHoldings} />
         <BitcoinCycleBadge phase={d.btcCyclePhase} />
         {d.dealingWindow.isOpen && (
-          <span className="inline-flex items-center text-[10px] font-bold px-3 py-1.5 rounded-full border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400">
-            DEALING WINDOW OPEN · CLOSES {d.dealingWindow.windowClosesLabel}
-          </span>
+          <StatusChip status="good" label={`DEALING WINDOW OPEN · CLOSES ${d.dealingWindow.windowClosesLabel}`} className="px-3 py-1.5 font-bold" />
         )}
         {!d.dealingWindow.isOpen && d.dealingWindow.daysUntilOpen !== null && (
           <span className="inline-flex items-center text-[10px] font-semibold px-3 py-1.5 rounded-full border border-border text-muted-foreground">
@@ -476,38 +424,39 @@ export default async function Dashboard() {
         )}
       </div>
 
-      {/* Stale data warning */}
+      {/* Stale data warning — semantic tokens (danger ≥7d, warning 3–6d) so the banner
+          re-skins with the theme instead of hardcoding the red/amber palette. */}
       {d.hasBalance && d.daysSinceUpdate !== null && d.daysSinceUpdate >= 3 && (
         <a href="/portfolio" className={`mb-5 flex items-center gap-3 rounded-xl border px-5 py-3 transition-colors group ${
           d.daysSinceUpdate >= 7
-            ? "border-red-500/30 bg-red-500/[0.07] hover:bg-red-500/[0.11]"
-            : "border-amber-400/30 bg-amber-400/[0.07] hover:bg-amber-400/[0.11]"
+            ? "border-danger/30 bg-danger/[0.07] hover:bg-danger/[0.11]"
+            : "border-warning/30 bg-warning/[0.07] hover:bg-warning/[0.11]"
         }`}>
-          <Activity className={`h-4 w-4 shrink-0 ${d.daysSinceUpdate >= 7 ? "text-red-500" : "text-amber-500"}`} />
-          <p className={`text-xs flex-1 ${d.daysSinceUpdate >= 7 ? "text-red-600 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`}>
+          <Activity className={`h-4 w-4 shrink-0 ${d.daysSinceUpdate >= 7 ? "text-danger" : "text-warning"}`} />
+          <p className={`text-xs flex-1 ${d.daysSinceUpdate >= 7 ? "text-danger" : "text-warning"}`}>
             <span className="font-bold">Prices last updated {d.daysSinceUpdate} day{d.daysSinceUpdate !== 1 ? "s" : ""} ago</span>
             {d.latestSnapshotDate && ` · ${new Date(d.latestSnapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
             {d.daysSinceUpdate >= 7 ? " — portfolio values may be significantly out of date." : ""}
           </p>
-          <span className={`shrink-0 text-xs font-semibold transition-colors ${d.daysSinceUpdate >= 7 ? "text-red-500/70 group-hover:text-red-500" : "text-amber-500/70 group-hover:text-amber-500"}`}>
+          <span className={`shrink-0 text-xs font-semibold transition-colors ${d.daysSinceUpdate >= 7 ? "text-danger/70 group-hover:text-danger" : "text-warning/70 group-hover:text-warning"}`}>
             Update now →
           </span>
         </a>
       )}
 
-      {/* Out-of-scope holding alert */}
+      {/* Out-of-scope holding alert — warning tokens */}
       {d.hasBalance && d.outOfScopeTickers.length > 0 && (
-        <a href="/portfolio" className="mb-5 flex items-center gap-4 rounded-xl border border-amber-400/40 bg-amber-400/10 dark:bg-amber-400/[0.08] px-5 py-3.5 hover:bg-amber-400/[0.14] transition-colors group">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+        <a href="/portfolio" className="mb-5 flex items-center gap-4 rounded-xl border border-warning/40 bg-warning/10 px-5 py-3.5 hover:bg-warning/[0.14] transition-colors group">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
           <div className="flex-1">
-            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+            <p className="text-sm font-bold text-warning">
               {d.outOfScopeTickers.join(", ")} {d.outOfScopeTickers.length > 1 ? "are" : "is"} held but not in your plan
             </p>
-            <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+            <p className="text-xs text-warning/80 mt-0.5">
               Follow the migration: retain IBIT, keep each legacy row and cost basis intact, and use replacement cash only after IBKR confirms settlement.
             </p>
           </div>
-          <span className="shrink-0 text-xs font-semibold text-amber-500/70 group-hover:text-amber-500 transition-colors">Review →</span>
+          <span className="shrink-0 text-xs font-semibold text-warning/70 group-hover:text-warning transition-colors">Review →</span>
         </a>
       )}
 
@@ -553,7 +502,9 @@ export default async function Dashboard() {
         </div>
 
         <div className="atlas-flightdeck-foot">
-          <div><span>Next contribution</span><b>{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "SGD")}</b></div>
+          {/* Art. XIII plan figures are USD (owner setting is stored in USD); reporting stays SGD,
+              so the SGD equivalent at the live rate rides along via the one convert() boundary. */}
+          <div><span>Next contribution</span><b>{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "USD")} ≈ {formatCurrency(convert(money(d.monthlyContribution, "USD"), "SGD", d.usdSgdRate).amount, "SGD")}</b></div>
           <div><span>DCA cash bank</span><b>{formatCurrency(d.cashBankBalance, "SGD")}</b></div>
           <div><span>Portfolio health</span><b>{d.health.overall}/100 · {d.health.overallLabel}</b></div>
           <div><span>2045 base case</span><b>{d.base2045 >= 1_000_000 ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M` : `S$${(d.base2045 / 1_000).toFixed(0)}K`}</b></div>

@@ -36,22 +36,21 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
   const [isPending, startTransition] = useTransition()
 
   const DriftIcon = h.drift > 0.05 ? TrendingUp : h.drift < -0.05 ? TrendingDown : Minus
-  // Color system: hard breach = red (severity), soft = direction-aware (yellow/orange), healthy = green
-  const under = h.drift < 0
+  // Semantic status tokens: hard breach = danger, any soft drift = warning
+  // (direction is carried by the trend icon and the ↑/↓ copy, not a second
+  // hue — same collapse as the compliance/threshold surfaces), healthy = success.
   const driftColor = h.isHard
-    ? "text-red-500"
+    ? "text-danger"
     : h.isSoft
-    ? (under ? "text-yellow-400" : "text-orange-500")
-    : "text-green-500"
+    ? "text-warning"
+    : "text-success"
   const StatusIcon = h.isHard ? XCircle : h.isSoft ? AlertTriangle : CheckCircle2
   const statusIconCls = driftColor
   const pulseCls = h.isHard ? "pulse-red" : ""
   const rowAccent = h.isHard
-    ? "border-l-4 border-red-500 bg-red-500/[0.02]"
+    ? "border-l-4 border-danger bg-danger/[0.02]"
     : h.isSoft
-    ? under
-      ? "border-l-[3px] border-yellow-400 bg-yellow-400/[0.02]"
-      : "border-l-[3px] border-orange-500 bg-orange-500/[0.02]"
+    ? "border-l-[3px] border-warning bg-warning/[0.02]"
     : "border-l-4 border-transparent"
 
   function handleSave() {
@@ -77,7 +76,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
   return (
     <div
       id={`holding-${h.ticker}`}
-      className={`group grid grid-cols-[44px_1fr] md:grid-cols-[44px_1fr_80px_110px_90px_90px_90px_44px] items-center gap-x-3 gap-y-0.5 px-5 py-3.5 hover:bg-accent/30 transition-colors scroll-mt-4 ${rowAccent} ${saved ? "bg-green-500/[0.04]" : ""}`}
+      className={`group grid grid-cols-[44px_1fr] md:grid-cols-[44px_1fr_80px_110px_90px_90px_90px_44px] items-center gap-x-3 gap-y-0.5 px-5 py-3.5 hover:bg-accent/30 transition-colors scroll-mt-4 ${rowAccent} ${saved ? "bg-success/[0.04]" : ""}`}
     >
       {/* Color dot + ticker */}
       <div className="flex items-center gap-2">
@@ -110,7 +109,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
             S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           {h.unrealisedSgd !== null && h.unrealisedSgd !== undefined && (
-            <span className={`text-[10px] font-semibold tabular-nums ${h.unrealisedSgd >= 0 ? "text-green-500" : "text-red-500"}`}>
+            <span className={`text-[10px] font-semibold tabular-nums ${h.unrealisedSgd >= 0 ? "text-success" : "text-danger"}`}>
               {h.unrealisedSgd >= 0 ? "+" : ""}S${Math.abs(h.unrealisedSgd).toLocaleString("en-SG", { maximumFractionDigits: 0 })}
               {h.unrealisedPct !== null && h.unrealisedPct !== undefined && ` (${h.unrealisedPct >= 0 ? "+" : ""}${h.unrealisedPct.toFixed(1)}%)`}
             </span>
@@ -176,7 +175,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
           <div className={`hidden md:flex items-center gap-1 justify-end text-xs font-bold tabular-nums ${driftColor}`}>
             <DriftIcon className="h-3 w-3 shrink-0" />
             {h.drift >= 0 ? "+" : ""}{h.drift.toFixed(1)}%
-            {h.overCap && <span className="ml-1 rounded bg-red-500/15 px-1 text-[9px] font-bold text-red-500">CAP</span>}
+            {h.overCap && <span className="ml-1 rounded bg-danger/15 px-1 text-[9px] font-bold text-danger">CAP</span>}
           </div>
         </>
       )}
@@ -188,7 +187,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
             <button
               onClick={handleSave}
               disabled={isPending}
-              className="flex h-6 w-6 items-center justify-center rounded bg-green-500/15 text-green-600 hover:bg-green-500/25 transition-colors disabled:opacity-50"
+              className="flex h-6 w-6 items-center justify-center rounded bg-success/15 text-success hover:bg-success/25 transition-colors disabled:opacity-50"
               title="Save changes"
             >
               <Check className="h-3.5 w-3.5" />
@@ -256,7 +255,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
             </div>
             <div className="flex items-end gap-1">
               <button onClick={handleSave} disabled={isPending}
-                className="flex h-11 items-center gap-1 rounded bg-green-500/15 px-3 text-xs font-semibold text-green-600 hover:bg-green-500/25 disabled:opacity-50">
+                className="flex h-11 items-center gap-1 rounded bg-success/15 px-3 text-xs font-semibold text-success hover:bg-success/25 disabled:opacity-50">
                 <Check className="h-3.5 w-3.5" /> Save
               </button>
               <button onClick={handleCancel}
@@ -277,10 +276,8 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       {!editing && (h.isHard || h.isSoft) && (
         <div className={`col-span-2 md:col-span-7 mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed ${
           h.isHard
-            ? "bg-red-500/[0.08] text-red-700 dark:text-red-300 border border-red-500/20"
-            : under
-              ? "bg-yellow-400/[0.08] text-yellow-700 dark:text-yellow-300 border border-yellow-400/20"
-              : "bg-orange-500/[0.08] text-orange-700 dark:text-orange-300 border border-orange-500/20"
+            ? "bg-danger/[0.08] text-danger border border-danger/20"
+            : "bg-warning/[0.08] text-warning border border-warning/20"
         }`}>
           <span className="font-bold mr-1">{h.isHard ? "Action required:" : "Suggested:"}</span>
           {h.isHard
@@ -295,7 +292,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       )}
 
       {saved && (
-        <div className="col-span-2 md:col-span-7 mt-1 text-[11px] text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
+        <div className="col-span-2 md:col-span-7 mt-1 text-[11px] text-success font-semibold flex items-center gap-1">
           <Check className="h-3 w-3" /> Saved — page will refresh with updated values
         </div>
       )}

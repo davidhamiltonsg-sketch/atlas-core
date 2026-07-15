@@ -228,7 +228,7 @@ body {
 .atlas-shell table th { color:hsl(var(--muted-foreground));font-family:var(--font-ibm-plex-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase; }
 .atlas-shell table tr { border-color:hsl(var(--border)); }
 .atlas-shell input,.atlas-shell select,.atlas-shell textarea { background:hsl(var(--background) / .75);border-color:hsl(var(--border)); }
-.atlas-shell button:not([class*="bg-red"]):not([class*="bg-green"]) { border-color:hsl(var(--border)); }
+.atlas-shell button:not([class*="bg-red"]):not([class*="bg-green"]):not([class*="bg-success"]):not([class*="bg-danger"]):not([class*="bg-warning"]) { border-color:hsl(var(--border)); }
 .atlas-shell [class*="uppercase"][class*="tracking"] { font-family:var(--font-ibm-plex-mono); }
 
 .atlas-flightdeck {
@@ -305,46 +305,6 @@ body {
 }
 /* soft states: no animation — colour alone */
 .pulse-amber, .pulse-yellow, .pulse-orange { border-radius: 99px; }
-
-
-/* ─── Health Gauge animations ─────────────────────────────────────────────── */
-
-/* Green — gentle breathing glow */
-@keyframes breathe-green {
-  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--success) / 0.3)); }
-  50%       { filter: drop-shadow(0 0 12px hsl(var(--success) / 0.6)); }
-}
-.gauge-healthy {
-  animation: breathe-green 3s ease-in-out infinite;
-}
-
-/* Amber — slow amber swell */
-@keyframes breathe-amber {
-  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--warning) / 0.3)); }
-  50%       { filter: drop-shadow(0 0 10px hsl(var(--warning) / 0.55)); }
-}
-.gauge-warning {
-  animation: breathe-amber 2.5s ease-in-out infinite;
-}
-
-/* Red — gentle swell (calmed: no flashing) */
-@keyframes breathe-red {
-  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--danger) / 0.3)); }
-  50%       { filter: drop-shadow(0 0 10px hsl(var(--danger) / 0.5)); }
-}
-.gauge-critical {
-  animation: breathe-red 2.8s ease-in-out infinite;
-}
-
-/* HealthGauge — semicircle arc sweeps in from empty on load. R is a fixed 63
-   in HealthGauge (never parameterised), so the arc length π·63 is a constant —
-   the "from" keyframe can hardcode it. `backwards` fill (no `forwards`) means
-   the arc settles on its real inline stroke-dashoffset the instant the
-   animation ends — same technique as .seal-ring-fill. */
-@keyframes gauge-arc-fill { from { stroke-dashoffset: 197.92033717615698; } }
-.gauge-arc-fill {
-  animation: gauge-arc-fill 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s backwards;
-}
 
 /* ─── Chart entry animations ──────────────────────────────────────────────── */
 @keyframes chart-enter {
@@ -581,9 +541,9 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
 /* ─── Motion respect ──────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .ring-hero, .loadbar, .float-soft, .spin-slow, .chart-enter,
-  .gauge-healthy, .gauge-warning, .gauge-critical, .pulse-red, .pulse-fire,
+  .pulse-red, .pulse-fire,
   .reveal-stack > *, .bar-fill, .skeleton::after, .btn-brand::after,
-  .seal-ring-fill, .gauge-arc-fill, .marker-land, .animate-spin {
+  .seal-ring-fill, .marker-land, .animate-spin {
     animation: none !important;
   }
   .card-lux, a.card-lux, .btn-brand, .btn-brand::after { transition: none !important; }
@@ -804,7 +764,6 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
   .glow-red, .glow-amber, .glow-green, .glow-navy { box-shadow: none !important; }
   .flash-red { opacity: 1 !important; }
   .pulse-red, .pulse-amber, .pulse-yellow, .pulse-orange { animation: none !important; }
-  .gauge-healthy, .gauge-warning, .gauge-critical { animation: none !important; filter: none !important; }
 
   /* ── Cards: keep subtle structure but flatten radius/shadow ── */
   .rounded-xl, .rounded-lg { border-radius: 0 !important; box-shadow: none !important; }
