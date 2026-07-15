@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
 import { HARD_THRESHOLDS } from "@/lib/constants"
-import { applyBitcoinSleeve, type PositionInput } from "@/lib/next-best-move"
+import { applyEconomicSleeves, type PositionInput } from "@/lib/next-best-move"
 import { computeLadder, type LadderInstruction } from "@/lib/ladder"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, type LookThroughResult } from "@/lib/look-through"
 import { refreshedLookThroughData } from "@/lib/look-through-data"
@@ -75,7 +75,7 @@ export async function getAtlasReportData(userId: string, period: ReportPeriod): 
       latestPrice: h.snapshots[0]?.price ?? 0,
     }
   })
-  const sleeved = applyBitcoinSleeve(rawPositions)
+  const sleeved = applyEconomicSleeves(rawPositions)
 
   const positions: AtlasReportPosition[] = sleeved.map((p) => {
     const ht = HARD_THRESHOLDS[p.ticker]

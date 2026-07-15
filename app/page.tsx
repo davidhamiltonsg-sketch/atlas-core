@@ -7,8 +7,9 @@ import { getSession } from "@/lib/session"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { computePortfolioHealth } from "@/lib/health"
-import { HARD_THRESHOLDS } from "@/lib/constants"
-import { computeMarketAwareDca, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
+import { HARD_THRESHOLDS, TICKER_TARGETS } from "@/lib/constants"
+import { computeMarketAwareDca, applyEconomicSleeves, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
+import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { computeLadder } from "@/lib/ladder"
 import { getLiveMarketPositions } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
@@ -90,16 +91,35 @@ async function getDashboardData(userId: string) {
     ? historyPoints[historyPoints.length - 1].value - historyPoints[historyPoints.length - 2].value
     : null
 
+  // Economic-sleeve view (identity over ticker): alternate exchange lines of a governed
+  // instrument (EQQQ→EQAC, SEMI→SMH) hold in place while the governed line accumulates
+  // toward the remainder of the sleeve target, and §3 hard thresholds judge the sleeve's
+  // COMBINED weight — a second line of the same ISIN can never read as its own drift.
+  const preSleeve = holdings.map((h) => ({
+    ticker: h.ticker,
+    actualPct: totalValue > 0 ? ((h.snapshots[0]?.value ?? 0) / totalValue) * 100 : 0,
+    targetPct: h.targetPct,
+  }))
+  const effTargetMap = new Map(applyEconomicSleeves(preSleeve).map((p) => [p.ticker, p.targetPct]))
+  const sleeveActualMap = new Map<string, number>()
+  for (const p of preSleeve) {
+    const key = economicSleeveTicker(p.ticker)
+    sleeveActualMap.set(key, (sleeveActualMap.get(key) ?? 0) + p.actualPct)
+  }
+
   const positions = holdings.map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
-    const driftPct = actualPct - h.targetPct
+    const sleeveKey = economicSleeveTicker(h.ticker)
+    const effTarget = effTargetMap.get(h.ticker) ?? h.targetPct
+    const driftPct = actualPct - effTarget
     const absDrift = Math.abs(driftPct)
-    const overCap = h.hardCapPct !== null && actualPct > h.hardCapPct
-    const ht = HARD_THRESHOLDS[h.ticker]
+    const judged = sleeveActualMap.get(sleeveKey) ?? actualPct
+    const overCap = h.hardCapPct !== null && judged > h.hardCapPct
+    const ht = h.ticker === sleeveKey ? HARD_THRESHOLDS[h.ticker] : undefined
     const isHardDrift = totalValue > 0 && (overCap ||
-      (ht?.low !== undefined && actualPct < ht.low) ||
-      (ht !== undefined && actualPct > ht.high))
+      (ht?.low !== undefined && judged < ht.low) ||
+      (ht !== undefined && judged > ht.high))
     const isSoftDrift = totalValue > 0 && !isHardDrift && absDrift > h.toleranceBand
     const status: ActionStatus = isHardDrift ? "hard" : isSoftDrift ? "soft" : "healthy"
     const latestPrice = h.snapshots[0]?.price ?? 0
@@ -112,7 +132,7 @@ async function getDashboardData(userId: string) {
     // Reconstructing from the full trade table can double-count re-imported or partial history,
     // so the trade ledger is used only when the latest IBKR snapshot omitted these fields.
     const valuation = openPositionValuation({value,units:latestSnapshot?.units??0,snapshotCostBasis:latestSnapshot?.costBasis,snapshotUnrealizedPnl:latestSnapshot?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate})
-    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: h.targetPct, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd:valuation.averagePriceInstrumentCurrency, costBasisSgd:valuation.costBasis??0, unrealisedSgd:valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct:valuation.reconciles?valuation.unrealizedReturnPct:null, valuationSource:valuation.source, valuationReconciles:valuation.reconciles, units: h.snapshots[0]?.units ?? 0 }
+    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: effTarget, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd:valuation.averagePriceInstrumentCurrency, costBasisSgd:valuation.costBasis??0, unrealisedSgd:valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct:valuation.reconciles?valuation.unrealizedReturnPct:null, valuationSource:valuation.source, valuationReconciles:valuation.reconciles, units: h.snapshots[0]?.units ?? 0 }
   })
 
   // Bitcoin sleeve consolidation — BTC in run-off, IBIT is accumulation vehicle
@@ -201,22 +221,30 @@ async function getDashboardData(userId: string) {
   const daysToContribution = Math.ceil((nextContribution.getTime() - todayMidnight.getTime()) / 86_400_000)
   const nextContributionLabel = nextContribution.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 
-  const donutData = holdings.filter(h=>["VWRA","EQAC","SMH","BTC","IBIT","GBTC","DBMFE"].includes(h.ticker)).map((h) => {
+  const donutData = holdings.filter(h=>["VWRA","EQAC","SMH","BTC","IBIT","GBTC","DBMFE","EQQQ","SEMI"].includes(h.ticker)).map((h) => {
     const value = h.snapshots[0]?.value ?? 0
     const actualPct = totalValue > 0 ? (value / totalValue) * 100 : 0
     return { ticker: h.ticker, name: h.name, actualPct, targetPct: h.targetPct, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value }
   }).sort((a, b) => b.actualPct - a.actualPct)
 
-  // Surface one governed Bitcoin sleeve; GBTC history stays separate in Activity.
+  // Surface ONE slice per economic sleeve (identity over ticker) — Bitcoin (BTC+IBIT+GBTC)
+  // and the alternate exchange lines EQQQ→EQAC / SEMI→SMH. Instrument history stays
+  // separate in Activity; this is a display grouping only.
   {
-    const bitcoin = donutData.filter((d) => ["BTC","IBIT","GBTC"].includes(d.ticker))
-    if (bitcoin.length) {
+    const SLEEVE_SLICES: Record<string, { name: string; target: number }> = {
+      BTC:  { name: "Bitcoin sleeve · IBIT target", target: BITCOIN_SLEEVE_TARGET_PCT },
+      EQAC: { name: "EQAC sleeve · EQAC + EQQQ",    target: TICKER_TARGETS["EQAC"] ?? 10 },
+      SMH:  { name: "SMH sleeve · SMH + SEMI",      target: TICKER_TARGETS["SMH"] ?? 5 },
+    }
+    for (const [key, meta] of Object.entries(SLEEVE_SLICES)) {
+      const members = donutData.filter((d) => economicSleeveTicker(d.ticker) === key)
+      if (members.length < 2) continue
       const merged = {
-        ticker: "BTC", name: "Bitcoin sleeve · IBIT target",
-        actualPct: bitcoin.reduce((sum,row)=>sum+row.actualPct,0), targetPct: BITCOIN_SLEEVE_TARGET_PCT,
-        color: bitcoin[0].color, value: bitcoin.reduce((sum,row)=>sum+row.value,0),
+        ticker: key, name: meta.name,
+        actualPct: members.reduce((sum, row) => sum + row.actualPct, 0), targetPct: meta.target,
+        color: members[0].color, value: members.reduce((sum, row) => sum + row.value, 0),
       }
-      const rest = donutData.filter((d) => !["BTC","IBIT","GBTC"].includes(d.ticker))
+      const rest = donutData.filter((d) => economicSleeveTicker(d.ticker) !== key)
       rest.push(merged)
       rest.sort((a, b) => b.actualPct - a.actualPct)
       donutData.length = 0
