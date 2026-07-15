@@ -16,9 +16,6 @@ model User {
   annualLumpSum          Float                @default(20000)
   contributionGrowthRate Float                @default(0.05)
   riskFreeRate           Float                @default(0.04)
-  // SBR liquidity pillar — the owner's standing confirmation that an emergency fund exists
-  // OUTSIDE this portfolio (Settings toggle). Defaulted so existing rows are safe on db push.
-  sbrExternalLiquidityVerified Boolean        @default(false)
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   holdings               Holding[]

@@ -1,10 +1,10 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
+import { setExternalLiquidityVerified } from "@/lib/external-liquidity"
 
 /**
  * SBR liquidity pillar — record the owner's standing confirmation that an emergency fund
@@ -18,10 +18,7 @@ export async function setExternalLiquidityVerifiedAction(verified: boolean): Pro
   if (active.constitutionId !== "silicon-brick-road") return { error: "This confirmation only applies to Silicon Brick Road." }
   try { assertCanMutateOwner(session, active.owner.id) } catch (error) { return { error: error instanceof Error ? error.message : "Read-only access." } }
 
-  await db.user.update({
-    where: { id: active.owner.id },
-    data: { sbrExternalLiquidityVerified: verified, updatedAt: new Date() },
-  })
+  await setExternalLiquidityVerified(active.owner.id, verified)
 
   for (const p of ["/settings", "/", "/reports", "/mission-control"]) revalidatePath(p)
   return { success: true }

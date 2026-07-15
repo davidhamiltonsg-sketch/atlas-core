@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { getExternalLiquidityVerified } from "@/lib/external-liquidity"
 import { buildPortfolioTimeline } from "@/lib/portfolio-metrics"
 import { SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { computeSbrNextMove, computeSbrHealth, type SbrPosition, type SbrHealth } from "@/lib/sbr-engine"
@@ -55,10 +56,10 @@ export interface SbrReportData {
  * timing nuance. Acceptable for a periodic summary rather than a real-time surface.
  */
 export async function getSbrReportData(userId: string, period: ReportPeriod): Promise<SbrReportData> {
-  const [holdings,lookThroughSources,owner] = await Promise.all([
+  const [holdings,lookThroughSources,liquidityVerified] = await Promise.all([
     db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" } } } }),
     db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
-    db.user.findUnique({ where: { id: userId }, select: { sbrExternalLiquidityVerified: true } }),
+    getExternalLiquidityVerified(userId),
   ])
 
   const fundOrder = SBR.funds.map((f) => f.ticker)
@@ -126,7 +127,7 @@ export async function getSbrReportData(userId: string, period: ReportPeriod): Pr
   }, null)
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
 
-  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays, SBR, owner?.sbrExternalLiquidityVerified ?? false)
+  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays, SBR, liquidityVerified)
   const lookThroughAsOf=lookThroughSources.length===SBR_FUND_TICKERS.length?new Date(Math.min(...lookThroughSources.map(x=>x.updatedAt.getTime()))):new Date(0)
   const refreshedLt = await refreshedLookThroughData()
   const lookThrough = computeSbrLookThrough(positions,new Date(),lookThroughAsOf,refreshedLt.weights)
