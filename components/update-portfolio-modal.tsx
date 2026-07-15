@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useTransition } from "react"
 import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw, ArrowUpCircle } from "lucide-react"
-import { updateHoldingsManually, extractFromScreenshot, applyExtractedHoldings } from "@/app/portfolio/actions"
+import { updateHoldingsManually, extractFromScreenshot, applyExtractedHoldings, type NeedsConfirmationRow } from "@/app/portfolio/actions"
 import { isInScope } from "@/lib/approved-alternatives"
 
 interface Holding {
@@ -48,8 +48,9 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   )
 
   // Screenshot state
-  const [screenshotState, setScreenshotState] = useState<"idle" | "processing" | "preview" | "error">("idle")
+  const [screenshotState, setScreenshotState] = useState<"idle" | "processing" | "preview" | "flagged" | "error">("idle")
   const [extractedRows, setExtractedRows] = useState<ExtractedRow[]>([])
+  const [flaggedRows, setFlaggedRows] = useState<NeedsConfirmationRow[]>([])
   const [extractError, setExtractError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -141,15 +142,33 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   }
 
   function handleConfirmScreenshot() {
-    // Import EVERY extracted row — existing tickers update, new ones (e.g. IBIT or an
-    // out-of-scope ETF) are created so nothing is silently dropped. The extracted SGD value
-    // travels along so non-USD-quoted lines (EUR DBMFE, GBp LSE) are valued correctly.
+    // Safe rows apply immediately; anything the server judges suspicious (unknown ticker,
+    // >5× unit jump, >3× portfolio swing) comes back as needsConfirmation and is shown for
+    // an explicit second confirmation — misread screenshots can no longer mint phantom
+    // positions or silently overwrite governed rows.
     const rows = extractedRows
       .filter((r) => r.units > 0 && r.price > 0)
       .map((r) => ({ ticker: r.ticker, units: r.units, price: r.price, value: r.value }))
 
     startTransition(async () => {
-      await applyExtractedHoldings(rows)
+      const result = await applyExtractedHoldings(rows)
+      if (result.needsConfirmation.length > 0) {
+        setFlaggedRows(result.needsConfirmation)
+        setScreenshotState("flagged")
+        return
+      }
+      setSaved(true)
+      setTimeout(() => { setSaved(false); onClose() }, 1200)
+    })
+  }
+
+  function handleConfirmFlagged() {
+    startTransition(async () => {
+      await applyExtractedHoldings(
+        flaggedRows.map((r) => ({ ticker: r.ticker, units: r.units, price: r.price, value: r.value })),
+        { confirmed: true },
+      )
+      setFlaggedRows([])
       setSaved(true)
       setTimeout(() => { setSaved(false); onClose() }, 1200)
     })
@@ -457,6 +476,33 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                   </div>
                 </div>
               )}
+
+              {screenshotState === "flagged" && (
+                <div>
+                  <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 p-4 mb-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">These rows look wrong — nothing was written</p>
+                        <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                          Unknown tickers or very large jumps usually mean the screenshot was misread. Only confirm if the numbers match your brokerage exactly.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-1">
+                    {flaggedRows.map((row) => (
+                      <div key={row.ticker} className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/[0.06] px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold">{row.ticker}</span>
+                          <span className="text-[11px] text-muted-foreground tabular-nums">{row.units} × ${row.price}</span>
+                        </div>
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">{row.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -500,6 +546,17 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Save Values
+              </button>
+            )}
+
+            {mode === "screenshot" && screenshotState === "flagged" && (
+              <button
+                onClick={handleConfirmFlagged}
+                disabled={isPending || saved || flaggedRows.length === 0}
+                className="flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
+              >
+                {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                Import flagged row{flaggedRows.length !== 1 ? "s" : ""} anyway
               </button>
             )}
 
