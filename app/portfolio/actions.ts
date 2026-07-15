@@ -8,8 +8,9 @@ import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation } from "
 import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
-import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { SBR_SPEC, ATLAS_SPEC } from "@/lib/portfolio-spec"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
+import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -106,6 +107,41 @@ export async function applyExtractedHoldings(
 
   for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd", "/risk", "/mission-control"]) revalidatePath(p)
   return { updated, created }
+}
+
+// Owner-only correction for an erroneous NON-GOVERNED row (e.g. a phantom position created
+// by a misread screenshot import). Append-only: the holding row and its history stay in the
+// DB — a zero snapshot is written (same close semantics as the IBKR sync), the row is marked
+// CLOSED, and the correction is recorded in the governance log. Governed sleeve positions
+// can never be zeroed from the UI.
+export async function removeErroneousPosition(holdingId: string): Promise<{ success?: true; error?: string }> {
+  const session = await getSession()
+  if (!session) return { error: "Unauthenticated." }
+  const active = await activePortfolioContext(session)
+  try { assertCanMutateOwner(session, active.owner.id) } catch (error) {
+    return { error: error instanceof Error ? error.message : "Read-only access." }
+  }
+
+  const holding = await db.holding.findFirst({ where: { id: holdingId, userId: active.owner.id } })
+  if (!holding) return { error: "Holding not found." }
+  const governedTickers = active.constitutionId === "silicon-brick-road" ? SBR_SPEC.funds.map((f) => f.ticker) : ATLAS_SPEC.funds.map((f) => f.ticker)
+  const governedSet = new Set<string>(governedTickers)
+  if (holding.targetPct > 0 || governedSet.has(economicSleeveTicker(holding.ticker))) {
+    return { error: "Only non-governed rows can be corrected. Governed positions change through contributions and documented trades." }
+  }
+
+  await upsertSnapshotToday(holding.id, { units: 0, price: 0, value: 0, costBasis: 0, unrealizedPnl: 0 })
+  await db.holding.update({ where: { id: holding.id }, data: { instrumentStatus: "CLOSED" } })
+  await db.governanceLog.create({
+    data: {
+      userId: active.owner.id,
+      event: "EXCEPTION_LOGGED",
+      details: `Erroneous ${holding.ticker} position zeroed by owner from the Position Ledger (data correction — row and history retained for audit).`,
+    },
+  })
+
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next"]) revalidatePath(p)
+  return { success: true }
 }
 
 // Live refresh: update prices AND share counts.

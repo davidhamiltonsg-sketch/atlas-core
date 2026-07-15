@@ -1,4 +1,5 @@
 import { ATLAS_SPEC } from "@/lib/portfolio-spec"
+import { GOVERNED_LINE_ALIASES } from "@/lib/instrument-identity"
 
 /**
  * Atlas Core — Governance Constants
@@ -128,6 +129,37 @@ export function applyBitcoinSleeve<T extends { ticker: string; actualPct: number
     if (p.ticker === BITCOIN_ACCUMULATION_TICKER) return { ...p, targetPct: Math.max(0, BITCOIN_SLEEVE_TARGET_PCT - btc.actualPct) }
     return p
   })
+}
+
+/**
+ * Generalized economic-sleeve transition model (identity over ticker):
+ *  — Bitcoin sleeve: BTC runs off, IBIT accumulates toward the combined 5% target
+ *    (applyBitcoinSleeve above; GBTC remains a genuine legacy instrument).
+ *  — Governed-line aliases (EQQQ→EQAC, SEMI→SMH): the alias row is the SAME
+ *    instrument (same ISIN) on another exchange line. It holds in place
+ *    (effective target = its current weight, no buy/sell pressure) while the
+ *    governed line accumulates toward the REMAINDER of the sleeve target — so
+ *    the sleeve's combined weight is what gets judged against the constitution.
+ * Storage, cost basis and history always retain the original instrument rows.
+ */
+export function applyEconomicSleeves<T extends { ticker: string; actualPct: number; targetPct: number }>(
+  positions: T[]
+): T[] {
+  let out = applyBitcoinSleeve(positions)
+  for (const [alias, governedTicker] of Object.entries(GOVERNED_LINE_ALIASES)) {
+    const aliasActual = out.filter((p) => p.ticker === alias).reduce((s, p) => s + p.actualPct, 0)
+    if (aliasActual <= 0 || !out.some((p) => p.ticker === governedTicker)) continue
+    // The governed line's remainder is derived from the CONSTITUTIONAL target (spec), not
+    // the row's current targetPct — so the transform is idempotent: pages can bake the
+    // effective target into engine inputs and the engines can safely apply it again.
+    const sleeveTarget = TICKER_TARGETS[governedTicker]
+    out = out.map((p) =>
+      p.ticker === alias ? { ...p, targetPct: p.actualPct }
+      : p.ticker === governedTicker && sleeveTarget !== undefined ? { ...p, targetPct: Math.max(0, sleeveTarget - aliasActual) }
+      : p
+    )
+  }
+  return out
 }
 
 export const BEHAVIORAL_RULES = {

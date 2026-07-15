@@ -11,7 +11,8 @@ import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-butto
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
-import { applyBitcoinSleeve, BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
+import { applyEconomicSleeves } from "@/lib/next-best-move"
+import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { getConstitution } from "@/lib/constitutions"
@@ -20,7 +21,8 @@ import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
 // Live refresh can poll IBKR Flex (~25s) to sync share counts — allow headroom.
 export const maxDuration = 60
 
-async function getPortfolioData(userId: string) {
+async function getPortfolioData(userId: string, governedTickers: string[]) {
+  const governedSet = new Set(governedTickers)
   const [holdings, trades, usdSgdRate] = await Promise.all([
     db.holding.findMany({
       where: { userId },
@@ -43,40 +45,61 @@ async function getPortfolioData(userId: string) {
   const totalValue = holdings.reduce((sum, h) => sum + (h.snapshots[0]?.value ?? 0), 0)
   const hasBalance = totalValue > 0
 
-  // Bitcoin sleeve effective targets: BTC runs off (hold-in-place), IBIT accumulates. Keeps
-  // the portfolio's drift/instructions consistent with the rest of the app (no "buy BTC").
+  // Economic-sleeve effective targets (identity over ticker): BTC runs off while IBIT
+  // accumulates, and alternate exchange lines of a governed instrument (EQQQ→EQAC,
+  // SEMI→SMH — same ISIN) hold in place while the governed line accumulates toward
+  // the remainder of the sleeve target. Keeps drift/instructions consistent app-wide.
   const effTarget: Record<string, number> = {}
-  for (const p of applyBitcoinSleeve(holdings.map(h => ({
+  for (const p of applyEconomicSleeves(holdings.map(h => ({
     ticker: h.ticker,
     actualPct: hasBalance ? ((h.snapshots[0]?.value ?? 0) / totalValue) * 100 : 0,
     targetPct: h.targetPct,
   })))) effTarget[p.ticker] = p.targetPct
 
-  return {
-    holdings: holdings.map((h) => {
+  // Combined weight per economic sleeve — hard thresholds judge THIS, not a single line.
+  const sleeveActual: Record<string, number> = {}
+  for (const h of holdings) {
+    const key = economicSleeveTicker(h.ticker)
+    sleeveActual[key] = (sleeveActual[key] ?? 0) + (hasBalance ? ((h.snapshots[0]?.value ?? 0) / totalValue) * 100 : 0)
+  }
+
+  const rows = holdings.map((h) => {
       const latest = h.snapshots[0]
       const value = latest?.value ?? 0
       const actualPct = hasBalance ? (value / totalValue) * 100 : 0
+      const sleeveKey = economicSleeveTicker(h.ticker)
+      const isGovernedExposure = governedSet.has(sleeveKey)
+      // Genuine legacy: a valued holding OUTSIDE the governed universe (different
+      // instrument). Stays in NAV/allocation but gets no target-drift advice.
+      const isLegacy = !isGovernedExposure && value > 0
       const tgt = effTarget[h.ticker] ?? h.targetPct
-      const drift = hasBalance ? actualPct - tgt : 0
-      const withinBand = !hasBalance || Math.abs(drift) <= h.toleranceBand
-      const overCap = hasBalance && h.hardCapPct !== null && actualPct > h.hardCapPct
-      const ht = HARD_THRESHOLDS[h.ticker]
-      const isHard = hasBalance && (overCap ||
-        (ht?.low !== undefined && actualPct < ht.low) ||
-        (ht !== undefined && actualPct > ht.high))
-      const isSoft = hasBalance && !isHard && !withinBand
+      const drift = hasBalance && !isLegacy ? actualPct - tgt : 0
+      const withinBand = !hasBalance || isLegacy || Math.abs(drift) <= h.toleranceBand
+      // Hard thresholds judge the sleeve's COMBINED weight. Only the sleeve-head row
+      // (ticker === sleeve key) carries the §3 drift-trigger lookup — alias/accumulation
+      // rows are governed via their derived targets, mirroring the BTC/IBIT precedent.
+      const judged = sleeveActual[sleeveKey] ?? actualPct
+      const overCap = hasBalance && !isLegacy && h.hardCapPct !== null && judged > h.hardCapPct
+      const ht = h.ticker === sleeveKey ? HARD_THRESHOLDS[h.ticker] : undefined
+      const isHard = hasBalance && !isLegacy && (overCap ||
+        (ht?.low !== undefined && judged < ht.low) ||
+        (ht !== undefined && judged > ht.high))
+      const isSoft = hasBalance && !isLegacy && !isHard && !withinBand
       const sparklineValues = h.snapshots.map(s => s.value)
 
       const cb = avgCostMap[h.ticker]
       const valuation=openPositionValuation({value,units:latest?.units??0,snapshotCostBasis:latest?.costBasis,snapshotUnrealizedPnl:latest?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate})
       const avgCostUsd=valuation.averagePriceInstrumentCurrency, unrealisedSgd=valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct=valuation.reconciles?valuation.unrealizedReturnPct:null
 
-      return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues, avgCostUsd, unrealisedSgd, unrealisedPct }
-    }),
-    totalValue,
-    hasBalance,
-  }
+      return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues, avgCostUsd, unrealisedSgd, unrealisedPct, sleeveKey, isLegacy }
+    })
+    // Dead rows — no units, no value, and no (effective) governed target: SGOV, IWQU,
+    // IMID, a run-off line that fully closed, or a zeroed erroneous row. Removed from
+    // display entirely; the DB rows and their history remain untouched. Governed
+    // placeholder rows (0 units but a live target) stay visible as the architecture.
+    .filter((h) => h.value > 0 || (h.latestSnapshot?.units ?? 0) > 0 || h.targetPct > 0)
+
+  return { holdings: rows, totalValue, hasBalance, sleeveActual }
 }
 
 export default async function Portfolio() {
@@ -85,8 +108,10 @@ export default async function Portfolio() {
     if (!session) redirect("/login")
     const active = await activePortfolioContext(session)
     const isSbr = active.constitutionId === "silicon-brick-road"
-    const targetSleeveCount = getConstitution(active.constitutionId).funds.length
-    const { holdings, totalValue, hasBalance } = await getPortfolioData(active.owner.id)
+    const constitutionFunds = getConstitution(active.constitutionId).funds
+    const targetSleeveCount = constitutionFunds.length
+    const canCorrect = session.role === "admin" || session.userId === active.owner.id
+    const { holdings, totalValue, hasBalance, sleeveActual } = await getPortfolioData(active.owner.id, constitutionFunds.map((f) => f.ticker))
 
     const snapshotDate = holdings[0]?.latestSnapshot
       ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
@@ -102,31 +127,49 @@ export default async function Portfolio() {
     }, null)
     const daysSinceUpdate = latestDate
       // Server-rendered freshness is intentionally evaluated at request time.
-      // eslint-disable-next-line react-hooks/purity
       ? Math.floor((Date.now() - latestDate.getTime()) / 86_400_000)
       : null
 
-    const withinCount = holdings.filter((h) => h.withinBand && !h.overCap).length
-    const hardBreaches = holdings.filter((h) => h.isHard).length
-    const softBreaches = holdings.filter((h) => h.isSoft).length
+    // Group rows by economic sleeve, in constitution order. A sleeve with more than one
+    // exchange line (EQAC+EQQQ, SMH+SEMI, BTC+IBIT) renders under one sleeve header with
+    // derived per-row targets; valued rows outside the governed universe render last as
+    // LEGACY — AWAITING SALE (still full members of NAV and allocation).
+    const sleeveGroups = constitutionFunds.map((f) => ({
+      key: f.ticker,
+      target: f.target,
+      label: f.ticker === "BTC" ? "Bitcoin sleeve" : `${f.ticker} sleeve`,
+      members: holdings.filter((h) => h.sleeveKey === f.ticker),
+    })).filter((g) => g.members.length > 0)
+    const legacyRows = holdings.filter((h) => h.isLegacy)
 
-    // Merge BTC+IBIT into one sleeve entry for visual display (donut, bars, drift summary)
-    const btcSlot = holdings.find(h => h.ticker === "BTC")
-    const ibitSlot = holdings.find(h => h.ticker === "IBIT")
-    const displaySlots = (btcSlot && ibitSlot)
-      ? holdings
-          .filter(h => h.ticker !== "IBIT")
-          .map(h => h.ticker !== "BTC" ? h : {
-            ...h,
-            name: "Bitcoin sleeve",
-            value: h.value + ibitSlot.value,
-            actualPct: h.actualPct + ibitSlot.actualPct,
-            targetPct: BITCOIN_SLEEVE_TARGET_PCT,
-            drift: (h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT,
-            withinBand: Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) <= h.toleranceBand,
-            isSoft: !h.isHard && Math.abs((h.actualPct + ibitSlot.actualPct) - BITCOIN_SLEEVE_TARGET_PCT) > h.toleranceBand,
-          })
-      : holdings
+    // One display slot per sleeve (donut, bars, drift summary) — combined weight vs the
+    // constitutional target, generalizing the previous BTC+IBIT-only merge.
+    const displaySlots = [
+      ...sleeveGroups.map((g) => {
+        if (g.members.length === 1) return g.members[0]
+        const head = g.members.find((h) => h.ticker === g.key) ?? g.members[0]
+        const actualPct = g.members.reduce((s, h) => s + h.actualPct, 0)
+        const drift = hasBalance ? actualPct - g.target : 0
+        const withinBand = !hasBalance || Math.abs(drift) <= head.toleranceBand
+        const isHard = g.members.some((h) => h.isHard)
+        return {
+          ...head,
+          name: g.label,
+          value: g.members.reduce((s, h) => s + h.value, 0),
+          actualPct,
+          targetPct: g.target,
+          drift,
+          withinBand,
+          isHard,
+          isSoft: !isHard && hasBalance && !withinBand,
+        }
+      }),
+      ...legacyRows,
+    ]
+
+    const withinCount = displaySlots.filter((h) => h.withinBand && !h.overCap).length
+    const hardBreaches = displaySlots.filter((h) => h.isHard).length
+    const softBreaches = displaySlots.filter((h) => h.isSoft).length
 
     const donutData = displaySlots.map((h) => ({
       ticker: h.ticker,
@@ -149,14 +192,14 @@ export default async function Portfolio() {
       <div className="flex items-center gap-2 flex-wrap mb-4">
         <AutoRefresh intervalHours={24} />
         <DriftNotifications alerts={[
-          ...holdings.filter(h => h.isHard).map(h => ({
+          ...displaySlots.filter(h => h.isHard).map(h => ({
             ticker: h.ticker,
             severity: "hard" as const,
             direction: h.drift > 0 ? "over" as const : "under" as const,
             actualPct: h.actualPct,
             targetPct: h.targetPct,
           })),
-          ...holdings.filter(h => h.isSoft).map(h => ({
+          ...displaySlots.filter(h => h.isSoft).map(h => ({
             ticker: h.ticker,
             severity: "soft" as const,
             direction: h.drift > 0 ? "over" as const : "under" as const,
@@ -244,7 +287,7 @@ export default async function Portfolio() {
             {(hasBalance ? [
               { label: "Total Value", value: formatCurrency(totalValue, "SGD"), sub: "SGD · IBKR", accent: "" },
               { label: "Holdings", value: String(holdings.length), sub: "Active positions", accent: "" },
-              { label: "Within Tolerance", value: `${withinCount}/${holdings.length}`, sub: "Bands respected", accent: withinCount === holdings.length ? "text-green-500" : "text-amber-500" },
+              { label: "Within Tolerance", value: `${withinCount}/${displaySlots.length}`, sub: "Sleeves in band", accent: withinCount === displaySlots.length ? "text-green-500" : "text-amber-500" },
               { label: "Hard Breaches", value: String(hardBreaches), sub: hardBreaches === 0 ? "None — all clear" : "Immediate review", accent: hardBreaches > 0 ? "text-red-500" : "text-green-500" },
             ] : [
               { label: "Holdings", value: String(holdings.length), sub: "Target allocations set", accent: "" },
@@ -347,9 +390,6 @@ export default async function Portfolio() {
 
             <div className="divide-y divide-border">
               {(() => {
-                const sleeveTickers = new Set(["BTC", "IBIT"])
-                const mainHoldings = holdings.filter(h => !sleeveTickers.has(h.ticker))
-                const sleeveHoldings = holdings.filter(h => sleeveTickers.has(h.ticker))
                 const renderRow = (h: typeof holdings[0]) => (
                   <HoldingRow
                     key={h.ticker}
@@ -372,27 +412,48 @@ export default async function Portfolio() {
                       avgCostUsd: h.avgCostUsd,
                       unrealisedSgd: h.unrealisedSgd,
                       unrealisedPct: h.unrealisedPct,
+                      legacy: h.isLegacy,
+                      canRemove: h.isLegacy && canCorrect,
                     }}
                   />
                 )
                 return (
                   <>
-                    {mainHoldings.map(renderRow)}
-                    {sleeveHoldings.length > 0 && (
-                      <>
+                    {sleeveGroups.map((g) => g.members.length === 1 ? (
+                      renderRow(g.members[0])
+                    ) : (
+                      <div key={g.key} className="divide-y divide-border">
+                        {/* Sleeve header — ONE economic exposure across exchange lines of the
+                            same instrument (identity over ticker); judged on the combined weight. */}
                         <div className="px-5 py-2 bg-muted/20 flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                          <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: g.members[0].color }} />
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                            Bitcoin sleeve — combined target {BITCOIN_SLEEVE_TARGET_PCT}%
-                            {btcSlot && ibitSlot && hasBalance && (
+                            {g.label} — combined target {g.target}%
+                            {hasBalance && (
                               <span className="ml-2 normal-case font-normal">
-                                ({(btcSlot.actualPct + ibitSlot.actualPct).toFixed(1)}% actual)
+                                ({(sleeveActual[g.key] ?? 0).toFixed(1)}% actual)
                               </span>
                             )}
                           </span>
                         </div>
-                        {sleeveHoldings.map(renderRow)}
-                      </>
+                        {g.members.map(renderRow)}
+                      </div>
+                    ))}
+                    {legacyRows.length > 0 && (
+                      <div className="divide-y divide-border">
+                        <div className="px-5 py-2 bg-muted/20">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Legacy — awaiting sale
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/80 mt-0.5 ml-3.5">
+                            Sell proceeds settle into the cash bank before replacement buys — Art. VII. Value and history stay attached to the original instrument.
+                          </p>
+                        </div>
+                        {legacyRows.map(renderRow)}
+                      </div>
                     )}
                   </>
                 )
@@ -463,7 +524,6 @@ export default async function Portfolio() {
                 : h.isSoft
                 ? (h.drift < 0 ? "#facc15" : "#f97316")   // yellow-400 / orange-500
                 : "#22c55e"                                 // green-500
-              const pct = Math.min(100, (h.actualPct / (h.hardCapPct ?? 100)) * 100)
               return (
                 <div key={h.ticker}>
                   <div className="flex items-center justify-between mb-1">

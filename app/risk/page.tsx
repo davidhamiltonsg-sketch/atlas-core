@@ -1,7 +1,7 @@
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency, formatPercent } from "@/lib/utils"
-import { applyBitcoinSleeve } from "@/lib/constants"
+import { applyEconomicSleeves } from "@/lib/constants"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { activePortfolioContext } from "@/lib/active-portfolio"
@@ -193,7 +193,7 @@ async function getRiskData(userId: string,isSbr=false) {
   // effective sleeve target so the weight bars/table don't read BTC as "underweight vs 7%" while
   // IBIT reads "overweight vs 0%" — consistent with the cockpit, reports, and governance surfaces.
   const sleeveTargets = new Map((isSbr?holdingStats.map(h=>({ticker:h.ticker,targetPct:h.targetPct})):
-    applyBitcoinSleeve(
+    applyEconomicSleeves(
       holdingStats.map(h => ({ ticker: h.ticker, actualPct: totalValue > 0 ? (h.latestValue / totalValue) * 100 : 0, targetPct: h.targetPct }))
     )).map(p => [p.ticker, p.targetPct]))
   for (const h of holdingStats) h.targetPct = sleeveTargets.get(h.ticker) ?? h.targetPct

@@ -16,10 +16,22 @@ export interface InstrumentIdentity {
   ibkrConid: string | null
 }
 
+/**
+ * Alternate exchange lines of a governed instrument — SAME ISIN, different listing.
+ * EQQQ (IE00BFZXGZ54) IS the governed EQAC fund; SEMI (IE00BMC38736) IS the governed
+ * SMH fund. Identity beats ticker: these rows are governed exposure, never "legacy",
+ * and aggregate into their sleeve for targets, bands and combined ceilings.
+ */
+export const GOVERNED_LINE_ALIASES: Record<string, string> = {
+  EQQQ: "EQAC",
+  SEMI: "SMH",
+}
+
 /** Governance grouping only. Storage, cost basis and history always retain the original instrument. */
 export function economicSleeveTicker(ticker: string): string {
   const symbol = ticker.trim().toUpperCase()
   if (symbol === "IBIT" || symbol === "GBTC") return "BTC"
+  if (GOVERNED_LINE_ALIASES[symbol]) return GOVERNED_LINE_ALIASES[symbol]
   if (symbol === "SMH.US" || symbol === "SMH_US" || symbol === "SMH-US") return "SMH_LEGACY_US"
   return symbol
 }

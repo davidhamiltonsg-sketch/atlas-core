@@ -7,6 +7,8 @@
 // If you hold the alternative in IBKR, it inherits all the core position's rules.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { GOVERNED_LINE_ALIASES } from "@/lib/instrument-identity"
+
 export interface AltVehicle {
   /** Pre-approved alternative tickers for this exposure. */
   tickers: string[]
@@ -53,6 +55,9 @@ export const GOVERNANCE_UNIVERSE: ReadonlySet<string> = new Set<string>([
   ...SBR_TICKERS,
   ...Object.keys(APPROVED_ALTERNATIVES),
   ...Object.values(APPROVED_ALTERNATIVES).flatMap((a) => a.tickers),
+  // Alternate exchange lines of governed instruments (same ISIN — EQQQ is EQAC,
+  // SEMI is SMH). Identity over ticker: these are IN scope, never "not in plan".
+  ...Object.keys(GOVERNED_LINE_ALIASES),
 ])
 
 /** Is this ticker part of the governed policy universe (core, buffer, or approved alternative)? */

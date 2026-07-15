@@ -5,7 +5,7 @@ import { db } from "@/lib/db"
 import { MissionControl, type PortfolioContext, type AgentFinding } from "@/components/mission-control/mission-control"
 import { computePortfolioHealth } from "@/lib/health"
 import { computeLadder } from "@/lib/ladder"
-import { BITCOIN_SLEEVE_TARGET_PCT, applyBitcoinSleeve } from "@/lib/next-best-move"
+import { applyEconomicSleeves } from "@/lib/next-best-move"
 import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { refreshedLookThroughData } from "@/lib/look-through-data"
@@ -179,7 +179,7 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
       })
       .filter(p => p.value > 0)
 
-    positions = applyBitcoinSleeve(positions)
+    positions = applyEconomicSleeves(positions)
 
     // Run engines
     const refreshedLt = await refreshedLookThroughData()

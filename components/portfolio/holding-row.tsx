@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, XCircle, CheckCircle2, Pencil, Check, X } from "lucide-react"
-import { updateHoldingsManually } from "@/app/portfolio/actions"
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, XCircle, CheckCircle2, Pencil, Check, X, Trash2 } from "lucide-react"
+import { updateHoldingsManually, removeErroneousPosition } from "@/app/portfolio/actions"
 import { Sparkline } from "@/components/charts/sparkline"
 
 interface HoldingRowProps {
@@ -25,6 +25,10 @@ interface HoldingRowProps {
     avgCostUsd?: number | null
     unrealisedSgd?: number | null
     unrealisedPct?: number | null
+    /** Valued holding outside the governed universe — no target, no drift advice. */
+    legacy?: boolean
+    /** Owner-only correction: zero out an erroneous non-governed row (append-only). */
+    canRemove?: boolean
   }
 }
 
@@ -33,7 +37,17 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
   const [units, setUnits] = useState(String(h.latestSnapshot?.units ?? 0))
   const [price, setPrice] = useState(String(h.latestSnapshot?.price ?? 0))
   const [saved, setSaved] = useState(false)
+  const [removeError, setRemoveError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  function handleRemove() {
+    if (!window.confirm(`Remove erroneous ${h.ticker} position? The row is zeroed and logged — history stays in the audit trail.`)) return
+    setRemoveError(null)
+    startTransition(async () => {
+      const result = await removeErroneousPosition(h.id)
+      if (result?.error) setRemoveError(result.error)
+    })
+  }
 
   const DriftIcon = h.drift > 0.05 ? TrendingUp : h.drift < -0.05 ? TrendingDown : Minus
   // Semantic status tokens: hard breach = danger, any soft drift = warning
@@ -162,21 +176,31 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       ) : (
         <>
           <div className="hidden md:flex flex-col items-end gap-1">
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {h.targetPct}%
-              {h.hardCapPct && <span className="text-[10px] ml-1 opacity-50">/{h.hardCapPct}%</span>}
-            </span>
-            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full opacity-40" style={{ width: `${Math.min(100, h.targetPct / 0.7)}%`, backgroundColor: h.color }} />
-            </div>
+            {h.legacy ? (
+              <span className="text-xs text-muted-foreground tabular-nums">—</span>
+            ) : (
+              <>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {h.targetPct.toFixed(1)}%
+                  {h.hardCapPct && <span className="text-[10px] ml-1 opacity-50">/{h.hardCapPct}%</span>}
+                </span>
+                <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full opacity-40" style={{ width: `${Math.min(100, h.targetPct / 0.7)}%`, backgroundColor: h.color }} />
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Drift */}
-          <div className={`hidden md:flex items-center gap-1 justify-end text-xs font-bold tabular-nums ${driftColor}`}>
-            <DriftIcon className="h-3 w-3 shrink-0" />
-            {h.drift >= 0 ? "+" : ""}{h.drift.toFixed(1)}%
-            {h.overCap && <span className="ml-1 rounded bg-danger/15 px-1 text-[9px] font-bold text-danger">CAP</span>}
-          </div>
+          {/* Drift — meaningless for a legacy row without a governed target */}
+          {h.legacy ? (
+            <div className="hidden md:flex items-center justify-end text-[10px] text-muted-foreground">awaiting sale</div>
+          ) : (
+            <div className={`hidden md:flex items-center gap-1 justify-end text-xs font-bold tabular-nums ${driftColor}`}>
+              <DriftIcon className="h-3 w-3 shrink-0" />
+              {h.drift >= 0 ? "+" : ""}{h.drift.toFixed(1)}%
+              {h.overCap && <span className="ml-1 rounded bg-danger/15 px-1 text-[9px] font-bold text-danger">CAP</span>}
+            </div>
+          )}
         </>
       )}
 
@@ -209,15 +233,31 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
             >
               <Pencil className="h-3 w-3" />
             </button>
-            <div title={
-              h.isHard
-                ? `Hard breach: ${h.ticker} is at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Immediate rebalancing required.`
-                : h.isSoft
-                ? `Soft drift: ${h.ticker} is at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Redirect contributions over the next 2–3 months.`
-                : `${h.ticker} is within its tolerance band at ${h.actualPct.toFixed(1)}% (target ${h.targetPct}%). No action needed.`
-            }>
-              <StatusIcon className={`h-4 w-4 ${statusIconCls} ${pulseCls} cursor-help`} />
-            </div>
+            {h.canRemove && (
+              <button
+                onClick={handleRemove}
+                disabled={isPending}
+                className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground/50 hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                title={`Remove erroneous ${h.ticker} position (zeroed and logged — not deleted)`}
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+            {h.legacy ? (
+              <div title={`${h.ticker} is a legacy holding awaiting sale. It stays in NAV and allocation until the sale settles; proceeds land in the cash bank before replacement buys (Art. VII).`}>
+                <Minus className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+              </div>
+            ) : (
+              <div title={
+                h.isHard
+                  ? `Hard breach: ${h.ticker} is at ${h.actualPct.toFixed(1)}% vs ${h.targetPct.toFixed(1)}% target. Immediate rebalancing required.`
+                  : h.isSoft
+                  ? `Soft drift: ${h.ticker} is at ${h.actualPct.toFixed(1)}% vs ${h.targetPct.toFixed(1)}% target. Redirect contributions over the next 2–3 months.`
+                  : `${h.ticker} is within its tolerance band at ${h.actualPct.toFixed(1)}% (target ${h.targetPct.toFixed(1)}%). No action needed.`
+              }>
+                <StatusIcon className={`h-4 w-4 ${statusIconCls} ${pulseCls} cursor-help`} />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -226,10 +266,10 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       <div className="col-span-2 grid grid-cols-2 gap-2 md:hidden text-xs mt-2">
         <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Market value</span><strong>S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
         <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Units · price</span><strong>{h.latestSnapshot?.units?.toLocaleString("en-SG") ?? "—"} · ${h.latestSnapshot?.price?.toFixed(2) ?? "—"}</strong></div>
-        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Target</span><strong>{h.targetPct.toFixed(1)}%</strong></div>
+        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Target</span><strong>{h.legacy ? "—" : `${h.targetPct.toFixed(1)}%`}</strong></div>
         <div className="flex items-center justify-between gap-2">
-          <span className={`font-bold ${driftColor}`}>
-            {h.actualPct.toFixed(1)}% · {h.drift >= 0 ? "+" : ""}{h.drift.toFixed(1)}% drift
+          <span className={`font-bold ${h.legacy ? "text-muted-foreground" : driftColor}`}>
+            {h.actualPct.toFixed(1)}%{h.legacy ? " · awaiting sale" : ` · ${h.drift >= 0 ? "+" : ""}${h.drift.toFixed(1)}% drift`}
           </span>
           <button onClick={() => setEditing(!editing)} aria-label={`Edit ${h.ticker} units and price`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
             <Pencil className="h-3 w-3" />
@@ -272,8 +312,10 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
         </div>
       )}
 
-      {/* Recommended action box */}
-      {!editing && (h.isHard || h.isSoft) && (
+      {/* Recommended action box — only for rows with a governed target. Target-drift
+          advice is meaningless against a 0% placeholder target, so legacy/0-target
+          rows never render a suggestion. Derived sleeve targets print at 1 dp. */}
+      {!editing && !h.legacy && h.targetPct > 0 && (h.isHard || h.isSoft) && (
         <div className={`col-span-2 md:col-span-7 mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed ${
           h.isHard
             ? "bg-danger/[0.08] text-danger border border-danger/20"
@@ -282,13 +324,17 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
           <span className="font-bold mr-1">{h.isHard ? "Action required:" : "Suggested:"}</span>
           {h.isHard
             ? h.drift > 0
-              ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Stop buying this fund and consider selling a small amount to bring it back to ${h.targetPct}%.`
-              : `Underweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Redirect all contributions to ${h.ticker} until restored above ${h.targetPct - 2}%.`
+              ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct.toFixed(1)}% target. Stop buying this fund and consider selling a small amount to bring it back to ${h.targetPct.toFixed(1)}%.`
+              : `Underweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct.toFixed(1)}% target. Redirect all contributions to ${h.ticker} until restored above ${Math.max(0, h.targetPct - 2).toFixed(1)}%.`
             : h.drift > 0
-              ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Pause accumulation for 1–3 months and redirect freed capital to underweight positions.`
-              : `Underweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct}% target. Redirect contributions for next 3 months until restored to within tolerance band.`
+              ? `Overweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct.toFixed(1)}% target. Pause accumulation for 1–3 months and redirect freed capital to underweight positions.`
+              : `Underweight at ${h.actualPct.toFixed(1)}% vs ${h.targetPct.toFixed(1)}% target. Redirect contributions for next 3 months until restored to within tolerance band.`
           }
         </div>
+      )}
+
+      {removeError && (
+        <div className="col-span-2 md:col-span-7 mt-1 text-[11px] text-danger font-semibold">{removeError}</div>
       )}
 
       {saved && (
