@@ -1,19 +1,23 @@
 import { formatCurrency } from "@/lib/utils"
+import { StatusChip, type StatusChipStatus } from "@/components/ui/status-chip"
 
 export interface ContributionMonthRow {
   key: string          // "YYYY-MM"
   label: string        // "Jan 2026"
   contributed: number  // SGD net new money recorded that month
-  planned: number      // SGD constitution plan for that month (incl. January boost for Atlas)
+  planned: number      // plan for that month in SGD (Atlas: US$ plan converted at the live rate)
+  plannedDisplay?: string // optional dual-currency label, e.g. "US$3,000 ≈ S$4,065" (Atlas)
   isCurrentMonth: boolean
 }
 
-function statusFor(row: ContributionMonthRow): { label: string; color: string } {
-  if (row.isCurrentMonth && row.contributed < row.planned) return { label: "In progress", color: "text-muted-foreground" }
-  if (row.planned <= 0) return { label: "—", color: "text-muted-foreground" }
-  if (row.contributed >= row.planned * 0.98) return { label: "On plan", color: "text-green-500" }
-  if (row.contributed > 0) return { label: "Partial", color: "text-yellow-400" }
-  return { label: "Missed", color: "text-red-500" }
+// Neutral states (current month still filling, no plan) render as quiet text;
+// concluded months get a semantic StatusChip.
+function statusFor(row: ContributionMonthRow): { label: string; chip: StatusChipStatus | null } {
+  if (row.isCurrentMonth && row.contributed < row.planned) return { label: "In progress", chip: null }
+  if (row.planned <= 0) return { label: "—", chip: null }
+  if (row.contributed >= row.planned * 0.98) return { label: "On plan", chip: "good" }
+  if (row.contributed > 0) return { label: "Partial", chip: "warn" }
+  return { label: "Missed", chip: "crit" }
 }
 
 /** Month-by-month contributed-vs-planned table. Pure presentation — the page owns the data. */
@@ -42,11 +46,15 @@ export function ContributionLedger({ rows }: { rows: ContributionMonthRow[] }) {
                 <tr key={row.key} className="hover:bg-accent/30 transition-colors">
                   <td className="px-5 py-3 font-semibold">{row.label}</td>
                   <td className="px-5 py-3 text-right tabular-nums font-semibold">{formatCurrency(row.contributed, "SGD")}</td>
-                  <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{formatCurrency(row.planned, "SGD")}</td>
-                  <td className={`px-5 py-3 text-right tabular-nums ${diff >= 0 ? "text-green-500" : "text-muted-foreground"}`}>
+                  <td className="px-5 py-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">{row.plannedDisplay ?? formatCurrency(row.planned, "SGD")}</td>
+                  <td className={`px-5 py-3 text-right tabular-nums ${diff >= 0 ? "text-success" : "text-muted-foreground"}`}>
                     {diff >= 0 ? "+" : "−"}{formatCurrency(Math.abs(diff), "SGD")}
                   </td>
-                  <td className={`px-5 py-3 text-right font-semibold ${status.color}`}>{status.label}</td>
+                  <td className="px-5 py-3 text-right">
+                    {status.chip
+                      ? <StatusChip status={status.chip} label={status.label} />
+                      : <span className="font-semibold text-muted-foreground">{status.label}</span>}
+                  </td>
                 </tr>
               )
             })}
@@ -101,7 +109,7 @@ export function CashBankHistory({ entries, bankLabel }: { entries: CashBankEntry
                   <span className="font-semibold">{TYPE_LABEL[e.type] ?? e.type}</span>
                   {e.description && <span className="text-muted-foreground ml-2 hidden sm:inline">{e.description}</span>}
                 </td>
-                <td className={`px-5 py-3 text-right tabular-nums font-semibold ${e.amount < 0 ? "text-red-500" : "text-green-500"}`}>
+                <td className={`px-5 py-3 text-right tabular-nums font-semibold ${e.amount < 0 ? "text-danger" : "text-success"}`}>
                   {e.amount >= 0 ? "+" : "−"}{formatCurrency(Math.abs(e.amount), "SGD")}
                 </td>
                 <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">{formatCurrency(e.balanceAfter, "SGD")}</td>

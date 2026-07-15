@@ -5,7 +5,7 @@ import { Sidebar } from "./sidebar"
 import { Topbar } from "./topbar"
 import type { ConstitutionId } from "@/lib/constitutions"
 import Link from "next/link"
-import { LayoutDashboard, Radar, ShieldCheck, Wallet, BarChart3 } from "lucide-react"
+import { LayoutDashboard, Radar, ShieldCheck, Wallet, CalendarCheck } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 interface ShellClientProps {
@@ -21,11 +21,13 @@ interface ShellClientProps {
 export function ShellClient({ title, subtitle, userName, isAdmin = false, constitutionId = "atlas-core", canSwitchPortfolio = false, children }: ShellClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
+  // Five ritual slots: the monthly one-screen answer (/next) replaces Risk — Risk stays a
+  // sidebar destination; the phone bar is for the monthly loop (see → act → verify).
   const mobileLinks = [
     { href: "/", label: "Overview", icon: LayoutDashboard, active: pathname === "/" },
+    { href: "/next", label: "This month", icon: CalendarCheck, active: pathname === "/next" },
     { href: `/mission-control?portfolio=${constitutionId}`, label: "Mission", icon: Radar, active: pathname === "/mission-control" },
     { href: "/portfolio", label: "Activity", icon: Wallet, active: pathname === "/portfolio" },
-    { href: "/risk", label: "Risk", icon: BarChart3, active: pathname === "/risk" },
     { href: "/governance", label: "Rules", icon: ShieldCheck, active: pathname === "/governance" },
   ]
 

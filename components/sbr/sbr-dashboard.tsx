@@ -125,7 +125,9 @@ async function getSbrData(userId: string) {
     })
     return {
       ticker: h.ticker, name: h.name, color: p?.color ?? h.color, units: cb?.units ?? 0, value: cb?.value ?? 0,
-      latestPrice: cb?.price ?? 0, priceChangePct: null, priceHistory: [],
+      // Real trend data for the Trend sparkline — the 8 fetched snapshots, oldest first.
+      latestPrice: cb?.price ?? 0, priceChangePct: null,
+      priceHistory: [...h.snapshots].reverse().map((s) => s.price).filter((p) => p > 0),
       avgCostUsd: valuation.averagePriceInstrumentCurrency,
       unrealisedSgd: valuation.reconciles ? valuation.unrealizedPnl : null,
       unrealisedPct: valuation.reconciles ? valuation.unrealizedReturnPct : null,
