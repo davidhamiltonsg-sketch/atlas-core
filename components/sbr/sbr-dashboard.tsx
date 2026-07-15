@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
+import { getExternalLiquidityVerified } from "@/lib/external-liquidity"
 import { formatCurrency } from "@/lib/utils"
 import { Activity, ChevronRight, TrendingUp } from "lucide-react"
 import { getSbrMarketData } from "@/lib/sbr-market"
@@ -49,7 +50,7 @@ async function getSbrData(userId: string) {
       where: { userId, type: "committee-minute", date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
     }),
-    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true, sbrExternalLiquidityVerified: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
     db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
   ])
   const fundOrder = SBR.funds.map((f) => f.ticker)
@@ -158,7 +159,7 @@ async function getSbrData(userId: string) {
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
   // Liquidity pillar: the owner's Settings confirmation that an emergency fund exists OUTSIDE
   // this portfolio — the portfolio itself must never score as emergency liquidity.
-  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays, SBR, owner?.sbrExternalLiquidityVerified ?? false)
+  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays, SBR, await getExternalLiquidityVerified(userId))
 
   // FX strip — live rate vs annual reference
   const fxDeviation = ((usdSgdRate - FX_REFERENCE_USDSGD) / FX_REFERENCE_USDSGD) * 100

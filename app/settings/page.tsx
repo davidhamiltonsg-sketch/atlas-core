@@ -7,6 +7,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { getConstitution } from "@/lib/constitutions"
 import { ATLAS_SPEC } from "@/lib/portfolio-spec"
 import { ExternalLiquidityToggle } from "@/components/sbr/external-liquidity-toggle"
+import { getExternalLiquidityVerified } from "@/lib/external-liquidity"
 
 export default async function SettingsPage() {
   const session = await getSession()
@@ -34,7 +35,7 @@ export default async function SettingsPage() {
       {active.constitutionId === "silicon-brick-road" && (
         <div className="settings-deck mt-5">
           <ExternalLiquidityToggle
-            verified={user?.sbrExternalLiquidityVerified ?? false}
+            verified={await getExternalLiquidityVerified(active.owner.id)}
             canEdit={session.role === "admin" || session.userId === active.owner.id}
           />
         </div>
