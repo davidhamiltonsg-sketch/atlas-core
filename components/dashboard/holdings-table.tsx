@@ -114,7 +114,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
         right={priceStale ? <StaleBadge title="Live prices unavailable — values use the last verified prices." /> : undefined}
       />
       <div className="overflow-x-auto">
-        <table className="w-full text-xs min-w-[1000px]">
+        <table className="w-full text-xs min-w-[920px] sm:min-w-[1000px]">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30">
               <th className="px-5 py-2.5 font-semibold">Holding</th>

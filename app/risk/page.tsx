@@ -8,6 +8,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
 import { ATLAS_TARGET_HHI, ATLAS_HHI_THRESHOLDS, atlasConcentrationLabel } from "@/lib/spec-derived"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure-bar-chart"
 
 const SBR_TARGET_HHI=SBR_SPEC.funds.reduce((sum,f)=>sum+(f.target/100)**2,0)
 const SBR_HHI_THRESHOLDS={onTarget:SBR_TARGET_HHI+0.04,drifting:SBR_TARGET_HHI+0.08}
@@ -42,7 +43,7 @@ function hhi(weights: number[]): number {
 function hhiLabel(h: number,isSbr=false): { label: string; color: string } {
   const t=isSbr?SBR_HHI_THRESHOLDS:ATLAS_HHI_THRESHOLDS
   const label = isSbr?(h<=t.onTarget?"On Target":h<=t.drifting?"Drifting":"Concentrated"):atlasConcentrationLabel(h)
-  const color = label === "On Target" ? "text-green-500" : label === "Drifting" ? "text-yellow-400" : "text-red-500"
+  const color = label === "On Target" ? "text-success" : label === "Drifting" ? "text-warning" : "text-danger"
   return { label, color }
 }
 
@@ -175,6 +176,8 @@ async function getRiskData(userId: string,isSbr=false) {
       name: h.name,
       color: h.color,
       targetPct: h.targetPct,
+      toleranceBand: h.toleranceBand ?? 2.5,
+      hardCapPct: h.hardCapPct,
       latestValue: latestDate ? dm.get(latestDate)!.value : 0,
       annualisedVol: annualise(stdDev(hReturns), Math.max(hAvgDays, 1)),
       dataPoints: sortedDates.length,
@@ -218,27 +221,30 @@ async function getRiskData(userId: string,isSbr=false) {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+// Severity colours from the semantic tokens (3 tiers). The old 4-tier
+// yellow/orange split collapsed into --warning — the tier labels still carry
+// the distinction, and light-mode yellow-400 text was illegible.
 function volLabel(v: number): { label: string; color: string } {
-  if (v < 0.08) return { label: "Low", color: "text-green-500" }
-  if (v < 0.15) return { label: "Moderate", color: "text-yellow-400" }
-  if (v < 0.25) return { label: "Elevated", color: "text-orange-500" }
-  return { label: "High", color: "text-red-500" }
+  if (v < 0.08) return { label: "Low", color: "text-success" }
+  if (v < 0.15) return { label: "Moderate", color: "text-warning" }
+  if (v < 0.25) return { label: "Elevated", color: "text-warning" }
+  return { label: "High", color: "text-danger" }
 }
 
 function sharpeLabel(s: number): { label: string; color: string } {
-  if (s >= 2)   return { label: "Excellent", color: "text-green-500" }
-  if (s >= 1)   return { label: "Good", color: "text-green-400" }
-  if (s >= 0.5) return { label: "Adequate", color: "text-yellow-400" }
-  if (s >= 0)   return { label: "Weak", color: "text-orange-500" }
-  return { label: "Negative", color: "text-red-500" }
+  if (s >= 2)   return { label: "Excellent", color: "text-success" }
+  if (s >= 1)   return { label: "Good", color: "text-success" }
+  if (s >= 0.5) return { label: "Adequate", color: "text-warning" }
+  if (s >= 0)   return { label: "Weak", color: "text-warning" }
+  return { label: "Negative", color: "text-danger" }
 }
 
 function ddLabel(dd: number): { label: string; color: string } {
   const abs = Math.abs(dd)
-  if (abs < 0.05)  return { label: "Minimal", color: "text-green-500" }
-  if (abs < 0.15)  return { label: "Moderate", color: "text-yellow-400" }
-  if (abs < 0.30)  return { label: "Significant", color: "text-orange-500" }
-  return { label: "Severe", color: "text-red-500" }
+  if (abs < 0.05)  return { label: "Minimal", color: "text-success" }
+  if (abs < 0.15)  return { label: "Moderate", color: "text-warning" }
+  if (abs < 0.30)  return { label: "Significant", color: "text-warning" }
+  return { label: "Severe", color: "text-danger" }
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -266,6 +272,20 @@ export default async function RiskPage() {
   const targetHhi=isSbr?SBR_TARGET_HHI:ATLAS_TARGET_HHI
   const hhiThresholds=isSbr?SBR_HHI_THRESHOLDS:ATLAS_HHI_THRESHOLDS
 
+  // Position-vs-limits rows for the exposure chart: each valued holding's
+  // actual weight against its own soft band top and hard cap (DB bands; the
+  // Bitcoin sleeve target was already applied to holdingStats above).
+  const exposureRows: ExposureBar[] = data.holdingStats
+    .filter(h => h.latestValue > 0)
+    .map(h => {
+      const actual = data.totalValue > 0 ? (h.latestValue / data.totalValue) * 100 : 0
+      const soft = h.targetPct + h.toleranceBand
+      const hard = h.hardCapPct ?? h.targetPct + h.toleranceBand * 2
+      const status: ExposureBar["status"] = actual > hard ? "excessive" : actual > soft ? "elevated" : "healthy"
+      return { name: h.ticker, value: actual, soft, hard, status }
+    })
+    .filter(r => r.hard > 0)
+
   return (
     <Shell title="Risk Metrics" subtitle="Volatility, drawdown, and concentration analysis" userName={session.name} isAdmin={session.role === "admin"}>
       <div className="risk-deck">
@@ -273,10 +293,10 @@ export default async function RiskPage() {
 
         {/* Data quality notice */}
         {!hasSufficientData && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
-            <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 flex gap-3">
+            <Info className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-amber-500">
+              <p className="text-xs font-semibold text-warning">
                 {hasEnoughForVol ? "Sharpe Ratio unavailable — insufficient history" : "Volatility & VaR unavailable — insufficient history"}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -363,12 +383,12 @@ export default async function RiskPage() {
         {hasEnoughForVol && (
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <AlertTriangle className="h-4 w-4 text-warning" />
               <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Value at Risk — Parametric 95%</h2>
             </div>
-            <div className="mx-5 mt-4 rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 flex items-start gap-2">
-              <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+            <div className="mx-5 mt-4 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 flex items-start gap-2">
+              <Info className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+              <p className="text-[11px] text-warning">
                 <span className="font-semibold">Parametric VaR — assumes normality.</span>{" "}
                 ETF returns exhibit fat tails (leptokurtosis): crash-scenario losses are routinely 2–3× larger than this model predicts.
                 Use these figures as a lower-bound estimate, not a ceiling.
@@ -377,7 +397,7 @@ export default async function RiskPage() {
             <div className="p-5 grid grid-cols-2 gap-6">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Daily VaR (1-day, 95%)</p>
-                <p className="text-xl font-black tabular-nums text-orange-500">
+                <p className="text-xl font-black tabular-nums text-warning">
                   {formatCurrency(data.var95Daily, "SGD")}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
@@ -386,7 +406,7 @@ export default async function RiskPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Monthly VaR (30-day, 95%)</p>
-                <p className="text-xl font-black tabular-nums text-orange-500">
+                <p className="text-xl font-black tabular-nums text-warning">
                   {formatCurrency(data.var95Monthly, "SGD")}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
@@ -424,7 +444,7 @@ export default async function RiskPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Current Drawdown from ATH</p>
-                <p className={`text-xl font-black tabular-nums ${data.currentDrawdown < -0.01 ? "text-red-500" : "text-green-500"}`}>
+                <p className={`text-xl font-black tabular-nums ${data.currentDrawdown < -0.01 ? "text-danger" : "text-success"}`}>
                   {data.currentDrawdown >= -0.001 ? "At ATH" : formatPercent(data.currentDrawdown * 100, 2, true)}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
@@ -482,6 +502,19 @@ export default async function RiskPage() {
             </table>
           </div>
         </div>
+
+        {/* Position vs mandate limits — per-row soft/hard drift zones */}
+        {exposureRows.length > 0 && (
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Position vs Mandate Limits</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">How much of each holding&apos;s hard cap is in use — green to its warning cap, amber to the hard cap, red beyond.</p>
+            </div>
+            <div className="p-5 pt-3">
+              <ExposureBarChart data={exposureRows} />
+            </div>
+          </div>
+        )}
 
         {/* Concentration (HHI) */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">

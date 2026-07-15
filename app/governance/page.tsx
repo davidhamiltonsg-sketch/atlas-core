@@ -2,15 +2,36 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowDown, Download, ExternalLink, ShieldCheck } from "lucide-react"
 import { Shell } from "@/components/shell"
+import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
 import { getConstitution } from "@/lib/constitutions"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { governanceRules } from "@/lib/governance-rules"
+import { economicSleeveTicker } from "@/lib/instrument-identity"
+import { ThresholdGauge, type ThresholdGaugeRow } from "@/components/governance/threshold-gauge"
 
 export default async function GovernancePage(){
   const session=await getSession();if(!session)redirect("/login?portfolio=atlas-core")
   const active=await activePortfolioContext(session),c=getConstitution(active.constitutionId),sbr=c.id==="silicon-brick-road",rules=governanceRules(c.id)
   const categories=[...new Set(rules.map(r=>r.category))]
+
+  // Live weights for the threshold gauge — latest snapshot per holding, rolled
+  // up by economic sleeve (IBIT/GBTC count inside the BTC sleeve) so each
+  // constitution fund is measured the way the mandate defines it.
+  const holdings=await db.holding.findMany({where:{userId:active.owner.id},include:{snapshots:{orderBy:{date:"desc"},take:1}}})
+  const totalValue=holdings.reduce((s,h)=>s+(h.snapshots[0]?.value??0),0)
+  const allocMap:Record<string,number>={}
+  if(totalValue>0)for(const h of holdings){
+    const v=h.snapshots[0]?.value??0
+    if(v>0){const key=economicSleeveTicker(h.ticker);allocMap[key]=(allocMap[key]??0)+(v/totalValue)*100}
+  }
+  const gaugeRows:ThresholdGaugeRow[]=c.funds.map(f=>({
+    ticker:f.ticker,color:f.color,classification:f.role.replace(/\.$/,""),
+    target:f.target,
+    hardLow:f.floor??0,hardHigh:f.hardCap??f.rangeHigh+5,
+    softLow:f.floor??0,softHigh:f.hardCap??f.rangeHigh+5,
+    healthyLow:f.rangeLow,healthyHigh:f.rangeHigh,
+  }))
   return <Shell title={sbr?"Your Constitution":"Constitution & Rules"} subtitle={`${c.shortName} v${c.version} · the controlling mandate`} userName={session.name} isAdmin={session.role==="admin"} constitutionId={c.id}>
     <div className="governance-deck">
       <section className="governance-hero">
@@ -51,6 +72,19 @@ export default async function GovernancePage(){
       </section>
 
       <section className="review-rhythm">{[["Monthly","Reconcile","Holdings, executions, cash, dividends, fees, FX and residual cash bank."],["Quarterly","Look underneath","Refresh official sources and review bands, overlap and classification."],["Annually","Check the destination","Review purpose, liquidity, instruments, beneficiaries, tax and legal changes."]].map(([when,title,text])=><article key={when}><span>{when}</span><h2>{title}</h2><p>{text}</p></article>)}</section>
+    </div>
+
+    {/* Live layer under the doctrine — actual weights against the bands the
+        sections above declare. Standard app card (not deck-skinned) so the
+        gauge's theme tokens render correctly in light and dark. */}
+    <div className="mt-6 rounded-xl border border-border bg-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{sbr?"Where each fund sits right now":"Live positions vs bands"}</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">{sbr?"Each fund's share of your money against its comfortable range and outer limits — updates with every sync.":"Actual sleeve weight against the soft band and hard limits above — refreshed with each broker sync."}</p>
+      </div>
+      {totalValue>0
+        ? <ThresholdGauge rows={gaugeRows} allocMap={allocMap}/>
+        : <p className="px-5 py-6 text-xs text-muted-foreground">{sbr?"No funds valued yet — this appears after the first broker sync.":"No valued holdings yet — positions appear after the first broker sync."}</p>}
     </div>
   </Shell>
 }
