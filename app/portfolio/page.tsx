@@ -14,7 +14,6 @@ import { HARD_THRESHOLDS } from "@/lib/constants"
 import { applyBitcoinSleeve, BITCOIN_SLEEVE_TARGET_PCT } from "@/lib/next-best-move"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
-import { getUsdSgdRate } from "@/lib/holdings-sync"
 import { getConstitution } from "@/lib/constitutions"
 import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
 

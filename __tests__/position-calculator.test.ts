@@ -3,36 +3,42 @@
  * Tests unified allocation calculation and Bitcoin sleeve consolidation
  */
 
+import { describe, it, expect } from "vitest"
 import {
   calculateAllocationPercentages,
   calculateBitcoinSleevePercent,
   getConsolidatedBitcoinPosition,
 } from "@/lib/position-calculator"
 
-interface TestHolding {
+type TestHolding = {
   ticker: string
   name: string
   value: number
   units?: number
   price?: number
+  color?: string
 }
 
 describe("position-calculator", () => {
   describe("calculateAllocationPercentages", () => {
     it("should calculate percentages correctly for simple holdings", () => {
+      // A portfolio exactly on the Atlas v10.5 targets (lib/portfolio-spec.ts):
+      // VWRA 70%, EQAC 10%, SMH 5%, BTC 5%, DBMFE 10%
       const holdings: TestHolding[] = [
         { ticker: "VWRA", name: "VWRA", value: 7000 },
         { ticker: "EQAC", name: "EQAC", value: 1000 },
         { ticker: "SMH", name: "SMH", value: 500 },
+        { ticker: "BTC", name: "Bitcoin", value: 500 },
         { ticker: "DBMFE", name: "DBMFE", value: 1000 },
       ]
 
       const allocations = calculateAllocationPercentages(holdings)
 
-      expect(allocations.get("VWRA")).toBeCloseTo(77.78, 1)
-      expect(allocations.get("EQAC")).toBeCloseTo(11.11, 1)
-      expect(allocations.get("SMH")).toBeCloseTo(5.56, 1)
-      expect(allocations.get("DBMFE")).toBeCloseTo(11.11, 1)
+      expect(allocations.get("VWRA")).toBeCloseTo(70, 1)
+      expect(allocations.get("EQAC")).toBeCloseTo(10, 1)
+      expect(allocations.get("SMH")).toBeCloseTo(5, 1)
+      expect(allocations.get("BTC")).toBeCloseTo(5, 1)
+      expect(allocations.get("DBMFE")).toBeCloseTo(10, 1)
     })
 
     it("should consolidate Bitcoin holdings (BTC + IBIT)", () => {
@@ -204,61 +210,3 @@ describe("position-calculator", () => {
     })
   })
 })
-
-// Simple test runner (works with tsx)
-async function runTests() {
-  const tests: { name: string; fn: () => void | Promise<void> }[] = []
-  let passed = 0
-  let failed = 0
-
-  // Define assertion helpers
-  global.expect = (value: any) => ({
-    toBe: (expected: any) => {
-      if (value === expected) {
-        passed++
-      } else {
-        failed++
-        console.error(`Expected ${value} to be ${expected}`)
-      }
-    },
-    toBeCloseTo: (expected: number, precision: number = 2) => {
-      const multiplier = Math.pow(10, precision)
-      if (
-        Math.round(value * multiplier) / multiplier ===
-        Math.round(expected * multiplier) / multiplier
-      ) {
-        passed++
-      } else {
-        failed++
-        console.error(
-          `Expected ${value} to be close to ${expected} (precision: ${precision})`
-        )
-      }
-    },
-    toBeNull: () => {
-      if (value === null) {
-        passed++
-      } else {
-        failed++
-        console.error(`Expected ${value} to be null`)
-      }
-    },
-    not: {
-      toBeNull: () => {
-        if (value !== null) {
-          passed++
-        } else {
-          failed++
-          console.error(`Expected ${value} not to be null`)
-        }
-      },
-    },
-  })
-
-  // Run tests manually for now
-  console.log("✓ All position-calculator tests defined (run with proper test framework)")
-}
-
-if (require.main === module) {
-  runTests().catch(console.error)
-}

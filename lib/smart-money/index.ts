@@ -1,21 +1,21 @@
 import { SmartMoneyTrade, SmartMoneyFeed, SmartMoneyFilter, SmartMoneyStats, DEFAULT_FILTER } from './types'
 import { fetchCongressTrades }   from './sources/finnhub-congress'
 import { fetchInsiderTrades }    from './sources/finnhub-insider'
-import { fetchInfluencerTrades } from './sources/unusual-whales'
 
 export * from './types'
 export * from './relevance'
 
+// 'influencer' remains in the SmartMoneySource type for UI compatibility, but has no
+// live source anymore (the curated unusual-whales list was removed) — it yields no trades.
 export async function fetchSmartMoneyFeed(options: {
   sources?:  Array<'congress' | 'insider' | 'influencer'>
   daysBack?: number; atlasOnly?: boolean; apiKey?: string
 }): Promise<{ feeds: SmartMoneyFeed[]; trades: SmartMoneyTrade[]; stats: SmartMoneyStats }> {
-  const { sources = ['congress', 'insider', 'influencer'], daysBack = 90, atlasOnly = false, apiKey } = options
+  const { sources = ['congress', 'insider'], daysBack = 90, atlasOnly = false, apiKey } = options
 
   const fetches: Promise<SmartMoneyFeed>[] = []
   if (sources.includes('congress'))   fetches.push(fetchCongressTrades({ daysBack, atlasOnly, apiKey }))
   if (sources.includes('insider'))    fetches.push(fetchInsiderTrades({ daysBack, atlasOnly, apiKey }))
-  if (sources.includes('influencer')) fetches.push(fetchInfluencerTrades({ daysBack, atlasOnly }))
 
   const feeds = await Promise.all(fetches)
   const seen  = new Set<string>()

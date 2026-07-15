@@ -1,7 +1,9 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-export type { BitcoinCyclePhase } from "@/lib/bitcoin-cycle"
+import type { BitcoinCyclePhase } from "@/lib/bitcoin-cycle"
+
+export type { BitcoinCyclePhase }
 
 interface BitcoinCycleBadgeProps {
   phase: BitcoinCyclePhase

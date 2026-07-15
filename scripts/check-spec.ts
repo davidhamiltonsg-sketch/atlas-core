@@ -66,7 +66,7 @@ for (const f of SBR_SPEC.funds) {
     [f.target, f.rangeLow, f.rangeHigh, f.hardCap, f.floor ?? null])
 }
 eq("SBR identities", SBR_SPEC.funds.map(f => [f.ticker, f.isin ?? null, f.cusip ?? null]), [
-  ["VWRA","IE00BK5BQT80",null],["EQAC","IE00BFZXGZ54",null],["SMH","IE00BMC38736",null],["BTC",null,"46438F101"],["DBMFE","LU2951555403",null],
+  ["VWRA","IE00BK5BQT80",null],["EQAC","IE00BFZXGZ54",null],["SMH","IE00BMC38736",null],["BTC",null,"46438F101"],["DBMFE","LU2951555403",null],["A35","SG1S08926457",null],
 ])
 eq("SBR monthly", SBR.monthlyContribution, SBR_SPEC.monthlyContribution)
 eq("SBR target value", SBR.targetValue, SBR_SPEC.hasFixedTarget ? SBR_SPEC.targetValue : null)

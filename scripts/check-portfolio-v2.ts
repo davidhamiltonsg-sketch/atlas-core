@@ -20,21 +20,23 @@ console.log("Portfolio v2 — constitutional routing checks\n")
 eq("Atlas target weights sum to 100", ATLAS_SPEC.funds.reduce((s, f) => s + f.target, 0), 100)
 eq("SBR target weights sum to 100", SBR_SPEC.funds.reduce((s, f) => s + f.target, 0), 100)
 eq("Atlas approved tickers", ATLAS_SPEC.funds.map(f => f.ticker), ["VWRA", "EQAC", "SMH", "BTC", "DBMFE"])
-eq("SBR approved tickers", SBR_SPEC.funds.map(f => f.ticker), ["VWRA", "EQAC", "SMH", "BTC", "DBMFE"])
+eq("SBR approved tickers", SBR_SPEC.funds.map(f => f.ticker), ["VWRA", "EQAC", "SMH", "BTC", "DBMFE", "A35"])
 eq("UCITS identities", ATLAS_SPEC.funds.filter(f => f.ticker !== "BTC").map(f => f.isin), ["IE00BK5BQT80", "IE00BFZXGZ54", "IE00BMC38736", "LU2951555403"])
 eq("SBR has no fixed value target", [SBR_SPEC.hasFixedTarget, SBR_SPEC.phases.map(p => p.key)], [false, ["GROWTH"]])
 
 let d = decidePortfolio(SILICON_BRICK_ROAD, [])
 eq("SBR empty starts with VWRA", [d.state, d.move.ticker, d.contribution.allocations.find(a => a.amount > 0)?.ticker], ["unfunded", "VWRA", "VWRA"])
 
-d = decidePortfolio(SILICON_BRICK_ROAD, [p("VWRA", 60), p("EQAC", 16), p("SMH", 5), p("BTC", 5), p("DBMFE", 14)])
+d = decidePortfolio(SILICON_BRICK_ROAD, [p("VWRA", 60), p("EQAC", 12), p("SMH", 5), p("BTC", 5), p("DBMFE", 12), p("A35", 6)])
 eq("SBR routes to furthest-underweight VWRA", [d.state, d.move.ticker], ["invested", "VWRA"])
 
 d = decidePortfolio(SILICON_BRICK_ROAD, [p("VWRA", 55), p("EQAC", 23), p("SMH", 7), p("BTC", 5), p("DBMFE", 10)])
 eq("SBR hard cap pauses EQAC and routes core", [d.move.severity, d.move.ticker, d.contribution.allocations.find(a => a.amount > 0)?.ticker], ["critical", "EQAC", "VWRA"])
 
+// VWRA breaches its 75% cap; new money goes to the furthest-underweight eligible holding,
+// which with A35 absent (0% vs 5% target) is the A35 anchor.
 d = decidePortfolio(SILICON_BRICK_ROAD, [p("VWRA", 76), p("EQAC", 10), p("SMH", 4), p("BTC", 4), p("DBMFE", 6)])
-eq("SBR capped core cannot receive contribution", [d.move.severity, d.move.ticker, d.contribution.allocations.find(a => a.amount > 0)?.ticker], ["critical", "VWRA", "EQAC"])
+eq("SBR capped core cannot receive contribution", [d.move.severity, d.move.ticker, d.contribution.allocations.find(a => a.amount > 0)?.ticker], ["critical", "VWRA", "A35"])
 
 d = decidePortfolio(ATLAS_CORE, [p("VT", 40), p("QQQM", 30), p("VWO", 15), p("SMH_US", 10), p("BTC", 5)])
 eq("Atlas legacy holdings enter transition", [d.state, d.legacyTickers], ["transition", ["VT", "QQQM", "VWO", "SMH_US"]])

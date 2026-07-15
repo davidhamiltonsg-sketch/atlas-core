@@ -71,13 +71,13 @@ const ATLAS_AGENTS: AgentDef[] = [
     icon: ShieldCheck,
     accent: C.gold,
     script: [
-      { t: 120, level: "info", msg: "Loading Atlas Core Constitution v10.4" },
+      { t: 120, level: "info", msg: "Loading Atlas Core Constitution v10.5" },
       { t: 620, level: "data", msg: "Reconciling five sleeves, soft bands and hard limits" },
       { t: 1180, level: "data", msg: "Checking look-through limits and source freshness" },
       { t: 1720, level: "info", msg: "Verifying whole-share and settlement controls" },
       { t: 2280, level: "info", msg: "Compiling the governed action summary" },
     ],
-    result: { status: "done", line: { t: 2700, level: "ok", msg: "Constitution v10.4 controls loaded" } },
+    result: { status: "done", line: { t: 2700, level: "ok", msg: "Constitution v10.5 controls loaded" } },
   },
   {
     id: "governance",
@@ -213,7 +213,7 @@ const SBR_AGENTS: AgentDef[] = [
     accent: C.blue,
     script: [
       { t: 120, level: "info", msg: "Weighing each fund against its guide-rails" },
-      { t: 720, level: "data", msg: "Targets VWRA 65% · EQAC 15% · SMH 5% · Bitcoin 5% · DBMFE 10%" },
+      { t: 720, level: "data", msg: "Targets VWRA 65% · EQAC 10% · SMH 5% · Bitcoin 5% · DBMFE 10% · A35 5%" },
       { t: 1320, level: "warn", msg: "Chip-maker fund sitting a little high" },
     ],
     result: { status: "alert", line: { t: 1800, level: "warn", msg: "One fund a bit high — even it out over the next month" } },

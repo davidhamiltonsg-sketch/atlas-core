@@ -1,34 +1,45 @@
 /**
- * Import boundary checker — Atlas Core ↔ SBR separation.
+ * Boundary checker — Atlas Core ↔ SBR separation.
  *
- * Asserts that no file in the SBR domain imports from Atlas Core engine files, and no
- * file in the Atlas Core engine imports SBR tickers or SBR-specific modules.
+ * Both portfolios now share the same fund universe (VWRA/EQAC/SMH/BTC/DBMFE), so
+ * "SBR-only tickers" is no longer a meaningful boundary. What still matters:
+ *
+ *   1. Import boundary — SBR experience files must not import Atlas-only business
+ *      logic (health engine, decision ladder, governance digest), and the Atlas
+ *      engine must not import SBR-specific modules.
+ *   2. A35 (the SGD bond anchor) is the one ticker that exists ONLY in SBR — it
+ *      must never appear in Atlas-only engine files.
+ *   3. Ownership routing — dutszm@gmail.com must map to silicon-brick-road, the
+ *      Atlas owner and unknown emails to atlas-core (lib/constitutions.ts).
+ *   4. SbrDashboard must only be rendered behind a silicon-brick-road gate.
  *
  * Run: npx tsx scripts/check-sbr-boundary.ts
  */
 
 import * as fs from "fs"
 import * as path from "path"
+import { constitutionIdForEmail } from "../lib/constitutions"
 
 const ROOT = path.resolve(__dirname, "..")
+let violations = 0
 
-// ─── Boundary rules ──────────────────────────────────────────────────────────
-// Each rule is { files, forbidden } where any file matching `files` must not
-// import any path matching any pattern in `forbidden`.
+function fail(msg: string, detail?: string) {
+  console.error(`BOUNDARY VIOLATION — ${msg}`)
+  if (detail) console.error(`  ${detail}`)
+  violations++
+}
+
+// ─── 1+2. Static import/content rules ────────────────────────────────────────
+// Each rule is { files, forbidden }: any file matching `files` must not contain
+// a line matching any pattern in `forbidden`.
 //
-// SHARED INTERFACES (NextMove, DcaPlan, DcaAllocation, EngineMarket) are in
-// lib/next-best-move.ts and are used by both portfolios as TYPE-only imports
-// — those are allowed. The boundary blocks BUSINESS LOGIC, not shared types.
-//
+// SHARED INTERFACES (NextMove, DcaPlan, DcaAllocation, EngineMarket) live in
+// lib/next-best-move.ts and are used by both portfolios as TYPE-only imports —
+// those are allowed. The boundary blocks BUSINESS LOGIC, not shared types.
 // lib/constitution.ts exports generic calendar utilities (getDealingWindow, etc.)
-// used by both portfolios alongside Atlas-specific constants. SBR files may import
-// only the calendar utilities; importing Atlas-specific ladder or health code is forbidden.
+// used by both portfolios; those are also allowed.
 
-const RULES: Array<{
-  name: string
-  files: RegExp
-  forbidden: RegExp[]
-}> = [
+const RULES: Array<{ name: string; files: RegExp; forbidden: RegExp[] }> = [
   {
     name: "SBR engine files must not import Atlas-only business logic modules",
     files: /\/(lib\/sbr[-_]|components\/sbr\/)/,
@@ -46,16 +57,13 @@ const RULES: Array<{
     ],
   },
   {
-    name: "Atlas Core engine must not reference SBR-only tickers as string literals",
-    files: /\/(lib\/(constants|next-best-move|health|ladder)\.ts)/,
-    forbidden: [
-      /"VWRA"/, // SBR-only ticker
-      /"A35"/,  // SBR-only ticker
-    ],
+    // Both portfolios share VWRA/EQAC/SMH/BTC/DBMFE; A35 is the single ticker
+    // that remains SBR-only. It must never leak into Atlas-only engine paths.
+    name: "Atlas Core engine must not reference the SBR-only ticker A35",
+    files: /\/(lib\/(constants|next-best-move|health|ladder|cycle|core-holdings)\.tsx?)/,
+    forbidden: [/["']A35["']/],
   },
 ]
-
-// ─── Scan ─────────────────────────────────────────────────────────────────────
 
 function getAllTs(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -72,29 +80,61 @@ function getAllTs(dir: string): string[] {
 }
 
 const allFiles = getAllTs(ROOT)
-let violations = 0
 
 for (const rule of RULES) {
   const inScope = allFiles.filter((f) => rule.files.test(f.replace(/\\/g, "/")))
   for (const file of inScope) {
     const rel = path.relative(ROOT, file).replace(/\\/g, "/")
-    const content = fs.readFileSync(file, "utf8")
-    const lines = content.split("\n")
+    const lines = fs.readFileSync(file, "utf8").split("\n")
     for (let i = 0; i < lines.length; i++) {
       for (const pattern of rule.forbidden) {
         if (pattern.test(lines[i])) {
-          console.error(`BOUNDARY VIOLATION — ${rule.name}`)
-          console.error(`  File: ${rel}:${i + 1}`)
-          console.error(`  Line: ${lines[i].trim()}`)
-          violations++
+          fail(rule.name, `File: ${rel}:${i + 1}\n  Line: ${lines[i].trim()}`)
         }
       }
     }
   }
 }
 
+// ─── 3. Ownership routing ────────────────────────────────────────────────────
+// The email → constitution map is what keeps Dami inside SBR and everyone else
+// (including unknown emails) inside Atlas Core.
+
+if (constitutionIdForEmail("dutszm@gmail.com") !== "silicon-brick-road") {
+  fail('dutszm@gmail.com must map to "silicon-brick-road"')
+}
+if (constitutionIdForEmail("davidhamiltonsg@gmail.com") !== "atlas-core") {
+  fail('davidhamiltonsg@gmail.com must map to "atlas-core"')
+}
+if (constitutionIdForEmail("someone-unknown@example.com") !== "atlas-core") {
+  fail('unknown emails must default to "atlas-core"')
+}
+if (constitutionIdForEmail("  DUTSZM@GMAIL.COM  ") !== "silicon-brick-road") {
+  fail("email → constitution mapping must be case/whitespace-insensitive")
+}
+
+// ─── 4. SbrDashboard rendered only behind a silicon-brick-road gate ──────────
+// Every file that renders <SbrDashboard must contain an explicit
+// silicon-brick-road constitution check on an earlier line than the render.
+
+for (const file of allFiles) {
+  const rel = path.relative(ROOT, file).replace(/\\/g, "/")
+  if (!rel.startsWith("app/") && !rel.startsWith("components/")) continue // only UI render paths
+  if (rel.startsWith("components/sbr/")) continue // the component's own module
+  const lines = fs.readFileSync(file, "utf8").split("\n")
+  const renderLine = lines.findIndex((l) => l.includes("<SbrDashboard"))
+  if (renderLine === -1) continue
+  const gateLine = lines.findIndex((l) => l.includes('=== "silicon-brick-road"'))
+  if (gateLine === -1 || gateLine > renderLine) {
+    fail(
+      "SbrDashboard must only render behind a silicon-brick-road constitution gate",
+      `File: ${rel}:${renderLine + 1} — no '=== "silicon-brick-road"' check before the render`,
+    )
+  }
+}
+
 if (violations === 0) {
-  console.log("✓ Atlas ↔ SBR import boundary clean — no violations found.")
+  console.log("✓ Atlas ↔ SBR boundary clean — imports, A35, ownership routing, and SbrDashboard gating all verified.")
   process.exit(0)
 } else {
   console.error(`\n${violations} boundary violation${violations === 1 ? "" : "s"} found. Fix before committing.`)

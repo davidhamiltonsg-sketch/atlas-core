@@ -3,6 +3,7 @@
  * Tests timezone-aware freshness calculations
  */
 
+import { describe, it, expect, vi } from "vitest"
 import {
   calculateFreshness,
   daysSinceDate,
@@ -99,13 +100,12 @@ describe("freshness-calc", () => {
       const now = new Date("2024-07-15T12:00:00Z")
 
       // Mock Date.now() for testing
-      const originalNow = Date.now
-      Date.now = jest.fn(() => now.getTime())
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now.getTime())
 
       const days = daysSinceDate(date)
       expect(days).toBe(3)
 
-      Date.now = originalNow
+      nowSpy.mockRestore()
     })
   })
 
@@ -236,13 +236,3 @@ describe("freshness-calc", () => {
     })
   })
 })
-
-// Mock jest for simple testing
-if (typeof jest === "undefined") {
-  global.jest = {
-    fn: (implementation?: any) => {
-      const mockFn = implementation || (() => {})
-      return mockFn as any
-    },
-  } as any
-}

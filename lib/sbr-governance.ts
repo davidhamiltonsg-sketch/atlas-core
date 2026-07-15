@@ -31,7 +31,7 @@ export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: numb
     { id: "country-lt", label: `No country reaches ${SBR_COUNTRY_LIMIT}%`, status: st(lt.topCountry.pct >= SBR_COUNTRY_LIMIT, lt.topCountry.pct >= SBR_COUNTRY_WATCH), detail: `${lt.topCountry.name} is ${lt.topCountry.pct.toFixed(1)}% (watch ${SBR_COUNTRY_WATCH}%, review ${SBR_COUNTRY_LIMIT}%)` },
     { id: "asset", label: "Equity remains within the high-risk mandate", status: st(equity > (SBR.totalEquityMaxPct ?? 100), equity > (SBR.totalEquityMaxPct ?? 100) - 2), detail: `Equity ${equity.toFixed(1)}%; managed futures ${(actual.get("DBMFE") ?? 0).toFixed(1)}%` },
     { id: "freshness", label: "Underlying fund data is current", status: st(lt.stale, lt.freshness === "review"), detail: `Oldest required look-through source is ${lt.ageDays} days old` },
-    { id: "ranges", label: "Each fund is inside its soft band", status: st(false, rangeDrift.length > 0), detail: rangeDrift.length ? `Contribution routing needed: ${rangeDrift.map(f => f.ticker).join(", ")}` : "All four funds are within range" },
+    { id: "ranges", label: "Each fund is inside its soft band", status: st(false, rangeDrift.length > 0), detail: rangeDrift.length ? `Contribution routing needed: ${rangeDrift.map(f => f.ticker).join(", ")}` : "All five funds are within range" },
   ]
   const breaches = checks.filter((c) => c.status === "breach").length
   const watches = checks.filter((c) => c.status === "watch").length

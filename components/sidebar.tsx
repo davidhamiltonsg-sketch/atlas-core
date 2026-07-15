@@ -14,6 +14,7 @@ import {
   Wallet,
   BarChart3,
   Radar,
+  PiggyBank,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./theme-toggle"
@@ -26,8 +27,8 @@ type NavGroupDef = { label: string; items: NavItem[] }
 // Per-constitution branding + navigation. Atlas Core (David) keeps the full surface; Silicon
 // Brick Road (Dami) shows only the surfaces its constitution actually uses.
 const BRAND: Record<ConstitutionId, { name: string; version: string }> = {
-  "atlas-core":         { name: "Atlas Core",         version: "v10.4 · GDEA" },
-  "silicon-brick-road": { name: "Silicon Brick Road", version: "v10.2 · SBR" },
+  "atlas-core":         { name: "Atlas Core",         version: "v10.5 · GDEA" },
+  "silicon-brick-road": { name: "Silicon Brick Road", version: "v10.4 · SBR" },
 }
 
 const NAV: Record<ConstitutionId, NavGroupDef[]> = {
@@ -38,6 +39,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     ] },
     { label: "Portfolio", items: [
       { href: "/portfolio", label: "Holdings & activity", icon: Wallet },
+      { href: "/contributions", label: "Contributions", icon: PiggyBank },
       { href: "/reports", label: "Look-through report", icon: FileBarChart2 },
       { href: "/risk", label: "Risk & concentration", icon: BarChart3 },
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
@@ -53,6 +55,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     ] },
     { label: "Portfolio", items: [
       { href: "/portfolio", label: "Holdings & activity", icon: Wallet },
+      { href: "/contributions", label: "Money you've added", icon: PiggyBank },
       { href: "/reports", label: "Look-through report", icon: FileBarChart2 },
       { href: "/risk", label: "Risk & concentration", icon: BarChart3 },
       { href: "/forecast", label: "Forecast", icon: TrendingUp },

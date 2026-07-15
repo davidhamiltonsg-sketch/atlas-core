@@ -6,6 +6,7 @@ import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { instrumentIdentity } from "@/lib/instrument-identity"
 import { recordDcaBankMovement } from "@/lib/dca-bank-service"
 import { portfolioOwner } from "@/lib/active-portfolio"
+import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import {
   parseFlexDate, naturalKey, executionNaturalKey,
   selectExecutionsToImport, selectStaleDuplicateTrades, type ExistingTradeRow,
@@ -40,7 +41,7 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
     created++
   }
   // Former governed rows remain visible for sale/cost-basis history but must not
-  // receive new contributions under v10.4.
+  // receive new contributions under v10.5.
   await db.holding.updateMany({
     where: { userId, ticker: { notIn: [...CORE_TICKERS, "IBIT"] }, instrumentStatus: "ACTIVE" },
     data: { targetPct: 0, hardCapPct: null, instrumentStatus: "LEGACY" },
@@ -63,8 +64,6 @@ export async function ensureSbrPresentation(userId: string): Promise<void> {
     }
   }
 }
-
-const YF = "https://query1.finance.yahoo.com/v8/finance/chart/USDSGD=X?interval=1d&range=1d"
 
 /**
  * Write at most ONE snapshot per holding per day. If today's snapshot exists, update it
@@ -156,18 +155,6 @@ export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
   return { ok: true, reason: errors.length ? errors.join("; ") : undefined, users: usersSynced, snapshots }
 }
 
-export async function getUsdSgdRate(): Promise<number> {
-  try {
-    const res = await fetch(YF, { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" })
-    if (res.ok) {
-      const d = await res.json()
-      const rate = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-      if (rate && rate > 0) return rate
-    }
-  } catch {}
-  return 1.35
-}
-
 /**
  * Make a holding reflect the trade log so every buy/sell feeds through the whole app.
  *
@@ -177,7 +164,7 @@ export async function getUsdSgdRate(): Promise<number> {
  * and YTD. Idempotent: derives from the full trade log, so it stays correct after edits/deletes.
  */
 export async function syncHoldingFromTrades(userId: string, ticker: string, fxRate?: number): Promise<void> {
-  const fx = fxRate ?? (await getUsdSgdRate())
+  const fx = fxRate ?? (await getCachedUsdSgdRate())
   const sym = ticker.toUpperCase()
 
   const trades = await db.trade.findMany({ where: { userId, ticker: sym }, orderBy: { date: "asc" } })
@@ -400,7 +387,7 @@ export async function importIbkrActivityForUser(
   for(const movement of bankMovements) await recordDcaBankMovement(movement)
 
   if (affected.size > 0) {
-    const fx = await getUsdSgdRate()
+    const fx = await getCachedUsdSgdRate()
     for (const t of affected) await syncHoldingFromTrades(userId, t, fx)
   }
   // Permanently remove any currency-conversion rows imported before the forex filter existed,

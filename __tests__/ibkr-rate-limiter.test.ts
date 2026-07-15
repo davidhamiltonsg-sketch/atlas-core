@@ -5,6 +5,7 @@
  * In a real implementation, these would use a mocked database.
  */
 
+import { describe, it, expect } from "vitest"
 import { formatTimeRemaining } from "@/lib/ibkr-rate-limiter"
 
 describe("IBKR Rate Limiter", () => {

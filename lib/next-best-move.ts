@@ -34,29 +34,43 @@ export { BITCOIN_TICKERS, BITCOIN_SLEEVE_TARGET_PCT, BITCOIN_RUNOFF_TICKER, BITC
 
 const governed = new Set(ATLAS_SPEC.funds.map((f) => f.ticker))
 const core = "VWRA"
+// Hard floors (constitution priority 3): a sleeve below its floor receives all new money
+// until the floor is restored — EQAC and DBMFE both carry a 5% hard floor.
+const floors = new Map(ATLAS_SPEC.funds.filter((f) => f.hardFloor != null).map((f) => [f.ticker, f.hardFloor as number]))
 function techPct(positions: PositionInput[]) {
   return positions.filter((p) => (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)).reduce((s, p) => s + p.actualPct, 0)
+}
+function belowFloor(positions: PositionInput[]) {
+  return positions
+    .filter((p) => governed.has(p.ticker) && floors.has(p.ticker) && p.actualPct < floors.get(p.ticker)!)
+    .filter((p) => p.hardCapPct === null || p.actualPct < p.hardCapPct)
+    .sort((a, b) => (a.actualPct - floors.get(a.ticker)!) - (b.actualPct - floors.get(b.ticker)!))[0] ?? null
 }
 function selectedHolding(positions: PositionInput[]) {
   const combined = techPct(positions)
   const techPaused = combined >= COMBINED_TECH_RULE.softCeiling
+  // Floor routing outranks the combined-ceiling pause in the constitution's priority order.
+  const floorFund = belowFloor(positions)
+  if (floorFund) return { selected: floorFund, techPaused, combined, floorRouted: true }
   const eligible = positions
     .filter((p) => governed.has(p.ticker) && p.targetPct > 0 && p.ticker !== BITCOIN_RUNOFF_TICKER)
     .filter((p) => !(techPaused && (COMBINED_TECH_RULE.tickers as readonly string[]).includes(p.ticker)))
     .filter((p) => p.hardCapPct === null || p.actualPct < p.hardCapPct)
     .sort((a, b) => (a.actualPct - a.targetPct) - (b.actualPct - b.targetPct))
-  return { selected: eligible[0] ?? positions.find((p) => p.ticker === core) ?? null, techPaused, combined }
+  return { selected: eligible[0] ?? positions.find((p) => p.ticker === core) ?? null, techPaused, combined, floorRouted: false }
 }
 
 export function computeMarketAwareDca(raw: PositionInput[], monthlyAmount: number, _opts: EngineOptions = {}): DcaPlan {
   const positions = applyBitcoinSleeve(raw)
-  const { selected, techPaused } = selectedHolding(positions)
+  const { selected, techPaused, floorRouted } = selectedHolding(positions)
   const allocations = positions.map<DcaAllocation>((p) => ({
     ticker: p.ticker, name: p.name, color: p.color,
     amount: selected?.ticker === p.ticker ? monthlyAmount : 0,
     standardAmount: Math.round(monthlyAmount * p.targetPct / 100),
     tag: selected?.ticker === p.ticker ? "boosted" : "zeroed",
-    reason: selected?.ticker === p.ticker ? `${p.ticker} is the furthest-underweight eligible constitutional holding.` : "Not selected by the contribution-first rule.",
+    reason: selected?.ticker === p.ticker
+      ? (floorRouted ? `${p.ticker} is below its ${floors.get(p.ticker)}% hard floor — all new money routes here until the floor is restored.` : `${p.ticker} is the furthest-underweight eligible constitutional holding.`)
+      : "Not selected by the contribution-first rule.",
   }))
   return {
     allocations,
@@ -69,12 +83,16 @@ export function computeMarketAwareDca(raw: PositionInput[], monthlyAmount: numbe
 export function computeNextBestMove(raw: PositionInput[], _monthlyAmount: number, opts: EngineOptions = {}): NextMove {
   const positions = applyBitcoinSleeve(raw)
   if (!positions.some((p) => p.value > 0)) return { severity:"none",ticker:core,action:"Start with VWRA",what:"Invest the first contribution in VWRA.",why:"VWRA is the broad global core.",when:"At the next permitted dealing window.",color:"#7c3aed" }
+  // Constitution priority order: 1) sleeve hard caps, 2) look-through hard limits,
+  // 3) hard-floor routing, 4) combined satellite ceiling, then standard routing.
+  const hard = positions.filter((p) => p.hardCapPct !== null && p.actualPct > p.hardCapPct).sort((a,b)=>(b.actualPct-(b.hardCapPct??100))-(a.actualPct-(a.hardCapPct??100)))[0]
+  if (hard) return { severity:"critical",ticker:hard.ticker,action:`Pause ${hard.ticker}`,what:`${hard.ticker} is ${hard.actualPct.toFixed(1)}%, above its ${hard.hardCapPct}% hard cap.`,why:"Hard caps require a documented correction; no automatic market order is created.",when:"At the next permitted review.",color:hard.color }
   if (opts.lookThroughBreach) {
     const b=opts.lookThroughBreach, ticker=b.trimTicker ?? "SMH"
     return { severity:"critical",ticker,action:`Pause ${ticker}`,what:`Refresh sources and correct ${b.label}, now ${b.pct.toFixed(1)}% versus its ${b.hard}% hard review level.`,why:"Look-through concentration overrides ticker-level comfort.",when:"Document the correction before trading.",color:"#ef4444" }
   }
-  const hard = positions.filter((p) => p.hardCapPct !== null && p.actualPct > p.hardCapPct).sort((a,b)=>(b.actualPct-(b.hardCapPct??100))-(a.actualPct-(a.hardCapPct??100)))[0]
-  if (hard) return { severity:"critical",ticker:hard.ticker,action:`Pause ${hard.ticker}`,what:`${hard.ticker} is ${hard.actualPct.toFixed(1)}%, above its ${hard.hardCapPct}% hard cap.`,why:"Hard caps require a documented correction; no automatic market order is created.",when:"At the next permitted review.",color:hard.color }
+  const floorFund = belowFloor(positions)
+  if (floorFund) return { severity:"high",ticker:floorFund.ticker,action:`Route all new money to ${floorFund.ticker}`,what:`${floorFund.ticker} is ${floorFund.actualPct.toFixed(1)}%, below its ${floors.get(floorFund.ticker)}% hard floor.`,why:"A sleeve below its hard floor takes priority for every new contribution until the floor is restored.",when:"At the next permitted dealing window.",color:floorFund.color }
   const combined=techPct(positions)
   if (combined >= COMBINED_TECH_RULE.hardCeiling) return { severity:"critical",ticker:"SMH",action:"Pause growth satellites",what:`EQAC plus SMH is ${combined.toFixed(1)}%, above the ${COMBINED_TECH_RULE.hardCeiling}% cap.`,why:"Overlapping technology exposure is governed as one risk.",when:"Route new cash to an eligible core holding.",color:"#ef4444" }
   const legacy=positions.filter((p)=>p.value>0 && !governed.has(p.ticker) && p.ticker!=="IBIT")

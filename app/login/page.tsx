@@ -14,14 +14,14 @@ const PORTFOLIO_META: Record<ConstitutionId, { theme: string; name: string; vers
   "atlas-core": {
     theme: "atlas-core",
     name: "Atlas Core",
-    version: "v10.4 · GDEA · Sign in to continue",
+    version: "v10.5 · GDEA · Sign in to continue",
     placeholder: "admin@atlas.local",
     footer: "Atlas Core is a private investment dashboard. Access is restricted.",
   },
   "silicon-brick-road": {
     theme: "sbr",
     name: "Silicon Brick Road",
-    version: "v10.2 · Flexible growth · Sign in to continue",
+    version: "v10.4 · Flexible growth · Sign in to continue",
     placeholder: "you@example.com",
     footer: "Silicon Brick Road is a private savings dashboard. Access is restricted.",
   },

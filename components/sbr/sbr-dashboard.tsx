@@ -18,7 +18,7 @@ import type { ComplianceBandPosition } from "@/components/cockpit/compliance-boa
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { AnimatedNumber } from "@/components/animated-number"
-import { getUsdSgdRate } from "@/lib/holdings-sync"
+import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { getDealingWindow, isInDealingWindow } from "@/lib/constitution"
 import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 import { computeSbrLookThrough } from "@/lib/sbr-look-through"
@@ -43,13 +43,13 @@ async function getSbrData(userId: string) {
     db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
     getSbrMarketData(),
     getRecentExecutions(userId, 1),
-    getUsdSgdRate(),
+    getCachedUsdSgdRate(),
     db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "silicon-brick-road", currency: "SGD" } } }),
     db.behaviourLog.findFirst({
       where: { userId, type: "committee-minute", date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
     }),
-    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true, sbrExternalLiquidityVerified: true } }),
     db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
   ])
   const fundOrder = SBR.funds.map((f) => f.ticker)
@@ -154,7 +154,9 @@ async function getSbrData(userId: string) {
 
   const latest = holdings.reduce<Date | null>((d, h) => { const s = h.snapshots[0]?.date; return s && (h.snapshots[0]?.value??0)>0 && (!d || s < d) ? s : d }, null)
   const snapshotAgeDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : 999
-  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays)
+  // Liquidity pillar: the owner's Settings confirmation that an emergency fund exists OUTSIDE
+  // this portfolio — the portfolio itself must never score as emergency liquidity.
+  const health = computeSbrHealth(positions, totalValue, snapshotAgeDays, SBR, owner?.sbrExternalLiquidityVerified ?? false)
 
   // FX strip — live rate vs annual reference
   const fxDeviation = ((usdSgdRate - FX_REFERENCE_USDSGD) / FX_REFERENCE_USDSGD) * 100
@@ -259,7 +261,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
       <section className="mb-5 grid gap-3 lg:grid-cols-3" aria-label="What to do, why, and where SBR is going">
         <article className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.nextMove.action}</h2><p>{d.nextMove.what}</p></div><Link href="/portfolio">Review activity →</Link></article>
         <article className="atlas-command-band"><div><span>WHY</span><h2>{d.nextMove.why}</h2><p>{d.nextMove.when??"At the next permitted contribution window."}</p></div><Link href="/mission-control?portfolio=silicon-brick-road">Open Mission Control →</Link></article>
-        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 15 · SMH 5 · IBIT 5 · DBMFE 10. A real SGD use must be documented before risk changes.</p></div><a href="/downloads/silicon-brick-road-constitution-v10.2.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
+        <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 10 · SMH 5 · BTC 5 · DBMFE 10 · A35 5. A real SGD use must be documented before risk changes.</p></div><a href="/downloads/silicon-brick-road-constitution-v10.4.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
       </section>
 
 

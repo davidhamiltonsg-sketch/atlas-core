@@ -184,7 +184,7 @@ export async function sendMonthlyReminderEmail(
   const accentBg = isAtlas ? "#f5f3ff" : "#e0f2fe"
   const moniker = isAtlas ? "AC" : "SBR"
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
-  const tagline = isAtlas ? "Investment Constitution v10.4" : "Flexible medium-term growth · Constitution v10.2"
+  const tagline = isAtlas ? "Investment Constitution v10.5" : "Flexible medium-term growth · Constitution v10.4"
   const severityColor = nextMove.severity === "critical" ? "#dc2626"
     : nextMove.severity === "high" ? "#d97706"
     : nextMove.severity === "medium" ? "#0284c7"
@@ -244,22 +244,15 @@ export async function sendMonthlyReminderEmail(
 
 // ─── Crash Protocol — Atlas Core ─────────────────────────────────────────
 /**
- * Urgent notification when the portfolio triggers the Art. XIV crash protocol.
- * Separate from the daily digest — sent immediately when the threshold is crossed.
+ * Urgent notification when the portfolio crosses the −25% crash-discipline threshold.
+ * Separate from the daily digest — sent once when the threshold is crossed.
  */
 export async function sendCrashProtocolEmail(
   toEmail: string,
   toName: string,
   drawdownPct: number,
-  sgovPct: number,
 ) {
   if (!emailConfigured()) return { skipped: true as const, reason: "RESEND_API_KEY not set" }
-
-  const sgovFloor = 8
-  const sgovExcess = Math.max(0, sgovPct - sgovFloor)
-  const sgovNote = sgovExcess > 0
-    ? `SGOV is at ${sgovPct.toFixed(1)}% — ${sgovExcess.toFixed(1)}% above the ${sgovFloor}% floor. Pre-committed response A1: deploy 50% of that excess (≈ ${(sgovExcess / 2).toFixed(1)}% of portfolio) into VWRA first.`
-    : `SGOV is at the ${sgovFloor}% floor — no dry powder to deploy.`
 
   const { error } = await getResend().emails.send({
     from: FROM,
@@ -275,31 +268,31 @@ export async function sendCrashProtocolEmail(
           <td style="background:rgba(255,255,255,0.2);border-radius:12px;width:40px;height:40px;text-align:center;vertical-align:middle;">
             <span style="color:#ffffff;font-size:13px;font-weight:900;letter-spacing:-0.5px;">AC</span></td>
           <td style="padding-left:12px;"><div style="font-size:15px;font-weight:700;color:#ffffff;">Atlas Core</div>
-            <div style="font-size:11px;color:#fecaca;margin-top:1px;">Crash Protocol — Art. XIV</div></td>
+            <div style="font-size:11px;color:#fecaca;margin-top:1px;">Crash discipline · Constitution v10.5</div></td>
         </tr></table>
       </td></tr>
       <tr><td style="padding:28px 32px;">
         <div style="font-size:24px;font-weight:800;color:#dc2626;margin-bottom:8px;">Portfolio −${Math.abs(drawdownPct).toFixed(0)}% from ATH</div>
-        <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">Hi ${toName}, the Art. XIV Crash Protocol has activated. Your pre-committed responses override any in-the-moment impulse.</p>
+        <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">Hi ${toName}, the portfolio has fallen more than 25% from its all-time high. Your pre-committed rules override any in-the-moment impulse.</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff1f2;border-radius:12px;padding:20px;margin-bottom:20px;">
           <tr><td>
             <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">What to do — in order</div>
             <div style="font-size:13px;color:#1f2937;line-height:1.8;">
-              1. <strong>SGOV deployment (A1):</strong> ${sgovNote}<br>
-              2. <strong>Continue contributions (A2):</strong> Keep making scheduled monthly contributions into VWRA — unchanged.<br>
-              3. <strong>Do not sell:</strong> Do not exit any position. Do not redesign the portfolio.<br>
-              4. <strong>Log the exception:</strong> Record this event in the governance log.
+              1. <strong>Continue contributions:</strong> Keep the scheduled monthly contribution unchanged — contribution-first routing steers new money to the sleeve furthest below target automatically.<br>
+              2. <strong>Do not sell:</strong> A market fall alone never forces a sale. Wait 72 hours before any unscheduled discretionary sale.<br>
+              3. <strong>Do not redesign:</strong> No leverage, no prediction-led changes, no new tickers.<br>
+              4. <strong>Log the event:</strong> Record this drawdown and your response in the governance log.
             </div>
           </td></tr>
         </table>
-        <p style="margin:0 0 20px;font-size:13px;color:#6b7280;line-height:1.5;font-style:italic;">The 2022 rule: keep buying during a rate-driven bear market. Markets have always recovered. Selling when things are down locks in a loss permanently.</p>
+        <p style="margin:0 0 20px;font-size:13px;color:#6b7280;line-height:1.5;font-style:italic;">The rule from every past bear market: keep buying on schedule. Selling when things are down converts a temporary fall into a permanent loss.</p>
         <table cellpadding="0" cellspacing="0"><tr>
           <td style="background:#dc2626;border-radius:10px;">
             <a href="${APP_URL}" style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Open Atlas Core — Log the Exception</a>
           </td></tr></table>
       </td></tr>
       <tr><td style="padding:16px 32px;border-top:1px solid #fecaca;background:#fff1f2;">
-        <p style="margin:0;font-size:11px;color:#9ca3af;">Art. XIV · Art. XI · Pre-committed responses A1 and A2. Crash protocol remains active until the drawdown clears −25%.</p>
+        <p style="margin:0;font-size:11px;color:#9ca3af;">Constitution v10.5 · Behaviour rules (Article V). Crash discipline remains in force until the drawdown clears −25%.</p>
       </td></tr>
     </table>
   </td></tr></table>
@@ -334,7 +327,7 @@ export async function sendAnnualAuditEmail(
     <li>Review the governed 5% Bitcoin sleeve and its approved vehicle identity.</li>
     <li>Confirm broker (IBKR Singapore) and custodian risk is acceptable.</li>` : `
     <li>Confirm SBR still has no fixed spending date or mandatory target value.</li>
-    <li>Review VWRA 65%, EQAC 15%, SMH 5%, Bitcoin 5% and DBMFE 10% against Dami's circumstances.</li>
+    <li>Review VWRA 65%, EQAC 10%, SMH 5%, Bitcoin 5%, DBMFE 10% and A35 5% against Dami's circumstances.</li>
     <li>If a real SGD use has emerged, document its amount, date and flexibility before changing risk.</li>
     <li>Review hidden-exposure factsheets — are provider holdings files current?</li>`
 
@@ -413,7 +406,7 @@ export async function sendPasswordResetEmail(
                   </td>
                   <td style="padding-left:12px;">
                     <div style="font-size:15px;font-weight:700;color:#1a1a2e;">Atlas Core</div>
-                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.4 · Atlas Core</div>
+                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.5 · Atlas Core</div>
                   </td>
                 </tr>
               </table>

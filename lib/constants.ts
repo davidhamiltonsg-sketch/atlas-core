@@ -4,9 +4,7 @@ import { ATLAS_SPEC } from "@/lib/portfolio-spec"
  * Atlas Core — Governance Constants
  *
  * The raw source of record for every rule value: allocation targets, position hard caps,
- * drift bands, the BTC halving-cycle modifier (§4.1), the SEMI cycle-aware soft band (§4.2),
- * and the combined EQQQ+SEMI tech-concentration ceiling (§4.3). Hard caps are static; only
- * the soft bands float — the one exception is BTC's hard cap, which moves by cycle phase.
+ * drift bands, and the combined EQAC+SMH tech-concentration ceiling (§4.3).
  *
  * UNITS — IMPORTANT:
  *   Allocation targets, caps, soft/healthy bands and the combined-tech ceilings are
@@ -27,13 +25,10 @@ export const TICKER_TARGETS: Record<string, number> = Object.fromEntries(
 )
 
 // Hard drift thresholds — whole-number percent. Position hard caps live in Art. VII
-// (VWRA 60%); the drift bands (soft/hard triggers, SEMI amber zone) live in Art. VIII.
+// (VWRA 80%); the drift bands (soft/hard triggers) live in Art. VIII.
 // BTC has no lower hard trigger — underweight is soft-alert only (it's a held
 // conviction asset: accumulate on weakness toward target, never sold at a loss).
-// SEMI hard cap 12% (Principle 04). SEMI amberHigh=11 adds a soft amber
-// zone 11–12% (Art. VII); display shows green <11%, amber 11–12%, red ≥12%.
-// BTC.high tracks the CURRENT cycle phase (Normal = 8% as of Jun 2026). The full
-// floating ladder lives in BTC_CYCLE_MODIFIERS (§4.1) and is surfaced in Governance.
+// SMH hard cap 10% (Art. VII). BTC hard cap 8%.
 // amberHigh?: if set, the amber/soft zone is (amberHigh, high]; healthy zone is (hardLow, amberHigh].
 // Derived from the single source (lib/portfolio-spec.ts). Key order (low, high, amberHigh) is
 // preserved so the JSON-compare contract checks stay byte-identical. SGOV (cap null) is excluded.
@@ -93,113 +88,6 @@ export const GOVERNANCE_BAND_ROWS: GovernanceBandRow[] =
     .map(getGovernanceBandRow)
     .filter((r): r is GovernanceBandRow => r !== null)
 
-// ─── §4.1 — BTC HALVING CYCLE MODIFIER ───────────────────────────────────────
-export type BtcCyclePhase = 'post_halving_bull' | 'normal' | 'bear'
-
-export interface BtcCycleModifier {
-  phase:     BtcCyclePhase
-  hardHigh:  number  // % of NAV
-  target:    number  // % of NAV
-  softHigh:  number  // % of NAV
-  label:     string
-  rationale: string
-}
-
-// Art. X: the cap NEVER WIDENS on a cycle forecast — that would operationalise a market
-// prediction the doctrine (Art. XXV) rejects. It holds at 8% and only TIGHTENS defensively
-// (to 6%) in a deep drawdown, which is prudence, not forecasting. The post-halving-bull
-// phase holds the cap at 8%; it is retained only so the cockpit can label the phase.
-// Target is a constant 5% (matches Art. VI).
-export const BTC_CYCLE_MODIFIERS: Record<BtcCyclePhase, BtcCycleModifier> = {
-  post_halving_bull: {
-    phase: 'post_halving_bull', hardHigh: 8, target: 5, softHigh: 7,
-    label: 'Post-Halving Bull',
-    rationale: '12–24 months post-halving. Cap held at 8% — it does not widen on the cycle.',
-  },
-  normal: {
-    phase: 'normal', hardHigh: 8, target: 5, softHigh: 7,
-    label: 'Normal',
-    rationale: 'Standard governance. No halving catalyst active.',
-  },
-  bear: {
-    phase: 'bear', hardHigh: 6, target: 5, softHigh: 5.5,
-    label: 'Bear / Risk-Off',
-    rationale: 'BTC drawdown >50% from cycle high. Cap tightens defensively — protection, not a forecast.',
-  },
-}
-
-/**
- * @param btcPriceVsCycleHigh price ÷ cycle-high as a ratio (e.g. 0.45 = 55% drawdown)
- * @param manualOverride optional forced phase
- */
-export function getBtcCyclePhase(
-  btcPriceVsCycleHigh?: number,
-  manualOverride?: BtcCyclePhase
-): BtcCyclePhase {
-  if (manualOverride) return manualOverride
-  const halvingDate = new Date('2024-04-19')
-  const now = new Date()
-  const monthsSinceHalving =
-    (now.getFullYear() - halvingDate.getFullYear()) * 12 +
-    (now.getMonth() - halvingDate.getMonth())
-  if (btcPriceVsCycleHigh !== undefined && btcPriceVsCycleHigh < 0.50) return 'bear'
-  // Art. VIII: bull window = months 12–24 post-halving only. Months 0–12 = normal (catalyst not yet priced).
-  if (monthsSinceHalving >= 12 && monthsSinceHalving <= 24) return 'post_halving_bull'
-  return 'normal'
-}
-
-export function getBtcModifier(
-  btcPriceVsCycleHigh?: number,
-  manualOverride?: BtcCyclePhase
-): BtcCycleModifier {
-  return BTC_CYCLE_MODIFIERS[getBtcCyclePhase(btcPriceVsCycleHigh, manualOverride)]
-}
-
-// ─── §4.2 — SEMI CYCLE-AWARE SOFT BAND ────────────────────────────────────────
-export type SemiCyclePhase = 'top' | 'mid' | 'bottom'
-
-export interface SemiSoftBand {
-  phase:       SemiCyclePhase
-  softLow:     number  // % of NAV
-  softHigh:    number  // % of NAV
-  healthyLow:  number  // % of NAV
-  healthyHigh: number  // % of NAV
-  label:       string
-  signal:      string
-}
-
-export const SEMI_SOFT_BANDS: Record<SemiCyclePhase, SemiSoftBand> = {
-  top: {
-    phase: 'top', softLow: 7, softHigh: 10, healthyLow: 9, healthyHigh: 10,
-    label: 'Cycle Top',
-    signal: 'SEMI within 5% of 52-week high. Hold only. No new buys.',
-  },
-  mid: {
-    phase: 'mid', softLow: 7, softHigh: 12, healthyLow: 7, healthyHigh: 12,
-    label: 'Mid-Cycle',
-    signal: 'Standard soft band applies.',
-  },
-  bottom: {
-    // The pullback widens the buy zone only on the LOW side (accumulate down to 5%).
-    // The upper bound stays clamped to the 12% hard cap (Art. VII) — the cap never moves,
-    // so healthyHigh/softHigh may never exceed it. See Art. XI accumulation precedence.
-    phase: 'bottom', softLow: 5, softHigh: 12, healthyLow: 7, healthyHigh: 12,
-    label: 'Cycle Bottom',
-    signal: 'SEMI >20% off 52-week high. Buy zone widens on the downside — accumulate toward the 12% cap.',
-  },
-}
-
-/** @param pctFromHigh price-from-52w-high as a ratio (e.g. -0.05 = 5% below high) */
-export function getSemiCyclePhase(pctFromHigh: number): SemiCyclePhase {
-  if (pctFromHigh > -0.05) return 'top'
-  if (pctFromHigh < -0.20) return 'bottom'
-  return 'mid'
-}
-
-export function getSemiSoftBand(pctFromHigh: number): SemiSoftBand {
-  return SEMI_SOFT_BANDS[getSemiCyclePhase(pctFromHigh)]
-}
-
 // ─── §4.3 — COMBINED TECH CONCENTRATION RULE ─────────────────────────────────
 // Display/governance rule. EQQQ+SEMI combined exposure as a whole-number percent.
 export const COMBINED_TECH_RULE = {
@@ -209,15 +97,15 @@ export const COMBINED_TECH_RULE = {
   label:       'Combined Tech Concentration',
   rationale:   'EQAC+SMH combined exposure. Semiconductor overlap means individual caps understate concentration risk.',
   action: {
-    soft: 'Flag for review. No new EQQQ or SEMI buys until combined falls below 36%.',
-    hard: 'Halt all EQQQ and SEMI contributions. Review at next monthly cycle.',
+    soft: `Flag for review. No new EQAC or SMH buys until combined falls below the ${ATLAS_SPEC.combinedTech.soft}% watch level.`,
+    hard: `Halt all EQAC and SMH contributions until combined falls below the ${ATLAS_SPEC.combinedTech.hard}% cap. Review at next monthly cycle.`,
   },
 } as const
 
 // ─── Bitcoin sleeve constants (Art. VIII) ────────────────────────────────────
 // BTC and IBIT are ONE economic exposure (Bitcoin). BTC is in run-off (held, not bought);
 // IBIT is the accumulation vehicle. New Bitcoin money always flows to IBIT.
-// Combined sleeve target 5%; cycle-aware hard cap lives in BTC_CYCLE_MODIFIERS.
+// Combined sleeve target 5%; the 8% hard cap lives in HARD_THRESHOLDS (from the spec).
 export const BITCOIN_TICKERS = ["BTC", "IBIT"] as const
 export const BITCOIN_SLEEVE_TARGET_PCT = 5
 export const BITCOIN_RUNOFF_TICKER     = "BTC"   // transitioning out like-for-like
@@ -292,24 +180,3 @@ export const OPERATING_ASSUMPTIONS = {
 
 export const GOVERNANCE_VERSION = '6.7' as const  // legacy v6.x version string (retained for backward compat)
 export const GOVERNANCE_UPDATED = '2026-07' as const
-
-// ─── COMMAND CENTRE — market-aware governance overlays ───────────────────────
-// Market-condition-aware rules that complement the Section 3 drift bands with overlays
-export const COMMAND_CENTRE_RULES = {
-  minHoldDays: 90,         // 3-month hold before any sale
-  semiConcentrationCap: 12, // SEMI hard cap at 12% weight (§4 override)
-  shockBufferTargetPct: 10, // Target 8-10% in SGOV / short-duration
-  tranche1Pct: 30,          // First entry tranche: 30% of intended capital
-  tranche2Pct: 40,          // Second entry (after 3 green weeks): 40%
-  tranche3Pct: 30,          // Third entry (trend confirmed): 30%
-  semiEntryLevel1: 590,     // First SEMI alert level (watch)
-  semiEntryLevel2: 550,     // Second SEMI alert level (deploy tranche 1)
-  semiEntryLevel3: 510,     // Third SEMI alert level (deploy tranche 2)
-  policyShockRecoveryDays: 42,  // Historical avg recovery: policy shocks
-  macroShockRecoveryDays: 540,  // Historical avg recovery: macro cycles
-} as const
-
-// Art. XIV crash threshold: a drawdown at or beyond this (negative %) from the tracked
-// all-time high triggers the crash protocol (A2 — keep contributing, never redesign).
-// Single source of record so the Art. XIII ladder and the next-best-move engine agree.
-export const CRASH_DRAWDOWN_PCT = -25

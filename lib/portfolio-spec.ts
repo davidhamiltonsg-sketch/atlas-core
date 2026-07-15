@@ -83,10 +83,11 @@ export const SBR_SPEC = {
   forecastBenchmarksAsOf: "Jun 2026",
   funds: [
     { ticker: "VWRA", target: 65, rangeLow: 60, rangeHigh: 70, hardCap: 75, isin: "IE00BK5BQT80", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.085, aggressive: 0.12 } },
-    { ticker: "EQAC", target: 15, rangeLow: 11.25, rangeHigh: 18.75, hardCap: 22.5, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
+    { ticker: "EQAC", target: 10, rangeLow: 7.5, rangeHigh: 12.5, hardCap: 15, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
     { ticker: "SMH", target: 5, rangeLow: 3.75, rangeHigh: 6.25, hardCap: 10, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
     { ticker: "BTC", target: 5, rangeLow: 3.75, rangeHigh: 6.25, hardCap: 8, cusip: "46438F101", exchange: "NASDAQ", expectedReturn: { conservative: -0.10, base: 0.12, aggressive: 0.25 } },
     { ticker: "DBMFE", target: 10, rangeLow: 7.5, rangeHigh: 12.5, floor: 5, hardCap: 15, isin: "LU2951555403", exchange: "EURONEXT PARIS", expectedReturn: { conservative: 0.00, base: 0.06, aggressive: 0.10 } },
+    { ticker: "A35", target: 5, rangeLow: 3.75, rangeHigh: 6.25, hardCap: 10, isin: "SG1S08926457", exchange: "SGX", expectedReturn: { conservative: 0.02, base: 0.03, aggressive: 0.04 } },
   ] as SbrFundSpec[],
   combined: { tickers: ["EQAC", "SMH"], warning: 25, hard: 32.5, resume: 22.5 },
   totalEquityMaxPct: 90,

@@ -71,6 +71,18 @@ export interface Constitution {
 // entries here as the Atlas Universe grows.
 const CONSTITUTION_BY_EMAIL: Record<string, ConstitutionId> = {
   "dutszm@gmail.com": "silicon-brick-road",
+  "admin@atlas.local": "atlas-core",
+  "davidhamiltonsg@gmail.com": "atlas-core",
+}
+
+// Accounts allowed to view every portfolio, not just their own. Atlas Core stays their
+// home portfolio; the topbar switcher lets them read SBR without owning it.
+const CROSS_VIEW_EMAILS = new Set(["admin@atlas.local", "davidhamiltonsg@gmail.com"])
+
+export function canViewAllPortfolios(email: string | undefined | null, role?: string): boolean {
+  if (role === "admin") return true
+  if (!email) return false
+  return CROSS_VIEW_EMAILS.has(email.trim().toLowerCase())
 }
 
 export function constitutionIdForEmail(email: string | undefined | null): ConstitutionId {
@@ -124,6 +136,7 @@ const SBR_PRESENTATION: Record<string, { name: string; role: string; color: stri
   SMH: { name: "VanEck Semiconductor UCITS ETF", role: "A bounded semiconductor satellite", color: "#818cf8" },
   BTC: { name: "Bitcoin sleeve", role: "A capped asymmetric return sleeve", color: "#f59e0b" },
   DBMFE: { name: "iMGP DBi Managed Futures Fund R EUR UCITS ETF", role: "A Luxembourg UCITS managed-futures diversifier with a governed floor", color: "#0891b2" },
+  A35: { name: "ABF Singapore Bond Index Fund", role: "The SGD anchor — Singapore government and quasi-government bonds in Dami's own currency", color: "#64748b" },
 }
 
 const SBR_FUNDS: ConstitutionFund[] = SBR_SPEC.funds.map((f) => ({
@@ -154,7 +167,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   id: "silicon-brick-road",
   name: "Silicon Brick Road — Investment Constitution",
   shortName: "Silicon Brick Road",
-  version: "10.3",
+  version: "10.4",
   updated: "2026-07",
   motto: "Discipline Over Prediction",
   objective: "Grow medium-term wealth through a simple global portfolio with no required end date. A future spending need must be written down before de-risking begins.",
@@ -162,7 +175,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   currency: SBR_SPEC.currency,
   monthlyContribution: SBR_SPEC.monthlyContribution,
   broker: "IBKR Singapore",
-  docPath: "/downloads/silicon-brick-road-constitution-v10.3.html",
+  docPath: "/downloads/silicon-brick-road-constitution-v10.4.html",
   funds: SBR_FUNDS,
   combined: { tickers: [...SBR_SPEC.combined.tickers], warning: SBR_SPEC.combined.warning, hard: SBR_SPEC.combined.hard, resume: SBR_SPEC.combined.resume, label: "Combined EQAC + SMH ceiling" },
   totalEquityMaxPct: SBR_SPEC.totalEquityMaxPct,
@@ -179,7 +192,7 @@ export const SILICON_BRICK_ROAD: Constitution = {
   ],
   rules: [
     { category: "The Ground Rules", title: "Flexible medium-term growth", description: "SBR has no fixed end date or pre-assigned spending purpose. It remains in growth mode until Dami writes down a genuine use, SGD amount and date." },
-    { category: "How to Split Your Money", title: "One broad core and four bounded sleeves", description: "Target VWRA 65%, EQAC 15%, SMH 5%, Bitcoin 5% and DBMFE managed futures 10%. Approved funds are identified by immutable instrument identity, not ticker alone." },
+    { category: "How to Split Your Money", title: "One broad core, four bounded sleeves and an SGD anchor", description: "Target VWRA 65%, EQAC 10%, SMH 5%, Bitcoin 5%, DBMFE managed futures 10% and A35 Singapore bonds 5%. Approved funds are identified by immutable instrument identity, not ticker alone." },
     { category: "Keeping Things in Balance", title: "Use contributions before selling", description: "Route each contribution to the furthest-underweight eligible holding. Soft bands guide new cash; hard caps require a documented correction. Market falls alone never force a sale." },
     { category: "Regular Investing", title: "Whole shares and the DCA cash bank", description: "Buy whole shares after reserving commission and FX. Unused contribution cash carries forward in SBR's separate SGD bank and is never treated as invested." },
     { category: "What You Actually Own", title: "Look through every fund", description: "Combine repeated exposure across VWRA, EQAC, SMH and DBMFE. Data freshness and concentration limits govern additions to overlapping sleeves." },
