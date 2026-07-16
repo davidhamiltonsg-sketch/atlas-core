@@ -14,7 +14,7 @@ const PORTFOLIO_META: Record<ConstitutionId, { theme: string; name: string; vers
   "atlas-core": {
     theme: "atlas-core",
     name: "Atlas Core",
-    version: "v10.5 · GDEA · Sign in to continue",
+    version: "v10.6 · GDEA · Sign in to continue",
     placeholder: "admin@atlas.local",
     footer: "Atlas Core is a private investment dashboard. Access is restricted.",
   },

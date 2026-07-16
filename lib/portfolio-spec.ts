@@ -57,8 +57,8 @@ export const ATLAS_SPEC = {
   funds: [
     { ticker: "VWRA", target: 70, band: 5, hardFloor: null, hardCap: 80, isin: "IE00BK5BQT80", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.085, aggressive: 0.12 } },
     { ticker: "EQAC", target: 10, band: 2.5, hardFloor: 5, hardCap: 15, driftLow: 5, isin: "IE00BFZXGZ54", exchange: "LSE", expectedReturn: { conservative: 0.05, base: 0.105, aggressive: 0.15 } },
-    { ticker: "SMH", target: 5, band: 1.25, hardFloor: null, hardCap: 10, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
-    { ticker: "BTC", target: 5, band: 1.25, hardFloor: null, hardCap: 8, cusip: "46438F101", exchange: "NASDAQ", expectedReturn: { conservative: -0.10, base: 0.12, aggressive: 0.25 } },
+    { ticker: "SMH", target: 5, band: 1.25, hardFloor: 2, hardCap: 10, driftLow: 2, isin: "IE00BMC38736", exchange: "LSE", expectedReturn: { conservative: 0.04, base: 0.115, aggressive: 0.18 } },
+    { ticker: "BTC", target: 5, band: 1.25, hardFloor: 2, hardCap: 8, driftLow: 2, cusip: "46438F101", exchange: "NASDAQ", expectedReturn: { conservative: -0.10, base: 0.12, aggressive: 0.25 } },
     { ticker: "DBMFE", target: 10, band: 2.5, hardFloor: 5, hardCap: 15, driftLow: 5, isin: "LU2951555403", exchange: "EURONEXT PARIS", expectedReturn: { conservative: 0.00, base: 0.06, aggressive: 0.10 } },
   ] as AtlasFundSpec[],
   combinedTech: { tickers: ["EQAC", "SMH"], soft: 18.75, hard: 25 },

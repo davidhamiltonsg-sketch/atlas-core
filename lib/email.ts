@@ -185,7 +185,7 @@ export async function sendMonthlyReminderEmail(
   const accentBg = isAtlas ? "#f5f3ff" : "#e0f2fe"
   const moniker = isAtlas ? "AC" : "SBR"
   const portfolioName = isAtlas ? "Atlas Core" : "Silicon Brick Road"
-  const tagline = isAtlas ? "Investment Constitution v10.5" : "Flexible medium-term growth · Constitution v10.5"
+  const tagline = isAtlas ? "Investment Constitution v10.6" : "Flexible medium-term growth · Constitution v10.5"
   const severityColor = nextMove.severity === "critical" ? "#dc2626"
     : nextMove.severity === "high" ? "#d97706"
     : nextMove.severity === "medium" ? "#0284c7"
@@ -277,7 +277,7 @@ export async function sendCrashProtocolEmail(
           <td style="background:rgba(255,255,255,0.2);border-radius:12px;width:40px;height:40px;text-align:center;vertical-align:middle;">
             <span style="color:#ffffff;font-size:13px;font-weight:900;letter-spacing:-0.5px;">AC</span></td>
           <td style="padding-left:12px;"><div style="font-size:15px;font-weight:700;color:#ffffff;">Atlas Core</div>
-            <div style="font-size:11px;color:#fecaca;margin-top:1px;">Crash discipline · Constitution v10.5</div></td>
+            <div style="font-size:11px;color:#fecaca;margin-top:1px;">Crash discipline · Constitution v10.6</div></td>
         </tr></table>
       </td></tr>
       <tr><td style="padding:28px 32px;">
@@ -301,7 +301,7 @@ export async function sendCrashProtocolEmail(
           </td></tr></table>
       </td></tr>
       <tr><td style="padding:16px 32px;border-top:1px solid #fecaca;background:#fff1f2;">
-        <p style="margin:0;font-size:11px;color:#9ca3af;">Constitution v10.5 · Behaviour rules (Article V). Crash discipline remains in force until the drawdown clears −25%.</p>
+        <p style="margin:0;font-size:11px;color:#9ca3af;">Constitution v10.6 · Behaviour rules (Article V). Crash discipline remains in force until the drawdown clears −25%.</p>
       </td></tr>
     </table>
   </td></tr></table>
@@ -415,7 +415,7 @@ export async function sendPasswordResetEmail(
                   </td>
                   <td style="padding-left:12px;">
                     <div style="font-size:15px;font-weight:700;color:#1a1a2e;">Atlas Core</div>
-                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.5 · Atlas Core</div>
+                    <div style="font-size:11px;color:#6b6b8a;margin-top:1px;">v10.6 · Atlas Core</div>
                   </td>
                 </tr>
               </table>
