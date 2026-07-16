@@ -11,6 +11,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { SBR_SPEC, ATLAS_SPEC } from "@/lib/portfolio-spec"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
 import { economicSleeveTicker } from "@/lib/instrument-identity"
+import { GOVERNANCE_UNIVERSE } from "@/lib/approved-alternatives"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -61,14 +62,28 @@ export async function updateHoldingsManually(
   revalidatePath("/mission-control")
 }
 
-// Apply screenshot-extracted holdings: update existing tickers AND create any new ones
-// (e.g. IBIT, or an out-of-scope ETF). Every row that has units & price is brought in so
-// the portfolio stays accurate — out-of-scope tickers are then flagged on the dashboard.
+// Apply screenshot-extracted holdings: update existing tickers and create governed ones.
+// GUARDED since the phantom-position incident: the importer used to silently create or
+// overwrite ANY OCR-returned row, which let a misread screenshot mint fake positions
+// (and even overwrite governed rows with absurd unit counts). Now:
+//   — creating a ticker outside the governed universe / known transition set, or
+//   — changing an existing holding's units by more than 5×, or
+//   — moving the portfolio total by more than 3×
+// returns those rows as `needsConfirmation` instead of writing. The owner re-applies
+// them explicitly with confirmed: true. SBR keeps its hard whitelist (never bypassed).
 const SBR_ALLOWED_TICKERS = new Set(SBR_SPEC.funds.map(f=>f.ticker))
+// Constitutionally recognized transition instruments (migration engine's legacy identities).
+const ATLAS_KNOWN_LEGACY = ["VT", "QQQM", "VWO", "SMH.US", "GBTC"] as const
+const UNIT_DELTA_LIMIT = 5   // flag a >5× (or <1/5×) unit change on an existing holding
+const TOTAL_DELTA_LIMIT = 3  // flag an import that moves the portfolio total >3× either way
+
+export interface ExtractedRowInput { ticker: string; units: number; price: number; value?: number }
+export interface NeedsConfirmationRow extends ExtractedRowInput { reason: string }
 
 export async function applyExtractedHoldings(
-  rows: Array<{ ticker: string; units: number; price: number; value?: number }>
-): Promise<{ updated: number; created: number }> {
+  rows: ExtractedRowInput[],
+  opts: { confirmed?: boolean } = {},
+): Promise<{ updated: number; created: number; needsConfirmation: NeedsConfirmationRow[] }> {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
   const active = await activePortfolioContext(session)
@@ -76,37 +91,157 @@ export async function applyExtractedHoldings(
   const constitutionId = active.constitutionId
   const ownerId = active.owner.id
   const isSbr = constitutionId === "silicon-brick-road"
+  const confirmed = opts.confirmed === true
 
   const usdSgdRate = await getCachedUsdSgdRate()
-  let updated = 0
-  let created = 0
+  const existing = await db.holding.findMany({
+    where: { userId: ownerId },
+    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+  })
+  const byTicker = new Map(existing.map((h) => [h.ticker, h]))
+  const atlasAllowedNew = new Set<string>([...GOVERNANCE_UNIVERSE, ...ATLAS_KNOWN_LEGACY])
+
+  const needsConfirmation: NeedsConfirmationRow[] = []
+  const candidates: Array<ExtractedRowInput & { sym: string; newValue: number }> = []
 
   for (const r of rows) {
     const sym = r.ticker?.trim().toUpperCase()
     if (!sym || !(r.units > 0) || !(r.price > 0)) continue
+    const extractedSgd = typeof r.value === "number" && Number.isFinite(r.value) && r.value > 0 ? r.value : null
+    const newValue = extractedSgd ?? r.units * r.price * usdSgdRate
+    const held = byTicker.get(sym)
 
-    let holding = await db.holding.findFirst({ where: { userId: ownerId, ticker: sym } })
-    if (!holding) {
-      // Guard: SBR users can only have SBR tickers created. An Atlas Core screenshot
-      // uploaded by mistake must not create out-of-mandate entries in an SBR account.
+    if (!held) {
+      // SBR whitelist is a hard boundary — never bypassed, even with confirmed: true.
       if (isSbr && !SBR_ALLOWED_TICKERS.has(sym)) continue
-      holding = await db.holding.create({
-        data: { userId: ownerId, ticker: sym, name: sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
+      if (!isSbr && !atlasAllowedNew.has(sym) && !confirmed) {
+        needsConfirmation.push({ ...r, ticker: sym, reason: `${sym} is not in the plan or its known transition set — creating it needs your confirmation.` })
+        continue
+      }
+    } else if (!confirmed) {
+      const oldUnits = held.snapshots[0]?.units ?? 0
+      if (oldUnits > 0) {
+        const ratio = r.units / oldUnits
+        if (ratio > UNIT_DELTA_LIMIT || ratio < 1 / UNIT_DELTA_LIMIT) {
+          needsConfirmation.push({ ...r, ticker: sym, reason: `${sym} would change from ${oldUnits.toLocaleString("en-SG")} to ${r.units.toLocaleString("en-SG")} units (×${ratio.toFixed(1)}) — confirm this is really what you hold.` })
+          continue
+        }
+      }
+    }
+    candidates.push({ ...r, sym, newValue })
+  }
+
+  // Portfolio-total guard: an import that swings NAV by >3× either way is almost
+  // certainly a misread screenshot — hold everything for confirmation.
+  if (!confirmed && candidates.length > 0) {
+    const currentTotal = existing.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
+    const candidateTickers = new Set(candidates.map((c) => c.sym))
+    const proposedTotal = candidates.reduce((s, c) => s + c.newValue, 0)
+      + existing.filter((h) => !candidateTickers.has(h.ticker)).reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
+    if (currentTotal > 0 && (proposedTotal > currentTotal * TOTAL_DELTA_LIMIT || proposedTotal < currentTotal / TOTAL_DELTA_LIMIT)) {
+      for (const c of candidates) needsConfirmation.push({ ticker: c.sym, units: c.units, price: c.price, value: c.value, reason: `Applying this import would move the portfolio total from ${Math.round(currentTotal).toLocaleString("en-SG")} to ${Math.round(proposedTotal).toLocaleString("en-SG")} SGD — confirm before writing.` })
+      candidates.length = 0
+    }
+  }
+
+  let updated = 0
+  let created = 0
+  for (const c of candidates) {
+    let holding = byTicker.get(c.sym)
+    if (!holding) {
+      const createdRow = await db.holding.create({
+        data: { userId: ownerId, ticker: c.sym, name: c.sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
       })
+      holding = { ...createdRow, snapshots: [] }
+      byTicker.set(c.sym, holding) // a duplicate ticker later in the batch must not create twice
       created++
     }
     // units × price × USDSGD is only correct for USD-quoted lines — DBMFE is EUR-quoted and
-    // LSE lines can print in GBp, so inferring SGD from an unlabelled quote misvalues them
-    // (same reasoning as the SBR refresh-path guard below). The vision extractor reads the
-    // account-base (SGD) value column directly; prefer it when present and sane, and fall
-    // back to the FX computation only when no usable extracted value exists.
-    const extractedSgd = typeof r.value === "number" && Number.isFinite(r.value) && r.value > 0 ? r.value : null
-    await upsertSnapshotToday(holding.id, { units: r.units, price: r.price, value: extractedSgd ?? r.units * r.price * usdSgdRate })
+    // LSE lines can print in GBp. The vision extractor reads the account-base (SGD) value
+    // column directly; prefer it when present and sane (already folded into newValue).
+    await upsertSnapshotToday(holding.id, { units: c.units, price: c.price, value: c.newValue })
     updated++
   }
 
-  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd", "/risk", "/mission-control"]) revalidatePath(p)
-  return { updated, created }
+  if (updated > 0 || created > 0) {
+    for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd", "/risk", "/mission-control", "/next"]) revalidatePath(p)
+  }
+  return { updated, created, needsConfirmation }
+}
+
+// ─── Owner data correction (phantom-position recovery) ──────────────────────
+// Snapshots carry NO provenance marker, and the one-row-per-day upsert lets a later
+// import overwrite an IBKR-sourced row in place — so "reverse everything that didn't
+// come from IBKR" cannot be done safely from history. The corrective path is instead
+// owner-entered truth: for each holding the owner states the REAL units (and optionally
+// the REAL SGD value, e.g. from the TWS screen); a corrective snapshot is written and
+// every change is recorded in the governance log. Append-only — nothing is deleted.
+export interface PositionCorrection {
+  holdingId: string
+  units: number          // true units held (0 = position does not exist)
+  valueSgd?: number | null // true SGD market value; omitted → units × latest SGD price per unit
+}
+
+export async function correctPositions(
+  corrections: PositionCorrection[],
+): Promise<{ success?: true; applied?: number; error?: string }> {
+  const session = await getSession()
+  if (!session) return { error: "Unauthenticated." }
+  const active = await activePortfolioContext(session)
+  try { assertCanMutateOwner(session, active.owner.id) } catch (error) {
+    return { error: error instanceof Error ? error.message : "Read-only access." }
+  }
+  if (!Array.isArray(corrections) || corrections.length === 0) return { error: "Nothing to correct." }
+  if (corrections.length > 100) return { error: "Too many corrections in one batch." }
+
+  const governedSet = new Set(
+    (active.constitutionId === "silicon-brick-road" ? SBR_SPEC : ATLAS_SPEC).funds.map((f) => f.ticker),
+  )
+
+  let applied = 0
+  for (const c of corrections) {
+    if (!Number.isFinite(c.units) || c.units < 0) continue
+    const holding = await db.holding.findFirst({
+      where: { id: c.holdingId, userId: active.owner.id },
+      include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+    })
+    if (!holding) continue
+    const latest = holding.snapshots[0]
+    const oldUnits = latest?.units ?? 0
+    const oldValue = latest?.value ?? 0
+    // SGD per unit from the latest snapshot (value/units — robust across quote currencies).
+    const perUnitSgd = latest && latest.units > 0 && latest.value > 0 ? latest.value / latest.units : 0
+    const value = typeof c.valueSgd === "number" && Number.isFinite(c.valueSgd) && c.valueSgd >= 0
+      ? c.valueSgd
+      : c.units * perUnitSgd
+    if (Math.abs(c.units - oldUnits) < 1e-9 && Math.abs(value - oldValue) < 0.005) continue
+
+    // Corrective snapshot: stale cost basis / P&L from the erroneous data is cleared —
+    // the next IBKR sync restores the authoritative basis.
+    await upsertSnapshotToday(holding.id, {
+      units: c.units,
+      price: c.units > 0 ? (latest?.price ?? 0) : 0,
+      value: c.units > 0 ? value : 0,
+      costBasis: null,
+      unrealizedPnl: null,
+    })
+    // A zeroed row outside the governed universe closes (drops out of display); governed
+    // rows stay ACTIVE as the target architecture even at zero.
+    if (c.units === 0 && !governedSet.has(economicSleeveTicker(holding.ticker))) {
+      await db.holding.update({ where: { id: holding.id }, data: { instrumentStatus: "CLOSED" } })
+    }
+    await db.governanceLog.create({
+      data: {
+        userId: active.owner.id,
+        event: "EXCEPTION_LOGGED",
+        details: `Data correction: ${holding.ticker} ${oldUnits.toLocaleString("en-SG")} units (S$${Math.round(oldValue).toLocaleString("en-SG")}) → ${c.units.toLocaleString("en-SG")} units (S$${Math.round(c.units > 0 ? value : 0).toLocaleString("en-SG")}). Owner-entered true position; prior data judged erroneous (import provenance is not recorded). History retained.`,
+      },
+    })
+    applied++
+  }
+
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
+  return { success: true, applied }
 }
 
 // Owner-only correction for an erroneous NON-GOVERNED row (e.g. a phantom position created

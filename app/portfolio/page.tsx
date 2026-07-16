@@ -8,6 +8,7 @@ import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { HoldingRow } from "@/components/portfolio/holding-row"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
+import { DataCorrectionPanel } from "@/components/portfolio/data-correction-panel"
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
@@ -370,6 +371,21 @@ export default async function Portfolio() {
               </div>
             </div>
           </div>
+
+          {/* Owner data correction — recovery from erroneous/phantom data. Snapshots carry
+              no provenance marker (see correctPositions), so the fix is owner-entered truth. */}
+          {canCorrect && hasBalance && (
+            <DataCorrectionPanel
+              plainEnglish={isSbr}
+              rows={holdings.map((h) => ({
+                holdingId: h.id,
+                ticker: h.ticker,
+                name: h.name,
+                units: h.latestSnapshot?.units ?? 0,
+                valueSgd: h.value,
+              }))}
+            />
+          )}
 
           {/* Holdings table */}
           <div id="holdings" className="rounded-xl border border-border bg-card overflow-hidden">
