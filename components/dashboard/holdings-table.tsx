@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/utils"
 import { StaleBadge } from "@/components/stale-badge"
 import { StatusChip, type StatusChipStatus } from "@/components/ui/status-chip"
 import { Sparkline } from "@/components/charts/sparkline"
+import { sgdUnitPrice } from "@/lib/unit-price"
 
 export type HoldingStatus = "healthy" | "soft" | "hard"
 
@@ -155,16 +156,27 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
                       : p.units > 0 ? fmtUnits(p.units) : <span className="text-muted-foreground">0</span>}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">
-                    {p.aggregate ? <span className="text-muted-foreground">—</span> : (
-                      <>
-                        {p.latestPrice > 0 ? <div className="font-medium">${p.latestPrice.toFixed(2)}</div> : <span className="text-muted-foreground">—</span>}
-                        {p.avgCostUsd != null && (
-                          <div className={`text-[10px] tabular-nums ${p.avgCostUsd > 0 && p.latestPrice > 0 ? (p.latestPrice >= p.avgCostUsd ? "text-success" : "text-danger") : "text-muted-foreground"}`}>
-                            avg ${p.avgCostUsd.toFixed(2)}
-                          </div>
-                        )}
-                      </>
-                    )}
+                    {p.aggregate ? <span className="text-muted-foreground">—</span> : (() => {
+                      // Derive, don't trust: Snapshot.price has no currency guarantee
+                      // (lib/unit-price.ts) — show the S$ per-unit figure from value/units,
+                      // and compare against the SGD average cost so the colour is honest.
+                      const nowSgd = sgdUnitPrice(p.units, p.value)
+                      const avgSgd = p.unrealisedSgd != null && p.units > 0 ? (p.value - p.unrealisedSgd) / p.units : null
+                      return (
+                        <>
+                          {nowSgd !== null
+                            ? <div className="font-medium">S${nowSgd.toFixed(2)}</div>
+                            : p.latestPrice > 0
+                            ? <div className="font-medium text-muted-foreground">{p.latestPrice.toFixed(2)} <span className="text-[9px]">(fund ccy)</span></div>
+                            : <span className="text-muted-foreground">—</span>}
+                          {avgSgd !== null && nowSgd !== null ? (
+                            <div className={`text-[10px] tabular-nums ${nowSgd >= avgSgd ? "text-success" : "text-danger"}`}>avg S${avgSgd.toFixed(2)}</div>
+                          ) : p.avgCostUsd != null ? (
+                            <div className="text-[10px] tabular-nums text-muted-foreground">avg {p.avgCostUsd.toFixed(2)} (fund ccy)</div>
+                          ) : null}
+                        </>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums font-medium">
                     {p.value > 0 ? formatCurrency(p.value, "SGD") : <span className="text-muted-foreground">—</span>}

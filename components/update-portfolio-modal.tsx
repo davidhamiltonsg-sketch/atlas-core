@@ -352,7 +352,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                             S${pos.positionValue.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[11px] text-muted-foreground ml-2 tabular-nums">
-                            {pos.units} × ${pos.markPrice.toFixed(2)}
+                            {pos.units} × {pos.units > 0 && pos.positionValue > 0 ? `S$${(pos.positionValue / pos.units).toFixed(2)}` : `${pos.markPrice.toFixed(2)} (fund ccy)`}
                           </span>
                           {pos.prevUnits !== null && pos.prevUnits !== pos.units && (
                             <span className="ml-2 text-[10px] text-amber-500">
@@ -380,7 +380,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               <div className="grid grid-cols-[minmax(0,1fr)_70px_70px] gap-2 px-1 text-[10px] font-medium text-muted-foreground sm:grid-cols-[1fr_90px_90px] sm:text-[11px]">
                 <span>Holding</span>
                 <span className="text-right">Units</span>
-                <span className="text-right">Price (USD)</span>
+                <span className="text-right">Price (fund currency)</span>
               </div>
               {holdings.map((h) => (
                 <div key={h.id} className="grid grid-cols-[minmax(0,1fr)_70px_70px] items-center gap-2 sm:grid-cols-[1fr_90px_90px]">
@@ -467,8 +467,8 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                             {offScope && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">not in plan</span>}
                           </div>
                           <div className="text-right">
-                            <span className="text-xs font-semibold">${row.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            <span className="text-[11px] text-muted-foreground ml-2">{row.units} × ${row.price}</span>
+                            <span className="text-xs font-semibold">S${row.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-[11px] text-muted-foreground ml-2">{row.units} × {row.price} (fund ccy)</span>
                           </div>
                         </div>
                       )
@@ -495,7 +495,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                       <div key={row.ticker} className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/[0.06] px-3 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold">{row.ticker}</span>
-                          <span className="text-[11px] text-muted-foreground tabular-nums">{row.units} × ${row.price}</span>
+                          <span className="text-[11px] text-muted-foreground tabular-nums">{row.units} × {row.price} (fund ccy)</span>
                         </div>
                         <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">{row.reason}</p>
                       </div>

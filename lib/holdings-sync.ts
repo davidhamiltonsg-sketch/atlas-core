@@ -69,6 +69,13 @@ export async function ensureSbrPresentation(userId: string): Promise<void> {
  * Write at most ONE snapshot per holding per day. If today's snapshot exists, update it
  * in place; otherwise create one. Keeps the value-history chart and the DB clean instead
  * of accumulating dozens of intraday rows from refresh-on-open.
+ *
+ * CURRENCY DISCIPLINE — `value` is authoritative SGD; `price` carries no currency
+ * guarantee (instrument-currency marks, trading-currency quotes, or historical
+ * SGD-conflated imports all exist in the column). Displays must derive S$ per-unit
+ * from value/units, and writers whose price/value pairs can disagree (screenshot
+ * import, IBKR-position refresh) must pass the price through valueConsistentPrice
+ * (lib/unit-price.ts) so a misread price can never contradict the stored value.
  */
 export async function upsertSnapshotToday(
   holdingId: string,
