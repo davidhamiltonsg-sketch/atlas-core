@@ -25,24 +25,21 @@ export async function POST() {
 
   // Use the active portfolio owner's IBKR account so either authorised login can
   // switch portfolios without silently syncing the wrong broker account.
-  const { token, positionsQuery: positionsId, activityQuery: activityId } =
-    ibkrCredentialsFor(active.constitutionId)
-  const queryId = activityId ?? positionsId
+  const { token, activityQuery: activityId } = ibkrCredentialsFor(active.constitutionId)
 
-  console.log("[sync-ibkr/activity] token present:", !!token, "activityId:", !!activityId, "fallback positionsId:", !!positionsId)
+  console.log("[sync-ibkr/activity] token present:", !!token, "activityId:", !!activityId)
 
-  if (!token || !queryId) {
+  // No positions-query fallback: a positions report parses "successfully" with zero
+  // trades/cash/dividends, so the import would report success while the contribution
+  // and dividend ledgers stay frozen. Fail loudly with setup instructions instead.
+  if (!token || !activityId) {
     return NextResponse.json(
-      { error: "IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID is not configured" },
+      { error: "The IBKR activity feed is not configured for this portfolio. Set the Flex token and a dedicated Activity Flex query (Trades + Cash Transactions + Dividends) in the activity query variable, then retry." },
       { status: 503 }
     )
   }
 
-  if (!activityId) {
-    console.warn("[sync-ibkr/activity] IBKR_FLEX_QUERY_ID_ACTIVITY not set — falling back to positions query. Add an Executions+CashTransactions FLEX query for full activity import.")
-  }
-
-  const result = await fetchFlexActivity(token, queryId)
+  const result = await fetchFlexActivity(token, activityId)
   console.log("[sync-ibkr/activity] fetchFlexActivity result:", result.success ? "success" : `error: ${(result as { success: false; error: string }).error}`)
 
   if (!result.success) {
@@ -133,10 +130,9 @@ export async function PUT(req: Request) {
 
   // Client confirmation selects broker record IDs; it never supplies authoritative money.
   // Re-fetch the Flex report and persist only matching server-side records.
-  const {token,positionsQuery,activityQuery}=ibkrCredentialsFor(active.constitutionId)
-  const queryId=activityQuery??positionsQuery
-  if(!token||!queryId)return NextResponse.json({error:"IBKR activity query is not configured"},{status:503})
-  const fresh=await fetchFlexActivity(token,queryId)
+  const {token,activityQuery}=ibkrCredentialsFor(active.constitutionId)
+  if(!token||!activityQuery)return NextResponse.json({error:"IBKR activity query is not configured"},{status:503})
+  const fresh=await fetchFlexActivity(token,activityQuery)
   if(!fresh.success)return NextResponse.json({error:fresh.error},{status:422})
   const selectedTrades=new Set((body.executions??[]).map(x=>x.tradeID))
   const selectedDividends=new Set((body.dividends??[]).map(x=>x.transactionID))

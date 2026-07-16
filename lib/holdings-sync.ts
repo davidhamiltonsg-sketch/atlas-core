@@ -6,6 +6,7 @@ import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { instrumentIdentity } from "@/lib/instrument-identity"
 import { recordDcaBankMovement } from "@/lib/dca-bank-service"
 import { portfolioOwner } from "@/lib/active-portfolio"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import {
   parseFlexDate, naturalKey, executionNaturalKey,
@@ -483,11 +484,14 @@ export async function syncIbkrActivityAllUsers(): Promise<IbkrActivitySyncResult
   const errors: string[] = []
   for (const u of users) {
     const isSbr = constitutionIdForEmail(u.email) === "silicon-brick-road"
-    const token = isSbr ? process.env.IBKR_SBR_FLEX_TOKEN : process.env.IBKR_FLEX_TOKEN
-    const activityId = isSbr
-      ? (process.env.IBKR_SBR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_SBR_FLEX_QUERY_ID)
-      : (process.env.IBKR_FLEX_QUERY_ID_ACTIVITY ?? process.env.IBKR_FLEX_QUERY_ID)
-    if (!token || !activityId) continue
+    const { token, activityQuery: activityId } = ibkrCredentialsFor(isSbr ? "silicon-brick-road" : "atlas-core")
+    // No positions-query fallback: a positions report parses "successfully" with zero
+    // trades/cash/dividends, freezing the contribution and dividend ledgers while
+    // holdings keep moving. Better an explicit error than a silent zero import.
+    if (!token || !activityId) {
+      errors.push(`${isSbr ? "SBR" : "Atlas"}: activity feed not configured (${isSbr ? "IBKR_SBR_FLEX_TOKEN + IBKR_SBR_FLEX_QUERY_ID_ACTIVITY" : "IBKR_FLEX_TOKEN + IBKR_FLEX_QUERY_ID_ACTIVITY"})`)
+      continue
+    }
     const reportKey = `${isSbr ? "sbr" : "atlas"}:${activityId}`
     let result = reports.get(reportKey)
     if (!result) {

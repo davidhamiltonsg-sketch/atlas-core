@@ -8,7 +8,9 @@ import { formatCurrency } from "@/lib/utils"
 import { money, convert } from "@/lib/money"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { sgtToday, sgtMonthKey, sgtYear } from "@/lib/sgt-date"
-import { PiggyBank, Wallet, CalendarClock, Info } from "lucide-react"
+import { ibkrCredentialsFor } from "@/lib/ibkr-config"
+import { PiggyBank, Wallet, CalendarClock, Info, AlertTriangle } from "lucide-react"
+import { ManualEntryPanel } from "@/components/contributions/manual-entry"
 import {
   ContributionLedger,
   CashBankHistory,
@@ -117,6 +119,16 @@ export default async function ContributionsPage() {
   const isSbr = active.constitutionId === "silicon-brick-road"
   const d = await getContributionData(active.owner.id, active.constitutionId)
 
+  // The ledger self-fills ONLY from the IBKR activity feed (deposits, trades,
+  // dividends). Holdings values move through other paths, so when the feed is
+  // missing this page must say so instead of sitting silently empty.
+  const creds = ibkrCredentialsFor(active.constitutionId)
+  const activityConfigured = Boolean(creds.token && creds.activityQuery)
+  const canMutate = session.role === "admin" || session.userId === active.owner.id
+  const holdingTickers = canMutate
+    ? (await db.holding.findMany({ where: { userId: active.owner.id }, select: { ticker: true }, orderBy: { ticker: "asc" } })).map((h) => h.ticker)
+    : []
+
   // Plain-English copy for the SBR surface; Atlas keeps the constitution vocabulary.
   const bankLabel = isSbr ? "Cash waiting for the next purchase" : "DCA cash bank"
   const bankHint = isSbr
@@ -132,6 +144,24 @@ export default async function ContributionsPage() {
       constitutionId={active.constitutionId}
     >
       <div className="space-y-5">
+
+        {/* Activity feed not connected — the reason this page would otherwise stay empty */}
+        {!activityConfigured && (
+          <div className="rounded-xl border border-warning/40 bg-warning/10 p-5 flex gap-3">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold">No broker activity feed is connected for this portfolio</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Holdings values still update, but contributions and dividends only fill automatically from an
+                IBKR <span className="font-semibold">Activity</span> Flex query (Trades + Cash Transactions + Dividends).
+                {isSbr
+                  ? " Set IBKR_SBR_FLEX_TOKEN and IBKR_SBR_FLEX_QUERY_ID_ACTIVITY, then run Import Activity from IBKR."
+                  : " Set IBKR_FLEX_TOKEN and IBKR_FLEX_QUERY_ID_ACTIVITY (from the owner's own IBKR account), then run Import Activity from IBKR."}
+                {" "}Until then, use the manual entry below.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Summary tiles */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -194,6 +224,9 @@ export default async function ContributionsPage() {
             </div>
           </div>
         )}
+
+        {/* Owner-only manual fallback — tagged [manual], append-only */}
+        {canMutate && <ManualEntryPanel tickers={holdingTickers} />}
 
         {/* Cash-bank carry-forward history */}
         <CashBankHistory entries={d.bankEntries} bankLabel={`${bankLabel} — recent movements`} />
