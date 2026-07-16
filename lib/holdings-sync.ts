@@ -28,6 +28,8 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
 
   let created = 0
   for (const ticker of CORE_TICKERS) {
+    // No unique constraint on (userId, ticker) — find-first immediately before create keeps
+    // concurrent callers (cron + page load) from minting duplicate Holding rows.
     const existing = await db.holding.findFirst({ where: { userId, ticker } })
     const d = CORE_DEFAULTS[ticker] ?? { name: ticker, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" }
     if (existing) {
@@ -177,6 +179,7 @@ export async function syncHoldingFromTrades(userId: string, ticker: string, fxRa
   const trades = await db.trade.findMany({ where: { userId, ticker: sym }, orderBy: { date: "asc" } })
   const netUnits = Math.max(0, trades.reduce((s, t) => s + (t.type === "BUY" ? t.units : -t.units), 0))
 
+  // No unique constraint on (userId, ticker) — find-first immediately before create.
   let holding = await db.holding.findFirst({ where: { userId, ticker: sym } })
   if (!holding) {
     if (netUnits <= 0) return

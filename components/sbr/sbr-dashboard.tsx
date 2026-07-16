@@ -25,6 +25,7 @@ import { CommitteeMinuteForm } from "@/components/sbr/committee-minute-form"
 import { computeSbrLookThrough } from "@/lib/sbr-look-through"
 import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { openPositionValuation } from "@/lib/valuation"
+import { foldDuplicateHoldings } from "@/lib/holding-duplicates"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -38,7 +39,7 @@ const FX_REFERENCE_USDSGD = 1.35
 const FX_BAND_PCT = 5 // ±5% from reference triggers a note
 
 async function getSbrData(userId: string) {
-  const [holdings, market, recentExec, usdSgdRate, cashBank, recentMinute, owner, lookThroughSources] = await Promise.all([
+  const [rawHoldings, market, recentExec, usdSgdRate, cashBank, recentMinute, owner, lookThroughSources] = await Promise.all([
     // Dami's owner ledger is SBR. Load every open instrument so an out-of-plan brokerage
     // holding remains visible and stays inside NAV/concentration denominators.
     db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 8 } } }),
@@ -53,6 +54,8 @@ async function getSbrData(userId: string) {
     db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
     db.etfLookThrough.findMany({ where: { ticker: { in: SBR_FUND_TICKERS } }, select: { ticker: true, updatedAt: true } }),
   ])
+  // Duplicate same-ticker rows fold into one row (units/value summed) — see lib/holding-duplicates.ts.
+  const holdings = foldDuplicateHoldings(rawHoldings)
   const fundOrder = SBR.funds.map((f) => f.ticker)
   const orderOf=(ticker:string)=>{const i=fundOrder.indexOf(ticker);return i<0?Number.MAX_SAFE_INTEGER:i}
   const holdingsSorted = [...holdings].sort((a, b) => orderOf(a.ticker) - orderOf(b.ticker))

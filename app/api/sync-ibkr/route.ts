@@ -117,6 +117,8 @@ export async function PUT(req: Request) {
     if (!holdingId) {
       const identity=instrumentIdentity({symbol:pos.symbol,isin:pos.isin,cusip:pos.cusip,exchange:pos.exchange,conid:pos.conid})
       const sym = identity.ticker
+      // No unique constraint on (userId, ticker) — find-first immediately before create
+      // keeps a concurrent import/sync from minting a duplicate Holding row.
       const existing = await db.holding.findFirst({ where: { userId: active.owner.id, ticker: sym } })
       if (existing) {
         holdingId = existing.id
