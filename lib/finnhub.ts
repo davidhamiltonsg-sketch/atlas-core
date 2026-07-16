@@ -50,6 +50,15 @@ async function fhGet<T>(path: string, revalidate: number): Promise<T | null> {
 // ─── Market positions (price + 52-week levels) ───────────────────────────────
 
 interface FinnhubQuote { c?: number }
+
+/** Live last price for a plain US-listed symbol (e.g. "BK"), or null when the
+ *  key is missing / the fetch fails. Used by the outside-Atlas RSU pipeline. */
+export async function getUsQuote(symbol: string): Promise<number | null> {
+  const clean = symbol.trim().toUpperCase()
+  if (!/^[A-Z.]{1,10}$/.test(clean)) return null
+  const quote = await fhGet<FinnhubQuote>(`/quote?symbol=${clean}`, TTL_QUOTE)
+  return quote?.c && quote.c > 0 ? quote.c : null
+}
 interface FinnhubMetricResp { metric?: Record<string, number | null> }
 
 export interface MarketSnapshot {

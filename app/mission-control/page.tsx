@@ -10,6 +10,7 @@ import { evaluateGovernance } from "@/lib/governance-status"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
 import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
+import { vestExtraContributionsForUser } from "@/lib/external-awards"
 import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
@@ -268,7 +269,10 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     for (const p of positions) allocMap[p.ticker] = p.actualPct
     const { rates, excludedTickers } = blendedGrowthRates(allocMap, riskFreeRate)
     const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
-    const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate)
+    // RSU vest inflows (sell-on-vest SOP) ride along as planned contributions — same
+    // maths as the cockpit tile and the Forecast page, so all three surfaces agree.
+    const vestExtras = await vestExtraContributionsForUser(userId)
+    const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate, vestExtras)
 
     // Volatility
     const timeline = buildPortfolioTimeline(

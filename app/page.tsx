@@ -25,6 +25,8 @@ import { SbrDashboard } from "@/components/sbr/sbr-dashboard"
 import type { ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { AnimatedNumber } from "@/components/animated-number"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
+import { getAwardPipeline, vestExtraContributionsForUser } from "@/lib/external-awards"
+import { ExternalAwardCard, type AwardCardData } from "@/components/cockpit/external-award-card"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { redirect } from "next/navigation"
@@ -198,7 +200,11 @@ async function getDashboardData(userId: string) {
   const { rates } = blendedGrowthRates(allocMap, riskFreeRate)
 
   const yearsTo2045 = Math.max(1, 2045 - new Date().getFullYear())
-  const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate)
+  // Outside-Atlas RSU vests count as planned contributions (sell-on-vest SOP) — plan
+  // currency (USD after tax), same units as the monthly plan and January boost. The
+  // award itself never enters NAV, targets or look-through.
+  const vestExtras = await vestExtraContributionsForUser(userId)
+  const base2045 = projectPortfolio(totalValue, monthlyContribution, annualLumpSum, rates.base, yearsTo2045, contributionGrowthRate, vestExtras)
 
   const startOfYear = new Date(new Date().getFullYear(), 0, 1)
   const dayOfYear = Math.floor((Date.now() - startOfYear.getTime()) / 86_400_000)
@@ -405,6 +411,30 @@ async function getDashboardData(userId: string) {
     latestUnits: h.snapshots[0]?.units ?? 0, latestPrice: h.snapshots[0]?.price ?? 0,
   }))
 
+  // Outside-Atlas award card rows (display-only; `editable` is decided by the caller
+  // from the session). Values in USD with an SGD gross rider at the live rate.
+  const awardPipeline = await getAwardPipeline(userId)
+  const awardCard: AwardCardData | null = awardPipeline
+    ? {
+        label: awardPipeline.award.label,
+        ticker: awardPipeline.award.ticker,
+        priceUsd: awardPipeline.priceUsd,
+        priceIsLive: awardPipeline.priceIsLive,
+        taxRatePct: awardPipeline.award.taxRatePct,
+        vests: awardPipeline.vests.map((v) => ({
+          dateLabel: v.date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+          units: v.units,
+          grossUsd: v.grossUsd,
+          afterTaxUsd: v.afterTaxUsd,
+          grossSgd: convert(money(v.grossUsd, "USD"), "SGD", usdSgdRate).amount,
+        })),
+        nextVestDays: awardPipeline.vests.length
+          ? Math.max(0, Math.ceil((awardPipeline.vests[0].date.getTime() - Date.now()) / 86_400_000))
+          : null,
+        tranchesRaw: awardPipeline.award.tranches,
+      }
+    : null
+
   return {
     totalValue, hasBalance, positions, holdingsRows, driftAlerts, maxDrift,
     activeRules, totalRules, snapshotAgeDays, health, hardBreaches, softBreaches,
@@ -417,6 +447,7 @@ async function getDashboardData(userId: string) {
     lastDone: recentExecutions[0] ?? null,
     cashBankBalance: cashBank?.balance ?? 0,
     btcCyclePhase,
+    awardCard,
   }
 }
 
@@ -431,6 +462,7 @@ export default async function Dashboard() {
     }
 
     const d = await getDashboardData(active.owner.id)
+    const canMutateOwner = session.role === "admin" || session.userId === active.owner.id
 
     const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
     const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
@@ -570,6 +602,9 @@ export default async function Dashboard() {
             </div>
             <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-violet-500 transition-colors shrink-0">Open →</span>
           </Link>
+
+          {/* ── OUTSIDE ATLAS — employer RSU pipeline (never NAV) ─────── */}
+          <ExternalAwardCard data={d.awardCard} editable={canMutateOwner} />
 
         </div>
 
