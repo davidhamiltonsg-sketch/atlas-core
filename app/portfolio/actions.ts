@@ -13,6 +13,7 @@ import { assertCanMutateOwner } from "@/lib/mutation-auth"
 import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { GOVERNANCE_UNIVERSE } from "@/lib/approved-alternatives"
 import { valueConsistentPrice } from "@/lib/unit-price"
+import { findDuplicateGroups } from "@/lib/holding-duplicates"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -150,6 +151,15 @@ export async function applyExtractedHoldings(
   for (const c of candidates) {
     let holding = byTicker.get(c.sym)
     if (!holding) {
+      // No DB unique constraint exists on (userId, ticker) — re-check immediately before
+      // create so a concurrent import/sync can't mint a duplicate Holding row.
+      const fresh = await db.holding.findFirst({
+        where: { userId: ownerId, ticker: c.sym },
+        include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+      })
+      if (fresh) { holding = fresh; byTicker.set(c.sym, fresh) }
+    }
+    if (!holding) {
       const createdRow = await db.holding.create({
         data: { userId: ownerId, ticker: c.sym, name: c.sym, targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b" },
       })
@@ -245,6 +255,72 @@ export async function correctPositions(
 
   for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
   return { success: true, applied }
+}
+
+// ─── Duplicate-holding merge (owner/admin) ───────────────────────────────────
+// The DB has no unique constraint on (userId, ticker), and an earlier importer bug
+// could create the same ticker twice in one batch. This merges each literal
+// same-ticker group: the canonical row (cost basis > freshest snapshot > oldest)
+// keeps the group's SUMMED units/value via a corrective snapshot, every other row
+// is zeroed and CLOSED (same semantics as removeErroneousPosition), and each group
+// gets a governance-log entry. Append-only — no rows or history are deleted.
+export async function mergeDuplicateHoldings(): Promise<{ success?: true; merged?: number; closed?: number; error?: string }> {
+  const session = await getSession()
+  if (!session) return { error: "Unauthenticated." }
+  const active = await activePortfolioContext(session)
+  try { assertCanMutateOwner(session, active.owner.id) } catch (error) {
+    return { error: error instanceof Error ? error.message : "Read-only access." }
+  }
+
+  const holdings = await db.holding.findMany({
+    where: { userId: active.owner.id },
+    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+  })
+  const groups = findDuplicateGroups(holdings)
+  if (groups.length === 0) return { success: true, merged: 0, closed: 0 }
+
+  const usdSgdRate = await getCachedUsdSgdRate()
+  let merged = 0
+  let closed = 0
+  for (const g of groups) {
+    const contributingClosed = g.close.filter((r) => (r.snapshots[0]?.units ?? 0) > 0 || (r.snapshots[0]?.value ?? 0) > 0)
+    if (contributingClosed.length > 0) {
+      // Fold the duplicates' real position into the kept row so no value is lost.
+      // Cost basis is summed only when EVERY contributing row carries one; otherwise it
+      // is cleared and the next IBKR sync restores the authoritative figure.
+      const contributing = [g.keep, ...contributingClosed]
+        .map((r) => r.snapshots[0])
+        .filter((snap): snap is NonNullable<typeof snap> => !!snap && (snap.units > 0 || snap.value > 0))
+      const costBasis = contributing.length > 0 && contributing.every((snap) => snap.costBasis != null)
+        ? contributing.reduce((sum, snap) => sum + (snap.costBasis ?? 0), 0)
+        : null
+      await upsertSnapshotToday(g.keep.id, {
+        units: g.totalUnits,
+        price: valueConsistentPrice(g.totalUnits, g.keep.snapshots[0]?.price ?? 0, g.totalValueSgd, usdSgdRate),
+        value: g.totalValueSgd,
+        costBasis,
+        unrealizedPnl: null,
+      })
+    }
+    for (const r of g.close) {
+      await upsertSnapshotToday(r.id, { units: 0, price: 0, value: 0, costBasis: 0, unrealizedPnl: 0 })
+      await db.holding.update({ where: { id: r.id }, data: { instrumentStatus: "CLOSED" } })
+      closed++
+    }
+    await db.governanceLog.create({
+      data: {
+        userId: active.owner.id,
+        event: "EXCEPTION_LOGGED",
+        details: contributingClosed.length > 0
+          ? `Duplicate holdings merged: kept ${g.ticker} row …${g.keep.id.slice(-6)} with the group's combined ${g.totalUnits.toLocaleString("en-SG")} units (S$${Math.round(g.totalValueSgd).toLocaleString("en-SG")}); zeroed and closed ${g.close.length} duplicate row(s) [${g.close.map((r) => `…${r.id.slice(-6)}`).join(", ")}]. Append-only; history retained.`
+          : `Duplicate holdings merged: kept ${g.ticker} row …${g.keep.id.slice(-6)}; closed ${g.close.length} empty duplicate row(s) [${g.close.map((r) => `…${r.id.slice(-6)}`).join(", ")}] without changing the kept position. Append-only; history retained.`,
+      },
+    })
+    merged++
+  }
+
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
+  return { success: true, merged, closed }
 }
 
 // Owner-only correction for an erroneous NON-GOVERNED row (e.g. a phantom position created
@@ -441,7 +517,10 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
     // Add: positions IBKR reports that we don't track yet (created untracked, target 0%).
     for (const [sym, p] of Object.entries(posMap)) {
       if (dbTickers.has(sym)) continue
-      const created = await db.holding.create({
+      // No unique constraint on (userId, ticker) — find-first immediately before create
+      // so a concurrent sync/import can't mint a duplicate Holding row.
+      const preexisting = await db.holding.findFirst({ where: { userId: ownerId, ticker: sym } })
+      const created = preexisting ?? await db.holding.create({
         data: {
           userId: ownerId, ticker: sym, name: sym,
           targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b",

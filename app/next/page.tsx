@@ -13,6 +13,7 @@ import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { money, convert } from "@/lib/money"
 import { formatCurrency } from "@/lib/utils"
 import { sgtToday, sgtMonthKey, dealingWindowStatus } from "@/lib/sgt-date"
+import { foldDuplicateHoldings } from "@/lib/holding-duplicates"
 import { NextMoveScreen } from "@/components/next-move/next-move-screen"
 import { LogExecutionButton } from "@/components/next-move/log-execution-button"
 import { DecisionLadderCard } from "@/components/cockpit/decision-ladder-card"
@@ -29,11 +30,14 @@ function fmtDay(d: Date): string {
 
 async function getNextData(userId: string, constitutionId: string) {
   const isSbr = constitutionId === "silicon-brick-road"
-  const [holdings, owner, cashBank] = await Promise.all([
+  const [rawHoldings, owner, cashBank] = await Promise.all([
     db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 1 } } }),
     db.user.findUnique({ where: { id: userId }, select: { monthlyContribution: true } }),
     db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId, currency: "SGD" } } }),
   ])
+  // Duplicate same-ticker rows fold into one row (units/value summed) — keeps the
+  // whole-share planner's per-ticker price map coherent. See lib/holding-duplicates.ts.
+  const holdings = foldDuplicateHoldings(rawHoldings)
   const totalValue = holdings.reduce((s, h) => s + (h.snapshots[0]?.value ?? 0), 0)
   const bankBalance = cashBank?.balance ?? 0
 

@@ -14,6 +14,7 @@ import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
 import { applyEconomicSleeves } from "@/lib/next-best-move"
 import { economicSleeveTicker } from "@/lib/instrument-identity"
+import { findDuplicateGroups, findSharedIdentityWarnings, foldDuplicateHoldings } from "@/lib/holding-duplicates"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { getConstitution } from "@/lib/constitutions"
@@ -24,7 +25,7 @@ export const maxDuration = 60
 
 async function getPortfolioData(userId: string, governedTickers: string[]) {
   const governedSet = new Set(governedTickers)
-  const [holdings, trades, usdSgdRate] = await Promise.all([
+  const [rawHoldings, trades, usdSgdRate] = await Promise.all([
     db.holding.findMany({
       where: { userId },
       include: { snapshots: { orderBy: { date: "desc" }, take: 8 } },
@@ -33,6 +34,13 @@ async function getPortfolioData(userId: string, governedTickers: string[]) {
     db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
     getCachedUsdSgdRate(),
   ])
+
+  // Duplicate same-ticker rows (a legacy importer bug could mint them): detect for the
+  // correction panel, then FOLD them into one canonical row per ticker for display and
+  // status math — units/value summed so NAV is unchanged until the owner merges.
+  const duplicateGroups = findDuplicateGroups(rawHoldings)
+  const identityWarnings = findSharedIdentityWarnings(rawHoldings)
+  const holdings = foldDuplicateHoldings(rawHoldings)
 
   // Weighted-average cost basis per ticker (SGD total, USD per unit)
   const avgCostMap: Record<string, { units: number; sgd: number; usd: number }> = {}
@@ -100,7 +108,16 @@ async function getPortfolioData(userId: string, governedTickers: string[]) {
     // placeholder rows (0 units but a live target) stay visible as the architecture.
     .filter((h) => h.value > 0 || (h.latestSnapshot?.units ?? 0) > 0 || h.targetPct > 0)
 
-  return { holdings: rows, totalValue, hasBalance, sleeveActual }
+  return {
+    holdings: rows, totalValue, hasBalance, sleeveActual,
+    duplicates: duplicateGroups.map((g) => ({
+      ticker: g.ticker,
+      rows: g.close.length + 1,
+      totalUnits: g.totalUnits,
+      totalValueSgd: g.totalValueSgd,
+    })),
+    identityWarnings,
+  }
 }
 
 export default async function Portfolio() {
@@ -112,7 +129,7 @@ export default async function Portfolio() {
     const constitutionFunds = getConstitution(active.constitutionId).funds
     const targetSleeveCount = constitutionFunds.length
     const canCorrect = session.role === "admin" || session.userId === active.owner.id
-    const { holdings, totalValue, hasBalance, sleeveActual } = await getPortfolioData(active.owner.id, constitutionFunds.map((f) => f.ticker))
+    const { holdings, totalValue, hasBalance, sleeveActual, duplicates, identityWarnings } = await getPortfolioData(active.owner.id, constitutionFunds.map((f) => f.ticker))
 
     const snapshotDate = holdings[0]?.latestSnapshot
       ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
@@ -374,9 +391,11 @@ export default async function Portfolio() {
 
           {/* Owner data correction — recovery from erroneous/phantom data. Snapshots carry
               no provenance marker (see correctPositions), so the fix is owner-entered truth. */}
-          {canCorrect && hasBalance && (
+          {canCorrect && (hasBalance || duplicates.length > 0) && (
             <DataCorrectionPanel
               plainEnglish={isSbr}
+              duplicates={duplicates}
+              identityWarnings={identityWarnings}
               rows={holdings.map((h) => ({
                 holdingId: h.id,
                 ticker: h.ticker,

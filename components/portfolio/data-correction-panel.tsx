@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Wrench, Check, AlertCircle, Loader2, Eraser } from "lucide-react"
-import { correctPositions } from "@/app/portfolio/actions"
+import { Wrench, Check, AlertCircle, Loader2, Eraser, Copy } from "lucide-react"
+import { correctPositions, mergeDuplicateHoldings } from "@/app/portfolio/actions"
 
 export interface CorrectionRow {
   holdingId: string
@@ -12,9 +12,20 @@ export interface CorrectionRow {
   valueSgd: number
 }
 
+export interface DuplicateGroupSummary {
+  ticker: string
+  rows: number
+  totalUnits: number
+  totalValueSgd: number
+}
+
 interface DataCorrectionPanelProps {
   rows: CorrectionRow[]
   plainEnglish?: boolean // SBR wording
+  /** Literal same-ticker duplicate Holding rows detected server-side. */
+  duplicates?: DuplicateGroupSummary[]
+  /** Different-ticker rows sharing one instrument identity — review-only. */
+  identityWarnings?: string[]
 }
 
 const fmtS = (v: number) => `S$${Math.round(v).toLocaleString("en-SG")}`
@@ -24,14 +35,30 @@ const fmtU = (v: number) => v.toLocaleString("en-SG", { maximumFractionDigits: 4
  *  screenshot import). The owner enters the TRUE units/value per holding from the broker
  *  statement; applying writes corrective snapshots and a governance-log entry per change.
  *  Append-only — nothing is deleted. */
-export function DataCorrectionPanel({ rows, plainEnglish = false }: DataCorrectionPanelProps) {
+export function DataCorrectionPanel({ rows, plainEnglish = false, duplicates = [], identityWarnings = [] }: DataCorrectionPanelProps) {
   const [draftUnits, setDraftUnits] = useState<Record<string, string>>(
     Object.fromEntries(rows.map((r) => [r.holdingId, String(r.units)])),
   )
   const [draftValue, setDraftValue] = useState<Record<string, string>>({})
   const [step, setStep] = useState<"edit" | "review">("edit")
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [mergeDone, setMergeDone] = useState(false)
   const [pending, startTransition] = useTransition()
+
+  function handleMergeDuplicates() {
+    setMsg(null)
+    startTransition(async () => {
+      const result = await mergeDuplicateHoldings()
+      if (result.success) {
+        setMergeDone(true)
+        setMsg({ type: "success", text: plainEnglish
+          ? `Done — ${result.merged} duplicate${result.merged === 1 ? "" : "s"} tidied up. Everything is noted in the log.`
+          : `Merged ${result.merged} duplicate group${result.merged === 1 ? "" : "s"} (${result.closed} row${result.closed === 1 ? "" : "s"} closed) — each logged to the governance log.` })
+      } else {
+        setMsg({ type: "error", text: result.error ?? "Could not merge the duplicates." })
+      }
+    })
+  }
 
   const L = plainEnglish
     ? {
@@ -86,9 +113,46 @@ export function DataCorrectionPanel({ rows, plainEnglish = false }: DataCorrecti
       <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 [&::-webkit-details-marker]:hidden">
         <Wrench className="h-4 w-4 text-warning shrink-0" />
         <span className="text-sm font-semibold">{L.title}</span>
+        {duplicates.length > 0 && !mergeDone && (
+          <span className="rounded-full bg-danger/10 text-danger ring-1 ring-danger/20 px-2 py-0.5 text-[10px] font-bold">
+            {duplicates.length} duplicate{duplicates.length === 1 ? "" : "s"} detected
+          </span>
+        )}
         <span className="text-[11px] text-muted-foreground ml-auto">open ▾</span>
       </summary>
       <div className="border-t border-border p-5 space-y-4">
+        {duplicates.length > 0 && !mergeDone && (
+          <div className="rounded-lg border border-danger/30 bg-danger/[0.06] p-3 space-y-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-danger">
+              <Copy className="h-3.5 w-3.5" /> {plainEnglish ? "The same fund appears more than once" : "Duplicate holding rows detected"}
+            </p>
+            {duplicates.map((g) => (
+              <p key={g.ticker} className="text-xs tabular-nums">
+                <span className="font-bold">{g.rows} rows for {g.ticker}</span> — duplicates detected · merging keeps one row with the combined {g.totalUnits.toLocaleString("en-SG", { maximumFractionDigits: 4 })} units (S${Math.round(g.totalValueSgd).toLocaleString("en-SG")}).
+              </p>
+            ))}
+            <p className="text-[11px] text-muted-foreground">
+              {plainEnglish
+                ? "Merging keeps one entry per fund with the combined amount — nothing is lost or erased, and the change is noted in the log."
+                : "Merge keeps the canonical row (cost basis → freshest snapshot → oldest) with the group's summed units/value; the other rows are zeroed and closed. Append-only; each group is logged."}
+            </p>
+            <button
+              onClick={handleMergeDuplicates}
+              disabled={pending}
+              className="flex items-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+            >
+              {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+              {plainEnglish ? "Tidy up duplicates" : "Merge duplicates"}
+            </button>
+          </div>
+        )}
+        {identityWarnings.length > 0 && (
+          <div className="rounded-lg border border-warning/30 bg-warning/[0.06] p-3 space-y-1">
+            {identityWarnings.map((w) => (
+              <p key={w} className="text-[11px] text-warning">{w}</p>
+            ))}
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">{L.intro}</p>
 
         {step === "edit" && (

@@ -10,6 +10,7 @@ import { computePortfolioHealth } from "@/lib/health"
 import { HARD_THRESHOLDS, TICKER_TARGETS } from "@/lib/constants"
 import { computeMarketAwareDca, applyEconomicSleeves, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
 import { economicSleeveTicker } from "@/lib/instrument-identity"
+import { foldDuplicateHoldings } from "@/lib/holding-duplicates"
 import { computeLadder } from "@/lib/ladder"
 import { getLiveMarketPositions } from "@/lib/finnhub"
 import { computeLookThrough, worstLookThroughBreach, worstLookThroughApproach, largestContributor } from "@/lib/look-through"
@@ -48,7 +49,7 @@ const DEFAULT_RISK_FREE_RATE = 0.04
 type ActionStatus = "healthy" | "soft" | "hard"
 
 async function getDashboardData(userId: string) {
-  const [user, holdings, usdSgdRate, trades, cashBank] = await Promise.all([
+  const [user, rawHoldings, usdSgdRate, trades, cashBank] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.holding.findMany({
       where: { userId },
@@ -58,6 +59,10 @@ async function getDashboardData(userId: string) {
     db.trade.findMany({ where: { userId }, orderBy: { date: "asc" } }),
     db.dcaCashBank.findUnique({ where: { userId_constitutionId_currency: { userId, constitutionId: "atlas-core", currency: "SGD" } } }),
   ])
+
+  // Duplicate same-ticker rows fold into one canonical row (units/value summed) so the
+  // cockpit can't render colliding rows or double sleeves — see lib/holding-duplicates.ts.
+  const holdings = foldDuplicateHoldings(rawHoldings)
 
   // Weighted-average cost basis per ticker from trades
   const avgCost: Record<string, { units: number; sgd: number; usd: number }> = {}
