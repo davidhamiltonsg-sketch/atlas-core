@@ -566,11 +566,16 @@ type ExtractResult =
 
 // Holdings import: extract holdings data from an IBKR screenshot (Claude vision) or a
 // PDF statement (Claude document reading) — same prompt, same downstream guards.
-export async function extractFromScreenshot(
-  imageBase64: string,
+// The payload must be a single object, not positional string args: React's server-action
+// decoder budgets string length against a 1M-slot array limit when strings sit directly in
+// the (multi-element) argument array, so a base64 PDF as a bare argument throws
+// "Maximum array nesting exceeded". Object properties are exempt from that counter.
+export async function extractFromScreenshot(payload: {
+  imageBase64: string
   mimeType: string
-): Promise<ExtractResult> {
+}): Promise<ExtractResult> {
   try {
+    const { imageBase64, mimeType } = payload
     const session = await getSession()
     if (!session) return { success: false, error: "Not authenticated" }
 
