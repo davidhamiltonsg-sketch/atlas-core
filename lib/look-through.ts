@@ -12,7 +12,7 @@
 // approximations that drift as funds rebalance; they feed the §4 look-through caps (the
 // "highest law"), so a staleness signal matters. Update this date whenever the weights are
 // refreshed from the latest fact sheets. Consumed by lookThroughWeightsAgeDays() below.
-export const ETF_WEIGHTS_AS_OF = "2026-06-30"
+export const ETF_WEIGHTS_AS_OF = "2026-07-16"
 
 /** Age (days) of the ETF weight tables relative to `now`, and whether they are stale
  *  (older than `staleAfterDays`, default one quarter). Lets the UI flag §4 exposure as
@@ -25,63 +25,45 @@ export function lookThroughWeightsAge(now: Date, staleAfterDays = LOOKTHROUGH_ST
 }
 
 // Approximate % of each ETF made up by each mega-cap (fund fact-sheet level).
+// GOVERNED FUNDS ONLY (plus the EQQQ/SEMI legacy aliases of EQAC/SMH). A ticker
+// missing from these tables lands in unclassifiedPct with an explicit warning —
+// that is the correct behaviour for non-governed strays, not a silent zero.
+// Baselines refreshed 2026-07-16 from: Vanguard VWRA fact sheet (31 May 2026),
+// Invesco EQQQ holdings (Q2 2026), VanEck SMH holdings (July 2026). The daily
+// cron's Yahoo refresh (lib/look-through-refresh.ts) supersedes these at runtime.
 export const ETF_COMPANY_WEIGHTS: Record<string, Record<string, number>> = {
-  IMID: { Nvidia: 4.3, Microsoft: 3.7, Apple: 4.0, Amazon: 2.4, Meta: 1.6, Alphabet: 2.1, Broadcom: 1.1, TSMC: 1.0 },
-  EQAC: { Nvidia: 8.0, Microsoft: 7.8, Apple: 8.5, Amazon: 5.5, Meta: 4.5, Alphabet: 5.0, Broadcom: 4.8, TSMC: 0.0 },
-  IWQU: { Nvidia: 5.2, Microsoft: 4.8, Apple: 4.2, Amazon: 2.4, Meta: 2.1, Alphabet: 3.5, Broadcom: 1.3, TSMC: 0.0 },
-  DTLA: {},
-  VT:   { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
-  VWRA: { Nvidia: 2.5, Microsoft: 3.0, Apple: 3.0, Amazon: 2.2, Meta: 1.4, Alphabet: 1.8, Broadcom: 0.9, TSMC: 0.8 },
-  QQQM: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
-  EQQQ: { Nvidia: 7.0, Microsoft: 8.5, Apple: 9.0, Amazon: 5.5, Meta: 4.5, Alphabet: 4.0, Broadcom: 3.5, TSMC: 0.0 },
-  SMH:  { Nvidia: 20.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 8.0, TSMC: 12.0 },
-  SEMI: { Nvidia: 20.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 8.0, TSMC: 12.0 },
-  VWO:  { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
-  VFEA: { Nvidia: 0.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 0.0, TSMC: 7.0 },
+  VWRA: { Nvidia: 4.7, Microsoft: 3.2, Apple: 4.3, Amazon: 2.5, Meta: 1.5, Alphabet: 2.1, Broadcom: 1.5, TSMC: 1.2 },
+  EQAC: { Nvidia: 8.6, Microsoft: 5.4, Apple: 7.4, Amazon: 5.0, Meta: 3.4, Alphabet: 4.8, Broadcom: 4.6, TSMC: 0.0 },
+  EQQQ: { Nvidia: 8.6, Microsoft: 5.4, Apple: 7.4, Amazon: 5.0, Meta: 3.4, Alphabet: 4.8, Broadcom: 4.6, TSMC: 0.0 },
+  SMH:  { Nvidia: 19.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 5.6, TSMC: 9.4 },
+  SEMI: { Nvidia: 19.0, Microsoft: 0.0, Apple: 0.0, Amazon: 0.0, Meta: 0.0, Alphabet: 0.0, Broadcom: 5.6, TSMC: 9.4 },
   BTC:  {},
   DBMFE: {},
   IBIT: {},
-  SGOV: {},
 }
 
 // Approximate sector / geography make-up of each ETF (% of the ETF).
 export const ETF_SECTOR_WEIGHTS: Record<string, { semiconductor: number; digital: number; us: number; ai: number }> = {
-  IMID: { semiconductor: 10, digital: 30.5, us: 62.8, ai: 15 },
-  EQAC: { semiconductor: 30, digital: 60, us: 97, ai: 35 },
-  IWQU: { semiconductor: 8, digital: 30, us: 70, ai: 15 },
-  DTLA: { semiconductor: 0, digital: 0, us: 100, ai: 0 },
-  VT:   { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
-  VWRA: { semiconductor: 8,   digital: 35, us: 62,  ai: 15 },
-  QQQM: { semiconductor: 13,  digital: 65, us: 100, ai: 35 },
-  EQQQ: { semiconductor: 13,  digital: 65, us: 100, ai: 35 },
-  SMH:  { semiconductor: 100, digital: 90, us: 75,  ai: 70 },
-  SEMI: { semiconductor: 100, digital: 90, us: 75,  ai: 70 },
-  VWO:  { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
-  VFEA: { semiconductor: 12,  digital: 30, us: 0,   ai: 10 },
+  VWRA: { semiconductor: 10,  digital: 37, us: 63,  ai: 18 },
+  EQAC: { semiconductor: 32,  digital: 62, us: 97,  ai: 35 },
+  EQQQ: { semiconductor: 32,  digital: 62, us: 97,  ai: 35 },
+  SMH:  { semiconductor: 100, digital: 90, us: 66,  ai: 70 },
+  SEMI: { semiconductor: 100, digital: 90, us: 66,  ai: 70 },
   BTC:  { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
   DBMFE:{ semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
   IBIT: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
-  SGOV: { semiconductor: 0,   digital: 0,  us: 0,   ai: 0 },
 }
 
 // Geographic make-up of each ETF (% of the ETF): US / Intl-Developed / Emerging / Crypto.
 export const ETF_GEO_WEIGHTS: Record<string, { us: number; intlDev: number; emerging: number; crypto: number }> = {
-  IMID: { us: 62.8, intlDev: 29.2, emerging: 8, crypto: 0 },
-  EQAC: { us: 97, intlDev: 3, emerging: 0, crypto: 0 },
-  IWQU: { us: 70, intlDev: 30, emerging: 0, crypto: 0 },
-  DTLA: { us: 100, intlDev: 0, emerging: 0, crypto: 0 },
-  VT:   { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
-  VWRA: { us: 62,  intlDev: 30, emerging: 8,   crypto: 0 },
-  QQQM: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
-  EQQQ: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
-  SMH:  { us: 75,  intlDev: 13, emerging: 12,  crypto: 0 },
-  SEMI: { us: 75,  intlDev: 13, emerging: 12,  crypto: 0 },
-  VWO:  { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
-  VFEA: { us: 0,   intlDev: 0,  emerging: 100, crypto: 0 },
+  VWRA: { us: 63,  intlDev: 28, emerging: 9,   crypto: 0 },
+  EQAC: { us: 97,  intlDev: 3,  emerging: 0,   crypto: 0 },
+  EQQQ: { us: 97,  intlDev: 3,  emerging: 0,   crypto: 0 },
+  SMH:  { us: 66,  intlDev: 20, emerging: 14,  crypto: 0 },
+  SEMI: { us: 66,  intlDev: 20, emerging: 14,  crypto: 0 },
   BTC:  { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
   DBMFE:{ us: 0,   intlDev: 0,  emerging: 0,   crypto: 0 },
   IBIT: { us: 0,   intlDev: 0,  emerging: 0,   crypto: 100 },
-  SGOV: { us: 100, intlDev: 0,  emerging: 0,   crypto: 0 },
 }
 
 // Caps as written in the Governance Document (§4). Whole-number percent of NAV.
@@ -199,7 +181,7 @@ export function computeLookThrough(
   }).sort((a, b) => b.pct - a.pct)
   const geoLabels:Record<string,string>={us:"United States",intlDev:"International developed",emerging:"Emerging markets",crypto:"Global / Bitcoin"}
   const geographies=Object.keys(geoLabels).map(key=>({key,label:geoLabels[key],pct:geoTotals[key]??0,soft:key==="us"?70:100,hard:key==="us"?75:100,status:statusFor(geoTotals[key]??0,key==="us"?70:100,key==="us"?75:100),contributors:geoContributors[key]??[]})).sort((a,b)=>b.pct-a.pct)
-  const assetDefs=[{key:"equity",label:"Equity",tickers:new Set(["VWRA","IMID","EQAC","IWQU","SMH","VT","QQQM","EQQQ","SEMI","VWO","VFEA"])},{key:"managed",label:"Managed futures",tickers:new Set(["DBMFE"])},{key:"crypto",label:"Bitcoin",tickers:new Set(["BTC","IBIT"])},{key:"unclassified",label:"Unclassified",tickers:new Set<string>()}]
+  const assetDefs=[{key:"equity",label:"Equity",tickers:new Set(["VWRA","EQAC","EQQQ","SMH","SEMI"])},{key:"managed",label:"Managed futures",tickers:new Set(["DBMFE"])},{key:"crypto",label:"Bitcoin",tickers:new Set(["BTC","IBIT"])},{key:"unclassified",label:"Unclassified",tickers:new Set<string>()}]
   const assets=assetDefs.map(def=>{const rows=positions.filter(p=>def.key==="unclassified"?!assetDefs.slice(0,3).some(x=>x.tickers.has(p.ticker.toUpperCase())):def.tickers.has(p.ticker.toUpperCase())).map(p=>({ticker:p.ticker.toUpperCase(),portfolioWeightPct:p.actualPct,underlyingWeightPct:100,contributionPct:p.actualPct}));const pct=rows.reduce((s,r)=>s+r.contributionPct,0);return {key:def.key,label:def.label,pct,soft:100,hard:100,status:"ok" as CapStatus,contributors:rows}})
 
   const oldest = requiredDates.length ? new Date(Math.min(...requiredDates.map(d => d.getTime()))) : now
