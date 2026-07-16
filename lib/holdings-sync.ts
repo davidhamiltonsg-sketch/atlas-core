@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
 import { CORE_TICKERS } from "@/lib/approved-alternatives"
-import { fetchFlexPositions, fetchFlexActivity, isForexRow } from "@/lib/ibkr-flex"
+import { fetchFlexPositions, fetchFlexActivity, isForexRow, type FlexPosition } from "@/lib/ibkr-flex"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD } from "@/lib/constitutions"
 import { CORE_DEFAULTS } from "@/lib/core-holdings"
 import { instrumentIdentity } from "@/lib/instrument-identity"
@@ -156,10 +156,53 @@ async function brokerPortfolioOwners(){
 }
 
 /**
+ * Given an already-fetched (or already-parsed, e.g. from an emailed Flex report) set of
+ * open positions, write them into one user's holdings. Idempotent (one snapshot per
+ * holding per day, via upsertSnapshotToday). A complete open-position report is
+ * authoritative: a previously open holding absent from it is closed at zero so stale
+ * snapshots cannot inflate NAV after a full sale. Only matched tickers are updated; this
+ * never creates or removes holdings. Returns the number of snapshots written.
+ *
+ * Factored out of syncIbkrSnapshotsAllUsers so both the polling cron AND the Flex
+ * email-delivery webhook (app/api/webhooks/ibkr-flex-email) share one persistence path —
+ * the webhook has no SendRequest/GetStatement round trip to make, it already has the XML.
+ */
+export async function applyFlexPositionsForUser(userId: string, positions: FlexPosition[]): Promise<number> {
+  let snapshots = 0
+  const identified = positions.map((p) => ({ p, identity: instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid }) }))
+  const bySymbol = new Map(identified.flatMap((x) => [[x.identity.ticker, x], [x.identity.displayTicker, x]]))
+  const holdings = await db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 1 } } })
+  const matchedHoldingIds = new Set<string>()
+  for (const h of holdings) {
+    const matched = bySymbol.get(h.ticker.toUpperCase())
+    if (!matched) continue
+    const { p: pos, identity } = matched
+    matchedHoldingIds.add(h.id)
+    await db.holding.update({ where: { id: h.id }, data: {
+      displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
+      isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
+      instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US", "GBTC"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",
+    } })
+    await upsertSnapshotToday(h.id, {
+      units: pos.units, price: pos.markPrice, value: pos.positionValue,
+      costBasis: pos.costBasis, unrealizedPnl: pos.unrealizedPnl,
+    })
+    snapshots++
+  }
+  for (const h of holdings) {
+    if (!matchedHoldingIds.has(h.id) && (h.snapshots[0]?.units ?? 0) > 0) {
+      await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0, costBasis: 0, unrealizedPnl: 0 })
+      await db.holding.update({ where: { id: h.id }, data: { instrumentStatus: "CLOSED" } })
+      snapshots++
+    }
+  }
+  return snapshots
+}
+
+/**
  * Automated snapshot refresh from IBKR Flex — for the scheduled cron, so the portfolio
- * never silently ages when the owner forgets to update it manually. Writes at most one
- * snapshot per holding per day (upsert). No-op (ok:false) when IBKR isn't configured.
- * Only matched tickers are updated; it never creates or removes holdings.
+ * never silently ages when the owner forgets to update it manually. No-op (ok:false)
+ * when IBKR isn't configured.
  */
 export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
   const users = await brokerPortfolioOwners()
@@ -182,29 +225,7 @@ export async function syncIbkrSnapshotsAllUsers(): Promise<IbkrSyncResult> {
       errors.push(`${isSbr ? "SBR" : "Atlas"}: ${result.error}`)
       continue
     }
-    const identified = result.positions.map((p) => ({ p, identity: instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid }) }))
-    const bySymbol = new Map(identified.flatMap((x) => [[x.identity.ticker, x], [x.identity.displayTicker, x]]))
-    const holdings = await db.holding.findMany({ where: { userId: u.id },include:{snapshots:{orderBy:{date:"desc"},take:1}} })
-    const matchedHoldingIds=new Set<string>()
-    for (const h of holdings) {
-      const matched = bySymbol.get(h.ticker.toUpperCase())
-      if (!matched) continue
-      const { p: pos, identity } = matched
-      matchedHoldingIds.add(h.id)
-      await db.holding.update({ where: { id: h.id }, data: {
-        displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
-        isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
-        instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US", "GBTC"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",
-      } })
-      await upsertSnapshotToday(h.id, {
-        units: pos.units, price: pos.markPrice, value: pos.positionValue,
-        costBasis: pos.costBasis, unrealizedPnl: pos.unrealizedPnl,
-      })
-      snapshots++
-    }
-    // A complete open-position report is authoritative. A previously open holding absent
-    // from it is closed at zero so stale snapshots cannot inflate NAV after a full sale.
-    for(const h of holdings){if(!matchedHoldingIds.has(h.id)&&(h.snapshots[0]?.units??0)>0){await upsertSnapshotToday(h.id,{units:0,price:0,value:0,costBasis:0,unrealizedPnl:0});await db.holding.update({where:{id:h.id},data:{instrumentStatus:"CLOSED"}});snapshots++}}
+    snapshots += await applyFlexPositionsForUser(u.id, result.positions)
     usersSynced++
   }
   if (usersSynced === 0) return { ok: false, reason: errors.join("; ") || "IBKR not configured", users: 0, snapshots: 0 }
