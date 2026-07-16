@@ -12,6 +12,7 @@ import { SBR_SPEC, ATLAS_SPEC } from "@/lib/portfolio-spec"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
 import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { GOVERNANCE_UNIVERSE } from "@/lib/approved-alternatives"
+import { valueConsistentPrice } from "@/lib/unit-price"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -159,7 +160,9 @@ export async function applyExtractedHoldings(
     // units × price × USDSGD is only correct for USD-quoted lines — DBMFE is EUR-quoted and
     // LSE lines can print in GBp. The vision extractor reads the account-base (SGD) value
     // column directly; prefer it when present and sane (already folded into newValue).
-    await upsertSnapshotToday(holding.id, { units: c.units, price: c.price, value: c.newValue })
+    // Value is authoritative SGD; a misread OCR price (e.g. an SGD-converted column)
+    // must not be stored as-is next to it — see lib/unit-price.ts.
+    await upsertSnapshotToday(holding.id, { units: c.units, price: valueConsistentPrice(c.units, c.price, c.newValue, usdSgdRate), value: c.newValue })
     updated++
   }
 
@@ -405,8 +408,10 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
     if (pos) {
       // Brokerage truth — update units AND price together.
       units = pos.units
-      price = pos.markPrice
       value = pos.positionValue > 0 ? pos.positionValue : pos.units * pos.markPrice * usdSgdRate
+      // IBKR's positionValue (SGD base) is authoritative; keep the stored price consistent
+      // with it (a stray mark in the wrong currency would otherwise contradict the value).
+      price = valueConsistentPrice(units, pos.markPrice, value, usdSgdRate)
       if (!latest || Math.abs((latest.units ?? 0) - units) > 1e-6) unitsUpdated++
     } else if (yh && latest) {
       // Yahoo price-only — carry units forward (no brokerage data for this holding).
@@ -516,9 +521,10 @@ export async function extractFromScreenshot(
 For each holding visible, return a JSON array with objects containing:
 - ticker: the stock/ETF ticker symbol (string)
 - units: number of shares/units held (number)
-- price: current price per unit in the trading currency shown (number)
-- value: total market value in SGD (number, as shown in the account base currency)
+- price: current price per unit in the fund's own TRADING currency (USD/EUR/GBp), never a converted figure (number)
+- value: total market value in SGD — the account BASE-currency column. This is the authoritative field; read it directly from the screenshot, do not compute it (number)
 
+If the screenshot only shows SGD-converted per-unit prices (no trading-currency column), still return the SGD market value in "value" and put the SGD per-unit figure in "price" — the app reconciles price against value and treats value as truth.
 Only include ETF/stock holdings, not cash. Return ONLY a valid JSON array, no explanation.
 Example: [{"ticker":"VWRA","units":428,"price":142.52,"value":61038.56}]`,
             },

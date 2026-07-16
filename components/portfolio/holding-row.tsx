@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, XCircle, CheckCircle2, Pencil, Check, X, Trash2 } from "lucide-react"
 import { updateHoldingsManually, removeErroneousPosition } from "@/app/portfolio/actions"
 import { Sparkline } from "@/components/charts/sparkline"
+import { sgdUnitPrice } from "@/lib/unit-price"
 
 interface HoldingRowProps {
   holding: {
@@ -112,9 +113,9 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       {/* Value — editable when in edit mode */}
       {editing ? (
         <div className="hidden md:flex flex-col gap-1">
-          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">USD preview</label>
+          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Preview (fund currency)</label>
           <span className="text-xs font-semibold tabular-nums text-primary">
-            ${liveValue > 0 ? liveValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+            {liveValue > 0 ? liveValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
           </span>
         </div>
       ) : (
@@ -128,11 +129,22 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
               {h.unrealisedPct !== null && h.unrealisedPct !== undefined && ` (${h.unrealisedPct >= 0 ? "+" : ""}${h.unrealisedPct.toFixed(1)}%)`}
             </span>
           )}
-          {h.avgCostUsd !== null && h.avgCostUsd !== undefined && h.latestSnapshot?.price && (
-            <span className="text-[9px] text-muted-foreground tabular-nums">
-              avg ${h.avgCostUsd.toFixed(2)} · now ${h.latestSnapshot.price.toFixed(2)}
-            </span>
-          )}
+          {(() => {
+            // Derive, don't trust: Snapshot.price has no currency guarantee (lib/unit-price.ts),
+            // so the displayed per-unit figures come from the SGD value of the same snapshot.
+            const units = h.latestSnapshot?.units ?? 0
+            const nowSgd = sgdUnitPrice(units, h.value)
+            if (nowSgd === null) return null
+            const avgSgd = h.unrealisedSgd !== null && h.unrealisedSgd !== undefined && units > 0 ? (h.value - h.unrealisedSgd) / units : null
+            const avgLabel = avgSgd !== null
+              ? `avg S$${avgSgd.toFixed(2)} · `
+              : h.avgCostUsd !== null && h.avgCostUsd !== undefined ? `avg ${h.avgCostUsd.toFixed(2)} (fund ccy) · ` : ""
+            return (
+              <span className="text-[9px] text-muted-foreground tabular-nums">
+                {avgLabel}now S${nowSgd.toFixed(2)}
+              </span>
+            )
+          })()}
         </div>
       )}
 
@@ -161,7 +173,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
               />
             </div>
             <div className="flex flex-col gap-0.5">
-              <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Price $</label>
+              <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Price (fund ccy)</label>
               <input
                 type="number"
                 value={price}
@@ -265,7 +277,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
       {/* Mobile row */}
       <div className="col-span-2 grid grid-cols-2 gap-2 md:hidden text-xs mt-2">
         <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Market value</span><strong>S${h.value.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Units · price</span><strong>{h.latestSnapshot?.units?.toLocaleString("en-SG") ?? "—"} · ${h.latestSnapshot?.price?.toFixed(2) ?? "—"}</strong></div>
+        <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Units · price</span><strong>{h.latestSnapshot?.units?.toLocaleString("en-SG") ?? "—"} · {(() => { const p = sgdUnitPrice(h.latestSnapshot?.units, h.value); return p !== null ? `S$${p.toFixed(2)}` : h.latestSnapshot?.price ? `${h.latestSnapshot.price.toFixed(2)} (fund ccy)` : "—" })()}</strong></div>
         <div><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Target</span><strong>{h.legacy ? "—" : `${h.targetPct.toFixed(1)}%`}</strong></div>
         <div className="flex items-center justify-between gap-2">
           <span className={`font-bold ${h.legacy ? "text-muted-foreground" : driftColor}`}>
@@ -288,7 +300,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
                 step="0.01" min="0" />
             </div>
             <div className="flex flex-col gap-0.5">
-              <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Price $</label>
+              <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Price (fund ccy)</label>
               <input type="number" value={price} onChange={e => setPrice(e.target.value)}
                 className="h-11 w-32 rounded border border-border bg-card px-2 text-base tabular-nums"
                 step="0.01" min="0" />
@@ -306,7 +318,7 @@ export function HoldingRow({ holding: h }: HoldingRowProps) {
           </div>
           {liveValue > 0 && (
             <p className="text-[11px] text-primary mt-1.5">
-              Preview value: ${liveValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              Preview value: {liveValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (fund currency)
             </p>
           )}
         </div>
