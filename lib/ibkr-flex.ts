@@ -261,8 +261,8 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
     let referenceCode: string | undefined
     let getUrl = `${FLEX_BASE}.GetStatement`
     let lastSendXml = ""
-    for (let sendAttempt = 0; sendAttempt < 2; sendAttempt++) {
-      if (sendAttempt > 0) await sleep(6000)
+    for (let sendAttempt = 0; sendAttempt < 3; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(sendAttempt === 1 ? 5000 : 12000)
       const sendRes = await fetch(sendUrl, { cache: "no-store" })
       if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
       lastSendXml = await sendRes.text()
@@ -292,7 +292,7 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
         const errorCode = sendXml.match(/<ErrorCode>([^<]+)<\/ErrorCode>/)?.[1] ?? ""
         return {
           success: false,
-          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError} This is usually temporary on IBKR's side — wait a few minutes before trying again (tapping repeatedly extends the wait).`,
+          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError} IBKR's report engine is busiest from US market close until late evening New York time — try again in a few minutes, or after 6 AM New York / 6 PM Singapore when statements are reliably ready. Tapping repeatedly extends the wait.`,
         }
       }
       return { success: false, error: `IBKR: ${ibkrError}` }
@@ -337,8 +337,8 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
     let referenceCode: string | undefined
     let getUrl = `${FLEX_BASE}.GetStatement`
     let sendXml = ""
-    for (let sendAttempt = 0; sendAttempt < 2; sendAttempt++) {
-      if (sendAttempt > 0) await sleep(6000)
+    for (let sendAttempt = 0; sendAttempt < 3; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(sendAttempt === 1 ? 5000 : 12000)
       const sendRes = await fetch(sendUrl, { cache: "no-store" })
       if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
       sendXml = await sendRes.text()
@@ -359,7 +359,7 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
       console.error("[ibkr-flex] fetchFlexPositions no referenceCode after retry. Raw XML (600):", sendXml.slice(0, 600))
       const ibkrError = extractError(sendXml)
       if (RETRYABLE.some((s) => sendXml.includes(s))) {
-        return { success: false, error: `IBKR: ${ibkrError} This is usually temporary on IBKR's side — wait a few minutes before trying again (tapping repeatedly extends the wait).` }
+        return { success: false, error: `IBKR: ${ibkrError} IBKR's report engine is busiest from US market close until late evening New York time — try again in a few minutes, or after 6 AM New York / 6 PM Singapore when statements are reliably ready. Tapping repeatedly extends the wait.` }
       }
       return { success: false, error: `IBKR: ${ibkrError}` }
     }
