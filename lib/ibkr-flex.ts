@@ -85,7 +85,9 @@ export function isForexRow(symbol: string, assetCategory?: string): boolean {
   return FOREX_SYMBOL.test(symbol.trim().toUpperCase())
 }
 
-// Exported for __tests__/ibkr-flex-parse.test.ts only — not part of the module's public API.
+// Exported for __tests__/ibkr-flex-parse.test.ts AND the Flex email-delivery webhook
+// (which already has the raw XML from IBKR's scheduled delivery — no SendRequest/
+// GetStatement round trip needed, just this parse step).
 export function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: string; reportDate: string } {
   // A query configured with Open Positions "Summary, Lot" emits BOTH a SUMMARY row and one
   // row per tax lot for the same position. Counting every row double- (or N-times-) counts
@@ -196,7 +198,10 @@ function classifyCashType(type: string, description: string, amount: number): Fl
   return "OTHER"
 }
 
-function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividends: FlexDividend[]; ledger: FlexLedgerEntry[]; accountId: string } {
+// Exported so both fetchFlexActivity (SendRequest/GetStatement path) and the Flex
+// email-delivery webhook (which already has the raw XML, no round trip needed) share
+// one parser.
+export function parseFlexActivity(xml: string): { executions: FlexExecution[]; dividends: FlexDividend[]; ledger: FlexLedgerEntry[]; accountId: string } {
   const executions: FlexExecution[] = []
   const dividends: FlexDividend[] = []
   const ledger: FlexLedgerEntry[] = []
