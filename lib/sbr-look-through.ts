@@ -1,6 +1,9 @@
-// SBR v3.2 look-through. These fund-level coefficients are planning estimates and must
+// SBR look-through. These fund-level coefficients are planning estimates and must
 // carry an as-of date; actual portfolio weights always come from the owner account.
-export const SBR_WEIGHTS_AS_OF = "2026-06-30"
+// Governed funds only (VWRA/EQAC/SMH/BTC/DBMFE/A35). Baselines refreshed 2026-07-16
+// from the same fact sheets as lib/look-through.ts; the daily Yahoo refresh
+// (lib/look-through-refresh.ts) supersedes them at runtime for the equity funds.
+export const SBR_WEIGHTS_AS_OF = "2026-07-16"
 export const SBR_TECHNOLOGY_LIMIT = 50
 export const SBR_TECHNOLOGY_WATCH = 45
 export const SBR_SEMICONDUCTOR_LIMIT = 30
@@ -13,34 +16,32 @@ export const SBR_FRESH_DAYS = 35
 export const SBR_STALE_DAYS = 75
 
 const INDUSTRIES: Record<string, Record<string, number>> = {
-  IMID: { Technology: 30.5, Financials: 16, Industrials: 11, Consumer: 15, Healthcare: 10, Other: 17.5 },
-  EQAC: { Technology: 60, Communication: 12, Consumer: 13, Healthcare: 5, Industrials: 4, Other: 6 },
+  EQAC: { Technology: 62, Communication: 12, Consumer: 12, Healthcare: 4, Industrials: 4, Other: 6 },
   SMH: { Semiconductors: 100 },
-  IB01: { "Sovereign bills": 100 },
-  VWRA: { Technology: 25, Financials: 16, Industrials: 11, Consumer: 16, Healthcare: 10, Other: 22 },
+  VWRA: { Technology: 27, Financials: 16, Industrials: 11, Consumer: 15, Healthcare: 9, Other: 22 },
   BTC: { Crypto: 100 },
   DBMFE: { "Managed futures": 100 },
+  A35: { "Singapore government bonds": 100 },
 }
 const COUNTRIES: Record<string, Record<string, number>> = {
-  IMID: { "United States": 62.8, Japan: 6, "United Kingdom": 4, China: 3, Canada: 3, Taiwan: 2, Other: 19.2 },
   EQAC: { "United States": 97, Other: 3 },
-  SMH: { "United States": 65, Taiwan: 18, Netherlands: 12, Other: 5 },
-  IB01: { "United States": 100 },
-  VWRA: { "United States": 62, Japan: 6, "United Kingdom": 4, China: 3, Canada: 3, Other: 22 },
+  SMH: { "United States": 66, Taiwan: 14, Netherlands: 12, Other: 8 },
+  VWRA: { "United States": 63, Japan: 6, "United Kingdom": 3.5, China: 3, Canada: 3, Other: 21.5 },
   BTC: { Global: 100 },
   DBMFE: { Global: 100 },
+  A35: { Singapore: 100 },
 }
 const COMPANIES: Record<string, Record<string, number>> = {
-  IMID: { Nvidia: 4.3, Apple: 4.0, Microsoft: 3.7, Amazon: 2.4, Alphabet: 2.1, Meta: 1.6, Broadcom: 1.1, TSMC: 1.0 },
-  EQAC: { Nvidia: 8.0, Apple: 8.5, Microsoft: 7.8, Amazon: 5.5, Alphabet: 5.0, Meta: 4.5, Broadcom: 4.8 },
-  SMH: { Nvidia: 19, Broadcom: 9, TSMC: 12, ASML: 8, AMD: 6 },
-  VWRA: { Nvidia: 2.5, Apple: 3.0, Microsoft: 3.0, Amazon: 2.2, Alphabet: 1.8, Meta: 1.4, Broadcom: 0.9, TSMC: 0.8 },
+  EQAC: { Nvidia: 8.6, Apple: 7.4, Microsoft: 5.4, Amazon: 5.0, Alphabet: 4.8, Broadcom: 4.6, Meta: 3.4 },
+  SMH: { Nvidia: 19, TSMC: 9.4, ASML: 7, Broadcom: 5.6, AMD: 5.6 },
+  VWRA: { Nvidia: 4.7, Apple: 4.3, Microsoft: 3.2, Amazon: 2.5, Alphabet: 2.1, Meta: 1.5, Broadcom: 1.5, TSMC: 1.2 },
 }
 const ASSETS: Record<string, Record<string, number>> = {
-  IMID: { Equity: 100 }, EQAC: { Equity: 100 }, SMH: { Equity: 100 }, IB01: { "Treasury bills": 100 },
+  EQAC: { Equity: 100 }, SMH: { Equity: 100 },
   VWRA: { Equity: 100 }, BTC: { Crypto: 100 }, DBMFE: { "Managed futures": 100 },
+  A35: { "SGD government bonds": 100 },
 }
-const SEMICONDUCTORS: Record<string, number> = { IMID: 10, EQAC: 30, SMH: 100, IB01: 0, VWRA: 8, BTC: 0, DBMFE: 0 }
+const SEMICONDUCTORS: Record<string, number> = { EQAC: 32, SMH: 100, VWRA: 10, BTC: 0, DBMFE: 0, A35: 0 }
 
 export interface ExposureLine { name: string; pct: number; contributors?: Array<{ticker:string;portfolioWeightPct:number;underlyingWeightPct:number;contributionPct:number}> }
 export interface SbrLookThrough {
@@ -87,6 +88,10 @@ export function computeSbrLookThrough(positions: Array<{ ticker: string; actualP
   const invested = positions.filter((p) => p.actualPct > 0)
   const companyTable={...COMPANIES},countryTable={...COUNTRIES},industryTable={...INDUSTRIES}
   for(const [ticker,row] of Object.entries(refreshedWeights??{})){
+    // A35's mandate is fixed (iBoxx ABF Singapore Bond Index). The refreshed rows use the
+    // Atlas geo schema, which would relabel Singapore as generic "International developed";
+    // the static Singapore/SGD-bond rows are more truthful, so never override them.
+    if(ticker==="A35")continue
     if(row.companyWeights)companyTable[ticker]=row.companyWeights
     if(row.geoWeights){const g=row.geoWeights;countryTable[ticker]={"United States":g.us??0,"International developed":g.intlDev??0,"Emerging markets":g.emerging??0,"Global / crypto":g.crypto??0}}
     if(row.sectorWeights){const s=row.sectorWeights;industryTable[ticker]={Technology:s.digital??0,Semiconductors:s.semiconductor??0,"Other / overlapping themes":Math.max(0,100-(s.digital??0))}}

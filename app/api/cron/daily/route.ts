@@ -4,6 +4,7 @@ import { buildGovernanceDigest } from "@/lib/governance-digest"
 import { buildSbrDigest } from "@/lib/sbr-digest"
 import { constitutionIdForEmail } from "@/lib/constitutions"
 import { authorizeCron } from "@/lib/cron-auth"
+import { refreshEtfLookThrough } from "@/lib/look-through-refresh"
 import {
   sendGovernanceDigestEmail,
   sendSbrDigestEmail,
@@ -26,6 +27,17 @@ export const dynamic = "force-dynamic"
 export async function GET(req: Request) {
   const authError = authorizeCron(req)
   if (authError) return authError
+
+  // Live look-through refresh BEFORE the digests, so today's §4 concentration
+  // estimates are computed from the funds' current compositions, not last
+  // quarter's fact sheets. Failure is non-fatal: the digests fall back to the
+  // most recent stored weights and the freshness logic flags the age.
+  let lookThrough: { updated: string[]; errors: string[] } | { error: string }
+  try {
+    lookThrough = await refreshEtfLookThrough()
+  } catch (e) {
+    lookThrough = { error: e instanceof Error ? e.message : "look-through refresh failed" }
+  }
 
   const users = await db.user.findMany({ select: { id: true, email: true } })
   const results: Array<{
@@ -115,5 +127,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ran: true, at: new Date().toISOString(), results })
+  return NextResponse.json({ ran: true, at: new Date().toISOString(), lookThrough, results })
 }
