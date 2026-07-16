@@ -564,7 +564,8 @@ type ExtractResult =
   | { success: true; data: Array<{ ticker: string; units: number; price: number; value: number }> }
   | { success: false; error: string }
 
-// Screenshot OCR: extract holdings data from an IBKR screenshot using Claude vision
+// Holdings import: extract holdings data from an IBKR screenshot (Claude vision) or a
+// PDF statement (Claude document reading) — same prompt, same downstream guards.
 export async function extractFromScreenshot(
   imageBase64: string,
   mimeType: string
@@ -578,6 +579,18 @@ export async function extractFromScreenshot(
 
     const client = new Anthropic({ apiKey })
 
+    const mediaBlock =
+      mimeType === "application/pdf"
+        ? ({ type: "document", source: { type: "base64", media_type: "application/pdf", data: imageBase64 } } as const)
+        : ({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+              data: imageBase64,
+            },
+          } as const)
+
     const message = await client.messages.create({
       model: "claude-opus-4-8",
       max_tokens: 1024,
@@ -585,17 +598,10 @@ export async function extractFromScreenshot(
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data: imageBase64,
-              },
-            },
+            mediaBlock,
             {
               type: "text",
-              text: `This is a brokerage (IBKR) portfolio screenshot. Extract the holdings data.
+              text: `This is a brokerage (IBKR) portfolio screenshot or account-statement PDF. Extract the holdings data (for a PDF, use the open/current positions section — ignore trade history and closed positions).
 
 For each holding visible, return a JSON array with objects containing:
 - ticker: the stock/ETF ticker symbol (string)
