@@ -8,6 +8,7 @@ import { ForecastChartPanel, type ExtendedForecastPoint, type MilestoneMarker } 
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { constitutionIdForEmail, SILICON_BRICK_ROAD as SBR } from "@/lib/constitutions"
 import { ASSET_EXPECTED_RETURNS, FORECAST_BENCHMARKS_AS_OF, blendedGrowthRates, projectPortfolio, toReal, coneProjection, effectiveMonthlyRate, yearsToHorizon } from "@/lib/forecast"
+import { vestExtraContributionsForUser } from "@/lib/external-awards"
 import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { activePortfolioContext } from "@/lib/active-portfolio"
@@ -176,6 +177,11 @@ export default async function Forecast() {
   const CONTRIBUTION_GROWTH_RATE = user?.contributionGrowthRate ?? 0.05
   const RISK_FREE_RATE = user?.riskFreeRate ?? 0.04
 
+  // Outside-Atlas RSU vests as planned contributions (sell-on-vest SOP) — after-tax,
+  // plan-currency amounts at their scheduled month. Applied to EVERY scenario line:
+  // vests are cash inflows like the January boost, independent of the growth scenario.
+  const vestExtras = await vestExtraContributionsForUser(active.owner.id)
+
   // Growth-rate assumptions blended from the portfolio's ACTUAL current holdings (not the
   // target weights) — a portfolio that has drifted toward more BTC/EQQQ sees that reflected
   // here, same as every other computation in the app. The buffer (SGOV) portion uses the
@@ -194,15 +200,15 @@ export default async function Forecast() {
   const remainingYears = yearsToHorizon(2045, startYear)
   for (let yr = 0; yr <= remainingYears; yr++) {
     const year = startYear + yr
-    const conservative = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.conservative, yr, CONTRIBUTION_GROWTH_RATE)
-    const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
-    const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.aggressive, yr, CONTRIBUTION_GROWTH_RATE)
-    const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, yr, CONTRIBUTION_GROWTH_RATE)
-    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, GLOBAL_BENCHMARK_RATE, yr, CONTRIBUTION_GROWTH_RATE)
+    const conservative = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.conservative, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
+    const base         = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
+    const aggressive   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.aggressive, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
+    const savings      = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
+    const vtBenchmark  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, GLOBAL_BENCHMARK_RATE, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
     const coneP10      = coneProjection(base, yr, -1.28, coneVol)
     const coneP90      = coneProjection(base, yr,  1.28, coneVol)
-    const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
-    const contribHigh  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 1.2, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE)
+    const contribLow   = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 0.8, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
+    const contribHigh  = yr === 0 ? currentValue : projectPortfolio(currentValue, MONTHLY_CONTRIBUTION * 1.2, ANNUAL_LUMP_SUM, rates.base, yr, CONTRIBUTION_GROWTH_RATE, vestExtras)
     chartData.push({
       year,
       label: String(year),
@@ -230,13 +236,13 @@ export default async function Forecast() {
     ...scenario,
     values: horizons.map((years) => ({
       years,
-      projected: projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, scenario.rate, years, CONTRIBUTION_GROWTH_RATE),
+      projected: projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, scenario.rate, years, CONTRIBUTION_GROWTH_RATE, vestExtras),
     })),
   }))
 
   const savingsValues = horizons.map((years) => ({
     years,
-    projected: projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, years, CONTRIBUTION_GROWTH_RATE),
+    projected: projectPortfolio(currentValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, years, CONTRIBUTION_GROWTH_RATE, vestExtras),
   }))
 
   const maxProjected = projections[2].values[2].projected
@@ -324,6 +330,13 @@ export default async function Forecast() {
           { label: "Contribution Growth",   value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`, sub: "Annual increase" },
           { label: "Base Growth Rate",      value: `${(rates.base * 100).toFixed(1)}% p.a.`, sub: `From your holdings mix, as of ${BENCHMARKS_AS_OF}` },
           { label: "Horizon",               value: "2045", sub: "19 years remaining" },
+          // Outside-Atlas RSU pipeline (sell-on-vest SOP) — surfaced so the chart's
+          // assumptions are honest about the extra planned inflows.
+          ...(vestExtras.length > 0 ? [{
+            label: "RSU Vests",
+            value: `${vestExtras.length} planned`,
+            sub: `≈ ${formatCurrency(vestExtras.reduce((s, v) => s + v.amount, 0), "USD")} after tax, sell-on-vest`,
+          }] : []),
         ].map(({ label, value, sub }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-4 card-elevated flex flex-col gap-1.5">
             <p className="text-xs font-medium text-muted-foreground">{label}</p>

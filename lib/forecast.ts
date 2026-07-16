@@ -87,9 +87,19 @@ export function blendedGrowthRates(allocPct: Record<string, number>, riskFreeRat
   }
 }
 
+/** One-off planned inflow at a specific month offset from now, in the same PLAN
+ *  currency as monthlyContribution/annualLumpSum (Atlas: USD). Used for RSU vests
+ *  under the sell-on-vest → contribute SOP; never a holding, only a cash inflow. */
+export interface ExtraContribution {
+  monthsFromNow: number
+  amount: number
+}
+
 /**
  * Deterministic monthly-compounding projection: current value + monthly contributions
  * (growing at contributionGrowthRate p.a.) + an annual lump sum, compounded at annualRate.
+ * Optional extraContributions land in their scheduled month; months beyond the horizon
+ * are ignored (the money hasn't arrived inside the projected window).
  */
 export function projectPortfolio(
   currentValue: number,
@@ -97,14 +107,22 @@ export function projectPortfolio(
   annualLumpSum: number,
   annualRate: number,
   years: number,
-  contributionGrowthRate: number
+  contributionGrowthRate: number,
+  extraContributions: ExtraContribution[] = []
 ): number {
   let value = currentValue
   const monthlyRate = effectiveMonthlyRate(annualRate)
+  // Bucket one-offs by absolute month index so the loop stays O(months).
+  const extraByMonth = new Map<number, number>()
+  for (const e of extraContributions) {
+    if (!Number.isFinite(e.amount) || e.amount === 0) continue
+    const idx = Math.max(0, Math.floor(e.monthsFromNow))
+    extraByMonth.set(idx, (extraByMonth.get(idx) ?? 0) + e.amount)
+  }
   for (let year = 0; year < years; year++) {
     const contribution = monthlyContribution * Math.pow(1 + contributionGrowthRate, year)
     for (let month = 0; month < 12; month++) {
-      value = value * (1 + monthlyRate) + contribution
+      value = value * (1 + monthlyRate) + contribution + (extraByMonth.get(year * 12 + month) ?? 0)
     }
     value += annualLumpSum // annual top-up applied every year (incl. the first)
   }
