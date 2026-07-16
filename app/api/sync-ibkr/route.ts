@@ -21,8 +21,15 @@ export async function POST() {
   const { token, positionsQuery: queryId } = ibkrCredentialsFor(active.constitutionId)
 
   if (!token || !queryId) {
+    // Name the RIGHT variables for the active portfolio — SBR runs on its own IBKR
+    // account (IBKR_SBR_FLEX_*), and telling Dami to set the Atlas vars is a trap.
+    const isSbr = active.constitutionId === "silicon-brick-road"
     return NextResponse.json(
-      { error: "IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID is not configured" },
+      {
+        error: `The IBKR connection for this portfolio isn't set up yet. Add ${
+          isSbr ? "IBKR_SBR_FLEX_TOKEN and IBKR_SBR_FLEX_QUERY_ID" : "IBKR_FLEX_TOKEN and IBKR_FLEX_QUERY_ID"
+        } in the server settings, then try again.`,
+      },
       { status: 503 }
     )
   }
