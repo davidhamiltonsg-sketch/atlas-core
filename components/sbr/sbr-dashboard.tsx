@@ -26,6 +26,8 @@ import { computeSbrLookThrough } from "@/lib/sbr-look-through"
 import { refreshedLookThroughData } from "@/lib/look-through-data"
 import { openPositionValuation } from "@/lib/valuation"
 import { foldDuplicateHoldings } from "@/lib/holding-duplicates"
+import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
+import { ensureSbrPresentation } from "@/lib/holdings-sync"
 
 const SBR_FUND_TICKERS = SBR.funds.map(f => f.ticker)
 
@@ -39,6 +41,10 @@ const FX_REFERENCE_USDSGD = 1.35
 const FX_BAND_PCT = 5 // ±5% from reference triggers a note
 
 async function getSbrData(userId: string) {
+  // Self-heal the governed rows first (creates any fund added by amendment, e.g. A35,
+  // at zero units with its constitutional target) so the first IBKR sync matches by
+  // ticker instead of minting a zero-target holding. Idempotent, SBR-gated inside.
+  await ensureSbrPresentation(userId)
   const [rawHoldings, market, recentExec, usdSgdRate, cashBank, recentMinute, owner, lookThroughSources] = await Promise.all([
     // Dami's owner ledger is SBR. Load every open instrument so an out-of-plan brokerage
     // holding remains visible and stays inside NAV/concentration denominators.
@@ -191,6 +197,13 @@ async function getSbrData(userId: string) {
     dealingWindow, windowOpen, nextWindowOpens,
     emeActive, emeMinuteFiled, drawdownPct,
     accrualMap, cashBankBalance: cashBank?.balance ?? 0, lookThrough, monthlyContribution,
+    // For the Update Values modal — lets the owner sync from her own IBKR account
+    // (the sync routes pick the SBR Flex credentials from the active portfolio) or
+    // seed the portfolio the first time: the confirm step creates missing holdings.
+    updateHoldings: holdingsSorted.map((h) => ({
+      id: h.id, ticker: h.ticker, name: h.name,
+      latestUnits: h.snapshots[0]?.units ?? 0, latestPrice: h.snapshots[0]?.price ?? 0,
+    })),
   }
 }
 
@@ -223,9 +236,15 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             <h2 id="sbr-position-heading">Where we are now.</h2>
             <p>Value, performance, ownership and the next rule-permitted action in one view.</p>
           </div>
-          <div className="atlas-freshness" aria-label={d.marketStale ? "Market data needs refreshing" : "Market data is current"}>
-            <span className={d.marketStale ? "warn" : "ok"} />
-            {d.marketStale ? "IBKR snapshot · refresh due" : "IBKR snapshot · current"}
+          <div className="flex flex-col items-end gap-2">
+            <div className="atlas-freshness" aria-label={d.marketStale ? "Market data needs refreshing" : "Market data is current"}>
+              <span className={d.marketStale ? "warn" : "ok"} />
+              {d.marketStale ? "IBKR snapshot · refresh due" : "IBKR snapshot · current"}
+            </div>
+            {/* Update path for SBR — sync from the SBR IBKR account, type values in, or
+                upload a screenshot/PDF. First sync SEEDS the portfolio: the confirm step
+                creates any holding that doesn't exist yet. */}
+            <PortfolioUpdateButton label="Update values" holdings={d.updateHoldings} />
           </div>
         </div>
 

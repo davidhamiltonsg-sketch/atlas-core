@@ -53,18 +53,30 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
 }
 
 /**
- * Keep an SBR user's holding rows' PRESENTATION (name, colour) in sync with the Silicon Brick
- * Road registry — so a fund-palette rebrand self-heals rows provisioned under old colours.
- * SBR ONLY (silently returns for Atlas users); never touches rule numbers or snapshots.
+ * Keep an SBR user's holding rows in sync with the Silicon Brick Road registry:
+ * presentation (name, colour) self-heals after a palette rebrand, and any governed fund
+ * missing a row is CREATED at zero units with its constitutional target — so a fund added
+ * by amendment (A35, v10.4) exists before the first IBKR sync instead of being minted by
+ * the sync with a zero target. SBR ONLY (silently returns for Atlas users). Idempotent.
  */
 export async function ensureSbrPresentation(userId: string): Promise<void> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
   if (!user || constitutionIdForEmail(user.email) !== "silicon-brick-road") return
   for (const f of SILICON_BRICK_ROAD.funds) {
     const existing = await db.holding.findFirst({ where: { userId, ticker: f.ticker } })
-    if (existing && (existing.color !== f.color || existing.name !== f.name)) {
-      await db.holding.update({ where: { id: existing.id }, data: { color: f.color, name: f.name } })
+    if (existing) {
+      if (existing.color !== f.color || existing.name !== f.name) {
+        await db.holding.update({ where: { id: existing.id }, data: { color: f.color, name: f.name } })
+      }
+      continue
     }
+    const h = await db.holding.create({
+      data: {
+        userId, ticker: f.ticker, name: f.name, targetPct: f.target,
+        hardCapPct: f.hardCap ?? null, toleranceBand: 2.5, color: f.color,
+      },
+    })
+    await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0 })
   }
 }
 
