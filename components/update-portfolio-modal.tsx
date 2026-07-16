@@ -144,7 +144,9 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
       } else {
         ;({ base64, mime } = await downscaleScreenshot(file))
       }
-      const result = await extractFromScreenshot(base64, mime)
+      // Single-object payload on purpose: bare string args count toward the flight decoder's
+      // 1M array-slot budget and a base64 PDF exceeds it (see extractFromScreenshot).
+      const result = await extractFromScreenshot({ imageBase64: base64, mimeType: mime })
       if (result.success) {
         setExtractedRows(result.data)
         setScreenshotState("preview")
