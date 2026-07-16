@@ -126,7 +126,24 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
     // try/catch so a failed action (oversized body, timeout, network) surfaces an error instead of
     // leaving the spinner stuck forever — the previous code awaited inside reader.onload with no catch.
     try {
-      const { base64, mime } = await downscaleScreenshot(file)
+      let base64: string, mime: string
+      if (file.type === "application/pdf") {
+        // PDFs go through unmodified (no canvas downscale) — cap the size so the base64 body
+        // stays inside the server-action limit (next.config: 8mb).
+        if (file.size > 4 * 1024 * 1024) {
+          throw new Error("This PDF is larger than 4 MB — export a shorter statement (positions section only) or use a screenshot instead.")
+        }
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader()
+          r.onload = () => resolve(r.result as string)
+          r.onerror = () => reject(new Error("Could not read the PDF file"))
+          r.readAsDataURL(file)
+        })
+        base64 = dataUrl.split(",")[1]
+        mime = "application/pdf"
+      } else {
+        ;({ base64, mime } = await downscaleScreenshot(file))
+      }
       const result = await extractFromScreenshot(base64, mime)
       if (result.success) {
         setExtractedRows(result.data)
@@ -412,7 +429,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
             <div>
               {screenshotState === "idle" && (
                 <div>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileChange} />
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border hover:border-violet-400 dark:hover:border-violet-500 py-10 transition-colors group"
@@ -422,7 +439,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-medium">Click to upload screenshot</p>
-                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP accepted · Claude AI extracts the data</p>
+                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP or PDF statement (max 4 MB) · Claude AI extracts the data</p>
                     </div>
                   </button>
                 </div>
