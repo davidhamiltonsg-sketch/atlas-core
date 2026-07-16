@@ -9,19 +9,28 @@ export interface IbkrCredentials {
 
 // Single source of truth for which IBKR Flex credentials a constitution uses.
 //
-// Silicon Brick Road has its own funded IBKR account, so it uses the IBKR_SBR_*
-// tokens when they are set and falls back to the main tokens if the SBR account
-// isn't wired up yet. Atlas Core always uses the main tokens. Before this, the
-// manual refresh (app/portfolio/actions.ts) picked per-constitution but the modal
-// "Sync IBKR" route did not — so an SBR user's sync silently hit the Atlas
-// account, or 503'd when only the SBR tokens were configured.
+// STRICT SEPARATION — the two portfolios are DIFFERENT IBKR accounts owned by
+// different people (SBR: Dami's U-account via IBKR_SBR_FLEX_*; Atlas: David's
+// account via the unprefixed IBKR_FLEX_*). There is deliberately NO fallback
+// from one account's variables to the other's: an SBR sync with missing SBR
+// credentials must fail loudly, never silently read Atlas's account (and vice
+// versa) — cross-account contamination corrupts both ledgers.
+//
+// activityQuery is likewise strict: it must be a dedicated Activity Flex query
+// (Trades + Cash Transactions + Dividends). Falling back to the positions query
+// used to "succeed" while importing zero trades, zero contributions and zero
+// dividends — the ledgers froze while holdings kept moving.
 export function ibkrCredentialsFor(constitutionId: ConstitutionId): IbkrCredentials {
   const sbr = constitutionId === "silicon-brick-road"
-  const pick = (sbrVar: string | undefined, mainVar: string | undefined) =>
-    (sbr ? (sbrVar || mainVar) : mainVar)
-  return {
-    token:          pick(process.env.IBKR_SBR_FLEX_TOKEN,             process.env.IBKR_FLEX_TOKEN),
-    positionsQuery: pick(process.env.IBKR_SBR_FLEX_QUERY_ID,          process.env.IBKR_FLEX_QUERY_ID),
-    activityQuery:  pick(process.env.IBKR_SBR_FLEX_QUERY_ID_ACTIVITY, process.env.IBKR_FLEX_QUERY_ID_ACTIVITY),
-  }
+  return sbr
+    ? {
+        token:          process.env.IBKR_SBR_FLEX_TOKEN,
+        positionsQuery: process.env.IBKR_SBR_FLEX_QUERY_ID,
+        activityQuery:  process.env.IBKR_SBR_FLEX_QUERY_ID_ACTIVITY,
+      }
+    : {
+        token:          process.env.IBKR_FLEX_TOKEN,
+        positionsQuery: process.env.IBKR_FLEX_QUERY_ID,
+        activityQuery:  process.env.IBKR_FLEX_QUERY_ID_ACTIVITY,
+      }
 }
