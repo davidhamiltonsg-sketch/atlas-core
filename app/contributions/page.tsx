@@ -11,6 +11,7 @@ import { sgtToday, sgtMonthKey, sgtYear } from "@/lib/sgt-date"
 import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { PiggyBank, Wallet, CalendarClock, Info, AlertTriangle } from "lucide-react"
 import { ManualEntryPanel } from "@/components/contributions/manual-entry"
+import { ActivityImportLauncher } from "@/components/contributions/activity-import-launcher"
 import {
   ContributionLedger,
   CashBankHistory,
@@ -225,8 +226,14 @@ export default async function ContributionsPage() {
           </div>
         )}
 
-        {/* Owner-only manual fallback — tagged [manual], append-only */}
-        {canMutate && <ManualEntryPanel tickers={holdingTickers} />}
+        {/* Owner-only ledger tools: broker activity import (the automatic path)
+            and the manual fallback — tagged [manual], append-only */}
+        {canMutate && (
+          <div className="space-y-3">
+            {activityConfigured && <ActivityImportLauncher />}
+            <ManualEntryPanel tickers={holdingTickers} />
+          </div>
+        )}
 
         {/* Cash-bank carry-forward history */}
         <CashBankHistory entries={d.bankEntries} bankLabel={`${bankLabel} — recent movements`} />
