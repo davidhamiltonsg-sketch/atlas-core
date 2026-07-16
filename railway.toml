@@ -11,8 +11,11 @@ restartPolicyMaxRetries = 3
 # ── Cron jobs (configure in Railway dashboard → Cron Jobs) ────────────────────
 # Each job calls the endpoint with:  Authorization: Bearer $CRON_SECRET
 #
-#  /api/cron/sync-holdings  — "0 22 * * *"   — 10 PM SGT daily (IBKR sync)
-#  /api/cron/daily          — "0 23 * * *"   — 11 PM SGT daily (governance digest)
+#  /api/cron/sync-holdings  — "0 10 * * *"   — 6 PM SGT / 6 AM New York daily (IBKR sync).
+#      Deliberately OUTSIDE IBKR's post-US-close statement-generation window (~16:00-23:00
+#      New York), where Flex SendRequest fails with error 1001; prior-day statements are
+#      reliably ready by early morning New York time.
+#  /api/cron/daily          — "45 10 * * *"  — 6:45 PM SGT daily (governance digest, right after the sync)
 #  /api/cron/monthly        — "0 0 14 * *"   — midnight SGT on the 14th (dealing-window reminder)
 #  /api/cron/annual         — "0 0 1 1 *"    — midnight SGT Jan 1 (annual audit reminder)
 

@@ -86,7 +86,12 @@ export function isForexRow(symbol: string, assetCategory?: string): boolean {
 }
 
 function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: string; reportDate: string } {
-  const positions: FlexPosition[] = []
+  // A query configured with Open Positions "Summary, Lot" emits BOTH a SUMMARY row and one
+  // row per tax lot for the same position. Counting every row double-counts every holding
+  // (summary + its lots), so rows are bucketed by levelOfDetail first: SUMMARY rows win when
+  // present; a lot-only report falls back to aggregating LOT rows per symbol+currency.
+  const summaryRows: FlexPosition[] = []
+  const lotRows: FlexPosition[] = []
   const re = /<OpenPosition\s+([^>]+)\/?>/g
   let match: RegExpExecArray | null
 
@@ -111,15 +116,37 @@ function parseFlexXml(xml: string): { positions: FlexPosition[]; accountId: stri
     if (symbol && !isNaN(units) && units > 0 && hasValue) {
       const mp = isNaN(markPrice) ? (units > 0 && !isNaN(positionValue) ? positionValue / units : 0) : markPrice
       const pv = isNaN(positionValue) ? units * mp : positionValue
-      positions.push({
+      const row: FlexPosition = {
         symbol, units, markPrice: mp, positionValue: pv, currency,
         costBasis: Number.isFinite(costBasisRaw) ? costBasisRaw : null,
         unrealizedPnl: Number.isFinite(unrealizedRaw) ? unrealizedRaw : null,
         isin: attr(a, "isin"), cusip: attr(a, "cusip"),
         exchange: attr(a, "listingExchange") || attr(a, "exchange"),
         conid: attr(a, "conid"),
-      })
+      }
+      // Rows without a levelOfDetail attribute are summary-style single rows.
+      if (attr(a, "levelOfDetail").toUpperCase() === "LOT") lotRows.push(row)
+      else summaryRows.push(row)
     }
+  }
+
+  let positions: FlexPosition[]
+  if (summaryRows.length > 0) {
+    positions = summaryRows
+  } else {
+    // Lot-only report: aggregate lots into one position per symbol+currency.
+    const bySymbol = new Map<string, FlexPosition>()
+    for (const lot of lotRows) {
+      const key = `${lot.symbol}|${lot.currency}`
+      const agg = bySymbol.get(key)
+      if (!agg) { bySymbol.set(key, { ...lot }); continue }
+      agg.units += lot.units
+      agg.positionValue += lot.positionValue
+      agg.markPrice = agg.units > 0 ? agg.positionValue / agg.units : agg.markPrice
+      agg.costBasis = agg.costBasis !== null && lot.costBasis !== null ? agg.costBasis + lot.costBasis : null
+      agg.unrealizedPnl = agg.unrealizedPnl !== null && lot.unrealizedPnl !== null ? agg.unrealizedPnl + lot.unrealizedPnl : null
+    }
+    positions = [...bySymbol.values()]
   }
 
   return {
@@ -261,8 +288,8 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
     let referenceCode: string | undefined
     let getUrl = `${FLEX_BASE}.GetStatement`
     let lastSendXml = ""
-    for (let sendAttempt = 0; sendAttempt < 2; sendAttempt++) {
-      if (sendAttempt > 0) await sleep(6000)
+    for (let sendAttempt = 0; sendAttempt < 3; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(sendAttempt === 1 ? 5000 : 12000)
       const sendRes = await fetch(sendUrl, { cache: "no-store" })
       if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
       lastSendXml = await sendRes.text()
@@ -292,7 +319,7 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
         const errorCode = sendXml.match(/<ErrorCode>([^<]+)<\/ErrorCode>/)?.[1] ?? ""
         return {
           success: false,
-          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError} This is usually temporary on IBKR's side — wait a few minutes before trying again (tapping repeatedly extends the wait).`,
+          error: `IBKR${errorCode ? ` (error ${errorCode})` : ""}: ${ibkrError} IBKR's report engine is busiest from US market close until late evening New York time — try again in a few minutes, or after 6 AM New York / 6 PM Singapore when statements are reliably ready. Tapping repeatedly extends the wait.`,
         }
       }
       return { success: false, error: `IBKR: ${ibkrError}` }
@@ -337,8 +364,8 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
     let referenceCode: string | undefined
     let getUrl = `${FLEX_BASE}.GetStatement`
     let sendXml = ""
-    for (let sendAttempt = 0; sendAttempt < 2; sendAttempt++) {
-      if (sendAttempt > 0) await sleep(6000)
+    for (let sendAttempt = 0; sendAttempt < 3; sendAttempt++) {
+      if (sendAttempt > 0) await sleep(sendAttempt === 1 ? 5000 : 12000)
       const sendRes = await fetch(sendUrl, { cache: "no-store" })
       if (!sendRes.ok) return { success: false, error: `IBKR SendRequest HTTP ${sendRes.status}` }
       sendXml = await sendRes.text()
@@ -359,7 +386,7 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
       console.error("[ibkr-flex] fetchFlexPositions no referenceCode after retry. Raw XML (600):", sendXml.slice(0, 600))
       const ibkrError = extractError(sendXml)
       if (RETRYABLE.some((s) => sendXml.includes(s))) {
-        return { success: false, error: `IBKR: ${ibkrError} This is usually temporary on IBKR's side — wait a few minutes before trying again (tapping repeatedly extends the wait).` }
+        return { success: false, error: `IBKR: ${ibkrError} IBKR's report engine is busiest from US market close until late evening New York time — try again in a few minutes, or after 6 AM New York / 6 PM Singapore when statements are reliably ready. Tapping repeatedly extends the wait.` }
       }
       return { success: false, error: `IBKR: ${ibkrError}` }
     }
