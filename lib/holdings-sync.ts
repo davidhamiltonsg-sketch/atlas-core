@@ -93,6 +93,25 @@ export async function ensureSbrPresentation(userId: string): Promise<void> {
     })
     await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0 })
   }
+
+  // Retire redundant rows seeded under an OLD SBR mix (e.g. EQQQ 25% / SEMI 15%): a dead
+  // row (no units, no value) outside the governed fund list must not keep a target — the
+  // ledger hides dead rows only when their target is 0, so a stale target resurrects them
+  // with phantom "underweight, redirect contributions" advice. Valued rows are never
+  // touched (out-of-plan money stays visible in NAV), and snapshots/history are never
+  // deleted — this only zeroes the rule numbers.
+  const governedTickers = new Set<string>(SILICON_BRICK_ROAD.funds.map((f) => f.ticker))
+  const staleRows = await db.holding.findMany({
+    where: { userId, ticker: { notIn: [...governedTickers] }, OR: [{ targetPct: { not: 0 } }, { hardCapPct: { not: null } }] },
+    include: { snapshots: { orderBy: { date: "desc" }, take: 1 } },
+  })
+  for (const h of staleRows) {
+    const latest = h.snapshots[0]
+    const dead = !latest || ((latest.units ?? 0) === 0 && (latest.value ?? 0) === 0)
+    if (dead) {
+      await db.holding.update({ where: { id: h.id }, data: { targetPct: 0, hardCapPct: null } })
+    }
+  }
 }
 
 /**
