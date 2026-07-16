@@ -62,18 +62,33 @@ export async function ensureCoreHoldings(userId: string): Promise<number> {
 export async function ensureSbrPresentation(userId: string): Promise<void> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
   if (!user || constitutionIdForEmail(user.email) !== "silicon-brick-road") return
+  // One read up front: the common render-path case (everything already provisioned and
+  // in sync) must cost a single query and zero writes.
+  const rows = await db.holding.findMany({ where: { userId }, select: { id: true, ticker: true, name: true, color: true, targetPct: true, hardCapPct: true, toleranceBand: true } })
+  const byTicker = new Map(rows.map((r) => [r.ticker, r]))
   for (const f of SILICON_BRICK_ROAD.funds) {
-    const existing = await db.holding.findFirst({ where: { userId, ticker: f.ticker } })
+    // Constitutional soft band, per fund — NOT a hardcoded default: VWRA's wide 60–70
+    // band (±5) is a deliberate constitutional choice and must survive seeding.
+    const band = f.rangeHigh !== undefined && f.rangeLow !== undefined ? (f.rangeHigh - f.rangeLow) / 2 : 2.5
+    const existing = byTicker.get(f.ticker)
     if (existing) {
-      if (existing.color !== f.color || existing.name !== f.name) {
-        await db.holding.update({ where: { id: existing.id }, data: { color: f.color, name: f.name } })
+      // Heal rule numbers as well as presentation (mirrors ensureCoreHoldings) — an
+      // amendment that moves a target must reach rows seeded under the old numbers.
+      if (
+        existing.color !== f.color || existing.name !== f.name || existing.targetPct !== f.target ||
+        existing.hardCapPct !== (f.hardCap ?? null) || existing.toleranceBand !== band
+      ) {
+        await db.holding.update({
+          where: { id: existing.id },
+          data: { color: f.color, name: f.name, targetPct: f.target, hardCapPct: f.hardCap ?? null, toleranceBand: band },
+        })
       }
       continue
     }
     const h = await db.holding.create({
       data: {
         userId, ticker: f.ticker, name: f.name, targetPct: f.target,
-        hardCapPct: f.hardCap ?? null, toleranceBand: 2.5, color: f.color,
+        hardCapPct: f.hardCap ?? null, toleranceBand: band, color: f.color,
       },
     })
     await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0 })
