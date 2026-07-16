@@ -5,8 +5,8 @@ import { ATLAS_CORE, SILICON_BRICK_ROAD } from "../lib/constitutions"
 const failures:string[]=[]
 const read=(f:string)=>fs.readFileSync(f,"utf8")
 const expect=(ok:boolean,msg:string)=>{if(!ok)failures.push(msg)}
-expect(ATLAS_CORE.version==="10.5","Atlas runtime version is not 10.5")
-expect(SILICON_BRICK_ROAD.version==="10.4","SBR runtime version is not 10.4")
+expect(ATLAS_CORE.version==="10.6","Atlas runtime version is not 10.6")
+expect(SILICON_BRICK_ROAD.version==="10.5","SBR runtime version is not 10.5")
 expect(ATLAS_SPEC.funds.map(f=>`${f.ticker}:${f.target}`).join("|")==="VWRA:70|EQAC:10|SMH:5|BTC:5|DBMFE:10","Atlas canonical weights drifted")
 expect(SBR_SPEC.funds.map(f=>`${f.ticker}:${f.target}`).join("|")==="VWRA:65|EQAC:10|SMH:5|BTC:5|DBMFE:10|A35:5","SBR canonical weights drifted")
 // Download filenames are derived from the runtime version, matching generate-constitutions.ts.

@@ -71,13 +71,13 @@ const ATLAS_AGENTS: AgentDef[] = [
     icon: ShieldCheck,
     accent: C.gold,
     script: [
-      { t: 120, level: "info", msg: "Loading Atlas Core Constitution v10.5" },
+      { t: 120, level: "info", msg: "Loading Atlas Core Constitution v10.6" },
       { t: 620, level: "data", msg: "Reconciling five sleeves, soft bands and hard limits" },
       { t: 1180, level: "data", msg: "Checking look-through limits and source freshness" },
       { t: 1720, level: "info", msg: "Verifying whole-share and settlement controls" },
       { t: 2280, level: "info", msg: "Compiling the governed action summary" },
     ],
-    result: { status: "done", line: { t: 2700, level: "ok", msg: "Constitution v10.5 controls loaded" } },
+    result: { status: "done", line: { t: 2700, level: "ok", msg: "Constitution v10.6 controls loaded" } },
   },
   {
     id: "governance",

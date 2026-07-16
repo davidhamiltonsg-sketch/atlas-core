@@ -53,7 +53,7 @@ export function computeLadder(positions: PositionInput[], _totalValue: number, o
   return {
     firedStep, severity: move.severity, ticker: move.ticker, headline: move.action,
     instruction: move.what, rationale: move.why, when: move.when,
-    citation: "Atlas Core Constitution v10.5 · contribution-first decision ladder",
+    citation: "Atlas Core Constitution v10.6 · contribution-first decision ladder",
     steps, exceptions, isTerminal: move.severity === "none",
   }
 }

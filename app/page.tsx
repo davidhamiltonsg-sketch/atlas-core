@@ -440,7 +440,7 @@ export default async function Dashboard() {
     const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
 
     return (
-    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.5" userName={session.name} isAdmin={session.role === "admin"}>
+    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.6" userName={session.name} isAdmin={session.role === "admin"}>
 
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-start gap-2">
