@@ -290,7 +290,7 @@ export function ProbabilityEngine({
       {result && (
         <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border border-b border-border">
           {/* Drawdown table */}
-          <div className="p-5">
+          <div className="p-5 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
               Maximum Drawdown Risk · Over {NY} Years
             </p>
@@ -332,7 +332,7 @@ export function ProbabilityEngine({
           </div>
 
           {/* Milestone heatmap */}
-          <div className="p-5">
+          <div className="p-5 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
               Milestone Probability · First-Passage
             </p>
