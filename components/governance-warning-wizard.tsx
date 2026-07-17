@@ -20,7 +20,6 @@ export function GovernanceWarningWizard({
   const isCritical = status === 'critical'
   const bgColor = isCritical ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'
   const textColor = isCritical ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'
-  const titleIcon = isCritical ? AlertTriangle : AlertTriangle
   const borderColor = isCritical ? 'border-red-500/50' : 'border-amber-500/50'
 
   return (
@@ -29,7 +28,7 @@ export function GovernanceWarningWizard({
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-inherit">
           <div className="flex items-start gap-3 flex-1">
-            <titleIcon className={`h-5 w-5 shrink-0 mt-0.5 ${textColor}`} />
+            <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${textColor}`} />
             <div>
               <h2 className={`text-lg font-bold ${textColor}`}>
                 {isCritical ? 'Critical Governance Alert' : 'Governance Caution'}
