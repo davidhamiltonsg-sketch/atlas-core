@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ATLAS_SPEC } from '@/lib/portfolio-spec'
 import { runMC, drawFanCanvas, formatFanValue, heatCell, type AssetConfig, type MCResult } from '@/lib/gbm-engine'
+import { yearsToHorizon } from '@/lib/forecast'
 
 // Asset weights and expected returns are sourced from ATLAS_SPEC.funds (the same governed
 // registry the rest of the app uses) instead of being duplicated here — this is exactly the
@@ -19,10 +20,13 @@ const ATLAS_ASSETS: AssetConfig[] = ATLAS_SPEC.funds
 const GREEN = '#00d68f'
 
 // ── Component ─────────────────────────────────────────────────────────────────
-const NY = 20
+// Matches the horizon the rest of /forecast uses (yearsToHorizon(2045)) rather than a
+// stale fixed 20 — a mismatch previously left the stats strip reading fan[19]/"yr 19"
+// under a "20-Year" header while every other stat on the page said 19 years / 2045.
+const NY = yearsToHorizon(2045)
 const MS = [1e6, 2e6, 3e6]
 const MSL = ['$1M', '$2M', '$3M']
-const MSY = [5, 10, 15, 19, 20]
+const MSY = [5, 10, 15, NY]
 const DD_LBLS = ['Minor (>20%)', 'Correction (>30%)', 'Severe (>40%)', 'Crisis (>50%)']
 const DD_CLRS = ['text-amber-400', 'text-orange-400', 'text-red-400', 'text-red-600']
 const DD_GOV = [
@@ -290,7 +294,7 @@ export function ProbabilityEngine({
       {result && (
         <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border border-b border-border">
           {/* Drawdown table */}
-          <div className="p-5">
+          <div className="p-5 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
               Maximum Drawdown Risk · Over {NY} Years
             </p>
@@ -332,7 +336,7 @@ export function ProbabilityEngine({
           </div>
 
           {/* Milestone heatmap */}
-          <div className="p-5">
+          <div className="p-5 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
               Milestone Probability · First-Passage
             </p>

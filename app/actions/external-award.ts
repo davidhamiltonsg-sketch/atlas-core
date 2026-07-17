@@ -59,7 +59,7 @@ export async function setExternalAwardAction(input: {
       await setExternalAward(active.owner.id, award)
     }
 
-    for (const p of ["/", "/forecast", "/mission-control"]) revalidatePath(p)
+    for (const p of ["/", "/portfolio", "/forecast", "/mission-control"]) revalidatePath(p)
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Could not save the award" }

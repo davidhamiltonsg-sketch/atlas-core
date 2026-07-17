@@ -142,8 +142,23 @@ export async function upsertSnapshotToday(
       data: { ...data, currency: "SGD", date: new Date() },
     })
   } else {
+    // Cost basis / unrealised P&L don't move on a plain price refresh. When the caller
+    // omits them (e.g. refreshLivePrices only ever passes units/price/value), carry
+    // forward the prior snapshot's values instead of letting Prisma default a brand-new
+    // row to null — otherwise the first refresh of every calendar day wiped cost basis
+    // to null and the UI permanently read "Needs reconciliation" until the next full
+    // IBKR sync. An explicitly-passed value (including null, e.g. zeroing a closed
+    // position) is never overridden.
+    const carryForward: { costBasis?: number | null; unrealizedPnl?: number | null } = {}
+    if (!("costBasis" in data) || !("unrealizedPnl" in data)) {
+      const prior = await db.snapshot.findFirst({ where: { holdingId }, orderBy: { date: "desc" } })
+      if (prior) {
+        if (!("costBasis" in data)) carryForward.costBasis = prior.costBasis
+        if (!("unrealizedPnl" in data)) carryForward.unrealizedPnl = prior.unrealizedPnl
+      }
+    }
     await db.snapshot.create({
-      data: { holdingId, ...data, currency: "SGD", date: new Date() },
+      data: { holdingId, ...carryForward, ...data, currency: "SGD", date: new Date() },
     })
   }
 }

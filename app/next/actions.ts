@@ -51,6 +51,6 @@ export async function logThisMonthExecution(
 
   revalidatePath("/next")
   revalidatePath("/")
-  revalidatePath("/governance")
+  revalidatePath("/compliance")
   return { success: true }
 }

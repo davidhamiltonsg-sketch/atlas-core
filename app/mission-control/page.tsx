@@ -100,7 +100,12 @@ async function loadPortfolioContext(active?: { constitutionId: "atlas-core" | "s
     const dayChangePct = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : null
 
     const withPct = rows.map(r => ({ ...r, pct: (r.value / total) * 100 }))
-    const driftAlerts = withPct.filter(r => r.targetPct > 0 && Math.abs(r.pct - r.targetPct) > r.toleranceBand).length
+    // Alias lines (EQQQ/SEMI/IBIT reported by IBKR on an alternate exchange line) must be
+    // rolled into their governed sleeve before judging drift, or a real breach can hide
+    // behind a raw per-row comparison — this previously disagreed with the governance
+    // check further down this same page (loadAgentFindings), which already consolidates.
+    const sleeveAdjusted = applyEconomicSleeves(withPct.map(r => ({ ...r, actualPct: r.pct })))
+    const driftAlerts = sleeveAdjusted.filter(r => r.targetPct > 0 && Math.abs(r.actualPct - r.targetPct) > r.toleranceBand).length
     const cashPct = withPct.filter(r => ["SGOV", "CASH", "SGD"].includes(r.ticker.toUpperCase())).reduce((s, r) => s + r.pct, 0)
 
     const targetTickers=new Set(constitution.funds.map(f=>f.ticker))

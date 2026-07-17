@@ -3,6 +3,7 @@ import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency, formatPercent } from "@/lib/utils"
 import { applyEconomicSleeves } from "@/lib/constants"
+import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { activePortfolioContext } from "@/lib/active-portfolio"
@@ -207,9 +208,18 @@ async function getRiskData(userId: string,isSbr=false) {
     }
   })
 
-  // Current weights for HHI
+  // Current weights for HHI. Alias lines (EQQQ/SEMI, or BTC split across BTC+IBIT rows)
+  // are ONE economic position — summing HHI over the raw per-instrument rows always
+  // understates concentration (HHI = Σw², so splitting one weight into two always lowers
+  // the total) versus every other concentration surface in the app, which consolidates
+  // by sleeve first. Merge by economicSleeveTicker before squaring.
   const totalValue = holdingStats.reduce((s, h) => s + h.latestValue, 0)
-  const weights = holdingStats.map(h => totalValue > 0 ? h.latestValue / totalValue : 0)
+  const sleeveValues = new Map<string, number>()
+  for (const h of holdingStats) {
+    const k = economicSleeveTicker(h.ticker)
+    sleeveValues.set(k, (sleeveValues.get(k) ?? 0) + h.latestValue)
+  }
+  const weights = Array.from(sleeveValues.values()).map(v => totalValue > 0 ? v / totalValue : 0)
   const hhiScore = hhi(weights)
 
   // Sector allocation — reuses the same look-through engine as /reports and /compliance

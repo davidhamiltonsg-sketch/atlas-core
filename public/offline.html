@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Atlas Universe — Offline</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #12101c;
+    color: #f2f0f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  .crest {
+    width: 56px;
+    height: 56px;
+    opacity: 0.9;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+  }
+  p {
+    font-size: 13.5px;
+    color: #a099b8;
+    max-width: 32ch;
+    line-height: 1.5;
+    margin: 0;
+  }
+  button {
+    margin-top: 8px;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: #8b5cf6; }
+  button:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="crest" viewBox="0 0 64 64" fill="none">
+      <path d="M32 3.5C38.4 6.4 46.9 8.2 54.9 8.8C56.1 8.9 57 9.9 57 11.1V29C57 45.4 46.5 55.6 32.9 60.3C32.3 60.5 31.7 60.5 31.1 60.3C17.5 55.6 7 45.4 7 29V11.1C7 9.9 7.9 8.9 9.1 8.8C17.1 8.2 25.6 6.4 32 3.5Z" fill="none" stroke="#a78bfa" stroke-width="2"/>
+    </svg>
+    <h1>You're offline</h1>
+    <p>Atlas Universe needs a connection to show current portfolio data. Reconnect and try again.</p>
+    <button onclick="location.reload()">Retry</button>
+  </div>
+</body>
+</html>

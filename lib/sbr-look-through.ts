@@ -1,9 +1,24 @@
+import { economicSleeveTicker } from "@/lib/instrument-identity"
+
 // SBR look-through. These fund-level coefficients are planning estimates and must
 // carry an as-of date; actual portfolio weights always come from the owner account.
 // Governed funds only (VWRA/EQAC/SMH/BTC/DBMFE/A35). Baselines refreshed 2026-07-16
 // from the same fact sheets as lib/look-through.ts; the daily Yahoo refresh
 // (lib/look-through-refresh.ts) supersedes them at runtime for the equity funds.
 export const SBR_WEIGHTS_AS_OF = "2026-07-16"
+
+// Alternate exchange lines of the same instrument (EQQQ→EQAC, SEMI→SMH, IBIT/GBTC→BTC —
+// see GOVERNED_LINE_ALIASES) must roll up to one sleeve here too, or an aliased holding
+// silently contributes zero to every concentration table below (table[ticker] ?? {} on an
+// unrecognized ticker) while still counting in NAV — a hard-cap breach could then read as
+// "ok" purely because IBKR reported the position under its alternate line. SMH's London-listed
+// UCITS line uses a distinct ".L" ticker (venue disambiguation, not an alias) so it's stripped
+// first, then the shared alias table is applied.
+function sbrSleeveTicker(ticker: string): string {
+  const raw = ticker.trim().toUpperCase()
+  const stripped = raw === "SMH.L" ? "SMH" : raw
+  return economicSleeveTicker(stripped)
+}
 export const SBR_TECHNOLOGY_LIMIT = 50
 export const SBR_TECHNOLOGY_WATCH = 45
 export const SBR_SEMICONDUCTOR_LIMIT = 30
@@ -73,8 +88,7 @@ function aggregate(positions: Array<{ ticker: string; actualPct: number }>, tabl
   const totals: Record<string, number> = {}
   const contributors:Record<string,NonNullable<ExposureLine["contributors"]>>={}
   for (const p of positions) {
-    const raw = p.ticker.toUpperCase()
-    const ticker = raw === "SMH.L" ? "SMH" : raw
+    const ticker = sbrSleeveTicker(p.ticker)
     for (const [name, insidePct] of Object.entries(table[ticker] ?? {})) {
       totals[name] = (totals[name] ?? 0) + (p.actualPct / 100) * insidePct
       if(insidePct>0)(contributors[name]??=[]).push({ticker,portfolioWeightPct:p.actualPct,underlyingWeightPct:insidePct,contributionPct:(p.actualPct/100)*insidePct})
@@ -100,14 +114,14 @@ export function computeSbrLookThrough(positions: Array<{ ticker: string; actualP
   const countries = aggregate(invested, countryTable)
   const industries = aggregate(invested, industryTable)
   const assets = aggregate(invested, ASSETS)
-  const technologyPct = invested.reduce((sum,p)=>{const t=p.ticker.toUpperCase()==="SMH.L"?"SMH":p.ticker.toUpperCase();return sum+(p.actualPct/100)*(refreshedWeights?.[t]?.sectorWeights?.digital??(t==="SMH"?90:INDUSTRIES[t]?.Technology??0))},0)
-  const semiconductorPct = invested.reduce((sum, p) => { const t=p.ticker.toUpperCase()==="SMH.L"?"SMH":p.ticker.toUpperCase(); return sum + (p.actualPct / 100) * (refreshedWeights?.[t]?.sectorWeights?.semiconductor??SEMICONDUCTORS[t]??0) }, 0)
+  const technologyPct = invested.reduce((sum,p)=>{const t=sbrSleeveTicker(p.ticker);return sum+(p.actualPct/100)*(refreshedWeights?.[t]?.sectorWeights?.digital??(t==="SMH"?90:INDUSTRIES[t]?.Technology??0))},0)
+  const semiconductorPct = invested.reduce((sum, p) => { const t=sbrSleeveTicker(p.ticker); return sum + (p.actualPct / 100) * (refreshedWeights?.[t]?.sectorWeights?.semiconductor??SEMICONDUCTORS[t]??0) }, 0)
   const topCompany = companies[0] ?? { name: "—", pct: 0 }
   const topCountry = countries[0] ?? { name: "—", pct: 0 }
   const topIndustry = industries[0] ?? { name: "—", pct: 0 }
   const ageDays = Math.max(0, Math.floor((now.getTime() - weightsAsOf.getTime()) / 86_400_000))
   const known = new Set(Object.keys(ASSETS))
-  const unclassifiedPct = invested.filter(p => !known.has(p.ticker === "SMH.L" ? "SMH" : p.ticker.toUpperCase())).reduce((s,p)=>s+p.actualPct,0)
+  const unclassifiedPct = invested.filter(p => !known.has(sbrSleeveTicker(p.ticker))).reduce((s,p)=>s+p.actualPct,0)
   const managedFuturesPct = assets.find(x => x.name === "Managed futures")?.pct ?? 0
   const cryptoPct = assets.find(x => x.name === "Crypto")?.pct ?? 0
   const freshness = ageDays > SBR_STALE_DAYS ? "stale" : ageDays > SBR_FRESH_DAYS ? "review" : "fresh"

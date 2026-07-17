@@ -259,9 +259,9 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             <p className="atlas-kicker">TOTAL PORTFOLIO VALUE</p>
             <strong className="atlas-total"><AnimatedNumber value={d.totalValue} currency="SGD" /></strong>
             <div className="atlas-value-stats">
-              <div><span>Cost basis</span><b>{totalCostBasis!==null?formatCurrency(totalCostBasis,"SGD"):"Needs reconciliation"}</b></div>
+              <div><span>Cost basis</span><b>{totalCostBasis!==null?formatCurrency(totalCostBasis,"SGD"):<Link href="/portfolio" className="underline decoration-dotted underline-offset-2">Needs reconciliation</Link>}</b></div>
               <div><span>Unrealised P&amp;L</span><b className={totalUnrealised!==null&&totalUnrealised<0?"down":"up"}>{totalUnrealised===null?"—":`${totalUnrealised>=0?"+":"−"}${formatCurrency(Math.abs(totalUnrealised),"SGD")}`}</b></div>
-              <div><span>Unrealised return</span><b className={totalReturnPct!==null&&totalReturnPct<0?"down":"up"}>{totalReturnPct===null?"Needs reconciliation":`${totalReturnPct>=0?"+":""}${totalReturnPct.toFixed(1)}%`}</b></div>
+              <div><span>Unrealised return</span><b className={totalReturnPct!==null&&totalReturnPct<0?"down":"up"}>{totalReturnPct===null?<Link href="/portfolio" className="underline decoration-dotted underline-offset-2">Needs reconciliation</Link>:`${totalReturnPct>=0?"+":""}${totalReturnPct.toFixed(1)}%`}</b></div>
             </div>
             <div className="atlas-command-line">
               <span>CONSTITUTION SAYS</span>
