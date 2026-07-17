@@ -20,6 +20,7 @@ import { GovernanceComplianceDashboard } from "@/components/dashboard/governance
 import { SbrProbabilityEngine } from "@/components/forecast/sbr-probability-engine"
 import { ForecastGuide } from "@/components/forecast-guide"
 import { HelpTooltip } from "@/components/help-tooltip"
+import { RebalancingGuide } from "@/components/rebalancing-guide"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
 const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
@@ -238,6 +239,8 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
         ]}
       />
 
+      <RebalancingGuide portfolio="silicon-brick-road" />
+
       {/* SBR Probability Engine */}
       <SbrProbabilityEngine
         startValue={d.totalValue}
@@ -452,6 +455,8 @@ export default async function Forecast() {
       />
 
       <ForecastGuide />
+
+      <RebalancingGuide portfolio="atlas-core" />
 
       {/* Hero stat row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
