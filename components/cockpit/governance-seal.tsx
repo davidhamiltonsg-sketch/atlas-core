@@ -19,8 +19,8 @@ interface Props {
   // Shown when the score is below 65. Defaults to the Atlas Core wording; Silicon Brick Road
   // passes a plain-English version so no Article citation / "discretionary" jargon leaks in.
   lowScoreWarning?: string
-  // When set, the whole seal becomes a click-through to the governance/rules page for
-  // whichever portfolio is rendering it (both pass "/governance" today).
+  // When set, the whole seal becomes a click-through to the compliance/rules page for
+  // whichever portfolio is rendering it (both pass "/compliance" today).
   href?: string
   hrefLabel?: string
 }
