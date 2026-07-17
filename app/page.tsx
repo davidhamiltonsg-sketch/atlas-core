@@ -582,15 +582,15 @@ export default async function Dashboard() {
       <div className="grid gap-5">
         <div className="space-y-5 min-w-0 reveal-stack">
 
-          {/* ── COMPLIANCE COCKPIT ────────────────────────────────────── */}
-          {/* 0. Governance Compliance Status — high-level overview */}
+          {/* ── COMPLIANCE STATUS ─────────────────────────────────────── */}
+          {/* Brief compliance alert with link to full compliance page */}
           <section className="atlas-command-band" style={{borderLeftColor: d.health.overall >= 80 ? '#10b981' : d.health.overall >= 60 ? '#f59e0b' : '#ef4444'}}>
             <div>
               <span>GOVERNANCE STATUS</span>
               <h2>Constitution {d.health.overall >= 80 ? '✓ Compliant' : d.health.overall >= 60 ? '⚠ Review needed' : '🚨 Action required'}</h2>
               <p>Portfolio health: {d.health.overall}/100 · {d.health.overallLabel} · {d.snapshotAgeDays <= 1 ? "Data current" : `${d.snapshotAgeDays} days old`}</p>
             </div>
-            <Link href="/forecast">View compliance dashboard →</Link>
+            <Link href="/compliance">View full status →</Link>
           </section>
 
           {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
