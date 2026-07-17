@@ -36,7 +36,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     { label: "Cockpit", items: [
       { href: "/", label: "Portfolio overview", icon: LayoutDashboard },
       { href: "/next", label: "This month", icon: CalendarCheck },
-      { href: "/mission-control", label: "Mission Control", icon: Radar },
+      { href: "/mission-control", label: "Update Portfolio", icon: Radar },
     ] },
     { label: "Portfolio", items: [
       { href: "/portfolio", label: "Holdings & activity", icon: Wallet },
@@ -53,7 +53,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
     { label: "Cockpit", items: [
       { href: "/", label: "Portfolio overview", icon: LayoutDashboard },
       { href: "/next", label: "What to do this month", icon: CalendarCheck },
-      { href: "/mission-control", label: "Mission Control", icon: Radar },
+      { href: "/mission-control", label: "Update Portfolio", icon: Radar },
     ] },
     { label: "Portfolio", items: [
       { href: "/portfolio", label: "Holdings & activity", icon: Wallet },

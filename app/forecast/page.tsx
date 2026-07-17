@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency } from "@/lib/utils"
@@ -17,6 +18,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 import { GovernanceComplianceDashboard } from "@/components/dashboard/governance-compliance-dashboard"
 import { SbrProbabilityEngine } from "@/components/forecast/sbr-probability-engine"
+import { ForecastGuide } from "@/components/forecast-guide"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
 const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
@@ -371,12 +373,12 @@ export default async function Forecast() {
             <p className="text-xs text-muted-foreground">Updated {lastUpdated.toLocaleDateString()}</p>
           </div>
           <div className="flex gap-2">
-            <button className="px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium">
+            <Link href="/mission-control" className="px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs font-medium">
               ↻ Update holdings
-            </button>
-            <button className="px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-xs font-medium">
+            </Link>
+            <Link href="/portfolio" className="px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-xs font-medium">
               → View portfolio
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -447,6 +449,8 @@ export default async function Forecast() {
           },
         ]}
       />
+
+      <ForecastGuide />
 
       {/* Hero stat row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
