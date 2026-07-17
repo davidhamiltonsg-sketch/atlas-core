@@ -15,6 +15,8 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { SBR_ASSET_EXPECTED_RETURNS } from "@/lib/spec-derived"
 import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
+import { GovernanceComplianceDashboard } from "@/components/dashboard/governance-compliance-dashboard"
+import { SbrProbabilityEngine } from "@/components/forecast/sbr-probability-engine"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
 const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
@@ -150,6 +152,91 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
           </p>
         </div>
       </div>
+
+      {/* Governance Compliance Dashboard for SBR */}
+      <GovernanceComplianceDashboard
+        portfolio="silicon-brick-road"
+        indicators={[
+          {
+            label: "Flexible Horizon",
+            status: "compliant",
+            value: "5/10/15y",
+            detail: "No fixed end date; choose your own timeline",
+            action: "Review horizon selection annually"
+          },
+          {
+            label: "Watch/Pause Status",
+            status: "compliant",
+            value: "Normal",
+            detail: "Portfolio operating within governance bands",
+            action: "Monitor drawdown at monthly checkpoints"
+          },
+          {
+            label: "Contribution Pace",
+            status: "compliant",
+            value: `S$${d.monthly.toLocaleString()}/mo`,
+            detail: `Annual lump sum: S$${d.annual.toLocaleString()}`,
+            action: "Adjust in Settings if circumstances change"
+          },
+          {
+            label: "Base Projection",
+            status: "compliant",
+            value: `${(d.growthRates.base * 100).toFixed(1)}% p.a.`,
+            detail: "Blended from actual current holdings",
+            action: "Review annually or after major rebalance"
+          },
+        ]}
+        rules={[
+          {
+            category: "Watch Tier",
+            rule: ">20% maximum drawdown in any year",
+            status: "pass",
+            description: "Monitor closely; DCA continues normally; no action required",
+            nextAction: "Check portfolio monthly; document rationale"
+          },
+          {
+            category: "Pause Tier",
+            rule: ">30% drawdown triggers governance review",
+            status: "pass",
+            description: "May pause contributions temporarily; formal committee decision required",
+            nextAction: "Schedule committee meeting within 2 weeks of trigger"
+          },
+          {
+            category: "Resume Tier",
+            rule: "Recovery to new high removes pause",
+            status: "pass",
+            description: "Once portfolio reaches new peak, pause is automatically lifted",
+            nextAction: "Resume contributions per original plan"
+          },
+        ]}
+        riskMetrics={{
+          maxDrawdown: 0.30,
+          volatility: 0.12,
+          concentration: 0.40,
+        }}
+        nextActions={[
+          {
+            priority: "medium",
+            action: "Annual portfolio review",
+            trigger: "Every January or after major market move",
+            deadline: "Before January 31"
+          },
+          {
+            priority: "low",
+            action: "Review withdrawal plan",
+            trigger: "If approaching your chosen horizon",
+            deadline: "6 months before target year"
+          },
+        ]}
+      />
+
+      {/* SBR Probability Engine */}
+      <SbrProbabilityEngine
+        startValue={d.totalValue}
+        monthlyDca={d.monthly}
+        annualBonus={d.annual}
+        contributionGrowthRate={d.growth}
+      />
       </div>
     </Shell>
   )
@@ -526,6 +613,82 @@ export default async function Forecast() {
           than a 1% improvement in annual return. Consistency and contribution growth compound alongside capital.
         </p>
       </div>
+
+      {/* Governance Compliance Dashboard */}
+      <GovernanceComplianceDashboard
+        portfolio="atlas-core"
+        indicators={[
+          {
+            label: "Portfolio Status",
+            status: "compliant",
+            value: "On Track",
+            detail: "Current allocation meets 2045 target envelope",
+            action: "Review allocation on Settings page"
+          },
+          {
+            label: "Contribution Growth",
+            status: "compliant",
+            value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`,
+            detail: "Annual increase in monthly DCA and bonuses",
+            action: "Adjust on Settings page if income changes"
+          },
+          {
+            label: "Volatility Profile",
+            status: "compliant",
+            value: `${(coneVol * 100).toFixed(0)}%`,
+            detail: `Annualized volatility from ${volIsReal ? 'portfolio history' : 'default assumption'}`,
+          },
+          {
+            label: "Time Horizon",
+            status: "compliant",
+            value: "2045",
+            detail: "19 years remaining until target date",
+            action: "Review glide path plan in 2040"
+          },
+        ]}
+        rules={[
+          {
+            category: "Target Achievement",
+            rule: "Base case projection for 2045",
+            status: "pass",
+            description: `SGD ${fmtM(base2045)} at ${(rates.base * 100).toFixed(1)}% p.a. return`,
+            nextAction: "Monitor annually; adjust contributions if income permits"
+          },
+          {
+            category: "Contribution Discipline",
+            rule: "Monthly DCA + Annual bonus + RSU vests",
+            status: "pass",
+            description: `SGD ${MONTHLY_CONTRIBUTION.toLocaleString()}/mo + SGD ${ANNUAL_LUMP_SUM.toLocaleString()}/yr${vestExtras.length > 0 ? ` + ${vestExtras.length} RSU vests (≈${formatCurrency(vestExtras.reduce((s, v) => s + v.amount, 0), 'USD')} USD)` : ''}`,
+            nextAction: "Continue DCA; review every January"
+          },
+          {
+            category: "Growth Assumption",
+            rule: "Blended from actual holdings (not target)",
+            status: "pass",
+            description: "Forecast reflects current allocation drift, not target-weight projection",
+            nextAction: "Rebalance if allocation drifts >5% from target"
+          },
+        ]}
+        riskMetrics={{
+          maxDrawdown: 0.35,
+          volatility: coneVol,
+          concentration: 0.25,
+        }}
+        nextActions={[
+          {
+            priority: "medium",
+            action: "Review 2040–2045 glide path",
+            trigger: "Every January or if portfolio compounds >50%",
+            deadline: "Before 2040"
+          },
+          {
+            priority: "low",
+            action: "Confirm retirement use and required amount",
+            trigger: "Annual portfolio review",
+            deadline: "Before 2041"
+          },
+        ]}
+      />
 
       <ProbabilityEngine
         startValue={currentValue}
