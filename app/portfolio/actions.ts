@@ -177,7 +177,7 @@ export async function applyExtractedHoldings(
   }
 
   if (updated > 0 || created > 0) {
-    for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/holdings", "/ytd", "/risk", "/mission-control", "/next"]) revalidatePath(p)
+    for (const p of ["/portfolio", "/", "/reports", "/forecast", "/compliance", "/risk", "/mission-control", "/next"]) revalidatePath(p)
   }
   return { updated, created, needsConfirmation }
 }
@@ -253,7 +253,7 @@ export async function correctPositions(
     applied++
   }
 
-  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/compliance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
   return { success: true, applied }
 }
 
@@ -319,7 +319,7 @@ export async function mergeDuplicateHoldings(): Promise<{ success?: true; merged
     merged++
   }
 
-  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/compliance", "/risk", "/mission-control", "/next", "/contributions"]) revalidatePath(p)
   return { success: true, merged, closed }
 }
 
@@ -354,7 +354,7 @@ export async function removeErroneousPosition(holdingId: string): Promise<{ succ
     },
   })
 
-  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/governance", "/risk", "/mission-control", "/next"]) revalidatePath(p)
+  for (const p of ["/portfolio", "/", "/reports", "/forecast", "/compliance", "/risk", "/mission-control", "/next"]) revalidatePath(p)
   return { success: true }
 }
 
@@ -547,7 +547,7 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
   revalidatePath("/")
   revalidatePath("/reports")
   revalidatePath("/forecast")
-  revalidatePath("/governance")
+  revalidatePath("/compliance")
   revalidatePath("/risk")
   revalidatePath("/mission-control")
 
@@ -587,7 +587,7 @@ export async function reconcileCostBasis(): Promise<{
     await importIbkrActivityForUser(active.owner.id, result.executions, result.dividends, result.ledger)
 
   if (tickers.length > 0) {
-    for (const p of ["/", "/trades", "/contributions", "/next", "/ytd", "/portfolio", "/governance", "/compliance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
+    for (const p of ["/", "/contributions", "/next", "/portfolio", "/compliance", "/reports", "/forecast", "/risk", "/mission-control"]) {
       revalidatePath(p)
     }
   }

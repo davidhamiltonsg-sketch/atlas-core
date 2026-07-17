@@ -6,11 +6,25 @@ import {
 } from "@/lib/sbr-look-through"
 import type { SbrPosition } from "@/lib/sbr-engine"
 import type { GovAlignment, Align } from "@/lib/governance-status"
+import { economicSleeveTicker } from "@/lib/instrument-identity"
+
+// Same alias normalization as sbr-look-through.ts's sbrSleeveTicker: an SBR satellite
+// reported by IBKR under its alternate exchange line (EQQQ instead of EQAC, SEMI instead
+// of SMH) must roll into the same sleeve here too, or the hard-cap/combined-satellite
+// checks below silently read that exposure as absent.
+function sleeveTicker(ticker: string): string {
+  const raw = ticker.trim().toUpperCase()
+  return economicSleeveTicker(raw === "SMH.L" ? "SMH" : raw)
+}
 
 export function evaluateSbrGovernance(positions: SbrPosition[], totalValue: number, weightsAsOf?: Date, now = new Date(), computedLookThrough?:SbrLookThrough): GovAlignment {
   if (totalValue <= 0) return { checks: [], breaches: 0, watches: 0, overall: "ok" }
   const st = (breach: boolean, watch: boolean): Align => breach ? "breach" : watch ? "watch" : "ok"
-  const actual = new Map(positions.map((p) => [p.ticker === "SMH.L" ? "SMH" : p.ticker, p.actualPct]))
+  const actual = new Map<string, number>()
+  for (const p of positions) {
+    const k = sleeveTicker(p.ticker)
+    actual.set(k, (actual.get(k) ?? 0) + p.actualPct)
+  }
   const combined = (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
   const equity = (actual.get("VWRA") ?? 0) + (actual.get("EQAC") ?? 0) + (actual.get("SMH") ?? 0)
   const lt = computedLookThrough??computeSbrLookThrough(positions, now, weightsAsOf)
