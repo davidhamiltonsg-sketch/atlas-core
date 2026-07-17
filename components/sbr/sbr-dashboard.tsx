@@ -14,7 +14,7 @@ import { DownloadReportCard } from "@/components/reports/download-report-card"
 import { HoldingsTable, type HoldingRow } from "@/components/dashboard/holdings-table"
 import { getRecentExecutions } from "@/lib/execution-actions"
 import type { GovAlignment } from "@/lib/governance-status"
-import type { SealDimension } from "@/components/cockpit/governance-seal"
+import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
 import type { ComplianceBandPosition } from "@/components/cockpit/compliance-board"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
@@ -216,15 +216,18 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
   const totalCostBasis=valuationComplete?positiveRows.reduce((sum,row)=>sum+row.value-(row.unrealisedSgd??0),0):null
   const totalReturnPct=totalUnrealised!==null&&totalCostBasis!==null&&totalCostBasis>0?(totalUnrealised/totalCostBasis)*100:null
 
-  // Convert SBR health dimensions to SealDimension format (weighted points)
+  // Convert SBR health dimensions to SealDimension format (weighted points). Weights mirror
+  // computeSbrHealth's actual overall formula exactly (lib/sbr-engine.ts) — governance .25,
+  // risk .20, allocation .15, contribution/freshness .20, behavioural .10, liquidity .10.
+  // "documentation" is not a separately-weighted term (it's a duplicate of freshness), so it
+  // isn't shown as its own dimension here.
   const sealDimensions: SealDimension[] = [
     { label: "Governance",   score: Math.round(d.health.governance    * 0.25), maxScore: 25, status: dimStatus(d.health.governance) },
     { label: "Risk",         score: Math.round(d.health.risk          * 0.20), maxScore: 20, status: dimStatus(d.health.risk) },
     { label: "Allocation",   score: Math.round(d.health.allocation    * 0.15), maxScore: 15, status: dimStatus(d.health.allocation) },
-    { label: "Contribution", score: Math.round(d.health.contribution  * 0.15), maxScore: 15, status: dimStatus(d.health.contribution) },
+    { label: "Contribution", score: Math.round(d.health.contribution  * 0.20), maxScore: 20, status: dimStatus(d.health.contribution) },
     { label: "Behaviour",    score: Math.round(d.health.behavioural   * 0.10), maxScore: 10, status: dimStatus(d.health.behavioural) },
     { label: "Liquidity",    score: Math.round(d.health.liquidity     * 0.10), maxScore: 10, status: dimStatus(d.health.liquidity) },
-    { label: "Docs",         score: Math.round(d.health.documentation * 0.05), maxScore: 5,  status: dimStatus(d.health.documentation) },
   ]
 
   return (
@@ -288,6 +291,18 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
         <article className="atlas-command-band"><div><span>WHY</span><h2>{d.nextMove.why}</h2><p>{d.nextMove.when??"At the next permitted contribution window."}</p></div><Link href="/mission-control?portfolio=silicon-brick-road">Review & Adjust →</Link></article>
         <article className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>Flexible medium-term compounding</h2><p>VWRA 65 · EQAC 10 · SMH 5 · BTC 5 · DBMFE 10 · A35 5. A real SGD use must be documented before risk changes.</p></div><a href="/downloads/silicon-brick-road-constitution-v10.5.html" target="_blank" rel="noopener noreferrer">Read constitution ↗</a></article>
       </section>
+
+      {/* Governance seal: ring score + per-dimension breakdown, click-through to full compliance page */}
+      <div className="mb-5">
+        <GovernanceSeal
+          overall={d.health.overall}
+          overallLabel={d.health.overallLabel}
+          constitutionLabel="SILICON BRICK ROAD"
+          dimensions={sealDimensions}
+          href="/compliance"
+          hrefLabel="View full status →"
+        />
+      </div>
 
 
       {/* Exceptional Market Event — EME detected (portfolio down ≥30% from peak) */}

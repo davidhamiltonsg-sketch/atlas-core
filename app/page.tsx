@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/utils"
 import { getSession } from "@/lib/session"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { PortfolioHistoryChart } from "@/components/charts/portfolio-history-chart"
+import { GovernanceSeal, type SealDimension } from "@/components/cockpit/governance-seal"
 import { computePortfolioHealth } from "@/lib/health"
 import { HARD_THRESHOLDS, TICKER_TARGETS } from "@/lib/constants"
 import { computeMarketAwareDca, applyEconomicSleeves, BITCOIN_SLEEVE_TARGET_PCT, type PositionInput } from "@/lib/next-best-move"
@@ -583,15 +584,21 @@ export default async function Dashboard() {
         <div className="space-y-5 min-w-0 reveal-stack">
 
           {/* ── COMPLIANCE STATUS ─────────────────────────────────────── */}
-          {/* Brief compliance alert with link to full compliance page */}
-          <section className="atlas-command-band" style={{borderLeftColor: d.health.overall >= 80 ? '#10b981' : d.health.overall >= 60 ? '#f59e0b' : '#ef4444'}}>
-            <div>
-              <span>GOVERNANCE STATUS</span>
-              <h2>Constitution {d.health.overall >= 80 ? '✓ Compliant' : d.health.overall >= 60 ? '⚠ Review needed' : '🚨 Action required'}</h2>
-              <p>Portfolio health: {d.health.overall}/100 · {d.health.overallLabel} · {d.snapshotAgeDays <= 1 ? "Data current" : `${d.snapshotAgeDays} days old`}</p>
-            </div>
-            <Link href="/compliance">View full status →</Link>
-          </section>
+          {/* Governance seal: ring score + per-dimension breakdown, click-through to full compliance page */}
+          <GovernanceSeal
+            overall={d.health.overall}
+            overallLabel={`${d.health.overall >= 80 ? 'Compliant' : d.health.overall >= 60 ? 'Review needed' : 'Action required'} · ${d.snapshotAgeDays <= 1 ? "data current" : `${d.snapshotAgeDays} days old`}`}
+            constitutionLabel="ATLAS CORE"
+            dimensions={([d.health.structural, d.health.behavioural, d.health.concentration, d.health.freshness] as const).map((dim): SealDimension => ({
+              label: dim.label,
+              score: dim.score,
+              maxScore: dim.label === "Structural" ? 40 : dim.label === "Freshness" ? 10 : 25,
+              status: dim.status,
+              citation: dim.citation,
+            }))}
+            href="/compliance"
+            hrefLabel="View full status →"
+          />
 
           {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
           <section className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.ladder.headline}</h2><p>{d.ladder.instruction}</p></div><Link href="/mission-control?portfolio=atlas-core">Review & Adjust →</Link></section>
