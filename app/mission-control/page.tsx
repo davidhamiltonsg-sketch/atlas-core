@@ -20,6 +20,7 @@ import { getLiveMarketPositions } from "@/lib/finnhub"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { redirect } from "next/navigation"
 import { Shell } from "@/components/shell"
+import { PostActionConfirmation } from "@/components/post-action-confirmation"
 
 // Mission Control is a personal, auth-gated console — never statically cached.
 export const dynamic = "force-dynamic"

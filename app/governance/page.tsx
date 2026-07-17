@@ -35,7 +35,7 @@ export default async function GovernancePage(){
   return <Shell title={sbr?"Your Constitution":"Constitution & Rules"} subtitle={`${c.shortName} v${c.version} · the controlling mandate`} userName={session.name} isAdmin={session.role==="admin"} constitutionId={c.id}>
     <div className="governance-deck">
       <section className="governance-hero">
-        <div><p>THE CONTROLLING MANDATE</p><h1>{sbr?"A simple plan strong enough to survive difficult markets.":"A portfolio governed by mathematics, evidence and restraint."}</h1><span>{c.objective}</span><div className="governance-actions"><Link href={c.docPath} target="_blank"><Download/>Download the full v{c.version} constitution</Link><Link href={`/mission-control?portfolio=${c.id}`}><ExternalLink/>Open Mission Control</Link></div></div>
+        <div><p>THE CONTROLLING MANDATE</p><h1>{sbr?"A simple plan strong enough to survive difficult markets.":"A portfolio governed by mathematics, evidence and restraint."}</h1><span>{c.objective}</span><div className="governance-actions"><Link href={c.docPath} target="_blank"><Download/>Download the full v{c.version} constitution</Link><Link href={`/mission-control?portfolio=${c.id}`}><ExternalLink/>Review & Adjust</Link></div></div>
         <div className="constitution-seal"><ShieldCheck/><b>v{c.version}</b><span>CANONICAL · CURRENT</span><small>{sbr?"Owner: Dami":"Owner: David"}</small></div>
       </section>
 

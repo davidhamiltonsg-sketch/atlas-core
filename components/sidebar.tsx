@@ -46,7 +46,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
     ] },
     { label: "Mandate", items: [
-      { href: "/governance", label: "Constitution & rules", icon: ShieldCheck },
+      { href: "/compliance", label: "Compliance & status", icon: ShieldCheck },
     ] },
   ],
   "silicon-brick-road": [
@@ -63,7 +63,7 @@ const NAV: Record<ConstitutionId, NavGroupDef[]> = {
       { href: "/forecast", label: "Forecast", icon: TrendingUp },
     ] },
     { label: "Mandate", items: [
-      { href: "/governance", label: "Constitution & rules", icon: ShieldCheck },
+      { href: "/compliance", label: "Compliance & status", icon: ShieldCheck },
     ] },
   ],
 }
