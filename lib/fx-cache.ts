@@ -1,5 +1,5 @@
 /**
- * Atlas Core — USD/SGD FX rate: single fetcher + per-render cache.
+ * Atlas Core — USD/SGD FX rate: single fetcher + cross-page cache.
  *
  * This is THE one place the app fetches the USD→SGD rate (Yahoo Finance,
  * query1 → query2 fallback, hardcoded 1.35 fallback when both are down).
@@ -7,14 +7,17 @@
  * Problem the cache solves: without it, Dashboard and Portfolio pages fetch the
  * rate independently, leading to different rates if called seconds apart — the
  * same holding then shows different SGD values on different pages. The rate is
- * cached for 5 seconds (per-request consistency window), which spans a single
- * Server Component page render.
+ * cached for 5 minutes, so normal browsing (dashboard → portfolio → back) shows
+ * a consistent SGD figure instead of a value that jumps on every navigation.
  *
  * Usage (Server Components, Server Actions, cron sync):
  *   const rate = await getCachedUsdSgdRate()
  *
- * Call clearFxCache() at the end of a request when a fresh rate is needed on
- * the next one.
+ * Do NOT call clearFxCache() at the end of a page render — that forces a fresh
+ * network fetch on every subsequent page load and defeats the cross-page
+ * consistency this module exists for. Reserve it for callers that genuinely
+ * need a guaranteed-fresh rate regardless of cache age (e.g. an explicit
+ * "refresh now" action).
  */
 
 const YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
@@ -46,8 +49,9 @@ interface CachedRate {
 let cachedRate: CachedRate | null = null
 let pendingFetch: Promise<number> | null = null
 
-// Cache duration: 5 seconds (per-request consistency within a single page render)
-const CACHE_DURATION_MS = 5000
+// Cache duration: 5 minutes — long enough that ordinary navigation between pages shows a
+// consistent rate, short enough that a genuinely stale rate self-heals without intervention.
+const CACHE_DURATION_MS = 5 * 60 * 1000
 
 /**
  * Get the USD/SGD exchange rate with caching.

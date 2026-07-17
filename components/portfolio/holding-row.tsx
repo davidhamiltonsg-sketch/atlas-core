@@ -6,31 +6,33 @@ import { updateHoldingsManually, removeErroneousPosition } from "@/app/portfolio
 import { Sparkline } from "@/components/charts/sparkline"
 import { sgdUnitPrice } from "@/lib/unit-price"
 
+export interface HoldingRowData {
+  id: string
+  ticker: string
+  name: string
+  color: string
+  value: number
+  actualPct: number
+  targetPct: number
+  hardCapPct: number | null
+  drift: number
+  withinBand: boolean
+  overCap: boolean
+  isHard: boolean
+  isSoft: boolean
+  latestSnapshot: { units: number; price: number } | null
+  sparklineValues?: number[]
+  avgCostUsd?: number | null
+  unrealisedSgd?: number | null
+  unrealisedPct?: number | null
+  /** Valued holding outside the governed universe — no target, no drift advice. */
+  legacy?: boolean
+  /** Owner-only correction: zero out an erroneous non-governed row (append-only). */
+  canRemove?: boolean
+}
+
 interface HoldingRowProps {
-  holding: {
-    id: string
-    ticker: string
-    name: string
-    color: string
-    value: number
-    actualPct: number
-    targetPct: number
-    hardCapPct: number | null
-    drift: number
-    withinBand: boolean
-    overCap: boolean
-    isHard: boolean
-    isSoft: boolean
-    latestSnapshot: { units: number; price: number } | null
-    sparklineValues?: number[]
-    avgCostUsd?: number | null
-    unrealisedSgd?: number | null
-    unrealisedPct?: number | null
-    /** Valued holding outside the governed universe — no target, no drift advice. */
-    legacy?: boolean
-    /** Owner-only correction: zero out an erroneous non-governed row (append-only). */
-    canRemove?: boolean
-  }
+  holding: HoldingRowData
 }
 
 export function HoldingRow({ holding: h }: HoldingRowProps) {

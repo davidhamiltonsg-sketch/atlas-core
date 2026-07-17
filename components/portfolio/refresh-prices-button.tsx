@@ -1,12 +1,20 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react"
 import { refreshLivePrices } from "@/app/portfolio/actions"
+import { setRefreshing } from "@/lib/client/refresh-signal"
 
 export function RefreshPricesButton() {
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<{ success: boolean; updated?: number; unitsUpdated?: number; added?: number; removed?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string } | null>(null)
+
+  // Publish pending state so sibling components (the holdings table) can show a
+  // loading skeleton while this refresh — and the revalidation it triggers — is in flight.
+  useEffect(() => {
+    setRefreshing(isPending)
+    return () => setRefreshing(false)
+  }, [isPending])
 
   function handleRefresh() {
     setResult(null)

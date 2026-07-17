@@ -32,7 +32,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
 import { GettingStartedGuide } from "@/components/getting-started-guide"
 import { redirect } from "next/navigation"
-import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
+import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { BitcoinCycleBadge } from "@/components/bitcoin-cycle-badge"
 import { getBitcoinCyclePhase } from "@/lib/bitcoin-cycle"
 import { sgtToday, sgtDateOnly, dealingWindowStatus } from "@/lib/sgt-date"
@@ -454,184 +454,180 @@ async function getDashboardData(userId: string) {
 }
 
 export default async function Dashboard() {
-  try {
-    const session = await getSession()
-    if (!session) redirect("/login?portfolio=atlas-core")
+  const session = await getSession()
+  if (!session) redirect("/login?portfolio=atlas-core")
 
-    const active = await activePortfolioContext(session)
-    if (active.constitutionId === "silicon-brick-road") {
-      return <SbrDashboard userId={active.owner.id} name={session.name} isAdmin={session.role === "admin"} />
-    }
-
-    const d = await getDashboardData(active.owner.id)
-    const canMutateOwner = session.role === "admin" || session.userId === active.owner.id
-
-    const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
-    const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
-    const costedMarketValue = costedRows.reduce((sum,p)=>sum+p.value,0)
-    const valuationComplete = d.holdingsRows.filter(p=>p.value>0).every(p=>p.unrealisedSgd!==null)
-    const totalUnrealised = totalCostBasis > 0 && valuationComplete ? costedMarketValue - totalCostBasis : null
-    const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
-
-    return (
-    <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.6" userName={session.name} isAdmin={session.role === "admin"}>
-
-      {/* Toolbar */}
-      <div className="mb-5 flex flex-wrap items-start gap-2">
-        <RefreshPricesButton />
-        <PortfolioUpdateButton label="Update Holdings" holdings={d.updateHoldings} />
-        <BitcoinCycleBadge phase={d.btcCyclePhase} />
-        {d.dealingWindow.isOpen && (
-          <StatusChip status="good" label={`DEALING WINDOW OPEN · CLOSES ${d.dealingWindow.windowClosesLabel}`} className="px-3 py-1.5 font-bold" />
-        )}
-        {!d.dealingWindow.isOpen && d.dealingWindow.daysUntilOpen !== null && (
-          <span className="inline-flex items-center text-[10px] font-semibold px-3 py-1.5 rounded-full border border-border text-muted-foreground">
-            WINDOW OPENS IN {d.dealingWindow.daysUntilOpen}d
-          </span>
-        )}
-      </div>
-
-      {/* Stale data warning — semantic tokens (danger ≥7d, warning 3–6d) so the banner
-          re-skins with the theme instead of hardcoding the red/amber palette. */}
-      {d.hasBalance && d.daysSinceUpdate !== null && d.daysSinceUpdate >= 3 && (
-        <a href="/portfolio" className={`mb-5 flex items-center gap-3 rounded-xl border px-5 py-3 transition-colors group ${
-          d.daysSinceUpdate >= 7
-            ? "border-danger/30 bg-danger/[0.07] hover:bg-danger/[0.11]"
-            : "border-warning/30 bg-warning/[0.07] hover:bg-warning/[0.11]"
-        }`}>
-          <Activity className={`h-4 w-4 shrink-0 ${d.daysSinceUpdate >= 7 ? "text-danger" : "text-warning"}`} />
-          <p className={`text-xs flex-1 ${d.daysSinceUpdate >= 7 ? "text-danger" : "text-warning"}`}>
-            <span className="font-bold">Prices last updated {d.daysSinceUpdate} day{d.daysSinceUpdate !== 1 ? "s" : ""} ago</span>
-            {d.latestSnapshotDate && ` · ${new Date(d.latestSnapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
-            {d.daysSinceUpdate >= 7 ? " — portfolio values may be significantly out of date." : ""}
-          </p>
-          <span className={`shrink-0 text-xs font-semibold transition-colors ${d.daysSinceUpdate >= 7 ? "text-danger/70 group-hover:text-danger" : "text-warning/70 group-hover:text-warning"}`}>
-            Update now →
-          </span>
-        </a>
-      )}
-
-      {/* Out-of-scope holding alert — warning tokens */}
-      {d.hasBalance && d.outOfScopeTickers.length > 0 && (
-        <a href="/portfolio" className="mb-5 flex items-center gap-4 rounded-xl border border-warning/40 bg-warning/10 px-5 py-3.5 hover:bg-warning/[0.14] transition-colors group">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
-          <div className="flex-1">
-            <p className="text-sm font-bold text-warning">
-              {d.outOfScopeTickers.join(", ")} {d.outOfScopeTickers.length > 1 ? "are" : "is"} held but not in your plan
-            </p>
-            <p className="text-xs text-warning/80 mt-0.5">
-              Follow the migration: retain IBIT, keep each legacy row and cost basis intact, and use replacement cash only after IBKR confirms settlement.
-            </p>
-          </div>
-          <span className="shrink-0 text-xs font-semibold text-warning/70 group-hover:text-warning transition-colors">Review →</span>
-        </a>
-      )}
-
-      {/* ── ATLAS FLIGHT DECK — portfolio first, governance second ─────── */}
-      <section className="atlas-flightdeck mb-6 overflow-hidden rounded-[28px] border border-violet-400/20">
-        <div className="atlas-flightdeck-head">
-          <div>
-            <p className="atlas-kicker">ATLAS CORE · LIVE PORTFOLIO POSITION</p>
-            <h2>Where we are now.</h2>
-            <p>Performance, ownership and the next constitution-permitted action in one view.</p>
-          </div>
-          <div className="atlas-freshness">
-            <span className={d.daysSinceUpdate !== null && d.daysSinceUpdate > 3 ? "warn" : "ok"} />
-            {d.daysSinceUpdate === null ? "Awaiting first sync" : `IBKR snapshot · ${d.daysSinceUpdate === 0 ? "today" : `${d.daysSinceUpdate}d old`}`}
-          </div>
-        </div>
-
-        <div className="atlas-flightdeck-grid">
-          <div className="atlas-value-bay">
-            <p className="atlas-kicker">TOTAL PORTFOLIO VALUE</p>
-            <strong className="atlas-total"><AnimatedNumber value={d.totalValue} currency="SGD" /></strong>
-            <div className="atlas-value-stats">
-              <div><span>Cost basis</span><b>{valuationComplete && totalCostBasis > 0 ? formatCurrency(totalCostBasis, "SGD") : "Needs reconciliation"}</b></div>
-              <div><span>Unrealised P&amp;L</span><b className={totalUnrealised !== null && totalUnrealised < 0 ? "down" : "up"}>{totalUnrealised === null ? "—" : `${totalUnrealised >= 0 ? "+" : "−"}${formatCurrency(Math.abs(totalUnrealised), "SGD")}`}</b></div>
-              <div><span>Unrealised return</span><b className={totalReturnPct !== null && totalReturnPct < 0 ? "down" : "up"}>{totalReturnPct === null ? "Needs reconciliation" : `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}</b></div>
-            </div>
-            <div className="atlas-command-line">
-              <span>CONSTITUTION SAYS</span>
-              <b>{d.ladder.headline}</b>
-              <p>{d.ladder.instruction}</p>
-            </div>
-          </div>
-
-          <div className="atlas-chart-bay">
-            <div className="atlas-panel-title"><div><span>PERFORMANCE</span><b>Portfolio value history</b></div>{d.valueChange !== null && <strong className={d.valueChange >= 0 ? "up" : "down"}>{d.valueChange >= 0 ? "+" : "−"}{formatCurrency(Math.abs(d.valueChange), "SGD")}</strong>}</div>
-            {d.historyPoints.length >= 2 ? <PortfolioHistoryChart data={d.historyPoints} /> : <div className="atlas-empty-chart"><Activity /><span>Performance history will appear after two complete IBKR snapshots.</span></div>}
-          </div>
-
-          <Link href="/portfolio" className="atlas-orbit-bay">
-            <div className="atlas-panel-title"><div><span>POSITION</span><b>Actual versus target</b></div><em>Open portfolio →</em></div>
-            <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD" />
-          </Link>
-        </div>
-
-        <div className="atlas-flightdeck-foot">
-          {/* Art. XIII plan figures are USD (owner setting is stored in USD); reporting stays SGD,
-              so the SGD equivalent at the live rate rides along via the one convert() boundary. */}
-          <div><span>Next contribution</span><b>{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "USD")} ≈ {formatCurrency(convert(money(d.monthlyContribution, "USD"), "SGD", d.usdSgdRate).amount, "SGD")}</b></div>
-          <div><span>DCA cash bank</span><b>{formatCurrency(d.cashBankBalance, "SGD")}</b></div>
-          <div><span>Portfolio health</span><b>{d.health.overall}/100 · {d.health.overallLabel}</b></div>
-          <div><span>2045 base case</span><b>{d.base2045 >= 1_000_000 ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M` : `S$${(d.base2045 / 1_000).toFixed(0)}K`}</b></div>
-        </div>
-      </section>
-
-      <GettingStartedGuide />
-
-      <div className="grid gap-5">
-        <div className="space-y-5 min-w-0 reveal-stack">
-
-          {/* ── COMPLIANCE STATUS ─────────────────────────────────────── */}
-          {/* Governance seal: ring score + per-dimension breakdown, click-through to full compliance page */}
-          <GovernanceSeal
-            overall={d.health.overall}
-            overallLabel={`${d.health.overall >= 80 ? 'Compliant' : d.health.overall >= 60 ? 'Review needed' : 'Action required'} · ${d.snapshotAgeDays <= 1 ? "data current" : `${d.snapshotAgeDays} days old`}`}
-            constitutionLabel="ATLAS CORE"
-            dimensions={([d.health.structural, d.health.behavioural, d.health.concentration, d.health.freshness] as const).map((dim): SealDimension => ({
-              label: dim.label,
-              score: dim.score,
-              maxScore: dim.label === "Structural" ? 40 : dim.label === "Freshness" ? 10 : 25,
-              status: dim.status,
-              citation: dim.citation,
-            }))}
-            href="/compliance"
-            hrefLabel="View full status →"
-          />
-
-          {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
-          <section className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.ladder.headline}</h2><p>{d.ladder.instruction}</p></div><Link href="/mission-control?portfolio=atlas-core">Review & Adjust →</Link></section>
-
-          {/* 2. Governance Rationale */}
-          <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/compliance">Read rules and constraints →</Link></section>
-
-          {/* 3. Compliance Board — position bands */}
-          <section className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>2045 disciplined accumulation</h2><p>Target VWRA 70 · EQAC 10 · SMH 5 · IBIT 5 · DBMFE 10. Legacy instruments remain visible until sales settle.</p></div><Link href="/forecast">Open forecast →</Link></section>
-
-          <section className="deck-ledger" aria-labelledby="atlas-ledger-title"><div className="deck-ledger-head"><div><span>TARGET POSITION LEDGER</span><h2 id="atlas-ledger-title">Current target holdings</h2><p>Closed and migrating instruments remain in Activity, not in this target view.</p></div><Link href="/portfolio">Open history and activity →</Link></div><div className="deck-ledger-scroll"><table><thead><tr><th>Asset</th><th>Allocation</th><th>Units</th><th>Current price</th><th>Market value</th><th>Cost basis</th><th>Unrealised P/L</th></tr></thead><tbody>{d.holdingsRows.filter(row=>["VWRA","EQAC","SMH","BTC","IBIT","DBMFE"].includes(row.ticker)).map(row=>{const basis=row.unrealisedSgd===null?null:row.value-row.unrealisedSgd;return <tr key={row.ticker}><td><b>{row.ticker}</b><small>{row.name}</small></td><td>{row.actualPct.toFixed(1)}%</td><td>{row.aggregate?"—":row.units.toLocaleString("en-SG",{maximumFractionDigits:4})}</td><td>{row.aggregate||!(row.units>0&&row.value>0)?"—":formatCurrency(row.value/row.units,"SGD")}</td><td><b>{formatCurrency(row.value,"SGD")}</b></td><td>{basis===null?"Needs reconciliation":formatCurrency(basis,"SGD")}</td><td className={row.unrealisedSgd!==null&&row.unrealisedSgd<0?"down":"up"}>{row.unrealisedSgd===null?"—":`${row.unrealisedSgd>=0?"+":"−"}${formatCurrency(Math.abs(row.unrealisedSgd),"SGD")}`}</td></tr>})}</tbody></table></div></section>
-
-          {/* ── WHAT YOU OWN ─────────────────────────────────────────── */}
-          <Link href="/reports" className="group flex items-center gap-3 rounded-2xl border border-border bg-card/75 backdrop-blur-md px-5 py-4 card-elevated hover:bg-accent/40 hover:border-violet-500/30 hover:-translate-y-0.5 transition-all">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
-              <FileBarChart2 className="h-4 w-4 text-violet-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold">What You Own — Full Report</p>
-              <p className="text-xs text-muted-foreground">Look-through · concentration · governance compliance · health scorecard · PDF export</p>
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-violet-500 transition-colors shrink-0">Open →</span>
-          </Link>
-
-          {/* ── OUTSIDE ATLAS — employer RSU pipeline (never NAV) ─────── */}
-          <ExternalAwardCard data={d.awardCard} editable={canMutateOwner} />
-
-        </div>
-
-      </div>
-    </Shell>
-    )
-  } finally {
-    clearFxCache()
+  const active = await activePortfolioContext(session)
+  if (active.constitutionId === "silicon-brick-road") {
+    return <SbrDashboard userId={active.owner.id} name={session.name} isAdmin={session.role === "admin"} />
   }
+
+  const d = await getDashboardData(active.owner.id)
+  const canMutateOwner = session.role === "admin" || session.userId === active.owner.id
+
+  const costedRows = d.holdingsRows.filter((p) => p.unrealisedSgd !== null)
+  const totalCostBasis = costedRows.reduce((sum, p) => sum + p.value - (p.unrealisedSgd ?? 0), 0)
+  const costedMarketValue = costedRows.reduce((sum,p)=>sum+p.value,0)
+  const valuationComplete = d.holdingsRows.filter(p=>p.value>0).every(p=>p.unrealisedSgd!==null)
+  const totalUnrealised = totalCostBasis > 0 && valuationComplete ? costedMarketValue - totalCostBasis : null
+  const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
+
+  return (
+  <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.6" userName={session.name} isAdmin={session.role === "admin"}>
+
+    {/* Toolbar */}
+    <div className="mb-5 flex flex-wrap items-start gap-2">
+      <RefreshPricesButton />
+      <PortfolioUpdateButton label="Update Holdings" holdings={d.updateHoldings} />
+      <BitcoinCycleBadge phase={d.btcCyclePhase} />
+      {d.dealingWindow.isOpen && (
+        <StatusChip status="good" label={`DEALING WINDOW OPEN · CLOSES ${d.dealingWindow.windowClosesLabel}`} className="px-3 py-1.5 font-bold" />
+      )}
+      {!d.dealingWindow.isOpen && d.dealingWindow.daysUntilOpen !== null && (
+        <span className="inline-flex items-center text-[10px] font-semibold px-3 py-1.5 rounded-full border border-border text-muted-foreground">
+          WINDOW OPENS IN {d.dealingWindow.daysUntilOpen}d
+        </span>
+      )}
+    </div>
+
+    {/* Stale data warning — semantic tokens (danger ≥7d, warning 3–6d) so the banner
+        re-skins with the theme instead of hardcoding the red/amber palette. */}
+    {d.hasBalance && d.daysSinceUpdate !== null && d.daysSinceUpdate >= 3 && (
+      <a href="/portfolio" className={`mb-5 flex items-center gap-3 rounded-xl border px-5 py-3 transition-colors group ${
+        d.daysSinceUpdate >= 7
+          ? "border-danger/30 bg-danger/[0.07] hover:bg-danger/[0.11]"
+          : "border-warning/30 bg-warning/[0.07] hover:bg-warning/[0.11]"
+      }`}>
+        <Activity className={`h-4 w-4 shrink-0 ${d.daysSinceUpdate >= 7 ? "text-danger" : "text-warning"}`} />
+        <p className={`text-xs flex-1 ${d.daysSinceUpdate >= 7 ? "text-danger" : "text-warning"}`}>
+          <span className="font-bold">Prices last updated {d.daysSinceUpdate} day{d.daysSinceUpdate !== 1 ? "s" : ""} ago</span>
+          {d.latestSnapshotDate && ` · ${new Date(d.latestSnapshotDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+          {d.daysSinceUpdate >= 7 ? " — portfolio values may be significantly out of date." : ""}
+        </p>
+        <span className={`shrink-0 text-xs font-semibold transition-colors ${d.daysSinceUpdate >= 7 ? "text-danger/70 group-hover:text-danger" : "text-warning/70 group-hover:text-warning"}`}>
+          Update now →
+        </span>
+      </a>
+    )}
+
+    {/* Out-of-scope holding alert — warning tokens */}
+    {d.hasBalance && d.outOfScopeTickers.length > 0 && (
+      <a href="/portfolio" className="mb-5 flex items-center gap-4 rounded-xl border border-warning/40 bg-warning/10 px-5 py-3.5 hover:bg-warning/[0.14] transition-colors group">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+        <div className="flex-1">
+          <p className="text-sm font-bold text-warning">
+            {d.outOfScopeTickers.join(", ")} {d.outOfScopeTickers.length > 1 ? "are" : "is"} held but not in your plan
+          </p>
+          <p className="text-xs text-warning/80 mt-0.5">
+            Follow the migration: retain IBIT, keep each legacy row and cost basis intact, and use replacement cash only after IBKR confirms settlement.
+          </p>
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-warning/70 group-hover:text-warning transition-colors">Review →</span>
+      </a>
+    )}
+
+    {/* ── ATLAS FLIGHT DECK — portfolio first, governance second ─────── */}
+    <section className="atlas-flightdeck mb-6 overflow-hidden rounded-[28px] border border-violet-400/20">
+      <div className="atlas-flightdeck-head">
+        <div>
+          <p className="atlas-kicker">ATLAS CORE · LIVE PORTFOLIO POSITION</p>
+          <h2>Where we are now.</h2>
+          <p>Performance, ownership and the next constitution-permitted action in one view.</p>
+        </div>
+        <div className="atlas-freshness">
+          <span className={d.daysSinceUpdate !== null && d.daysSinceUpdate > 3 ? "warn" : "ok"} />
+          {d.daysSinceUpdate === null ? "Awaiting first sync" : `IBKR snapshot · ${d.daysSinceUpdate === 0 ? "today" : `${d.daysSinceUpdate}d old`}`}
+        </div>
+      </div>
+
+      <div className="atlas-flightdeck-grid">
+        <div className="atlas-value-bay">
+          <p className="atlas-kicker">TOTAL PORTFOLIO VALUE</p>
+          <strong className="atlas-total"><AnimatedNumber value={d.totalValue} currency="SGD" /></strong>
+          <div className="atlas-value-stats">
+            <div><span>Cost basis</span><b>{valuationComplete && totalCostBasis > 0 ? formatCurrency(totalCostBasis, "SGD") : "Needs reconciliation"}</b></div>
+            <div><span>Unrealised P&amp;L</span><b className={totalUnrealised !== null && totalUnrealised < 0 ? "down" : "up"}>{totalUnrealised === null ? "—" : `${totalUnrealised >= 0 ? "+" : "−"}${formatCurrency(Math.abs(totalUnrealised), "SGD")}`}</b></div>
+            <div><span>Unrealised return</span><b className={totalReturnPct !== null && totalReturnPct < 0 ? "down" : "up"}>{totalReturnPct === null ? "Needs reconciliation" : `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}</b></div>
+          </div>
+          <div className="atlas-command-line">
+            <span>CONSTITUTION SAYS</span>
+            <b>{d.ladder.headline}</b>
+            <p>{d.ladder.instruction}</p>
+          </div>
+        </div>
+
+        <div className="atlas-chart-bay">
+          <div className="atlas-panel-title"><div><span>PERFORMANCE</span><b>Portfolio value history</b></div>{d.valueChange !== null && <strong className={d.valueChange >= 0 ? "up" : "down"}>{d.valueChange >= 0 ? "+" : "−"}{formatCurrency(Math.abs(d.valueChange), "SGD")}</strong>}</div>
+          {d.historyPoints.length >= 2 ? <PortfolioHistoryChart data={d.historyPoints} /> : <div className="atlas-empty-chart"><Activity /><span>Performance history will appear after two complete IBKR snapshots.</span></div>}
+        </div>
+
+        <Link href="/portfolio" className="atlas-orbit-bay">
+          <div className="atlas-panel-title"><div><span>POSITION</span><b>Actual versus target</b></div><em>Open portfolio →</em></div>
+          <AllocationDonut data={d.donutData} totalValue={d.totalValue} currency="SGD" />
+        </Link>
+      </div>
+
+      <div className="atlas-flightdeck-foot">
+        {/* Art. XIII plan figures are USD (owner setting is stored in USD); reporting stays SGD,
+            so the SGD equivalent at the live rate rides along via the one convert() boundary. */}
+        <div><span>Next contribution</span><b>{d.nextContributionLabel} · {formatCurrency(d.monthlyContribution, "USD")} ≈ {formatCurrency(convert(money(d.monthlyContribution, "USD"), "SGD", d.usdSgdRate).amount, "SGD")}</b></div>
+        <div><span>DCA cash bank</span><b>{formatCurrency(d.cashBankBalance, "SGD")}</b></div>
+        <div><span>Portfolio health</span><b>{d.health.overall}/100 · {d.health.overallLabel}</b></div>
+        <div><span>2045 base case</span><b>{d.base2045 >= 1_000_000 ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M` : `S$${(d.base2045 / 1_000).toFixed(0)}K`}</b></div>
+      </div>
+    </section>
+
+    <GettingStartedGuide />
+
+    <div className="grid gap-5">
+      <div className="space-y-5 min-w-0 reveal-stack">
+
+        {/* ── COMPLIANCE STATUS ─────────────────────────────────────── */}
+        {/* Governance seal: ring score + per-dimension breakdown, click-through to full compliance page */}
+        <GovernanceSeal
+          overall={d.health.overall}
+          overallLabel={`${d.health.overall >= 80 ? 'Compliant' : d.health.overall >= 60 ? 'Review needed' : 'Action required'} · ${d.snapshotAgeDays <= 1 ? "data current" : `${d.snapshotAgeDays} days old`}`}
+          constitutionLabel="ATLAS CORE"
+          dimensions={([d.health.structural, d.health.behavioural, d.health.concentration, d.health.freshness] as const).map((dim): SealDimension => ({
+            label: dim.label,
+            score: dim.score,
+            maxScore: dim.label === "Structural" ? 40 : dim.label === "Freshness" ? 10 : 25,
+            status: dim.status,
+            citation: dim.citation,
+          }))}
+          href="/compliance"
+          hrefLabel="View full status →"
+        />
+
+        {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
+        <section className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.ladder.headline}</h2><p>{d.ladder.instruction}</p></div><Link href="/mission-control?portfolio=atlas-core">Review & Adjust →</Link></section>
+
+        {/* 2. Governance Rationale */}
+        <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/compliance">Read rules and constraints →</Link></section>
+
+        {/* 3. Compliance Board — position bands */}
+        <section className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>2045 disciplined accumulation</h2><p>Target VWRA 70 · EQAC 10 · SMH 5 · IBIT 5 · DBMFE 10. Legacy instruments remain visible until sales settle.</p></div><Link href="/forecast">Open forecast →</Link></section>
+
+        <section className="deck-ledger" aria-labelledby="atlas-ledger-title"><div className="deck-ledger-head"><div><span>TARGET POSITION LEDGER</span><h2 id="atlas-ledger-title">Current target holdings</h2><p>Closed and migrating instruments remain in Activity, not in this target view.</p></div><Link href="/portfolio">Open history and activity →</Link></div><div className="deck-ledger-scroll"><table><thead><tr><th>Asset</th><th>Allocation</th><th>Units</th><th>Current price</th><th>Market value</th><th>Cost basis</th><th>Unrealised P/L</th></tr></thead><tbody>{d.holdingsRows.filter(row=>["VWRA","EQAC","SMH","BTC","IBIT","DBMFE"].includes(row.ticker)).map(row=>{const basis=row.unrealisedSgd===null?null:row.value-row.unrealisedSgd;return <tr key={row.ticker}><td><b>{row.ticker}</b><small>{row.name}</small></td><td>{row.actualPct.toFixed(1)}%</td><td>{row.aggregate?"—":row.units.toLocaleString("en-SG",{maximumFractionDigits:4})}</td><td>{row.aggregate||!(row.units>0&&row.value>0)?"—":formatCurrency(row.value/row.units,"SGD")}</td><td><b>{formatCurrency(row.value,"SGD")}</b></td><td>{basis===null?"Needs reconciliation":formatCurrency(basis,"SGD")}</td><td className={row.unrealisedSgd!==null&&row.unrealisedSgd<0?"down":"up"}>{row.unrealisedSgd===null?"—":`${row.unrealisedSgd>=0?"+":"−"}${formatCurrency(Math.abs(row.unrealisedSgd),"SGD")}`}</td></tr>})}</tbody></table></div></section>
+
+        {/* ── WHAT YOU OWN ─────────────────────────────────────────── */}
+        <Link href="/reports" className="group flex items-center gap-3 rounded-2xl border border-border bg-card/75 backdrop-blur-md px-5 py-4 card-elevated hover:bg-accent/40 hover:border-violet-500/30 hover:-translate-y-0.5 transition-all">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
+            <FileBarChart2 className="h-4 w-4 text-violet-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold">What You Own — Full Report</p>
+            <p className="text-xs text-muted-foreground">Look-through · concentration · governance compliance · health scorecard · PDF export</p>
+          </div>
+          <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-violet-500 transition-colors shrink-0">Open →</span>
+        </Link>
+
+        {/* ── OUTSIDE ATLAS — employer RSU pipeline (never NAV) ─────── */}
+        <ExternalAwardCard data={d.awardCard} editable={canMutateOwner} />
+
+      </div>
+
+    </div>
+  </Shell>
+  )
 }
