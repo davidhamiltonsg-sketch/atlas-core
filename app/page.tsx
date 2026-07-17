@@ -596,8 +596,8 @@ export default async function Dashboard() {
           {/* 1. Decision Ladder — the single instruction (Art. XIII), first on the page */}
           <section className="atlas-command-band"><div><span>WHAT TO DO</span><h2>{d.ladder.headline}</h2><p>{d.ladder.instruction}</p></div><Link href="/mission-control?portfolio=atlas-core">Review & Adjust →</Link></section>
 
-          {/* 2. Governance Seal — constitution health */}
-          <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/governance">Read constitution →</Link></section>
+          {/* 2. Governance Rationale */}
+          <section className="atlas-command-band"><div><span>WHY</span><h2>{d.ladder.rationale}</h2><p>Governance {d.health.overall}/100 · oldest portfolio snapshot {d.snapshotAgeDays <= 1 ? "current" : `${d.snapshotAgeDays} days old`}.</p></div><Link href="/compliance">Read rules and constraints →</Link></section>
 
           {/* 3. Compliance Board — position bands */}
           <section className="atlas-command-band"><div><span>WHERE WE ARE GOING</span><h2>2045 disciplined accumulation</h2><p>Target VWRA 70 · EQAC 10 · SMH 5 · IBIT 5 · DBMFE 10. Legacy instruments remain visible until sales settle.</p></div><Link href="/forecast">Open forecast →</Link></section>

@@ -162,82 +162,17 @@ async function SbrForecast({ userId, userName, isAdmin }: { userId: string; user
         </div>
       </div>
 
-      {/* Governance Compliance Dashboard for SBR */}
-      <GovernanceComplianceDashboard
-        portfolio="silicon-brick-road"
-        indicators={[
-          {
-            label: "Flexible Horizon",
-            status: "compliant",
-            value: "5/10/15y",
-            detail: "No fixed end date; choose your own timeline",
-            action: "Review horizon selection annually"
-          },
-          {
-            label: "Watch/Pause Status",
-            status: "compliant",
-            value: "Normal",
-            detail: "Portfolio operating within governance bands",
-            action: "Monitor drawdown at monthly checkpoints"
-          },
-          {
-            label: "Contribution Pace",
-            status: "compliant",
-            value: `S$${d.monthly.toLocaleString()}/mo`,
-            detail: `Annual lump sum: S$${d.annual.toLocaleString()}`,
-            action: "Adjust in Settings if circumstances change"
-          },
-          {
-            label: "Base Projection",
-            status: "compliant",
-            value: `${(d.growthRates.base * 100).toFixed(1)}% p.a.`,
-            detail: "Blended from actual current holdings",
-            action: "Review annually or after major rebalance"
-          },
-        ]}
-        rules={[
-          {
-            category: "Watch Tier",
-            rule: ">20% maximum drawdown in any year",
-            status: "pass",
-            description: "Monitor closely; DCA continues normally; no action required",
-            nextAction: "Check portfolio monthly; document rationale"
-          },
-          {
-            category: "Pause Tier",
-            rule: ">30% drawdown triggers governance review",
-            status: "pass",
-            description: "May pause contributions temporarily; formal committee decision required",
-            nextAction: "Schedule committee meeting within 2 weeks of trigger"
-          },
-          {
-            category: "Resume Tier",
-            rule: "Recovery to new high removes pause",
-            status: "pass",
-            description: "Once portfolio reaches new peak, pause is automatically lifted",
-            nextAction: "Resume contributions per original plan"
-          },
-        ]}
-        riskMetrics={{
-          maxDrawdown: 0.30,
-          volatility: 0.12,
-          concentration: 0.40,
-        }}
-        nextActions={[
-          {
-            priority: "medium",
-            action: "Annual portfolio review",
-            trigger: "Every January or after major market move",
-            deadline: "Before January 31"
-          },
-          {
-            priority: "low",
-            action: "Review withdrawal plan",
-            trigger: "If approaching your chosen horizon",
-            deadline: "6 months before target year"
-          },
-        ]}
-      />
+      {/* Compliance status — link to dedicated compliance page */}
+      <Link href="/compliance" className="group flex items-start gap-4 rounded-xl border border-green-500/30 bg-green-500/5 dark:bg-green-500/[0.07] px-5 py-4 mb-6 hover:border-green-500/50 hover:bg-green-500/10 transition-colors">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/20 shrink-0 mt-0.5">
+          <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">Compliance & Watch Status</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Contribution pace: S${d.monthly.toLocaleString()}/month · Growth: {(d.growthRates.base * 100).toFixed(1)}% p.a. · Watch/Pause tiers active</p>
+        </div>
+        <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors shrink-0">View full status →</span>
+      </Link>
 
       <RebalancingGuide portfolio="silicon-brick-road" />
 
