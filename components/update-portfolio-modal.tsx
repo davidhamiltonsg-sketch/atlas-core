@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState, useRef, useTransition } from "react"
-import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw, ArrowUpCircle } from "lucide-react"
+import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw, ArrowUpCircle, TrendingUp, Info, ShieldAlert } from "lucide-react"
 import { updateHoldingsManually, extractFromScreenshot, applyExtractedHoldings, type NeedsConfirmationRow } from "@/app/portfolio/actions"
 import { isInScope } from "@/lib/approved-alternatives"
+import { formatFlexDate } from "@/lib/ibkr-flex"
 
 interface Holding {
   id: string
@@ -32,6 +33,42 @@ interface IBKRPosition {
   prevPrice: number | null
 }
 
+interface IBKRExecution {
+  tradeID: string
+  symbol: string
+  buySell: "BUY" | "SELL"
+  quantity: number
+  price: number
+  fxRate: number
+  tradeDate: string
+  alreadyImported: boolean
+  holdingKnown: boolean
+}
+
+interface IBKRDividend {
+  transactionID: string
+  symbol: string
+  amount: number
+  payDate: string
+  description: string
+  holdingId: string | null
+  alreadyImported: boolean
+  holdingKnown: boolean
+}
+
+interface IBKRLedgerEntry {
+  externalId: string
+  category: string
+  symbol: string
+  amount: number
+  currency: string
+  amountBase: number | null
+  fxRate: number | null
+  date: string
+  description: string
+  rawType: string
+}
+
 interface UpdatePortfolioModalProps {
   holdings: Holding[]
   onClose: () => void
@@ -57,14 +94,36 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   const [extractError, setExtractError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // IBKR state
+  // IBKR state — positions (required half of the closing refresh)
   const [ibkrState, setIbkrState] = useState<"idle" | "fetching" | "preview" | "error">("idle")
   const [ibkrPositions, setIbkrPositions] = useState<IBKRPosition[]>([])
   const [ibkrError, setIbkrError] = useState<string | null>(null)
   const [ibkrMeta, setIbkrMeta] = useState<{ accountId: string; reportDate: string } | null>(null)
 
+  // IBKR state — activity (trades/dividends/cash). Optional half: if this fails or isn't
+  // configured, positions can still be reviewed and saved on their own.
+  const [activityState, setActivityState] = useState<"idle" | "loaded" | "unavailable">("idle")
+  const [activityError, setActivityError] = useState<string | null>(null)
+  const [executions, setExecutions] = useState<IBKRExecution[]>([])
+  const [dividends, setDividends] = useState<IBKRDividend[]>([])
+  const [ledger, setLedger] = useState<IBKRLedgerEntry[]>([])
+  const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set())
+  const [selectedDivs, setSelectedDivs] = useState<Set<string>>(new Set())
+  const [behaviourAcknowledged, setBehaviourAcknowledged] = useState(false)
+  const [saveSummary, setSaveSummary] = useState<{ positions: number; trades: number; dividends: number; ledger: number } | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
+
+  // Opening straight into "ibkr" mode (defaultMode="ibkr", skipping the choose screen) has
+  // nothing to fetch it automatically the way the choose-screen's card onClick does — kick
+  // it off here instead. Guarded on ibkrState==="idle" so it fires once on mount and never
+  // re-fires from the choose-screen path (which already sets ibkrState past "idle" in the
+  // same synchronous click handler before this effect re-evaluates).
+  useEffect(() => {
+    if (mode === "ibkr" && ibkrState === "idle") handleIBKRSync()
+  }, [mode, ibkrState])
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -219,32 +278,65 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
     })
   }
 
-  // ── IBKR FLEX ─────────────────────────────────────────────────────────────
+  // ── IBKR FLEX — "Closing Refresh": positions (units/price/cost basis) AND activity
+  // (trades/dividends/cash/tax) fetched together, reviewed together, saved together. ──
 
   async function handleIBKRSync() {
     setIbkrState("fetching")
     setIbkrError(null)
-    try {
-      const res = await fetch("/api/sync-ibkr", { method: "POST" })
-      const data = await res.json()
-      if (!res.ok) {
-        setIbkrError(data.error ?? "Failed to fetch from IBKR")
-        setIbkrState("error")
-        return
-      }
-      setIbkrPositions(data.positions)
-      setIbkrMeta({ accountId: data.accountId, reportDate: data.reportDate })
-      setIbkrState("preview")
-    } catch {
-      setIbkrError("Network error — check your connection")
+    setActivityState("idle")
+    setActivityError(null)
+    setSaveSummary(null)
+    setSaveError(null)
+
+    const [posResult, actResult] = await Promise.all([
+      fetch("/api/sync-ibkr", { method: "POST" })
+        .then(async (res) => ({ ok: res.ok, data: await res.json() }))
+        .catch(() => ({ ok: false, data: { error: "Network error — check your connection" } })),
+      fetch("/api/sync-ibkr/activity", { method: "POST" })
+        .then(async (res) => ({ ok: res.ok, data: await res.json() }))
+        .catch(() => ({ ok: false, data: { error: "Network error — check your connection" } })),
+    ])
+
+    // Positions is the required half — without it there's nothing to review.
+    if (!posResult.ok) {
+      setIbkrError(posResult.data.error ?? "Failed to fetch from IBKR")
       setIbkrState("error")
+      return
     }
+    setIbkrPositions(posResult.data.positions)
+    setIbkrMeta({ accountId: posResult.data.accountId, reportDate: posResult.data.reportDate })
+    setIbkrState("preview")
+
+    // Activity is optional — not configured or transiently unavailable never blocks positions.
+    if (!actResult.ok) {
+      setActivityError(actResult.data.error ?? "Failed to fetch activity from IBKR")
+      setActivityState("unavailable")
+      return
+    }
+    setExecutions(actResult.data.executions)
+    setDividends(actResult.data.dividends)
+    setLedger(actResult.data.ledger ?? [])
+    setSelectedTrades(new Set(
+      (actResult.data.executions as IBKRExecution[]).filter((e) => !e.alreadyImported).map((e) => e.tradeID)
+    ))
+    setSelectedDivs(new Set(
+      (actResult.data.dividends as IBKRDividend[]).filter((d) => !d.alreadyImported).map((d) => d.transactionID)
+    ))
+    setActivityState("loaded")
   }
+
+  const hasSells = executions.some((e) => selectedTrades.has(e.tradeID) && e.buySell === "SELL")
+  const canConfirmIBKR = ibkrPositions.length > 0 && (!hasSells || behaviourAcknowledged)
 
   function handleConfirmIBKR() {
     // Send ALL positions — matched ones update in place, new tickers (e.g. IBIT) are created.
+    // Positions already carry IBKR's own reported cost basis/unrealised P&L, so saving them
+    // reflects the true post-trade state directly — no separate "go update units manually"
+    // reconciliation step needed once activity is imported alongside.
     startTransition(async () => {
-      const res = await fetch("/api/sync-ibkr", {
+      setSaveError(null)
+      const posRes = await fetch("/api/sync-ibkr", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -257,10 +349,36 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
           })),
         }),
       })
-      if (res.ok) {
-        setSaved(true)
-        setTimeout(() => { setSaved(false); onClose() }, 1200)
+      if (!posRes.ok) {
+        const d = await posRes.json().catch(() => ({}))
+        setSaveError(d.error ?? "Failed to save positions")
+        return
       }
+      const posData = await posRes.json()
+
+      let actSummary = { trades: 0, dividends: 0, ledger: 0 }
+      const tradesToImport = executions.filter((e) => selectedTrades.has(e.tradeID))
+      const divsToImport = dividends.filter((d) => selectedDivs.has(d.transactionID))
+      if (activityState === "loaded" && (tradesToImport.length > 0 || divsToImport.length > 0 || ledger.length > 0)) {
+        const actRes = await fetch("/api/sync-ibkr/activity", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ executions: tradesToImport, dividends: divsToImport, ledger }),
+        })
+        // Positions are already saved at this point — an activity failure here is surfaced
+        // as a partial result, not rolled back or blocked.
+        if (actRes.ok) {
+          const actData = await actRes.json()
+          actSummary = { trades: actData.tradesImported, dividends: actData.dividendsImported, ledger: actData.ledgerImported ?? 0 }
+        } else {
+          const d = await actRes.json().catch(() => ({}))
+          setActivityError(d.error ?? "Positions saved, but activity import failed")
+        }
+      }
+
+      setSaveSummary({ positions: posData.updated ?? ibkrPositions.length, ...actSummary })
+      setSaved(true)
+      setTimeout(() => { setSaved(false); onClose() }, 2400)
     })
   }
 
@@ -275,7 +393,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>
             <h2 id="update-portfolio-title" className="text-sm font-semibold">Update Portfolio Values</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Sync from IBKR or enter manually</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Closing refresh from IBKR, or enter manually</p>
           </div>
           <button ref={closeRef} onClick={onClose} aria-label="Close portfolio update" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors">
             <X className="h-4 w-4" />
@@ -297,8 +415,8 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                   <RefreshCw className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Sync IBKR</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Live positions via Flex API</p>
+                  <p className="text-sm font-semibold">Closing Refresh</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Positions, cost basis, trades, dividends &amp; cash from IBKR</p>
                 </div>
               </button>
 
@@ -413,6 +531,165 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
                     <p className="text-xs text-muted-foreground text-center py-2">
                       No open positions returned by IBKR.
                     </p>
+                  )}
+
+                  {/* Activity — optional half of the closing refresh */}
+                  {activityState === "unavailable" && (
+                    <div className="mt-4 rounded-lg border border-amber-300/40 bg-amber-400/5 px-3 py-2.5 flex items-start gap-2">
+                      <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Trades, dividends &amp; cash weren&apos;t pulled</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{activityError} Positions above are still current and can be saved on their own.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activityState === "loaded" && (
+                    <div className="mt-5 space-y-5">
+                      {/* Trades */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Trades ({executions.length})</h3>
+                          {executions.some((e) => !e.alreadyImported) && (
+                            <span className="text-[10px] text-violet-500 font-semibold">{executions.filter((e) => !e.alreadyImported).length} new</span>
+                          )}
+                        </div>
+                        {executions.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-1">No executions in this period.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {executions.map((e) => {
+                              const isSelected = selectedTrades.has(e.tradeID)
+                              const canSelect = !e.alreadyImported
+                              return (
+                                <label key={e.tradeID} className={`flex items-center gap-3 rounded-lg px-3 py-2 border transition-colors ${
+                                  e.alreadyImported ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                                    : isSelected ? "border-violet-500/40 bg-violet-500/[0.06] cursor-pointer"
+                                    : "border-border bg-card cursor-pointer hover:bg-accent/30"
+                                }`}>
+                                  <input type="checkbox" checked={isSelected} disabled={!canSelect} className="shrink-0 accent-violet-600"
+                                    onChange={(ev) => setSelectedTrades((prev) => {
+                                      const next = new Set(prev)
+                                      if (ev.target.checked) next.add(e.tradeID); else next.delete(e.tradeID)
+                                      return next
+                                    })}
+                                  />
+                                  <ArrowUpCircle className={`h-3.5 w-3.5 shrink-0 ${e.buySell === "BUY" ? "text-green-500" : "text-red-500"}`} />
+                                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                                    <span className={`text-xs font-bold ${e.buySell === "BUY" ? "text-green-500" : "text-red-500"}`}>{e.buySell}</span>
+                                    <span className="text-xs font-semibold">{e.symbol}</span>
+                                    <span className="text-[11px] text-muted-foreground">{e.quantity} × ${e.price.toFixed(2)}</span>
+                                    {!e.holdingKnown && <span className="text-[10px] text-violet-400 italic">new</span>}
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground shrink-0">{formatFlexDate(e.tradeDate)}</span>
+                                  {e.alreadyImported && <span className="text-[10px] text-muted-foreground italic shrink-0">imported</span>}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Dividends */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Dividends ({dividends.length})</h3>
+                          {dividends.some((d) => !d.alreadyImported) && (
+                            <span className="text-[10px] text-violet-500 font-semibold">{dividends.filter((d) => !d.alreadyImported).length} new</span>
+                          )}
+                        </div>
+                        {dividends.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-1">No dividends in this period.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {dividends.map((d) => {
+                              const isSelected = selectedDivs.has(d.transactionID)
+                              const canSelect = !d.alreadyImported
+                              return (
+                                <label key={d.transactionID} className={`flex items-center gap-3 rounded-lg px-3 py-2 border transition-colors ${
+                                  d.alreadyImported ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                                    : isSelected ? "border-green-500/40 bg-green-500/[0.04] cursor-pointer"
+                                    : "border-border bg-card cursor-pointer hover:bg-accent/30"
+                                }`}>
+                                  <input type="checkbox" checked={isSelected} disabled={!canSelect} className="shrink-0 accent-violet-600"
+                                    onChange={(ev) => setSelectedDivs((prev) => {
+                                      const next = new Set(prev)
+                                      if (ev.target.checked) next.add(d.transactionID); else next.delete(d.transactionID)
+                                      return next
+                                    })}
+                                  />
+                                  <TrendingUp className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                                    <span className="text-xs font-semibold">{d.symbol}</span>
+                                    <span className="text-[11px] text-muted-foreground truncate">{d.description}</span>
+                                  </div>
+                                  <span className="text-[11px] tabular-nums font-semibold text-green-500 shrink-0">
+                                    +S${d.amount.toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                  {d.alreadyImported && <span className="text-[10px] text-muted-foreground italic shrink-0">imported</span>}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cash — deposits, withdrawals, fees, tax, interest, conversions */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Cash &amp; adjustments ({ledger.length})</h3>
+                        {ledger.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-1">No deposits, withdrawals, fees, tax, interest or conversions in this period.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {ledger.map((entry) => (
+                              <div key={entry.externalId} className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+                                <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-bold text-muted-foreground shrink-0">{entry.category.replaceAll("_", " ")}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[11px] font-medium">{entry.description || entry.rawType}</p>
+                                  <p className="text-[10px] text-muted-foreground">{entry.symbol || entry.currency} · {formatFlexDate(entry.date)}</p>
+                                </div>
+                                <span className={`text-[11px] font-semibold tabular-nums shrink-0 ${entry.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
+                                  {entry.amount >= 0 ? "+" : ""}{entry.amount.toLocaleString("en-SG", { maximumFractionDigits: 2 })} {entry.currency}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Governance gate — required acknowledgment for SELL trades */}
+                      {hasSells && (
+                        <label className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-400/5 px-4 py-3 cursor-pointer">
+                          <input type="checkbox" checked={behaviourAcknowledged} onChange={(e) => setBehaviourAcknowledged(e.target.checked)} className="mt-0.5 shrink-0 accent-amber-500" />
+                          <div className="flex items-start gap-1.5">
+                            <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                              <span className="font-semibold">Governance gate:</span> I confirm this sale was reviewed against the investment policy, justified by the Behaviour Log, and does not constitute panic selling or speculation.
+                            </p>
+                          </div>
+                        </label>
+                      )}
+                    </div>
+                  )}
+
+                  {activityError && activityState === "loaded" && (
+                    <div className="mt-3 rounded-lg border border-red-300/40 bg-red-400/5 px-3 py-2 text-[11px] text-red-600 dark:text-red-400">
+                      {activityError}
+                    </div>
+                  )}
+
+                  {saveError && (
+                    <div className="mt-3 rounded-lg border border-red-300/40 bg-red-400/5 px-3 py-2 text-[11px] text-red-600 dark:text-red-400">
+                      {saveError}
+                    </div>
+                  )}
+
+                  {saveSummary && (
+                    <div className="mt-3 rounded-lg border border-green-300/40 bg-green-400/5 px-3 py-2.5 text-[11px] text-green-700 dark:text-green-400">
+                      Saved {saveSummary.positions} position{saveSummary.positions !== 1 ? "s" : ""}
+                      {(saveSummary.trades > 0 || saveSummary.dividends > 0 || saveSummary.ledger > 0) &&
+                        ` · ${saveSummary.trades} trade${saveSummary.trades !== 1 ? "s" : ""}, ${saveSummary.dividends} dividend${saveSummary.dividends !== 1 ? "s" : ""}, ${saveSummary.ledger} cash entr${saveSummary.ledger === 1 ? "y" : "ies"}`}
+                    </div>
                   )}
                 </div>
               )}
@@ -572,14 +849,20 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
               </div>
             )}
 
-            {mode === "ibkr" && ibkrState === "preview" && ibkrPositions.length > 0 && (
+            {mode === "ibkr" && ibkrState === "preview" && ibkrPositions.length > 0 && !saveSummary && (
               <button
                 onClick={handleConfirmIBKR}
-                disabled={isPending || saved}
+                disabled={isPending || saved || !canConfirmIBKR}
                 className="flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold px-4 py-2 transition-colors"
               >
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                Save {ibkrPositions.length} position{ibkrPositions.length !== 1 ? "s" : ""}
+                Save Closing Refresh
+                {(() => {
+                  const activityCount = selectedTrades.size + selectedDivs.size + ledger.length
+                  return activityCount > 0
+                    ? ` (${ibkrPositions.length} + ${activityCount})`
+                    : ` (${ibkrPositions.length})`
+                })()}
               </button>
             )}
 

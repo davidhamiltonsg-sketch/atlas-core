@@ -247,7 +247,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             {/* Update path for SBR — sync from the SBR IBKR account, type values in, or
                 upload a screenshot/PDF. First sync SEEDS the portfolio: the confirm step
                 creates any holding that doesn't exist yet. */}
-            <PortfolioUpdateButton label="Update values" holdings={d.updateHoldings} />
+            <PortfolioUpdateButton label="Closing Refresh" defaultMode="ibkr" holdings={d.updateHoldings} />
           </div>
         </div>
 

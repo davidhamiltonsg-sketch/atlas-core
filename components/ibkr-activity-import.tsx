@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition, useMemo } from "react"
 import { X, RefreshCw, Check, AlertCircle, ArrowUpCircle, Loader2, TrendingUp, Info, ShieldAlert } from "lucide-react"
 import { isInScope } from "@/lib/approved-alternatives"
+import { formatFlexDate } from "@/lib/ibkr-flex"
 
 interface Execution {
   tradeID: string
@@ -43,15 +44,6 @@ interface LedgerEntry {
 interface IBKRActivityImportProps {
   onClose: () => void
   onImported: () => void
-}
-
-function formatFlexDate(s: string) {
-  if (s.length === 8) {
-    return new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`).toLocaleDateString("en-GB", {
-      day: "numeric", month: "short", year: "2-digit",
-    })
-  }
-  return s
 }
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
