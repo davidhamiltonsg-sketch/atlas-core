@@ -1,251 +1,22 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ATLAS_SPEC } from '@/lib/portfolio-spec'
+import { runMC, drawFanCanvas, formatFanValue, heatCell, type AssetConfig, type MCResult } from '@/lib/gbm-engine'
 
-// ── Asset configs ────────────────────────────────────────────────────────────
-interface Asset { n: string; w: number; mu: number[]; s: number }
-
-const ATLAS_ASSETS: Asset[] = [
-  { n: 'VWRA', w: 0.70, mu: [0.05, 0.085, 0.12], s: 0.16 },
-  { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.23 },
-  { n: 'SMH', w: 0.05, mu: [0.04, 0.115, 0.18], s: 0.30 },
-  { n: 'IBIT', w: 0.05, mu: [-0.10,  0.12,   0.25  ], s: 0.70 },
-  { n: 'DBMFE', w: 0.10, mu: [0.00, 0.06, 0.10], s: 0.135 },
-]
-
-// Planning correlation matrix for VWRA/EQAC/SMH/IBIT/DBMFE. It is an explicit model input,
-// not a claim that future correlations are known or stationary.
-const CORR_5: number[][] = [
-  [1.00, 0.88, 0.78, 0.30, 0.00],
-  [0.88, 1.00, 0.82, 0.35, 0.00],
-  [0.78, 0.82, 1.00, 0.35, 0.00],
-  [0.30, 0.35, 0.35, 1.00, 0.00],
-  [0.00, 0.00, 0.00, 0.00, 1.00],
-]
-// CIDX maps both UCITS tickers (VWRA/EQQQ/SEMI/VFEA) and their legacy US equivalents
-// (VT/QQQM/SMH/VWO) to the same correlation column — kept for backward data compatibility
-// so historical snapshots with old tickers still resolve to the correct matrix index.
-const CIDX: Record<string, number> = {
-  VWRA: 0, VT: 0, VWO: 0, EQAC: 1, QQQM: 1, SMH: 2, IBIT: 3, GBTC: 3, BTC: 3, DBMFE: 4,
-}
-
-// ── GBM math ──────────────────────────────────────────────────────────────────
-function chol(C: number[][]): number[][] {
-  const n = C.length
-  const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0))
-  for (let j = 0; j < n; j++) {
-    let s = C[j][j]
-    for (let k = 0; k < j; k++) s -= L[j][k] ** 2
-    L[j][j] = Math.sqrt(Math.max(s, 1e-14))
-    for (let i = j + 1; i < n; i++) {
-      let t = C[i][j]
-      for (let k = 0; k < j; k++) t -= L[i][k] * L[j][k]
-      L[i][j] = t / L[j][j]
-    }
-  }
-  return L
-}
-
-let _sp = 0, _hs = false, _seed=0x5a17c9e3
-function random(){_seed=(_seed*1664525+1013904223)>>>0;return _seed/4294967296}
-function rn(): number {
-  if (_hs) { _hs = false; return _sp }
-  let u = 0, v = 0, s = 0
-  do { u = random() * 2 - 1; v = random() * 2 - 1; s = u * u + v * v } while (s >= 1 || s === 0)
-  const m = Math.sqrt(-2 * Math.log(s) / s); _sp = v * m; _hs = true; return u * m
-}
-
-function corrZ(L: number[][], n: number): number[] {
-  const u = Array.from({ length: n }, rn)
-  return Array.from({ length: n }, (_, r) => L[r].slice(0, r + 1).reduce((s, v, c) => s + v * u[c], 0))
-}
-
-function buildCorr(assets: Asset[]): number[][] {
-  const n = assets.length
-  return Array.from({ length: n }, (_, i) =>
-    Array.from({ length: n }, (_, j) => {
-      const ci = CIDX[assets[i].n] ?? 0
-      const cj = CIDX[assets[j].n] ?? 0
-      if (ci < 5 && cj < 5) return CORR_5[ci][cj]
-      return i === j ? 1 : 0.08
-    })
-  )
-}
-
-interface MCResult {
-  fan: number[][]
-  ddP: number[]
-  ddThr: number[]
-  msP: number[][]
-}
-
-function runMC(
-  assets: Asset[], nP: number, si: number, sv: number,
-  NY: number, DCA: number, BONUS: number, GROWTH:number,
-  MS: number[], MSY: number[]
-): MCResult {
-  _seed=0x5a17c9e3;_hs=false
-  const C = buildCorr(assets), L = chol(C)
-  const nA = assets.length
-  const dt = 1 / 12, sdt = Math.sqrt(dt)
-  const dr = assets.map(a => (a.mu[si] - 0.5 * a.s * a.s) * dt)
-  const dif = assets.map(a => a.s * sdt)
-  const w = assets.map(a => a.w)
-  const PCTS = [5, 10, 25, 50, 75, 90]
-  const ddThr = [0.20, 0.30, 0.40, 0.50]
-
-  const yearVals: Float64Array[] = Array.from({ length: NY + 1 }, () => new Float64Array(nP))
-  const maxDD = new Float64Array(nP)
-  const hy = new Uint16Array(nP * MS.length).fill(999)
-
-  for (let p = 0; p < nP; p++) {
-    const pos = w.map(wi => wi * sv)
-    let pval = sv, peak = sv, mdd = 0
-    yearVals[0][p] = sv
-
-    for (let yr = 0; yr < NY; yr++) {
-      const annualDca=DCA*Math.pow(1+GROWTH,yr),annualBonus=BONUS*Math.pow(1+GROWTH,yr)
-      for (let mo = 0; mo < 12; mo++) {
-        const z = corrZ(L, nA)
-        for (let i = 0; i < nA; i++) {
-          pos[i] = pos[i] * Math.exp(dr[i] + dif[i] * z[i]) + w[i] * annualDca
-        }
-        pval = pos.reduce((s, v) => s + v, 0)
-        if (pval > peak) peak = pval
-        const dd = (peak - pval) / peak; if (dd > mdd) mdd = dd
-      }
-      for (let i = 0; i < nA; i++) pos[i] += w[i] * annualBonus
-      pval = pos.reduce((s, v) => s + v, 0)
-      if (pval > peak) peak = pval
-      const dd2 = (peak - pval) / peak; if (dd2 > mdd) mdd = dd2
-      yearVals[yr + 1][p] = pval
-      for (let mi = 0; mi < MS.length; mi++) {
-        if (hy[p * MS.length + mi] === 999 && pval >= MS[mi]) hy[p * MS.length + mi] = yr + 1
-      }
-    }
-    maxDD[p] = mdd
-  }
-
-  const fan = Array.from({ length: NY + 1 }, (_, yr) => {
-    const v = Array.from(yearVals[yr]).sort((a, b) => a - b)
-    return PCTS.map(pct => v[Math.min(nP - 1, Math.floor(pct / 100 * nP))])
-  })
-
-  const ddP = ddThr.map(t => Array.from(maxDD).filter(d => d > t).length / nP)
-  const msP = MS.map((_, mi) => MSY.map(ty => {
-    let c = 0; for (let p = 0; p < nP; p++) if (hy[p * MS.length + mi] <= ty) c++; return c / nP
+// Asset weights and expected returns are sourced from ATLAS_SPEC.funds (the same governed
+// registry the rest of the app uses) instead of being duplicated here — this is exactly the
+// kind of drift-prone duplication that caused the SBR combined-tech-ceiling bug and the
+// fabricated "Bitcoin 7/8%" look-through claim found elsewhere in the app.
+const ATLAS_ASSETS: AssetConfig[] = ATLAS_SPEC.funds
+  .filter((f): f is typeof f & { expectedReturn: NonNullable<typeof f.expectedReturn> } => f.expectedReturn !== undefined)
+  .map(f => ({
+    ticker: f.ticker,
+    weight: f.target / 100,
+    mu: [f.expectedReturn.conservative, f.expectedReturn.base, f.expectedReturn.aggressive],
   }))
 
-  return { fan, ddP, ddThr, msP }
-}
-
-// ── Canvas fan chart ──────────────────────────────────────────────────────────
-function fmtV(v: number) {
-  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M'
-  if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K'
-  return '$' + v.toFixed(0)
-}
-
-function niceMax(v: number) {
-  const e = Math.pow(10, Math.floor(Math.log10(v || 1)))
-  return Math.ceil((v || 1) / e) * e
-}
-
-function drawFanCanvas(canvas: HTMLCanvasElement, fan: number[][], NY: number) {
-  const dpr = window.devicePixelRatio || 1
-  const W = canvas.offsetWidth || 680
-  const H = canvas.offsetHeight || 280
-  canvas.width = W * dpr; canvas.height = H * dpr
-  const ctx = canvas.getContext('2d')!
-  ctx.scale(dpr, dpr)
-
-  const isDark = document.documentElement.dataset.theme === 'dark' ||
-    (document.documentElement.dataset.theme !== 'light' && window.matchMedia('(prefers-color-scheme:dark)').matches)
-
-  const gridClr = isDark ? '#1e2d40' : '#e2e8f0'
-  const textClr = isDark ? '#64748b' : '#94a3b8'
-  const green = '#00d68f'
-  const MS_COLORS = ['#60a5fa', '#a78bfa', '#c084fc']
-  const MS_VALS = [1e6, 2e6, 3e6]
-  const MS_LBLS = ['$1M', '$2M', '$3M']
-
-  const P = { t: 14, r: 58, b: 38, l: 76 }
-  const pw = W - P.l - P.r, ph = H - P.t - P.b
-  const yMax = niceMax(fan[NY][5])
-  const x = (yr: number) => P.l + (yr / NY) * pw
-  const y = (v: number) => H - P.b - (v / yMax) * ph
-
-  ctx.clearRect(0, 0, W, H)
-
-  // y-grid
-  const step = niceMax(yMax / 6)
-  for (let v = step; v <= yMax * 1.001; v += step) {
-    const yv = y(v)
-    ctx.strokeStyle = gridClr; ctx.lineWidth = 1; ctx.setLineDash([])
-    ctx.beginPath(); ctx.moveTo(P.l, yv); ctx.lineTo(W - P.r, yv); ctx.stroke()
-    ctx.fillStyle = textClr; ctx.font = '10px monospace'; ctx.textAlign = 'right'
-    ctx.fillText(fmtV(v), P.l - 5, yv + 4)
-  }
-
-  // x-grid (every 5 years)
-  for (let yr = 0; yr <= NY; yr += 5) {
-    const xv = x(yr)
-    ctx.strokeStyle = gridClr; ctx.lineWidth = 1; ctx.setLineDash([])
-    ctx.beginPath(); ctx.moveTo(xv, P.t); ctx.lineTo(xv, H - P.b); ctx.stroke()
-    ctx.fillStyle = textClr; ctx.font = '10px monospace'; ctx.textAlign = 'center'
-    ctx.fillText(String(2026 + yr), xv, H - P.b + 14)
-  }
-
-  // Milestone dashes
-  MS_VALS.forEach((mv, i) => {
-    if (mv > yMax * 1.02) return
-    const yv = y(mv)
-    ctx.strokeStyle = MS_COLORS[i]; ctx.lineWidth = 1; ctx.setLineDash([5, 4])
-    ctx.globalAlpha = 0.55
-    ctx.beginPath(); ctx.moveTo(P.l, yv); ctx.lineTo(W - P.r, yv); ctx.stroke()
-    ctx.globalAlpha = 1; ctx.setLineDash([])
-    ctx.fillStyle = MS_COLORS[i]; ctx.font = '9px monospace'; ctx.textAlign = 'left'
-    ctx.fillText(MS_LBLS[i], W - P.r + 3, yv + 4)
-  })
-
-  // Fill bands (P10-P90, P25-P75)
-  const fillBand = (iL: number, iH: number, alpha: number) => {
-    ctx.beginPath()
-    ctx.moveTo(x(0), y(fan[0][iH]))
-    for (let yr = 1; yr <= NY; yr++) ctx.lineTo(x(yr), y(fan[yr][iH]))
-    for (let yr = NY; yr >= 0; yr--) ctx.lineTo(x(yr), y(fan[yr][iL]))
-    ctx.closePath()
-    ctx.fillStyle = green; ctx.globalAlpha = alpha; ctx.fill(); ctx.globalAlpha = 1
-  }
-  fillBand(1, 4, 0.10)
-  fillBand(2, 3, 0.22)
-
-  // Lines (P10, P25, P75, P90, P50)
-  const drawLine = (idx: number, alpha: number, width: number, dash: number[] = []) => {
-    ctx.beginPath(); ctx.moveTo(x(0), y(fan[0][idx]))
-    for (let yr = 1; yr <= NY; yr++) ctx.lineTo(x(yr), y(fan[yr][idx]))
-    ctx.strokeStyle = green; ctx.lineWidth = width; ctx.globalAlpha = alpha
-    ctx.setLineDash(dash); ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([])
-  }
-  drawLine(0, 0.18, 1, [3, 4])
-  drawLine(5, 0.18, 1, [3, 4])
-  drawLine(1, 0.45, 1)
-  drawLine(4, 0.45, 1)
-  drawLine(3, 1.0, 2.5)
-
-  // 2045 marker
-  const x19 = x(NY === 20 ? 19 : NY)
-  const y50 = y(fan[NY === 20 ? 19 : NY][3])
-  const y10 = y(fan[NY === 20 ? 19 : NY][1])
-  const y90 = y(fan[NY === 20 ? 19 : NY][5])
-  ctx.strokeStyle = green; ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.globalAlpha = 0.28
-  ctx.beginPath(); ctx.moveTo(x19, y10); ctx.lineTo(x19, y90); ctx.stroke()
-  ctx.setLineDash([]); ctx.globalAlpha = 1
-  ctx.beginPath(); ctx.arc(x19, y50, 4, 0, Math.PI * 2)
-  ctx.fillStyle = green; ctx.fill()
-  ctx.font = '9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = green
-  ctx.fillText('2045', x19, y50 - 9)
-}
+const GREEN = '#00d68f'
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const NY = 20
@@ -260,13 +31,6 @@ const DD_GOV = [
   'Tier 4: Emergency review — contributions continue',
   'Tier 4–5: Full governance review, no selling without written rationale',
 ]
-
-function heatCell(p: number) {
-  if (p < 0.01) return { bg: 'transparent', cl: 'text-muted-foreground' }
-  if (p < 0.15) return { bg: `rgba(248,113,113,${(0.08 + p * 0.55).toFixed(2)})`, cl: 'text-foreground' }
-  if (p < 0.45) return { bg: `rgba(245,158,11,${(0.1 + p * 0.45).toFixed(2)})`,   cl: 'text-foreground' }
-  return { bg: `rgba(0,214,143,${(0.12 + p * 0.5).toFixed(2)})`, cl: 'text-foreground font-bold' }
-}
 
 export function ProbabilityEngine({
   startValue,
@@ -319,20 +83,33 @@ export function ProbabilityEngine({
     }
   }, [dca, bonus, sv, scenario, nPaths, scheduleRun])
 
+  const chartOpts = useMemo(() => ({
+    accentColor: GREEN,
+    currencySymbol: '$',
+    milestones: [
+      { value: 1e6, label: '$1M', color: '#60a5fa' },
+      { value: 2e6, label: '$2M', color: '#a78bfa' },
+      { value: 3e6, label: '$3M', color: '#c084fc' },
+    ],
+    xGridStepYears: 5,
+    markerYears: [19],
+    markerLabels: { 19: '2045' },
+  }), [])
+
   useEffect(() => {
     if (result && canvasRef.current) {
-      drawFanCanvas(canvasRef.current, result.fan, NY)
+      drawFanCanvas(canvasRef.current, result.fan, NY, chartOpts)
     }
-  }, [result])
+  }, [result, chartOpts])
 
   // Redraw on theme toggle or resize
   useEffect(() => {
     const obs = new ResizeObserver(() => {
-      if (result && canvasRef.current) drawFanCanvas(canvasRef.current, result.fan, NY)
+      if (result && canvasRef.current) drawFanCanvas(canvasRef.current, result.fan, NY, chartOpts)
     })
     if (canvasRef.current) obs.observe(canvasRef.current)
     return () => obs.disconnect()
-  }, [result])
+  }, [result, chartOpts])
 
   const SCENARIOS = [
     { label: 'Conservative', color: 'text-amber-400' },
@@ -502,7 +279,7 @@ export function ProbabilityEngine({
             return (
               <div key={lbl} className="px-3 py-2.5">
                 <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{lbl} · yr 19</p>
-                <p className={`text-sm font-black tabular-nums mt-0.5 ${colors[i]}`}>{fmtV(vals[i])}</p>
+                <p className={`text-sm font-black tabular-nums mt-0.5 ${colors[i]}`}>{formatFanValue(vals[i])}</p>
               </div>
             )
           })}
@@ -530,8 +307,11 @@ export function ProbabilityEngine({
               <tbody className="divide-y divide-border">
                 {result.ddP.map((p, i) => (
                   <tr key={i}>
-                    <td className={`py-2 font-semibold ${DD_CLRS[i]}`}>{DD_LBLS[i]}</td>
-                    <td className="py-2 text-right">
+                    <td className={`py-2 font-semibold ${DD_CLRS[i]}`}>
+                      {DD_LBLS[i]}
+                      <span className="block font-normal text-[10px] text-muted-foreground normal-case mt-0.5">{DD_GOV[i]}</span>
+                    </td>
+                    <td className="py-2 text-right align-top">
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-12 h-1 bg-border rounded-full overflow-hidden">
                           <div
@@ -576,7 +356,7 @@ export function ProbabilityEngine({
                     <tr key={mi}>
                       <td className="py-1.5 pr-2 font-bold text-foreground">{MSL[mi]}</td>
                       {row.map((p, yi) => {
-                        const { bg, cl } = heatCell(p)
+                        const { bg, cl } = heatCell(p, '0,214,143')
                         return (
                           <td
                             key={yi}
@@ -600,8 +380,9 @@ export function ProbabilityEngine({
       <div className="px-5 py-3 bg-muted/20">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           <strong>Methodology:</strong> GBM with Itô-corrected drift — S(t+Δt) = S(t)·exp[(μ−σ²/2)Δt + σ√Δt·Z], monthly steps.
-          Correlated normals via Cholesky decomposition of the 2014–2024 empirical 5×5 correlation matrix.
-          Asset config: VWRA 70% (σ=16%), EQAC 10% (σ=23%), SMH 5% (σ=30%), IBIT 5% (σ=70%), DBMFE 10% (σ=13.5%). DBMFE correlation is a planning assumption, not guaranteed crisis behaviour.
+          Correlated normals via Cholesky decomposition of a planning correlation matrix. Asset weights and expected
+          returns are sourced from the Atlas Core constitution&apos;s fund registry; volatility and correlation are separate
+          planning assumptions, not constitution requirements.
           {scenario === 0 && ' Conservative μ: blended ~7.1% p.a.'}
           {scenario === 1 && ' Base μ: blended ~10.3% p.a.'}
           {scenario === 2 && ' Aggressive μ: blended ~13.9% p.a.'}

@@ -1,245 +1,22 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { SBR_SPEC } from '@/lib/portfolio-spec'
+import { runMC, drawFanCanvas, formatFanValue, heatCell, type AssetConfig, type MCResult } from '@/lib/gbm-engine'
 
-// ── Asset configs for SBR ────────────────────────────────────────────────────
-interface Asset { n: string; w: number; mu: number[]; s: number }
-
-// SBR asset configuration (6 funds per constitution)
-const SBR_ASSETS: Asset[] = [
-  { n: 'VWRA', w: 0.65, mu: [0.05, 0.085, 0.12], s: 0.16 },
-  { n: 'A35', w: 0.05, mu: [0.03, 0.04, 0.05], s: 0.08 },
-  { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.23 },
-  { n: 'SMH', w: 0.05, mu: [0.04, 0.115, 0.18], s: 0.30 },
-  { n: 'BTC', w: 0.05, mu: [-0.10, 0.12, 0.25], s: 0.70 },
-  { n: 'DBMFE', w: 0.10, mu: [0.00, 0.06, 0.10], s: 0.135 },
-]
-
-// SBR correlation matrix for 6 funds (VWRA/A35/EQAC/SMH/BTC/DBMFE)
-const CORR_6: number[][] = [
-  [1.00, 0.30, 0.88, 0.78, 0.30, 0.00],  // VWRA
-  [0.30, 1.00, 0.15, 0.10, 0.05, 0.00],  // A35 (SGD bonds)
-  [0.88, 0.15, 1.00, 0.82, 0.35, 0.00],  // EQAC
-  [0.78, 0.10, 0.82, 1.00, 0.35, 0.00],  // SMH
-  [0.30, 0.05, 0.35, 0.35, 1.00, 0.00],  // BTC
-  [0.00, 0.00, 0.00, 0.00, 0.00, 1.00],  // DBMFE
-]
-
-// ── GBM math ──────────────────────────────────────────────────────────────────
-function chol(C: number[][]): number[][] {
-  const n = C.length
-  const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0))
-  for (let j = 0; j < n; j++) {
-    let s = C[j][j]
-    for (let k = 0; k < j; k++) s -= L[j][k] ** 2
-    L[j][j] = Math.sqrt(Math.max(s, 1e-14))
-    for (let i = j + 1; i < n; i++) {
-      let t = C[i][j]
-      for (let k = 0; k < j; k++) t -= L[i][k] * L[j][k]
-      L[i][j] = t / L[j][j]
-    }
-  }
-  return L
-}
-
-let _sp = 0, _hs = false, _seed = 0x5a17c9e3
-function random() { _seed = (_seed * 1664525 + 1013904223) >>> 0; return _seed / 4294967296 }
-function rn(): number {
-  if (_hs) { _hs = false; return _sp }
-  let u = 0, v = 0, s = 0
-  do { u = random() * 2 - 1; v = random() * 2 - 1; s = u * u + v * v } while (s >= 1 || s === 0)
-  const m = Math.sqrt(-2 * Math.log(s) / s); _sp = v * m; _hs = true; return u * m
-}
-
-function corrZ(L: number[][], n: number): number[] {
-  const u = Array.from({ length: n }, rn)
-  return Array.from({ length: n }, (_, r) => L[r].slice(0, r + 1).reduce((s, v, c) => s + v * u[c], 0))
-}
-
-interface MCResult {
-  fan: number[][]
-  ddP: number[]
-  ddThr: number[]
-  msP: number[][]
-}
-
-function runMC(
-  assets: Asset[], nP: number, si: number, sv: number,
-  NY: number, DCA: number, BONUS: number, GROWTH: number,
-  MS: number[], MSY: number[]
-): MCResult {
-  _seed = 0x5a17c9e3; _hs = false
-  const C = CORR_6, L = chol(C)
-  const nA = assets.length
-  const dt = 1 / 12, sdt = Math.sqrt(dt)
-  const dr = assets.map(a => (a.mu[si] - 0.5 * a.s * a.s) * dt)
-  const dif = assets.map(a => a.s * sdt)
-  const w = assets.map(a => a.w)
-  const PCTS = [5, 10, 25, 50, 75, 90]
-  const ddThr = [0.20, 0.30, 0.40, 0.50]
-
-  const yearVals: Float64Array[] = Array.from({ length: NY + 1 }, () => new Float64Array(nP))
-  const maxDD = new Float64Array(nP)
-  const hy = new Uint16Array(nP * MS.length).fill(999)
-
-  for (let p = 0; p < nP; p++) {
-    const pos = w.map(wi => wi * sv)
-    let pval = sv, peak = sv, mdd = 0
-    yearVals[0][p] = sv
-
-    for (let yr = 0; yr < NY; yr++) {
-      const annualDca = DCA * Math.pow(1 + GROWTH, yr)
-      const annualBonus = BONUS * Math.pow(1 + GROWTH, yr)
-      for (let mo = 0; mo < 12; mo++) {
-        const z = corrZ(L, nA)
-        for (let i = 0; i < nA; i++) {
-          pos[i] = pos[i] * Math.exp(dr[i] + dif[i] * z[i]) + w[i] * annualDca
-        }
-        pval = pos.reduce((s, v) => s + v, 0)
-        if (pval > peak) peak = pval
-        const dd = (peak - pval) / peak; if (dd > mdd) mdd = dd
-      }
-      for (let i = 0; i < nA; i++) pos[i] += w[i] * annualBonus
-      pval = pos.reduce((s, v) => s + v, 0)
-      if (pval > peak) peak = pval
-      const dd2 = (peak - pval) / peak; if (dd2 > mdd) mdd = dd2
-      yearVals[yr + 1][p] = pval
-      for (let mi = 0; mi < MS.length; mi++) {
-        if (hy[p * MS.length + mi] === 999 && pval >= MS[mi]) hy[p * MS.length + mi] = yr + 1
-      }
-    }
-    maxDD[p] = mdd
-  }
-
-  const fan = Array.from({ length: NY + 1 }, (_, yr) => {
-    const v = Array.from(yearVals[yr]).sort((a, b) => a - b)
-    return PCTS.map(pct => v[Math.min(nP - 1, Math.floor(pct / 100 * nP))])
-  })
-
-  const ddP = ddThr.map(t => Array.from(maxDD).filter(d => d > t).length / nP)
-  const msP = MS.map((_, mi) => MSY.map(ty => {
-    let c = 0; for (let p = 0; p < nP; p++) if (hy[p * MS.length + mi] <= ty) c++; return c / nP
+// Asset weights and expected returns are sourced from SBR_SPEC.funds instead of being
+// duplicated here — see the matching comment in probability-engine.tsx (Atlas) for why.
+const SBR_ASSETS: AssetConfig[] = SBR_SPEC.funds
+  .filter((f): f is typeof f & { expectedReturn: NonNullable<typeof f.expectedReturn> } => f.expectedReturn !== undefined)
+  .map(f => ({
+    ticker: f.ticker,
+    weight: f.target / 100,
+    mu: [f.expectedReturn.conservative, f.expectedReturn.base, f.expectedReturn.aggressive],
   }))
 
-  return { fan, ddP, ddThr, msP }
-}
-
-// ── Canvas fan chart for SBR ──────────────────────────────────────────────────
-function fmtV(v: number) {
-  if (v >= 1e6) return 'S$' + (v / 1e6).toFixed(2) + 'M'
-  if (v >= 1e3) return 'S$' + (v / 1e3).toFixed(0) + 'K'
-  return 'S$' + v.toFixed(0)
-}
-
-function niceMax(v: number) {
-  const e = Math.pow(10, Math.floor(Math.log10(v || 1)))
-  return Math.ceil((v || 1) / e) * e
-}
-
-function drawFanCanvas(canvas: HTMLCanvasElement, fan: number[][], NY: number) {
-  const dpr = window.devicePixelRatio || 1
-  const W = canvas.offsetWidth || 680
-  const H = canvas.offsetHeight || 280
-  canvas.width = W * dpr; canvas.height = H * dpr
-  const ctx = canvas.getContext('2d')!
-  ctx.scale(dpr, dpr)
-
-  const isDark = document.documentElement.dataset.theme === 'dark' ||
-    (document.documentElement.dataset.theme !== 'light' && window.matchMedia('(prefers-color-scheme:dark)').matches)
-
-  const gridClr = isDark ? '#1e2d40' : '#e2e8f0'
-  const textClr = isDark ? '#64748b' : '#94a3b8'
-  const cyan = '#06b6d4'
-  const MS_COLORS = ['#22d3ee', '#a78bfa', '#c084fc']
-  const MS_VALS = [500_000, 1_000_000, 1_500_000]
-  const MS_LBLS = ['S$500K', 'S$1M', 'S$1.5M']
-
-  const P = { t: 14, r: 58, b: 38, l: 76 }
-  const pw = W - P.l - P.r, ph = H - P.t - P.b
-  const yMax = niceMax(fan[NY][5])
-  const x = (yr: number) => P.l + (yr / NY) * pw
-  const y = (v: number) => H - P.b - (v / yMax) * ph
-
-  ctx.clearRect(0, 0, W, H)
-
-  // y-grid
-  const step = niceMax(yMax / 6)
-  for (let v = step; v <= yMax * 1.001; v += step) {
-    const yv = y(v)
-    ctx.strokeStyle = gridClr; ctx.lineWidth = 1; ctx.setLineDash([])
-    ctx.beginPath(); ctx.moveTo(P.l, yv); ctx.lineTo(W - P.r, yv); ctx.stroke()
-    ctx.fillStyle = textClr; ctx.font = '10px monospace'; ctx.textAlign = 'right'
-    ctx.fillText(fmtV(v), P.l - 5, yv + 4)
-  }
-
-  // x-grid (every year)
-  for (let yr = 0; yr <= NY; yr++) {
-    const xv = x(yr)
-    if (yr % 5 === 0 || yr <= NY) {
-      ctx.strokeStyle = gridClr; ctx.lineWidth = 1; ctx.setLineDash([])
-      ctx.beginPath(); ctx.moveTo(xv, P.t); ctx.lineTo(xv, H - P.b); ctx.stroke()
-      ctx.fillStyle = textClr; ctx.font = '10px monospace'; ctx.textAlign = 'center'
-      ctx.fillText(String(2026 + yr), xv, H - P.b + 14)
-    }
-  }
-
-  // Milestone dashes
-  MS_VALS.forEach((mv, i) => {
-    if (mv > yMax * 1.02) return
-    const yv = y(mv)
-    ctx.strokeStyle = MS_COLORS[i]; ctx.lineWidth = 1; ctx.setLineDash([5, 4])
-    ctx.globalAlpha = 0.55
-    ctx.beginPath(); ctx.moveTo(P.l, yv); ctx.lineTo(W - P.r, yv); ctx.stroke()
-    ctx.globalAlpha = 1; ctx.setLineDash([])
-    ctx.fillStyle = MS_COLORS[i]; ctx.font = '9px monospace'; ctx.textAlign = 'left'
-    ctx.fillText(MS_LBLS[i], W - P.r + 3, yv + 4)
-  })
-
-  // Fill bands (P10-P90, P25-P75)
-  const fillBand = (iL: number, iH: number, alpha: number) => {
-    ctx.beginPath()
-    ctx.moveTo(x(0), y(fan[0][iH]))
-    for (let yr = 1; yr <= NY; yr++) ctx.lineTo(x(yr), y(fan[yr][iH]))
-    for (let yr = NY; yr >= 0; yr--) ctx.lineTo(x(yr), y(fan[yr][iL]))
-    ctx.closePath()
-    ctx.fillStyle = cyan; ctx.globalAlpha = alpha; ctx.fill(); ctx.globalAlpha = 1
-  }
-  fillBand(1, 4, 0.10)
-  fillBand(2, 3, 0.22)
-
-  // Lines (P10, P25, P75, P90, P50)
-  const drawLine = (idx: number, alpha: number, width: number, dash: number[] = []) => {
-    ctx.beginPath(); ctx.moveTo(x(0), y(fan[0][idx]))
-    for (let yr = 1; yr <= NY; yr++) ctx.lineTo(x(yr), y(fan[yr][idx]))
-    ctx.strokeStyle = cyan; ctx.lineWidth = width; ctx.globalAlpha = alpha
-    ctx.setLineDash(dash); ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([])
-  }
-  drawLine(0, 0.18, 1, [3, 4])
-  drawLine(5, 0.18, 1, [3, 4])
-  drawLine(1, 0.45, 1)
-  drawLine(4, 0.45, 1)
-  drawLine(3, 1.0, 2.5)
-
-  // Terminal markers
-  const showYear = (yr: number) => {
-    const xv = x(yr)
-    const y50 = y(fan[yr][3])
-    const y10 = y(fan[yr][1])
-    const y90 = y(fan[yr][5])
-    ctx.strokeStyle = cyan; ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.globalAlpha = 0.28
-    ctx.beginPath(); ctx.moveTo(xv, y10); ctx.lineTo(xv, y90); ctx.stroke()
-    ctx.setLineDash([]); ctx.globalAlpha = 1
-    ctx.beginPath(); ctx.arc(xv, y50, 4, 0, Math.PI * 2)
-    ctx.fillStyle = cyan; ctx.fill()
-  }
-
-  if (NY >= 5) showYear(5)
-  if (NY >= 10) showYear(10)
-  if (NY >= 15) showYear(15)
-}
+const CYAN = '#06b6d4'
 
 // ── Component ─────────────────────────────────────────────────────────────────
-const NY_HORIZONS = { 5: 5, 10: 10, 15: 15 }
 const MS = [500_000, 1_000_000, 1_500_000]
 const MSL = ['S$500K', 'S$1M', 'S$1.5M']
 const MSY = [5, 10, 15]
@@ -252,11 +29,8 @@ const DD_GOV = [
   'Resume: Formal pause lifted when recovered',
 ]
 
-function heatCell(p: number) {
-  if (p < 0.01) return { bg: 'transparent', cl: 'text-muted-foreground' }
-  if (p < 0.15) return { bg: `rgba(248,113,113,${(0.08 + p * 0.55).toFixed(2)})`, cl: 'text-foreground' }
-  if (p < 0.45) return { bg: `rgba(245,158,11,${(0.1 + p * 0.45).toFixed(2)})`, cl: 'text-foreground' }
-  return { bg: `rgba(6,182,212,${(0.12 + p * 0.5).toFixed(2)})`, cl: 'text-foreground font-bold' }
+function heatCellSbr(p: number) {
+  return heatCell(p, '6,182,212')
 }
 
 export function SbrProbabilityEngine({
@@ -311,19 +85,33 @@ export function SbrProbabilityEngine({
     }
   }, [dca, bonus, sv, scenario, nPaths, horizon, scheduleRun])
 
+  const chartOpts = useMemo(() => ({
+    accentColor: CYAN,
+    currencySymbol: 'S$',
+    milestones: [
+      { value: 500_000, label: 'S$500K', color: '#22d3ee' },
+      { value: 1_000_000, label: 'S$1M', color: '#a78bfa' },
+      { value: 1_500_000, label: 'S$1.5M', color: '#c084fc' },
+    ],
+    xGridStepYears: 5,
+    // Flexible horizon — no fixed target year, so mark whichever waypoints fall within range
+    // instead of a single terminal year the way Atlas does with 2045.
+    markerYears: [5, 10, 15].filter(y => y <= horizon),
+  }), [horizon])
+
   useEffect(() => {
     if (result && canvasRef.current) {
-      drawFanCanvas(canvasRef.current, result.fan, horizon)
+      drawFanCanvas(canvasRef.current, result.fan, horizon, chartOpts)
     }
-  }, [result, horizon])
+  }, [result, horizon, chartOpts])
 
   useEffect(() => {
     const obs = new ResizeObserver(() => {
-      if (result && canvasRef.current) drawFanCanvas(canvasRef.current, result.fan, horizon)
+      if (result && canvasRef.current) drawFanCanvas(canvasRef.current, result.fan, horizon, chartOpts)
     })
     if (canvasRef.current) obs.observe(canvasRef.current)
     return () => obs.disconnect()
-  }, [result, horizon])
+  }, [result, horizon, chartOpts])
 
   const SCENARIOS = [
     { label: 'Conservative', color: 'text-amber-400' },
@@ -481,7 +269,7 @@ export function SbrProbabilityEngine({
             return (
               <div key={lbl} className="px-3 py-2.5">
                 <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{lbl}</p>
-                <p className={`text-sm font-black tabular-nums mt-0.5 ${colors[i]}`}>{fmtV(vals[i])}</p>
+                <p className={`text-sm font-black tabular-nums mt-0.5 ${colors[i]}`}>{formatFanValue(vals[i], 'S$')}</p>
               </div>
             )
           })}
@@ -509,8 +297,11 @@ export function SbrProbabilityEngine({
               <tbody className="divide-y divide-border">
                 {result.ddP.map((p, i) => (
                   <tr key={i}>
-                    <td className={`py-2 font-semibold ${DD_CLRS[i]}`}>{DD_LBLS[i]}</td>
-                    <td className="py-2 text-right">
+                    <td className={`py-2 font-semibold ${DD_CLRS[i]}`}>
+                      {DD_LBLS[i]}
+                      <span className="block font-normal text-[10px] text-muted-foreground normal-case mt-0.5">{DD_GOV[i]}</span>
+                    </td>
+                    <td className="py-2 text-right align-top">
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-12 h-1 bg-border rounded-full overflow-hidden">
                           <div
@@ -528,11 +319,6 @@ export function SbrProbabilityEngine({
                 ))}
               </tbody>
             </table>
-            <div className="mt-4 p-3 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/20">
-              <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-                <span className="text-cyan-400">Governance response:</span> Minor/Correction = watch carefully. Severe/Crisis = pause contributions, formal review.
-              </p>
-            </div>
           </div>
 
           {/* Milestone heatmap */}
@@ -560,7 +346,7 @@ export function SbrProbabilityEngine({
                     <tr key={mi}>
                       <td className="py-1.5 pr-2 font-bold text-foreground">{MSL[mi]}</td>
                       {row.map((p, yi) => {
-                        const { bg, cl } = heatCell(p)
+                        const { bg, cl } = heatCellSbr(p)
                         return (
                           <td
                             key={yi}
@@ -583,7 +369,9 @@ export function SbrProbabilityEngine({
       {/* Methodology footnote */}
       <div className="px-5 py-3 bg-muted/20">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          <strong>Methodology:</strong> GBM with Itô-corrected drift, monthly steps, Cholesky correlation. SBR assets per constitution: VWRA 65% (σ=16%), A35 5% (σ=8%), EQAC 10% (σ=23%), SMH 5% (σ=30%), BTC 5% (σ=70%), DBMFE 10% (σ=13.5%). A35 is the SGD anchor; DBMFE correlation is a planning assumption.
+          <strong>Methodology:</strong> GBM with Itô-corrected drift, monthly steps, Cholesky correlation. Asset weights
+          and expected returns are sourced from the SBR constitution&apos;s fund registry; volatility and correlation are
+          separate planning assumptions, not constitution requirements. A35 is the SGD anchor.
           {scenario === 0 && ' Conservative μ: blended ~6.5% p.a.'}
           {scenario === 1 && ' Base μ: blended ~8.8% p.a.'}
           {scenario === 2 && ' Aggressive μ: blended ~11.2% p.a.'}
