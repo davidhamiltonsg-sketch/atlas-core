@@ -38,8 +38,11 @@ interface UpdatePortfolioModalProps {
   defaultMode?: "choose" | "manual" | "screenshot" | "ibkr"
 }
 
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose" }: UpdatePortfolioModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<"choose" | "manual" | "screenshot" | "ibkr">(defaultMode)
 
   // Manual state
@@ -65,9 +68,32 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
   useEffect(() => {
     closeRef.current?.focus()
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
+
+    // Lock body scroll behind the modal while it's open, restoring whatever was there before.
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { onClose(); return }
+      if (event.key !== "Tab") return
+      // Focus trap: keep Tab/Shift+Tab cycling within the dialog instead of escaping to the page behind it.
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      if (!focusable || focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
     document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [onClose])
 
   // ── Manual ────────────────────────────────────────────────────────────────
@@ -244,7 +270,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div role="dialog" aria-modal="true" aria-labelledby="update-portfolio-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="update-portfolio-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>

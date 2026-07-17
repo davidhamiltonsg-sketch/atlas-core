@@ -28,7 +28,7 @@ export function ShellClient({ title, subtitle, userName, isAdmin = false, consti
     { href: "/next", label: "This month", icon: CalendarCheck, active: pathname === "/next" },
     { href: `/mission-control?portfolio=${constitutionId}`, label: "Mission", icon: Radar, active: pathname === "/mission-control" },
     { href: "/portfolio", label: "Activity", icon: Wallet, active: pathname === "/portfolio" },
-    { href: "/governance", label: "Rules", icon: ShieldCheck, active: pathname === "/governance" },
+    { href: "/compliance", label: "Compliance", icon: ShieldCheck, active: pathname === "/compliance" },
   ]
 
   return (

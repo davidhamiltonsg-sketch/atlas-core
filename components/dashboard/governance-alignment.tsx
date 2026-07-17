@@ -39,7 +39,7 @@ export function GovernanceAlignment({ data }: { data: GovAlignment }) {
         })}
       </ul>
       <div className="px-5 py-2.5 border-t border-border bg-muted/20">
-        <a href="/governance" className="text-[11px] font-semibold text-primary hover:underline">See the full rulebook →</a>
+        <a href="/compliance" className="text-[11px] font-semibold text-primary hover:underline">See the full rulebook →</a>
       </div>
     </div>
   )

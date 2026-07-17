@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Check, AlertCircle, Loader2, User, Lock, Shield, Eye, EyeOff, TrendingUp } from "lucide-react"
 import { updateProfileAction, changePasswordAction, updateContributionSettingsAction } from "./actions"
+import { useToast } from "@/components/ui/toast"
 
 interface SettingsClientProps {
   initialName: string
@@ -43,6 +44,8 @@ function StatusMessage({ msg }: { msg: { type: "success" | "error"; text: string
 }
 
 export function SettingsClient({ initialName, initialEmail, role, monthlyContribution, annualLumpSum, contributionGrowthRate, riskFreeRate, portfolioName, canEdit }: SettingsClientProps) {
+  const { toast } = useToast()
+
   // Profile
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
@@ -68,6 +71,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
         ? { type: "success", text: "Contribution settings saved." }
         : { type: "error", text: result.error ?? "Save failed." }
       )
+      toast(result.success ? "Contribution settings saved." : (result.error ?? "Save failed."), { type: result.success ? "success" : "error" })
     })
   }
 
@@ -81,6 +85,7 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
         ? { type: "success", text: "Profile updated." }
         : { type: "error", text: result.error ?? "Update failed." }
       )
+      toast(result.success ? "Profile updated." : (result.error ?? "Update failed."), { type: result.success ? "success" : "error" })
     })
   }
 
@@ -94,8 +99,10 @@ export function SettingsClient({ initialName, initialEmail, role, monthlyContrib
       if (result.success) {
         setPwdMsg({ type: "success", text: "Password changed." })
         form.reset()
+        toast("Password changed.", { type: "success" })
       } else {
         setPwdMsg({ type: "error", text: result.error ?? "Change failed." })
+        toast(result.error ?? "Change failed.", { type: "error" })
       }
     })
   }

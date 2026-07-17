@@ -54,8 +54,11 @@ function formatFlexDate(s: string) {
   return s
 }
 
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<"idle" | "fetching" | "preview" | "error">("idle")
   const [executions, setExecutions] = useState<Execution[]>([])
   const [dividends, setDividends] = useState<Dividend[]>([])
@@ -72,9 +75,30 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
 
   useEffect(() => {
     closeRef.current?.focus()
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
+
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { onClose(); return }
+      if (event.key !== "Tab") return
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      if (!focusable || focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
     document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [onClose])
 
   async function handleFetch() {
@@ -154,7 +178,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div role="dialog" aria-modal="true" aria-labelledby="ibkr-activity-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="ibkr-activity-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>

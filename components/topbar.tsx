@@ -4,6 +4,7 @@ import { Menu, LogOut, User } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { logoutAction } from "@/app/logout-action"
 import { selectPortfolio } from "@/app/actions/portfolio-selection"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import type { ConstitutionId } from "@/lib/constitutions"
 
 interface TopbarProps {
@@ -34,6 +35,7 @@ export function Topbar({ onMenuClick, title, subtitle, userName, constitutionId 
       </button>
 
       <div className="flex-1 min-w-0">
+        <Breadcrumbs pathname={pathname} constitutionId={constitutionId} />
         <h1 className="font-display text-base font-bold leading-none tracking-tight truncate">{title}</h1>
         {subtitle && (
           <p className="font-data mt-1 text-xs text-muted-foreground truncate">{subtitle}</p>

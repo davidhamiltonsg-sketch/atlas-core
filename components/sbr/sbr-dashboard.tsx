@@ -374,7 +374,7 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">There is no automatic value phase or spending deadline. De-risk only after Dami records a real SGD use, amount and date. Stale look-through data blocks concentration-led trades until refreshed.</p>
               </div>
-              <a href="/governance" className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 shrink-0">
+              <a href="/compliance" className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 shrink-0">
                 Read rules <ChevronRight className="h-3 w-3" />
               </a>
             </div>
