@@ -12,6 +12,7 @@ import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { PiggyBank, Wallet, CalendarClock, Info, AlertTriangle } from "lucide-react"
 import { ManualEntryPanel } from "@/components/contributions/manual-entry"
 import { ActivityImportLauncher } from "@/components/contributions/activity-import-launcher"
+import { RebalancingGuide } from "@/components/rebalancing-guide"
 import {
   ContributionLedger,
   CashBankHistory,
@@ -145,6 +146,9 @@ export default async function ContributionsPage() {
       constitutionId={active.constitutionId}
     >
       <div className="space-y-5">
+
+        {/* Rebalancing strategy guide */}
+        <RebalancingGuide portfolio={isSbr ? "silicon-brick-road" : "atlas-core"} />
 
         {/* Activity feed not connected — the reason this page would otherwise stay empty */}
         {!activityConfigured && (
