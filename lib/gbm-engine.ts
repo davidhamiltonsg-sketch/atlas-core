@@ -158,10 +158,20 @@ function niceMax(v: number): number {
 }
 
 export function heatCell(p: number, positiveRgb: string): { bg: string; cl: string } {
+  // Opacity is normalised WITHIN each tier's own probability range (not off the raw p),
+  // so e.g. a 15% cell and a 39% cell -- both "amber" -- land at opposite ends of the
+  // same visible gradient instead of two barely-distinguishable shades of murky brown.
   if (p < 0.01) return { bg: 'transparent', cl: 'text-muted-foreground' }
-  if (p < 0.15) return { bg: `rgba(248,113,113,${(0.08 + p * 0.55).toFixed(2)})`, cl: 'text-foreground' }
-  if (p < 0.45) return { bg: `rgba(245,158,11,${(0.1 + p * 0.45).toFixed(2)})`, cl: 'text-foreground' }
-  return { bg: `rgba(${positiveRgb},${(0.12 + p * 0.5).toFixed(2)})`, cl: 'text-foreground font-bold' }
+  if (p < 0.15) {
+    const t = (p - 0.01) / (0.15 - 0.01)
+    return { bg: `rgba(248,113,113,${(0.15 + t * 0.45).toFixed(2)})`, cl: 'text-foreground' }
+  }
+  if (p < 0.45) {
+    const t = (p - 0.15) / (0.45 - 0.15)
+    return { bg: `rgba(245,158,11,${(0.15 + t * 0.45).toFixed(2)})`, cl: 'text-foreground' }
+  }
+  const t = Math.min(1, (p - 0.45) / (1 - 0.45))
+  return { bg: `rgba(${positiveRgb},${(0.2 + t * 0.55).toFixed(2)})`, cl: 'text-foreground font-bold' }
 }
 
 // ── Canvas fan chart ──────────────────────────────────────────────────────────
