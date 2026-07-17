@@ -32,11 +32,9 @@ export function DriftNotifications({ alerts, constitutionName = "Atlas Core" }: 
       setPermission("unsupported")
       return
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPermission(Notification.permission)
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === "true" && Notification.permission === "granted") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEnabled(true)
     }
   }, [])

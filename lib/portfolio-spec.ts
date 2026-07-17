@@ -89,7 +89,7 @@ export const SBR_SPEC = {
     { ticker: "DBMFE", target: 10, rangeLow: 7.5, rangeHigh: 12.5, floor: 5, hardCap: 15, isin: "LU2951555403", exchange: "EURONEXT PARIS", expectedReturn: { conservative: 0.00, base: 0.06, aggressive: 0.10 } },
     { ticker: "A35", target: 5, rangeLow: 3.75, rangeHigh: 6.25, hardCap: 10, isin: "SG1S08926457", exchange: "SGX", expectedReturn: { conservative: 0.02, base: 0.03, aggressive: 0.04 } },
   ] as SbrFundSpec[],
-  combined: { tickers: ["EQAC", "SMH"], warning: 25, hard: 32.5, resume: 22.5 },
+  combined: { tickers: ["EQAC", "SMH"], warning: 18.75, hard: 25, resume: 18.75 },
   totalEquityMaxPct: 90,
   drawdownTriggerPct: 30,
   skipAtHighPct: 0,
@@ -98,7 +98,7 @@ export const SBR_SPEC = {
 
 // Single flexible-growth rule set retained behind the phase-shaped compatibility type.
 export const SBR_PHASE_CAPS = {
-  GROWTH: { smhHard: 10, combinedHard: 32.5, combinedWarning: 25, combinedResume: 22.5 },
+  GROWTH: { smhHard: 10, combinedHard: 25, combinedWarning: 18.75, combinedResume: 18.75 },
 } as const
 export type SbrPhaseKey = keyof typeof SBR_PHASE_CAPS
 

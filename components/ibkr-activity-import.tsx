@@ -268,7 +268,8 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                             onChange={ev => {
                               setSelectedTrades(prev => {
                                 const next = new Set(prev)
-                                ev.target.checked ? next.add(e.tradeID) : next.delete(e.tradeID)
+                                if (ev.target.checked) next.add(e.tradeID)
+                                else next.delete(e.tradeID)
                                 return next
                               })
                             }}
@@ -337,7 +338,8 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
                             onChange={ev => {
                               setSelectedDivs(prev => {
                                 const next = new Set(prev)
-                                ev.target.checked ? next.add(d.transactionID) : next.delete(d.transactionID)
+                                if (ev.target.checked) next.add(d.transactionID)
+                                else next.delete(d.transactionID)
                                 return next
                               })
                             }}

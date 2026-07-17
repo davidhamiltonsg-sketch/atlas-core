@@ -148,7 +148,7 @@ export async function PUT(req: Request) {
     await importIbkrActivityForUser(active.owner.id, executions, dividends, ledger)
 
   if (tickers.length > 0) {
-    for (const p of ["/", "/trades", "/contributions", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings"]) {
+    for (const p of ["/", "/trades", "/contributions", "/next", "/ytd", "/portfolio", "/governance", "/compliance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
       revalidatePath(p)
     }
   }

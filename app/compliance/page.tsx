@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowDown, Download, ExternalLink, ShieldCheck } from "lucide-react"
+import { ArrowDown, Download, ShieldCheck } from "lucide-react"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
@@ -11,22 +11,15 @@ import { economicSleeveTicker } from "@/lib/instrument-identity"
 import { ThresholdGauge, type ThresholdGaugeRow } from "@/components/governance/threshold-gauge"
 import { GovernanceComplianceDashboard } from "@/components/dashboard/governance-compliance-dashboard"
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
-import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { vestExtraContributionsForUser } from "@/lib/external-awards"
 import { formatCurrency } from "@/lib/utils"
 import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
-import { sbrBlendedGrowthRate } from "@/lib/sbr-forecast"
-import { SILICON_BRICK_ROAD as SBR, FORECAST_BENCHMARKS_AS_OF } from "@/lib/constitutions"
 
 // Compliance dashboard is always fresh — real-time governance status
 export const dynamic = "force-dynamic"
 
-const GLOBAL_BENCHMARK_RATE = 0.085
 const CONE_VOL_DEFAULT = 0.15
-const ASSET_EXPECTED_RETURNS: Record<string, { base: number }> = {
-  VWRA: { base: 0.085 },
-}
 
 export default async function CompliancePage() {
   const session = await getSession()
@@ -99,7 +92,6 @@ export default async function CompliancePage() {
   // 2045 projections
   const vestExtras = await vestExtraContributionsForUser(active.owner.id)
   const base2045 = projectPortfolio(totalValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, rates.base, 19, CONTRIBUTION_GROWTH_RATE, vestExtras)
-  const savings2045 = projectPortfolio(totalValue, MONTHLY_CONTRIBUTION, ANNUAL_LUMP_SUM, RISK_FREE_RATE, 19, CONTRIBUTION_GROWTH_RATE, vestExtras)
 
   function fmtM(v: number) {
     if (v >= 1_000_000) return `S$${(v / 1_000_000).toFixed(2)}M`
@@ -179,7 +171,7 @@ export default async function CompliancePage() {
             {
               priority: "medium",
               action: "Review monthly contributions",
-              description: "Ensure contributions are being made according to plan",
+              trigger: "Ensure contributions are being made according to plan",
               link: "/contributions",
             },
           ]}
