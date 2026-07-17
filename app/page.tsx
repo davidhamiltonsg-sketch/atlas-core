@@ -29,6 +29,7 @@ import { getAwardPipeline, vestExtraContributionsForUser } from "@/lib/external-
 import { ExternalAwardCard, type AwardCardData } from "@/components/cockpit/external-award-card"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { openPositionValuation } from "@/lib/valuation"
+import { GettingStartedGuide } from "@/components/getting-started-guide"
 import { redirect } from "next/navigation"
 import { getCachedUsdSgdRate, clearFxCache } from "@/lib/fx-cache"
 import { BitcoinCycleBadge } from "@/components/bitcoin-cycle-badge"
@@ -575,6 +576,8 @@ export default async function Dashboard() {
           <div><span>2045 base case</span><b>{d.base2045 >= 1_000_000 ? `S$${(d.base2045 / 1_000_000).toFixed(1)}M` : `S$${(d.base2045 / 1_000).toFixed(0)}K`}</b></div>
         </div>
       </section>
+
+      <GettingStartedGuide />
 
       <div className="grid gap-5">
         <div className="space-y-5 min-w-0 reveal-stack">
