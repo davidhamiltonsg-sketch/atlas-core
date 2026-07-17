@@ -19,6 +19,7 @@ import { ProbabilityEngine } from "@/components/forecast/probability-engine"
 import { GovernanceComplianceDashboard } from "@/components/dashboard/governance-compliance-dashboard"
 import { SbrProbabilityEngine } from "@/components/forecast/sbr-probability-engine"
 import { ForecastGuide } from "@/components/forecast-guide"
+import { HelpTooltip } from "@/components/help-tooltip"
 
 const BENCHMARKS_AS_OF = FORECAST_BENCHMARKS_AS_OF
 const GLOBAL_BENCHMARK_RATE = ASSET_EXPECTED_RETURNS.VWRA?.base ?? ASSET_EXPECTED_RETURNS.IMID?.base ?? 0.085
@@ -487,11 +488,19 @@ export default async function Forecast() {
 
       {/* CHART PANEL */}
       <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Compounding Trajectories</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {startYear} → 2045 · hover to inspect any year · switch views for uncertainty & contribution sensitivity
-          </p>
+        <div className="px-5 py-4 border-b border-border flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <h2 className="text-sm font-semibold">Compounding Trajectories</h2>
+              <HelpTooltip
+                title="How trajectories are calculated"
+                description="Each trajectory assumes your current allocation remains constant and applies consistent annual returns. The P10/P90 cone shows a range based on historical volatility. These are growth projections, not predictions or guarantees."
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {startYear} → 2045 · hover to inspect any year · switch views for uncertainty & contribution sensitivity
+            </p>
+          </div>
         </div>
         <div className="p-4">
           <ForecastChartPanel
@@ -529,13 +538,21 @@ export default async function Forecast() {
       </div>
 
       {/* Scenario cards */}
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        {projections.map(({ label, rateLabel, values, color }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-5 card-elevated">
-            <div className="flex items-center justify-between mb-0.5">
-              <h3 className="text-sm font-bold">{label}</h3>
-              <span className="text-xs font-medium text-muted-foreground">{rateLabel}</span>
-            </div>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold">Growth Scenarios</h3>
+          <HelpTooltip
+            title="Understanding scenarios"
+            description="Conservative assumes lower returns; Base Case reflects historical averages from your holdings; Aggressive assumes stronger performance. None are predictions — they show ranges for planning purposes. Your actual outcome will likely fall somewhere between Conservative and Aggressive."
+          />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {projections.map(({ label, rateLabel, values, color }) => (
+            <div key={label} className="rounded-xl border border-border bg-card p-5 card-elevated">
+              <div className="flex items-center justify-between mb-0.5">
+                <h3 className="text-sm font-bold">{label}</h3>
+                <span className="text-xs font-medium text-muted-foreground">{rateLabel}</span>
+              </div>
             <div className="h-px bg-border my-3" style={{ background: `linear-gradient(to right, ${color}50, transparent)` }} />
             <div className="space-y-4">
               {values.map(({ years, projected }) => (
@@ -561,6 +578,7 @@ export default async function Forecast() {
             </div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* Bank savings comparison */}
