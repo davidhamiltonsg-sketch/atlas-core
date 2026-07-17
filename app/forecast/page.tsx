@@ -16,8 +16,8 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { SBR_ASSET_EXPECTED_RETURNS } from "@/lib/spec-derived"
 import { AnimatedNumber } from "@/components/animated-number"
 import { ProbabilityEngine } from "@/components/forecast/probability-engine"
-import { GovernanceComplianceDashboard } from "@/components/dashboard/governance-compliance-dashboard"
 import { SbrProbabilityEngine } from "@/components/forecast/sbr-probability-engine"
+import { ShieldCheck } from "lucide-react"
 import { ForecastGuide } from "@/components/forecast-guide"
 import { HelpTooltip } from "@/components/help-tooltip"
 import { RebalancingGuide } from "@/components/rebalancing-guide"
@@ -387,72 +387,17 @@ export default async function Forecast() {
         </div>
       </div>
 
-      {/* Governance Compliance Dashboard (BEFORE probability engine per UX audit) */}
-      <GovernanceComplianceDashboard
-        portfolio="atlas-core"
-        indicators={[
-          {
-            label: "Portfolio Status",
-            status: "compliant",
-            value: "On Track",
-            detail: "All governance rules satisfied",
-          },
-          {
-            label: "Contribution Growth",
-            status: "compliant",
-            value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`,
-            detail: "Outpacing inflation",
-          },
-          {
-            label: "Growth Volatility",
-            status: "compliant",
-            value: `${(coneVol * 100).toFixed(0)}%`,
-            detail: `${volIsReal ? "Portfolio actual" : "Default estimate"}`,
-          },
-          {
-            label: "Time Horizon",
-            status: "compliant",
-            value: "19 years",
-            detail: "Target retirement: 2045",
-          },
-        ]}
-        rules={[
-          {
-            category: "Growth",
-            rule: "Target achievement on track",
-            status: "pass",
-            description: `Projected 2045 value: ${fmtM(base2045)} (base case)`,
-            nextAction: "Continue current contribution and allocation plan",
-          },
-          {
-            category: "Contribution",
-            rule: "Contribution discipline maintained",
-            status: "pass",
-            description: `Monthly: S$${MONTHLY_CONTRIBUTION.toLocaleString()} + Annual: S$${ANNUAL_LUMP_SUM.toLocaleString()}`,
-            nextAction: "Review contribution plan annually in Settings",
-          },
-          {
-            category: "Assumptions",
-            rule: "Growth assumptions reasonable",
-            status: "pass",
-            description: `Base case: ${(rates.base * 100).toFixed(1)}% p.a. from actual current holdings`,
-            nextAction: "Rebalance if drift exceeds target bands",
-          },
-        ]}
-        riskMetrics={{
-          maxDrawdown: 0.25,
-          volatility: coneVol,
-          concentration: 0.35,
-        }}
-        nextActions={[
-          {
-            priority: "medium",
-            action: "Review glide path for 2040–2045 transition",
-            trigger: "Annual review",
-            deadline: "Dec 2026",
-          },
-        ]}
-      />
+      {/* Compliance status — link to dedicated compliance page */}
+      <Link href="/compliance" className="group flex items-start gap-4 rounded-xl border border-green-500/30 bg-green-500/5 dark:bg-green-500/[0.07] px-5 py-4 mb-6 hover:border-green-500/50 hover:bg-green-500/10 transition-colors">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/20 shrink-0 mt-0.5">
+          <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">Portfolio Compliance Status</p>
+          <p className="text-xs text-muted-foreground mt-0.5">All governance rules satisfied · {(rates.base * 100).toFixed(1)}% base growth assumption · {(coneVol * 100).toFixed(0)}% volatility</p>
+        </div>
+        <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors shrink-0">View full status →</span>
+      </Link>
 
       <ForecastGuide />
 
@@ -732,81 +677,17 @@ export default async function Forecast() {
         </p>
       </div>
 
-      {/* Governance Compliance Dashboard */}
-      <GovernanceComplianceDashboard
-        portfolio="atlas-core"
-        indicators={[
-          {
-            label: "Portfolio Status",
-            status: "compliant",
-            value: "On Track",
-            detail: "Current allocation meets 2045 target envelope",
-            action: "Review allocation on Settings page"
-          },
-          {
-            label: "Contribution Growth",
-            status: "compliant",
-            value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`,
-            detail: "Annual increase in monthly DCA and bonuses",
-            action: "Adjust on Settings page if income changes"
-          },
-          {
-            label: "Volatility Profile",
-            status: "compliant",
-            value: `${(coneVol * 100).toFixed(0)}%`,
-            detail: `Annualized volatility from ${volIsReal ? 'portfolio history' : 'default assumption'}`,
-          },
-          {
-            label: "Time Horizon",
-            status: "compliant",
-            value: "2045",
-            detail: "19 years remaining until target date",
-            action: "Review glide path plan in 2040"
-          },
-        ]}
-        rules={[
-          {
-            category: "Target Achievement",
-            rule: "Base case projection for 2045",
-            status: "pass",
-            description: `SGD ${fmtM(base2045)} at ${(rates.base * 100).toFixed(1)}% p.a. return`,
-            nextAction: "Monitor annually; adjust contributions if income permits"
-          },
-          {
-            category: "Contribution Discipline",
-            rule: "Monthly DCA + Annual bonus + RSU vests",
-            status: "pass",
-            description: `SGD ${MONTHLY_CONTRIBUTION.toLocaleString()}/mo + SGD ${ANNUAL_LUMP_SUM.toLocaleString()}/yr${vestExtras.length > 0 ? ` + ${vestExtras.length} RSU vests (≈${formatCurrency(vestExtras.reduce((s, v) => s + v.amount, 0), 'USD')} USD)` : ''}`,
-            nextAction: "Continue DCA; review every January"
-          },
-          {
-            category: "Growth Assumption",
-            rule: "Blended from actual holdings (not target)",
-            status: "pass",
-            description: "Forecast reflects current allocation drift, not target-weight projection",
-            nextAction: "Rebalance if allocation drifts >5% from target"
-          },
-        ]}
-        riskMetrics={{
-          maxDrawdown: 0.35,
-          volatility: coneVol,
-          concentration: 0.25,
-        }}
-        nextActions={[
-          {
-            priority: "medium",
-            action: "Review 2040–2045 glide path",
-            trigger: "Every January or if portfolio compounds >50%",
-            deadline: "Before 2040"
-          },
-          {
-            priority: "low",
-            action: "Confirm retirement use and required amount",
-            trigger: "Annual portfolio review",
-            deadline: "Before 2041"
-          },
-        ]}
-      />
+      {/* Compliance status — link to dedicated compliance page */}
+      <Link href="/compliance" className="group flex items-start gap-4 rounded-xl border border-green-500/30 bg-green-500/5 dark:bg-green-500/[0.07] px-5 py-4 mb-6 hover:border-green-500/50 hover:bg-green-500/10 transition-colors">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/20 shrink-0 mt-0.5">
+          <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">Portfolio Compliance Status</p>
+          <p className="text-xs text-muted-foreground mt-0.5">All governance rules satisfied · 2045 target {fmtM(base2045)} base case · {(rates.base * 100).toFixed(1)}% p.a. growth assumption</p>
+        </div>
+        <span className="text-xs font-semibold text-muted-foreground/60 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors shrink-0">View full status →</span>
+      </Link>
 
       <ProbabilityEngine
         startValue={currentValue}
