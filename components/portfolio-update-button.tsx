@@ -14,7 +14,7 @@ interface Holding {
 
 interface PortfolioUpdateButtonProps {
   holdings: Holding[]
-  defaultMode?: "choose" | "manual" | "screenshot"
+  defaultMode?: "choose" | "manual" | "screenshot" | "ibkr"
   label?: string
 }
 

@@ -320,14 +320,36 @@ export default async function Portfolio() {
           ))}
         </div>
 
-        {/* Update portfolio — three options */}
+        {/* Update portfolio — four options */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="px-5 py-3.5 border-b border-border bg-muted/20">
             <h2 className="text-sm font-semibold mb-0.5">Update Your Portfolio</h2>
             <p className="text-xs text-muted-foreground">Keep your holdings current — choose how you&apos;d like to enter new prices</p>
           </div>
-          <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
-            <div className="px-5 py-4 flex items-start gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
+            <div className="px-5 py-4 flex items-start gap-3 bg-card">
+              <div className="shrink-0 h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center mt-0.5">
+                <span className="text-sm">🔄</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold mb-1">Closing refresh</p>
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                  Pulls positions, cost basis, units, dividends, tax, buys, sells, deposits and conversions from IBKR in one pass.
+                </p>
+                <PortfolioUpdateButton
+                  defaultMode="ibkr"
+                  label="Closing Refresh"
+                  holdings={holdings.map((h) => ({
+                    id: h.id,
+                    ticker: h.ticker,
+                    name: h.name,
+                    latestUnits: h.latestSnapshot?.units ?? 0,
+                    latestPrice: h.latestSnapshot?.price ?? 0,
+                  }))}
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 flex items-start gap-3 bg-card">
               <div className="shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
                 <span className="text-sm font-black text-primary">✎</span>
               </div>
@@ -349,7 +371,7 @@ export default async function Portfolio() {
                 />
               </div>
             </div>
-            <div className="px-5 py-4 flex items-start gap-3">
+            <div className="px-5 py-4 flex items-start gap-3 bg-card">
               <div className="shrink-0 h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center mt-0.5">
                 <span className="text-sm font-black text-violet-500">📷</span>
               </div>
@@ -373,7 +395,7 @@ export default async function Portfolio() {
             </div>
 
             {/* Live prices panel */}
-            <div className="px-5 py-4 flex items-start gap-3">
+            <div className="px-5 py-4 flex items-start gap-3 bg-card">
               <div className="shrink-0 h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center mt-0.5">
                 <span className="text-sm">📡</span>
               </div>

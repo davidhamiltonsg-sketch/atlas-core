@@ -478,7 +478,7 @@ export default async function Dashboard() {
     {/* Toolbar */}
     <div className="mb-5 flex flex-wrap items-start gap-2">
       <RefreshPricesButton />
-      <PortfolioUpdateButton label="Update Holdings" holdings={d.updateHoldings} />
+      <PortfolioUpdateButton label="Closing Refresh" defaultMode="ibkr" holdings={d.updateHoldings} />
       <BitcoinCycleBadge phase={d.btcCyclePhase} />
       {d.dealingWindow.isOpen && (
         <StatusChip status="good" label={`DEALING WINDOW OPEN · CLOSES ${d.dealingWindow.windowClosesLabel}`} className="px-3 py-1.5 font-bold" />

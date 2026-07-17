@@ -1,4 +1,5 @@
 import { computeNextBestMove, type EngineMarket, type PositionInput, type Severity } from "@/lib/next-best-move"
+import { GOVERNED_LINE_ALIASES } from "@/lib/instrument-identity"
 
 export type { PositionInput }
 export interface LiveMarketPos { price: number; lo52: number; hi52: number; histVolPct?: number }
@@ -39,7 +40,10 @@ export function computeLadder(positions: PositionInput[], _totalValue: number, o
     portfolioDrawdownPct: opts.portfolioDrawdownPct,
     drawdownDays: opts.drawdownDays,
   })
-  const legacy = positions.some((p) => p.value > 0 && !["VWRA", "EQAC", "SMH", "BTC", "IBIT", "DBMFE"].includes(p.ticker))
+  // An alternate exchange line of a governed instrument (EQQQ/SEMI — same ISIN as EQAC/SMH)
+  // is governed exposure inside its sleeve, never a migration item — mirrors the same
+  // exclusion next-best-move.ts's computeNextBestMove applies (lib/next-best-move.ts:116).
+  const legacy = positions.some((p) => p.value > 0 && !["VWRA", "EQAC", "SMH", "BTC", "IBIT", "DBMFE"].includes(p.ticker) && !GOVERNED_LINE_ALIASES[p.ticker])
   const firedStep = move.severity === "critical" ? 1 : legacy ? 2 : move.ticker ? 3 : 4
   const steps = labels.map<LadderStep>((label, index) => {
     const step = index + 1

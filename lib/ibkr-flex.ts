@@ -1,5 +1,17 @@
 const FLEX_BASE = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService"
 
+/** Flex dates arrive as bare "YYYYMMDD" — render them the same way everywhere a Flex
+ *  activity row is shown (activity import, closing refresh). Non-Flex-shaped strings
+ *  pass through unchanged rather than throwing. */
+export function formatFlexDate(s: string): string {
+  if (s.length === 8) {
+    return new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`).toLocaleDateString("en-GB", {
+      day: "numeric", month: "short", year: "2-digit",
+    })
+  }
+  return s
+}
+
 export interface FlexPosition {
   symbol: string
   units: number
