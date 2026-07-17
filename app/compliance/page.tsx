@@ -13,8 +13,18 @@ import { GovernanceComplianceDashboard } from "@/components/dashboard/governance
 import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { vestExtraContributionsForUser } from "@/lib/external-awards"
 import { formatCurrency } from "@/lib/utils"
-import { buildPortfolioTimeline, annualisedVolatility } from "@/lib/portfolio-metrics"
+import { buildPortfolioTimeline, annualisedVolatility, maxDrawdown } from "@/lib/portfolio-metrics"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
+import { applyEconomicSleeves } from "@/lib/next-best-move"
+import { computeLookThrough } from "@/lib/look-through"
+import { refreshedLookThroughData } from "@/lib/look-through-data"
+import { evaluateGovernance, type Align } from "@/lib/governance-status"
+import { computeSbrLookThrough } from "@/lib/sbr-look-through"
+import { evaluateSbrGovernance } from "@/lib/sbr-governance"
+import type { SbrPosition } from "@/lib/sbr-engine"
+
+const CONE_DRAWDOWN_DEFAULT = 0.20
+const alignToIndicator: Record<Align, "compliant" | "caution" | "critical"> = { ok: "compliant", watch: "caution", breach: "critical" }
 
 // Compliance dashboard is always fresh — real-time governance status
 export const dynamic = "force-dynamic"
@@ -80,6 +90,47 @@ export default async function CompliancePage() {
   const timeline = buildPortfolioTimeline(holdings)
   const realVol = annualisedVolatility(timeline)
   const coneVol = realVol === null ? CONE_VOL_DEFAULT : Math.min(0.30, Math.max(0.08, realVol))
+  const drawdown = maxDrawdown(timeline)
+
+  // Real governance alignment — was previously hardcoded to "compliant"/"pass" everywhere on
+  // this page regardless of actual drift/look-through state, so the top banner could read
+  // "✓ Compliant · All rules satisfied" during a real hard breach. Mirrors the same
+  // evaluateGovernance/evaluateSbrGovernance call the dashboard and mission-control use.
+  let govAlignment: { checks: { id: string; label: string; status: Align; detail: string }[]; breaches: number; watches: number; overall: Align }
+  let concentrationPct = 0
+  if (sbr) {
+    const sbrPositions: SbrPosition[] = c.funds.map(f => {
+      const h = holdings.find(x => x.ticker === f.ticker)
+      const value = h?.snapshots[0]?.value ?? 0
+      return {
+        ticker: f.ticker, name: h?.name ?? f.ticker, color: f.color, value,
+        actualPct: totalValue > 0 ? (value / totalValue) * 100 : 0,
+        targetPct: f.target, rangeLow: f.rangeLow, rangeHigh: f.rangeHigh,
+        hardCap: f.hardCap, floor: f.floor, latestPrice: h?.snapshots[0]?.price ?? 0, hi52: 0,
+      }
+    })
+    const sbrLt = computeSbrLookThrough(sbrPositions, new Date())
+    govAlignment = evaluateSbrGovernance(sbrPositions, totalValue, undefined, new Date(), sbrLt)
+    concentrationPct = Math.max(sbrLt.topCompany.pct, sbrLt.topCountry.pct) / 100
+  } else {
+    const positions = applyEconomicSleeves(holdings.map(h => {
+      const value = h.snapshots[0]?.value ?? 0
+      return {
+        ticker: h.ticker, actualPct: totalValue > 0 ? (value / totalValue) * 100 : 0,
+        targetPct: h.targetPct, toleranceBand: h.toleranceBand ?? 2.5,
+      }
+    }))
+    const refreshedLt = await refreshedLookThroughData()
+    const lookThrough = computeLookThrough(positions, new Date(), refreshedLt.updatedAt, refreshedLt.weights)
+    govAlignment = evaluateGovernance({ positions, bufferPct: 0, lookThrough })
+    concentrationPct = Math.max(lookThrough.companies[0]?.pct ?? 0, lookThrough.sectors[0]?.pct ?? 0) / 100
+  }
+  const overallAlign = govAlignment.overall
+  const govDetail = govAlignment.breaches
+    ? `${govAlignment.breaches} check${govAlignment.breaches !== 1 ? "s" : ""} outside a hard limit — see checks below`
+    : govAlignment.watches
+    ? `${govAlignment.watches} check${govAlignment.watches !== 1 ? "s" : ""} approaching a soft band`
+    : "All governance rules satisfied"
 
   // Growth rates from actual holdings
   const allocMapForRates: Record<string, number> = {}
@@ -114,21 +165,21 @@ export default async function CompliancePage() {
           indicators={[
             {
               label: "Portfolio Status",
-              status: "compliant",
+              status: alignToIndicator[overallAlign],
               value: totalValue > 0 ? "On Track" : "No holdings",
-              detail: "All governance rules satisfied",
+              detail: totalValue > 0 ? govDetail : "No holdings yet",
             },
             {
               label: "Contribution Growth",
-              status: "compliant",
+              status: CONTRIBUTION_GROWTH_RATE > 0 ? "compliant" : "caution",
               value: `${(CONTRIBUTION_GROWTH_RATE * 100).toFixed(0)}% p.a.`,
-              detail: "Outpacing inflation",
+              detail: CONTRIBUTION_GROWTH_RATE > 0 ? "Contribution amount grows each year" : "Contribution amount is flat — review in Settings",
             },
             {
               label: "Growth Volatility",
-              status: "compliant",
+              status: realVol !== null ? "compliant" : "caution",
               value: `${(coneVol * 100).toFixed(0)}%`,
-              detail: `${realVol !== null ? "Portfolio actual" : "Default estimate"}`,
+              detail: `${realVol !== null ? "Portfolio actual" : "Default estimate — not enough snapshot history yet"}`,
             },
             {
               label: "Time Horizon",
@@ -141,14 +192,14 @@ export default async function CompliancePage() {
             {
               category: "Growth",
               rule: "Target achievement on track",
-              status: "pass",
+              status: totalValue > 0 ? "pass" : "warning",
               description: totalValue > 0 ? `Projected 2045 value: ${fmtM(base2045)} (base case)` : "No holdings yet",
               nextAction: "Continue current contribution and allocation plan",
             },
             {
               category: "Contribution",
               rule: "Contribution discipline maintained",
-              status: "pass",
+              status: MONTHLY_CONTRIBUTION > 0 ? "pass" : "warning",
               description: sbr
                 ? `Monthly: S$${MONTHLY_CONTRIBUTION.toLocaleString()}`
                 : `Monthly: S$${MONTHLY_CONTRIBUTION.toLocaleString()} + Annual: S$${ANNUAL_LUMP_SUM.toLocaleString()}`,
@@ -157,15 +208,15 @@ export default async function CompliancePage() {
             {
               category: "Assumptions",
               rule: "Growth assumptions reasonable",
-              status: "pass",
+              status: rates.base > 0.12 ? "warning" : "pass",
               description: `Base case: ${(rates.base * 100).toFixed(1)}% p.a. from actual current holdings`,
               nextAction: "Rebalance if drift exceeds target bands",
             },
           ]}
           riskMetrics={{
-            maxDrawdown: 0.25,
+            maxDrawdown: drawdown ?? CONE_DRAWDOWN_DEFAULT,
             volatility: coneVol,
-            concentration: 0.35,
+            concentration: concentrationPct,
           }}
           nextActions={[
             {

@@ -509,10 +509,16 @@ a.card-lux:active, button.card-lux:active { transform: translateY(0) scale(0.99)
    r is a fixed 45 in GovernanceSeal (never parameterised), so the circumference
    2·π·45 is a constant — the "from" keyframe can hardcode it. `backwards` fill
    (no `forwards`) means the ring settles on its real inline stroke-dashoffset
-   the instant the animation ends, same technique as .reveal-stack.            */
+   the instant the animation ends, same technique as .reveal-stack.
+   Delay is deliberately later than .reveal-stack's own card entrance (seal is
+   nth-child(1): 0.55s duration + 0.04s delay, done by ~0.59s) so the ring reads
+   as its own distinct beat — "card arrives, THEN the ring sweeps up" — instead
+   of blurring into one generic fade. AnimatedNumber's score gets a matching
+   delay/duration (governance-seal.tsx) so the number finishes counting the
+   moment the ring finishes sweeping.                                         */
 @keyframes seal-ring-fill { from { stroke-dashoffset: 282.7433388230814; } }
 .seal-ring-fill {
-  animation: seal-ring-fill 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
+  animation: seal-ring-fill 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.55s backwards;
 }
 
 /* ─── Position markers — land on their band/drift position ─────────────────

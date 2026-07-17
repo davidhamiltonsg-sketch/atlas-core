@@ -192,7 +192,11 @@ export function computeLookThrough(
   if (managedFuturesPct > 0) warnings.push(`${managedFuturesPct.toFixed(1)}% is managed futures and is reported separately from equity sectors.`)
   if (freshness !== "fresh") warnings.push(`Oldest required source is ${ageDays} days old; refresh before a concentration-led allocation change.`)
   warnings.push("Look-through values are estimates. They may pause or redirect contributions, but never create an automatic sell signal.")
-  return { companies, sectors, geographies, assets, unclassifiedPct, managedFuturesPct, cryptoPct, ageDays, freshness, stale: freshness === "stale", estimated: true, hardSignalsActionable: false, warnings }
+  // Actionability itself is always true here — the callers (worstLookThroughBreach,
+  // worstLookThroughApproach) separately gate on `stale` and `unclassifiedPct > 0` before
+  // treating a breach as real, so a hard cap on fresh, fully-classified data must be able to
+  // reach the pause/redirect path this function's own warning text promises below.
+  return { companies, sectors, geographies, assets, unclassifiedPct, managedFuturesPct, cryptoPct, ageDays, freshness, stale: freshness === "stale", estimated: true, hardSignalsActionable: true, warnings }
 }
 
 /** The single worst look-through breach (hard cap exceeded), if any — for the engine. */

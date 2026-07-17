@@ -120,11 +120,15 @@ export function projectPortfolio(
     extraByMonth.set(idx, (extraByMonth.get(idx) ?? 0) + e.amount)
   }
   for (let year = 0; year < years; year++) {
+    // The January lump sum lands before that year's monthly compounding starts, so it earns
+    // a full year of growth like a real January 1st contribution would — added after the loop
+    // (as this previously was) left every year's lump sum, including the very last one, with
+    // zero months of growth credited inside the projection horizon.
+    value += annualLumpSum
     const contribution = monthlyContribution * Math.pow(1 + contributionGrowthRate, year)
     for (let month = 0; month < 12; month++) {
       value = value * (1 + monthlyRate) + contribution + (extraByMonth.get(year * 12 + month) ?? 0)
     }
-    value += annualLumpSum // annual top-up applied every year (incl. the first)
   }
   return value
 }

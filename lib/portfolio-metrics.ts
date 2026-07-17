@@ -74,3 +74,21 @@ export function annualisedVolatility(timeline: TimelinePoint[], minPoints = 6): 
   const periodsPerYear = 365 / Math.max(avgGap, 1)
   return stdDev(returns) * Math.sqrt(periodsPerYear)
 }
+
+/**
+ * Largest peak-to-trough decline observed in the timeline, as a positive fraction
+ * (0.12 = a 12% drawdown from the running high). Returns null when there are too
+ * few points for the figure to mean anything — callers should fall back to a
+ * sensible default rather than silently displaying 0% (a false "no drawdown" claim
+ * is exactly as misleading as an unrelated hardcoded guess).
+ */
+export function maxDrawdown(timeline: TimelinePoint[], minPoints = 3): number | null {
+  if (timeline.length < minPoints) return null
+  let peak = timeline[0].value
+  let worst = 0
+  for (const point of timeline) {
+    if (point.value > peak) peak = point.value
+    else if (peak > 0) worst = Math.max(worst, (peak - point.value) / peak)
+  }
+  return worst
+}

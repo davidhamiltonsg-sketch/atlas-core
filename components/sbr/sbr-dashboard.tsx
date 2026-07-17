@@ -180,8 +180,11 @@ async function getSbrData(userId: string) {
   const windowOpen = isInDealingWindow(now)
   const nextWindowOpens = windowOpen ? null : getDealingWindow(new Date(now.getFullYear(), now.getMonth() + 1, 1)).opens
 
-  // Exceptional Market Event detection — portfolio down ≥30% from peak
-  const EME_THRESHOLD = -30
+  // Exceptional Market Event detection — portfolio down past the constitutional trigger from
+  // peak. Sourced from SBR.drawdownTriggerPct (asserted against SBR_SPEC by check-spec.ts)
+  // rather than a second hardcoded copy, so an amendment to the trigger can't silently
+  // desync this banner + the 72h committee-minute gate from the constitution.
+  const EME_THRESHOLD = -(SBR.drawdownTriggerPct ?? 30)
   const emeActive = drawdownPct !== undefined && drawdownPct <= EME_THRESHOLD
   const emeMinuteFiled = recentMinute !== null
 

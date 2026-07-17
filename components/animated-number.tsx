@@ -17,6 +17,10 @@ interface AnimatedNumberProps {
   decimals?: number
   suffix?: string
   duration?: number
+  // Delay before the count-up starts — lets a number wait for a sibling animation
+  // (e.g. the governance seal's ring sweep) so they read as one staged reveal
+  // instead of two motions blurring together at once.
+  delay?: number
   className?: string
 }
 
@@ -36,6 +40,7 @@ export function AnimatedNumber({
   decimals = 0,
   suffix = "",
   duration = 1000,
+  delay = 0,
   className,
 }: AnimatedNumberProps) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -48,16 +53,20 @@ export function AnimatedNumber({
       return
     }
     let raf = 0
-    const start = performance.now()
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / duration)
-      const eased = 1 - Math.pow(1 - p, 3)
-      el.textContent = fmt(value * eased, currency, decimals, suffix)
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [value, currency, decimals, suffix, duration])
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      if (cancelled) return
+      const start = performance.now()
+      const tick = (t: number) => {
+        const p = Math.min(1, (t - start) / duration)
+        const eased = 1 - Math.pow(1 - p, 3)
+        el.textContent = fmt(value * eased, currency, decimals, suffix)
+        if (p < 1) raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
+    }, delay)
+    return () => { cancelled = true; window.clearTimeout(timer); cancelAnimationFrame(raf) }
+  }, [value, currency, decimals, suffix, duration, delay])
 
   return (
     <span ref={ref} className={className}>

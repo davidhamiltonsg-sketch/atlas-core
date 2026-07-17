@@ -71,7 +71,10 @@ export function GovernanceSeal({ overall, overallLabel, dimensions, constitution
         </svg>
         <div className="absolute inset-0 grid place-items-center">
           <div className="text-center">
-            <span className={`text-2xl font-display font-black tabular-nums ${scoreColor}`}><AnimatedNumber value={overall} /></span>
+            {/* Delay/duration matched to .seal-ring-fill (globals.css) so the number finishes
+                counting the instant the ring finishes its sweep — one staged reveal, not two
+                animations racing independently. */}
+            <span className={`text-2xl font-display font-black tabular-nums ${scoreColor}`}><AnimatedNumber value={overall} delay={550} duration={1500} /></span>
             <span className="block text-[9px] font-data font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
           </div>
         </div>
