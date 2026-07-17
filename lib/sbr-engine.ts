@@ -34,10 +34,11 @@ function route(positions: SbrPosition[], totalValue: number, c: Constitution, op
   const floor = positions.filter(p => p.floor !== undefined && p.actualPct < p.floor).sort((a,b) => (a.actualPct-(a.floor??0))-(b.actualPct-(b.floor??0)))[0]
   if (floor) return { tag: "floor", fund: floor, floor: floor.floor! }
   const combined = positions.filter(p => c.combined?.tickers.includes(p.ticker)).reduce((s,p)=>s+p.actualPct,0)
-  // Constitution levels: pause satellites only above the hard ceiling (32.5%); a prior pause
-  // holds until combined falls below the resume level (22.5%); the warning level (25%) is an
-  // early warning only and never blocks routing.
-  const hard = c.combined?.hard ?? 32.5, warning = c.combined?.warning ?? 25, resume = c.combined?.resume ?? 22.5
+  // Constitution levels (Article II, derived from each fund's own hard cap — same method as
+  // Atlas's combinedTech rule): pause satellites only above the hard ceiling (25%); a prior
+  // pause holds until combined falls back below the soft band (18.75%); crossing the soft band
+  // on the way up is an early warning only and never blocks routing.
+  const hard = c.combined?.hard ?? 25, warning = c.combined?.warning ?? 18.75, resume = c.combined?.resume ?? 18.75
   if (combined > hard || (opts.previouslyPaused && combined >= resume)) return { tag: "combined_hard", combined }
   if (combined >= warning) return { tag: "combined_watch", combined }
   const under = byGap.find(p => p.actualPct < p.rangeLow && p.actualPct < p.rangeHigh)

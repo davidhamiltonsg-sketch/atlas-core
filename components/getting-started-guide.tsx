@@ -1,7 +1,6 @@
 'use client'
 
 import { ChevronRight, BarChart3, TrendingUp, Settings, RefreshCw } from 'lucide-react'
-import Link from 'next/link'
 
 export function GettingStartedGuide() {
   return (
@@ -12,21 +11,21 @@ export function GettingStartedGuide() {
           <BarChart3 className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
           <div className="flex-1">
             <p className="font-medium text-foreground">Start here: Portfolio Overview</p>
-            <p className="text-xs mt-0.5">See your current value, compliance status, and today's action at a glance.</p>
+            <p className="text-xs mt-0.5">See your current value, compliance status, and today&apos;s action at a glance.</p>
           </div>
         </div>
         <div className="flex gap-3">
           <TrendingUp className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
           <div className="flex-1">
             <p className="font-medium text-foreground">Forecast (Portfolio → Forecast)</p>
-            <p className="text-xs mt-0.5">Explore your long-term trajectory. Governance rules appear first, then probability scenarios. See "Starting Portfolio" to verify where projections begin.</p>
+            <p className="text-xs mt-0.5">Explore your long-term trajectory. Governance rules appear first, then probability scenarios. See &ldquo;Starting Portfolio&rdquo; to verify where projections begin.</p>
           </div>
         </div>
         <div className="flex gap-3">
           <RefreshCw className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
           <div className="flex-1">
             <p className="font-medium text-foreground">Update Holdings (Sidebar: Update Portfolio)</p>
-            <p className="text-xs mt-0.5">Add this month's contribution, sync prices, run helpers, and execute rebalancing. Your forecast updates automatically after each action.</p>
+            <p className="text-xs mt-0.5">Add this month&apos;s contribution, sync prices, run helpers, and execute rebalancing. Your forecast updates automatically after each action.</p>
           </div>
         </div>
         <div className="flex gap-3">

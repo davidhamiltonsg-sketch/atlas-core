@@ -1,6 +1,7 @@
 'use client'
 
-import { AlertTriangle, CheckCircle2, Circle, TrendingDown, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { AlertTriangle, CheckCircle2, Circle, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react'
 
 interface ComplianceIndicator {
   label: string
@@ -33,6 +34,7 @@ interface GovernanceComplianceDashboardProps {
     action: string
     trigger: string
     deadline?: string
+    link?: string
   }>
 }
 
@@ -197,19 +199,17 @@ export function GovernanceComplianceDashboard({
             <p className="text-xs text-muted-foreground mt-1">Governance-required or recommended actions</p>
           </div>
           <div className="divide-y divide-border">
-            {nextActions.map((action, idx) => (
-              <div
-                key={idx}
-                className={`px-5 py-4 ${
-                  action.priority === 'critical' ? 'bg-red-500/5 border-l-2 border-red-500' :
-                  action.priority === 'high' ? 'bg-orange-500/5 border-l-2 border-orange-500' :
-                  action.priority === 'medium' ? 'bg-amber-500/5 border-l-2 border-amber-500' :
-                  'bg-blue-500/5 border-l-2 border-blue-500'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
+            {nextActions.map((action, idx) => {
+              const rowClass = `px-5 py-4 flex items-start justify-between gap-2 ${
+                action.priority === 'critical' ? 'bg-red-500/5 border-l-2 border-red-500' :
+                action.priority === 'high' ? 'bg-orange-500/5 border-l-2 border-orange-500' :
+                action.priority === 'medium' ? 'bg-amber-500/5 border-l-2 border-amber-500' :
+                'bg-blue-500/5 border-l-2 border-blue-500'
+              }`
+              const body = (
+                <>
                   <div className="flex items-start gap-3">
-                    <Circle className={`h-2 w-2 mt-2 ${
+                    <Circle className={`h-2 w-2 mt-2 shrink-0 ${
                       action.priority === 'critical' ? 'fill-red-500 text-red-500' :
                       action.priority === 'high' ? 'fill-orange-500 text-orange-500' :
                       action.priority === 'medium' ? 'fill-amber-500 text-amber-500' :
@@ -220,14 +220,26 @@ export function GovernanceComplianceDashboard({
                       <p className="text-xs text-muted-foreground mt-1">{action.trigger}</p>
                     </div>
                   </div>
-                  {action.deadline && (
-                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
-                      {action.deadline}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    {action.deadline && (
+                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                        {action.deadline}
+                      </span>
+                    )}
+                    {action.link && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                </>
+              )
+              return action.link ? (
+                <Link key={idx} href={action.link} className={`${rowClass} hover:bg-accent/50 transition-colors`}>
+                  {body}
+                </Link>
+              ) : (
+                <div key={idx} className={rowClass}>
+                  {body}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

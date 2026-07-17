@@ -107,7 +107,7 @@ export async function POST(req: Request) {
   }
 
   if (touchedAny) {
-    for (const p of ["/", "/portfolio", "/ytd", "/contributions", "/trades", "/governance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
+    for (const p of ["/", "/portfolio", "/ytd", "/contributions", "/next", "/trades", "/governance", "/compliance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
       revalidatePath(p)
     }
   }

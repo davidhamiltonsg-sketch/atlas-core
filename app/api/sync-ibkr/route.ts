@@ -153,7 +153,7 @@ export async function PUT(req: Request) {
     updated++
   }
 
-  for (const p of ["/", "/trades", "/ytd", "/portfolio", "/governance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
+  for (const p of ["/", "/trades", "/ytd", "/portfolio", "/governance", "/compliance", "/contributions", "/next", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
     revalidatePath(p)
   }
 

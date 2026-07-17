@@ -10,17 +10,23 @@ interface ForecastPageWrapperProps {
 
 export function ForecastPageWrapper({ children }: ForecastPageWrapperProps) {
   const searchParams = useSearchParams()
+  const action = searchParams.get('action')
+  const [lastAction, setLastAction] = useState(action)
   const [showConfirmation, setShowConfirmation] = useState<'update-holdings' | 'forecast-adjustment' | null>(null)
 
+  // Adjust state during render (React's recommended replacement for setState-in-effect)
+  // when the ?action= param changes; the effect below only ever sets state from its
+  // setTimeout callback, which is the sanctioned "subscribe to an external timer" case.
+  if (action !== lastAction) {
+    setLastAction(action)
+    setShowConfirmation(action === 'holdings-updated' ? 'update-holdings' : action === 'forecast-adjusted' ? 'forecast-adjustment' : null)
+  }
+
   useEffect(() => {
-    const action = searchParams.get('action')
-    if (action === 'holdings-updated' || action === 'forecast-adjusted') {
-      setShowConfirmation(action === 'holdings-updated' ? 'update-holdings' : 'forecast-adjustment')
-      // Auto-dismiss after 8 seconds
-      const timer = setTimeout(() => setShowConfirmation(null), 8000)
-      return () => clearTimeout(timer)
-    }
-  }, [searchParams])
+    if (!showConfirmation) return
+    const timer = setTimeout(() => setShowConfirmation(null), 8000)
+    return () => clearTimeout(timer)
+  }, [showConfirmation])
 
   return (
     <>

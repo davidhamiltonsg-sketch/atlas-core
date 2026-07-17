@@ -18,7 +18,7 @@ export function ForecastGuide() {
           <LineChart className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
           <div>
             <p className="font-medium text-foreground">2. Verify Your Starting Point</p>
-            <p className="text-xs">The "Starting Portfolio Value" card shows where your projections begin. Use "Update holdings" if prices are stale, or "View portfolio" to verify current positions.</p>
+            <p className="text-xs">The &ldquo;Starting Portfolio Value&rdquo; card shows where your projections begin. Use &ldquo;Update holdings&rdquo; if prices are stale, or &ldquo;View portfolio&rdquo; to verify current positions.</p>
           </div>
         </div>
         <div className="flex gap-2.5">
