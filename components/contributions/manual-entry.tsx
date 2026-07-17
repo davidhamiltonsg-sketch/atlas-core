@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { PlusCircle, CheckCircle2, AlertTriangle } from "lucide-react"
 import { addManualContribution, addManualDividend } from "@/app/contributions/actions"
+import { useToast } from "@/components/ui/toast"
 
 // Owner-only manual ledger entry — the fallback when no IBKR activity feed is
 // connected (or its report window has a gap). Two entry kinds:
@@ -16,6 +17,7 @@ const labelCls = "block text-[11px] font-semibold text-muted-foreground mb-1"
 
 export function ManualEntryPanel({ tickers }: { tickers: string[] }) {
   const router = useRouter()
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<"contribution" | "dividend">("contribution")
   const [amount, setAmount] = useState("")
@@ -34,12 +36,15 @@ export function ManualEntryPanel({ tickers }: { tickers: string[] }) {
           ? await addManualContribution({ amount: parsed, date, note })
           : await addManualDividend({ ticker, amount: parsed, paymentDate: date, note })
       if (result.success) {
-        setMessage({ ok: true, text: kind === "contribution" ? "Recorded. The ledger and monthly totals update immediately." : `Dividend recorded against ${ticker}.` })
+        const text = kind === "contribution" ? "Recorded. The ledger and monthly totals update immediately." : `Dividend recorded against ${ticker}.`
+        setMessage({ ok: true, text })
+        toast(text, { type: "success" })
         setAmount("")
         setNote("")
         router.refresh()
       } else {
         setMessage({ ok: false, text: result.error })
+        toast(result.error, { type: "error" })
       }
     })
   }

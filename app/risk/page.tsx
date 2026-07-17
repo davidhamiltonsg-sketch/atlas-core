@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { db } from "@/lib/db"
 import { formatCurrency, formatPercent } from "@/lib/utils"
@@ -5,10 +6,12 @@ import { applyEconomicSleeves } from "@/lib/constants"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { activePortfolioContext } from "@/lib/active-portfolio"
-import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info } from "lucide-react"
+import { AlertTriangle, BarChart3, Shield, TrendingDown, Activity, Info, ArrowRight } from "lucide-react"
 import { ATLAS_TARGET_HHI, ATLAS_HHI_THRESHOLDS, atlasConcentrationLabel } from "@/lib/spec-derived"
 import { SBR_SPEC } from "@/lib/portfolio-spec"
 import { ExposureBarChart, type ExposureBar } from "@/components/charts/exposure-bar-chart"
+import { computeLookThrough } from "@/lib/look-through"
+import { computeSbrLookThrough } from "@/lib/sbr-look-through"
 
 const SBR_TARGET_HHI=SBR_SPEC.funds.reduce((sum,f)=>sum+(f.target/100)**2,0)
 const SBR_HHI_THRESHOLDS={onTarget:SBR_TARGET_HHI+0.04,drifting:SBR_TARGET_HHI+0.08}
@@ -38,6 +41,21 @@ function annualise(sd: number, avgDaysBetween: number): number {
 function hhi(weights: number[]): number {
   // weights are fractions (0-1). Result 0-1. Higher = more concentrated.
   return weights.reduce((s, w) => s + w * w, 0)
+}
+
+// Pearson correlation coefficient between two equal-length, date-aligned return series.
+function correlation(a: number[], b: number[]): number {
+  if (a.length !== b.length || a.length < 2) return 0
+  const ma = mean(a), mb = mean(b)
+  let cov = 0, va = 0, vb = 0
+  for (let i = 0; i < a.length; i++) {
+    const da = a[i] - ma, db = b[i] - mb
+    cov += da * db
+    va += da * da
+    vb += db * db
+  }
+  if (va === 0 || vb === 0) return 0
+  return cov / Math.sqrt(va * vb)
 }
 
 function hhiLabel(h: number,isSbr=false): { label: string; color: string } {
@@ -102,6 +120,9 @@ async function getRiskData(userId: string,isSbr=false) {
   // register as a return.
   const periodReturns: number[] = []
   const daysBetween: number[] = []
+  // Per-asset period returns aligned to the same date transitions as periodReturns above —
+  // reused for the pairwise correlation matrix so it needs no extra data fetch.
+  const assetReturns: number[][] = holdingsWithData.map(() => [])
   for (let i = 1; i < timeline.length; i++) {
     const prev = timeline[i - 1]
     const curr = timeline[i]
@@ -110,10 +131,12 @@ async function getRiskData(userId: string,isSbr=false) {
     for (let j = 0; j < prev.holdings.length; j++) {
       const pPrice = prev.holdings[j].price
       const cPrice = curr.holdings[j].price
+      const assetReturn = pPrice > 0 ? (cPrice - pPrice) / pPrice : 0
       if (pPrice > 0) {
         const weight = prev.holdings[j].value / prev.value
-        portfolioReturn += weight * ((cPrice - pPrice) / pPrice)
+        portfolioReturn += weight * assetReturn
       }
+      assetReturns[j].push(assetReturn)
     }
     periodReturns.push(portfolioReturn)
     daysBetween.push((new Date(curr.date).getTime() - new Date(prev.date).getTime()) / 86_400_000)
@@ -189,6 +212,21 @@ async function getRiskData(userId: string,isSbr=false) {
   const weights = holdingStats.map(h => totalValue > 0 ? h.latestValue / totalValue : 0)
   const hhiScore = hhi(weights)
 
+  // Sector allocation — reuses the same look-through engine as /reports and /compliance
+  // (Atlas: semiconductor/digital/us/ai caps; SBR: full industry breakdown), normalised to a
+  // common {label, pct} shape so the page doesn't need to know which portfolio it's rendering.
+  const lookThroughPositions = holdingStats.filter(h => h.latestValue > 0).map(h => ({
+    ticker: h.ticker,
+    actualPct: totalValue > 0 ? (h.latestValue / totalValue) * 100 : 0,
+  }))
+  const sectorAllocation: { label: string; pct: number }[] = totalValue > 0
+    ? (isSbr
+      ? computeSbrLookThrough(lookThroughPositions).industries.map(l => ({ label: l.name, pct: l.pct }))
+      : computeLookThrough(lookThroughPositions).sectors.map(l => ({ label: l.label, pct: l.pct })))
+      .filter(l => l.pct > 0.5)
+      .sort((a, b) => b.pct - a.pct)
+    : []
+
   // Bitcoin sleeve: BTC + IBIT are ONE 7% position (BTC run-off, IBIT accumulation). Show the
   // effective sleeve target so the weight bars/table don't read BTC as "underweight vs 7%" while
   // IBIT reads "overweight vs 0%" — consistent with the cockpit, reports, and governance surfaces.
@@ -197,6 +235,12 @@ async function getRiskData(userId: string,isSbr=false) {
       holdingStats.map(h => ({ ticker: h.ticker, actualPct: totalValue > 0 ? (h.latestValue / totalValue) * 100 : 0, targetPct: h.targetPct }))
     )).map(p => [p.ticker, p.targetPct]))
   for (const h of holdingStats) h.targetPct = sleeveTargets.get(h.ticker) ?? h.targetPct
+
+  // ── Step 5: Pairwise correlation matrix, from the same aligned price returns above ────
+  const correlationAssets = holdingsWithData.map(h => ({ ticker: h.ticker, color: h.color }))
+  const correlationMatrix = correlationAssets.map((_, i) =>
+    correlationAssets.map((_, j) => (i === j ? 1 : correlation(assetReturns[i], assetReturns[j])))
+  )
 
   return {
     timeline,
@@ -212,6 +256,10 @@ async function getRiskData(userId: string,isSbr=false) {
     var95Daily,
     var95Monthly,
     holdingStats,
+    correlationAssets,
+    correlationMatrix,
+    correlationPeriods: periodReturns.length,
+    sectorAllocation,
     hhiScore,
     totalValue,
     dataPoints: timeline.length,
@@ -503,6 +551,84 @@ export default async function RiskPage() {
           </div>
         </div>
 
+        {/* Sector allocation — look-through exposure by sector/industry, not just by fund */}
+        {data.sectorAllocation.length > 0 && (
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sector Allocation</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Look-through exposure by sector — the same holding can contribute to several sectors at once, so this can add to more than 100%.
+              </p>
+            </div>
+            <div className="p-5 space-y-2.5">
+              {data.sectorAllocation.map(s => (
+                <div key={s.label}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold">{s.label}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{formatPercent(s.pct, 1, false)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bar-fill transition-all bg-primary" style={{ width: `${Math.min(s.pct, 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Correlation matrix — pairwise Pearson correlation from the same aligned price
+            history used for volatility above; same 8-period reliability floor applies. */}
+        {data.correlationAssets.length >= 2 && data.correlationPeriods >= VOL_MIN_PERIODS && (
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Correlation Matrix</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                How closely each pair of holdings has moved together, from {data.correlationPeriods} periods of price history. Near +1 means little diversification benefit; near 0 or negative means the pair tends to offset each other.
+              </p>
+            </div>
+            <div className="overflow-x-auto p-5 pt-3">
+              <table className="text-xs border-separate" style={{ borderSpacing: 2 }}>
+                <thead>
+                  <tr>
+                    <th className="px-2 py-1" />
+                    {data.correlationAssets.map(a => (
+                      <th key={a.ticker} className="px-2 py-1 text-center font-semibold text-muted-foreground whitespace-nowrap">
+                        {a.ticker}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.correlationAssets.map((rowAsset, i) => (
+                    <tr key={rowAsset.ticker}>
+                      <th className="px-2 py-1 text-right font-semibold text-muted-foreground whitespace-nowrap">{rowAsset.ticker}</th>
+                      {data.correlationMatrix[i].map((v, j) => {
+                        // Diverging fill: warm for positive (moves together, less diversification),
+                        // cool for negative (offsetting, a diversification benefit); intensity by |v|.
+                        const bg = i === j
+                          ? "rgba(148,163,184,0.15)"
+                          : v >= 0
+                            ? `rgba(239,68,68,${0.08 + Math.abs(v) * 0.35})`
+                            : `rgba(34,197,94,${0.08 + Math.abs(v) * 0.35})`
+                        return (
+                          <td
+                            key={data.correlationAssets[j].ticker}
+                            className="px-2 py-1.5 text-center tabular-nums font-medium rounded"
+                            style={{ background: bg }}
+                            title={`${rowAsset.ticker} × ${data.correlationAssets[j].ticker}: ${v.toFixed(2)}`}
+                          >
+                            {v.toFixed(2)}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Position vs mandate limits — per-row soft/hard drift zones */}
         {exposureRows.length > 0 && (
           <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -513,6 +639,15 @@ export default async function RiskPage() {
             <div className="p-5 pt-3">
               <ExposureBarChart data={exposureRows} />
             </div>
+            {exposureRows.some(r => r.status !== "healthy") && (
+              <Link
+                href="/contributions"
+                className="flex items-center justify-between gap-3 border-t border-border px-5 py-3.5 text-xs font-semibold text-warning hover:bg-warning/5 transition-colors group"
+              >
+                <span>One or more positions are outside their comfortable range — see how contributions route to correct drift</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            )}
           </div>
         )}
 
@@ -556,6 +691,15 @@ export default async function RiskPage() {
               })}
             </div>
           </div>
+          {hhiInfo.label !== "On Target" && (
+            <Link
+              href="/compliance"
+              className={`flex items-center justify-between gap-3 border-t border-border px-5 py-3.5 text-xs font-semibold hover:bg-accent/40 transition-colors group ${hhiInfo.color}`}
+            >
+              <span>Concentration is {hhiInfo.label.toLowerCase()} — see the governance rules and bands that apply</span>
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          )}
         </div>
 
         {/* Risk Glossary */}
