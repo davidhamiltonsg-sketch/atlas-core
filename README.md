@@ -22,6 +22,7 @@ npm run dev
 - `CRON_SECRET` — bearer token the cron endpoints require
 - `RESEND_API_KEY` (+ `EMAIL_FROM`) — email digests
 - IBKR Flex: `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_ID`, `IBKR_FLEX_QUERY_ID_ACTIVITY` (Atlas) and `IBKR_SBR_FLEX_TOKEN`, `IBKR_SBR_FLEX_QUERY_ID`, `IBKR_SBR_FLEX_QUERY_ID_ACTIVITY` (SBR)
+- IBKR Flex email-delivery webhook (`/api/webhooks/ibkr-flex-email`, alternative to the polling path above): `RESEND_WEBHOOK_SECRET` (from the Resend webhook's signing secret) + `IBKR_FLEX_EMAIL_RECIPIENT` (the dedicated inbound address) + `IBKR_FLEX_ACCOUNT_ID` / `IBKR_SBR_FLEX_ACCOUNT_ID` (routes an inbound statement to the right portfolio by IBKR account number)
 - Optional: `FINNHUB_API_KEY`, `ANTHROPIC_API_KEY`
 
 ## Cron schedule (vercel.json / railway.toml)
