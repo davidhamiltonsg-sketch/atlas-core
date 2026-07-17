@@ -8,7 +8,11 @@ import { PortfolioUpdateButton } from "@/components/portfolio-update-button"
 import { AllocationDonut } from "@/components/charts/allocation-donut"
 import { HoldingsTableInteractive } from "@/components/portfolio/holdings-table-interactive"
 import { RefreshPricesButton } from "@/components/portfolio/refresh-prices-button"
+import { ReconcileButton } from "@/components/portfolio/reconcile-button"
 import { DataCorrectionPanel } from "@/components/portfolio/data-correction-panel"
+import { ExternalAwardCard, type AwardCardData } from "@/components/cockpit/external-award-card"
+import { getAwardPipeline } from "@/lib/external-awards"
+import { money, convert } from "@/lib/money"
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
 import { HARD_THRESHOLDS } from "@/lib/constants"
@@ -129,6 +133,33 @@ export default async function Portfolio() {
   const targetSleeveCount = constitutionFunds.length
   const canCorrect = session.role === "admin" || session.userId === active.owner.id
   const { holdings, totalValue, hasBalance, sleeveActual, duplicates, identityWarnings } = await getPortfolioData(active.owner.id, constitutionFunds.map((f) => f.ticker))
+
+  // Outside-Atlas employer award pipeline — never part of NAV/targets/drift, but it
+  // should still be visible somewhere holdings live rather than only on the dashboard.
+  // Atlas-specific by design (the "Outside Atlas" framing); SBR's portfolio owner has no
+  // such pipeline.
+  const awardPipeline = isSbr ? null : await getAwardPipeline(active.owner.id)
+  const usdSgdRate = await getCachedUsdSgdRate()
+  // eslint-disable-next-line react-hooks/purity -- server-rendered at request time, see daysSinceUpdate above
+  const nextVestDays = awardPipeline?.vests.length ? Math.max(0, Math.ceil((awardPipeline.vests[0].date.getTime() - Date.now()) / 86_400_000)) : null
+  const awardCard: AwardCardData | null = awardPipeline
+    ? {
+        label: awardPipeline.award.label,
+        ticker: awardPipeline.award.ticker,
+        priceUsd: awardPipeline.priceUsd,
+        priceIsLive: awardPipeline.priceIsLive,
+        taxRatePct: awardPipeline.award.taxRatePct,
+        vests: awardPipeline.vests.map((v) => ({
+          dateLabel: v.date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+          units: v.units,
+          grossUsd: v.grossUsd,
+          afterTaxUsd: v.afterTaxUsd,
+          grossSgd: convert(money(v.grossUsd, "USD"), "SGD", usdSgdRate).amount,
+        })),
+        nextVestDays,
+        tranchesRaw: awardPipeline.award.tranches,
+      }
+    : null
 
   const snapshotDate = holdings[0]?.latestSnapshot
     ? new Date(holdings[0].latestSnapshot.date).toLocaleDateString("en-GB", {
@@ -407,6 +438,20 @@ export default async function Portfolio() {
                 <RefreshPricesButton />
               </div>
             </div>
+
+            {/* Reconciliation panel */}
+            <div className="px-5 py-4 flex items-start gap-3 bg-card">
+              <div className="shrink-0 h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center mt-0.5">
+                <span className="text-sm">🧮</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold mb-1">Reconcile cost basis</p>
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                  If cost basis or unrealised return shows &ldquo;Needs reconciliation&rdquo;, re-check every trade, dividend and cash entry against your broker in one pass.
+                </p>
+                <ReconcileButton />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -425,6 +470,10 @@ export default async function Portfolio() {
               valueSgd: h.value,
             }))}
           />
+        )}
+
+        {!isSbr && (awardCard || canCorrect) && (
+          <ExternalAwardCard data={awardCard} editable={canCorrect} />
         )}
 
         {/* Holdings table */}

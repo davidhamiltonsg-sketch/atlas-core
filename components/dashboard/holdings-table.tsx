@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardHeader } from "@/components/ui/primitives"
 import { altLabelFor, isInScope } from "@/lib/approved-alternatives"
 import { formatCurrency } from "@/lib/utils"
@@ -214,7 +215,7 @@ export function HoldingsTable({ positions, totalValue, priceStale = false, contr
               <td />
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalValue, "SGD")}</td>
               <td className={`px-3 py-3 text-right tabular-nums ${!valuationComplete ? "text-muted-foreground" : totalUnreal >= 0 ? "text-success" : "text-danger"}`}>
-                {valuationComplete ? `${totalUnreal >= 0 ? "+" : ""}${formatCurrency(totalUnreal, "SGD")}` : "Needs reconciliation"}
+                {valuationComplete ? `${totalUnreal >= 0 ? "+" : ""}${formatCurrency(totalUnreal, "SGD")}` : <Link href="/portfolio" className="underline decoration-dotted underline-offset-2">Needs reconciliation</Link>}
               </td>
               <td colSpan={3} />
             </tr>

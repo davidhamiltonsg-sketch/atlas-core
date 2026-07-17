@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/session"
-import { fetchFlexPositions } from "@/lib/ibkr-flex"
-import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation } from "@/lib/holdings-sync"
+import { fetchFlexPositions, fetchFlexActivity } from "@/lib/ibkr-flex"
+import { upsertSnapshotToday, ensureCoreHoldings, ensureSbrPresentation, importIbkrActivityForUser } from "@/lib/holdings-sync"
 import { ibkrCredentialsFor } from "@/lib/ibkr-config"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
@@ -558,6 +558,41 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
     : undefined
 
   return { success: true, updated, unitsUpdated, added, removed, source: haveIbkr ? "ibkr" : "yahoo", note }
+}
+
+// One-click cost-basis reconciliation. "Needs reconciliation" appears when a holding's
+// cost basis can't be derived — IBKR's Flex positions report doesn't always carry it, and
+// the fallback reconstructs it from imported Trade rows. Historically fixing that required
+// walking the multi-step "Closing Refresh" modal (fetch → hand-select every execution/
+// dividend/ledger row → confirm). This re-fetches the same Flex activity report and imports
+// everything in one pass — importIbkrActivityForUser already dedupes by IBKR trade/
+// transaction ID (and by natural key), so re-submitting already-imported rows is a no-op.
+export async function reconcileCostBasis(): Promise<{
+  success: boolean; tradesImported?: number; dividendsImported?: number; ledgerImported?: number; contributionsImported?: number; error?: string
+}> {
+  const session = await getSession()
+  if (!session) throw new Error("Unauthenticated")
+  const active = await activePortfolioContext(session)
+  assertCanMutateOwner(session, active.owner.id)
+
+  const { token, activityQuery } = ibkrCredentialsFor(active.constitutionId)
+  if (!token || !activityQuery) {
+    return { success: false, error: "The IBKR activity feed is not configured for this portfolio. Set the Flex token and a dedicated Activity Flex query (Trades + Cash Transactions + Dividends), then retry." }
+  }
+
+  const result = await fetchFlexActivity(token, activityQuery)
+  if (!result.success) return { success: false, error: result.error }
+
+  const { trades: tradesImported, dividends: dividendsImported, ledger: ledgerImported, contributions: contributionsImported, tickers } =
+    await importIbkrActivityForUser(active.owner.id, result.executions, result.dividends, result.ledger)
+
+  if (tickers.length > 0) {
+    for (const p of ["/", "/trades", "/contributions", "/next", "/ytd", "/portfolio", "/governance", "/compliance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
+      revalidatePath(p)
+    }
+  }
+
+  return { success: true, tradesImported, dividendsImported, ledgerImported, contributionsImported }
 }
 
 type ExtractResult =
