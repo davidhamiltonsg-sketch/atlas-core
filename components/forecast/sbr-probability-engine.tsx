@@ -5,22 +5,24 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 // ── Asset configs for SBR ────────────────────────────────────────────────────
 interface Asset { n: string; w: number; mu: number[]; s: number }
 
-// SBR asset configuration (5 funds)
+// SBR asset configuration (6 funds per constitution)
 const SBR_ASSETS: Asset[] = [
-  { n: 'A20', w: 0.20, mu: [0.05, 0.08, 0.11], s: 0.14 },
-  { n: 'A35', w: 0.35, mu: [0.03, 0.05, 0.07], s: 0.08 },
-  { n: 'A70', w: 0.20, mu: [0.06, 0.10, 0.14], s: 0.18 },
-  { n: 'EQAC', w: 0.15, mu: [0.05, 0.105, 0.15], s: 0.23 },
-  { n: 'SMH', w: 0.10, mu: [0.04, 0.115, 0.18], s: 0.30 },
+  { n: 'VWRA', w: 0.65, mu: [0.05, 0.085, 0.12], s: 0.16 },
+  { n: 'A35', w: 0.05, mu: [0.03, 0.04, 0.05], s: 0.08 },
+  { n: 'EQAC', w: 0.10, mu: [0.05, 0.105, 0.15], s: 0.23 },
+  { n: 'SMH', w: 0.05, mu: [0.04, 0.115, 0.18], s: 0.30 },
+  { n: 'BTC', w: 0.05, mu: [-0.10, 0.12, 0.25], s: 0.70 },
+  { n: 'DBMFE', w: 0.10, mu: [0.00, 0.06, 0.10], s: 0.135 },
 ]
 
-// SBR correlation matrix (simplified for 5 funds)
-const CORR_5: number[][] = [
-  [1.00, 0.65, 0.85, 0.80, 0.70],
-  [0.65, 1.00, 0.50, 0.45, 0.35],
-  [0.85, 0.50, 1.00, 0.82, 0.75],
-  [0.80, 0.45, 0.82, 1.00, 0.82],
-  [0.70, 0.35, 0.75, 0.82, 1.00],
+// SBR correlation matrix for 6 funds (VWRA/A35/EQAC/SMH/BTC/DBMFE)
+const CORR_6: number[][] = [
+  [1.00, 0.30, 0.88, 0.78, 0.30, 0.00],  // VWRA
+  [0.30, 1.00, 0.15, 0.10, 0.05, 0.00],  // A35 (SGD bonds)
+  [0.88, 0.15, 1.00, 0.82, 0.35, 0.00],  // EQAC
+  [0.78, 0.10, 0.82, 1.00, 0.35, 0.00],  // SMH
+  [0.30, 0.05, 0.35, 0.35, 1.00, 0.00],  // BTC
+  [0.00, 0.00, 0.00, 0.00, 0.00, 1.00],  // DBMFE
 ]
 
 // ── GBM math ──────────────────────────────────────────────────────────────────
@@ -67,7 +69,7 @@ function runMC(
   MS: number[], MSY: number[]
 ): MCResult {
   _seed = 0x5a17c9e3; _hs = false
-  const C = CORR_5, L = chol(C)
+  const C = CORR_6, L = chol(C)
   const nA = assets.length
   const dt = 1 / 12, sdt = Math.sqrt(dt)
   const dr = assets.map(a => (a.mu[si] - 0.5 * a.s * a.s) * dt)
@@ -581,10 +583,10 @@ export function SbrProbabilityEngine({
       {/* Methodology footnote */}
       <div className="px-5 py-3 bg-muted/20">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          <strong>Methodology:</strong> GBM with monthly steps, Cholesky correlation. SBR assets: A20/A35/A70 (SGD anchors) + EQAC/SMH (growth).
-          {scenario === 0 && ' Conservative μ: blended ~6% p.a.'}
-          {scenario === 1 && ' Base μ: blended ~8.5% p.a.'}
-          {scenario === 2 && ' Aggressive μ: blended ~11% p.a.'}
+          <strong>Methodology:</strong> GBM with Itô-corrected drift, monthly steps, Cholesky correlation. SBR assets per constitution: VWRA 65% (σ=16%), A35 5% (σ=8%), EQAC 10% (σ=23%), SMH 5% (σ=30%), BTC 5% (σ=70%), DBMFE 10% (σ=13.5%). A35 is the SGD anchor; DBMFE correlation is a planning assumption.
+          {scenario === 0 && ' Conservative μ: blended ~6.5% p.a.'}
+          {scenario === 1 && ' Base μ: blended ~8.8% p.a.'}
+          {scenario === 2 && ' Aggressive μ: blended ~11.2% p.a.'}
           {' '}Flexible 5/10/15-year horizons per SBR constitution. Not a prediction or guarantee.
         </p>
       </div>
