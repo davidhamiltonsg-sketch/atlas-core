@@ -33,11 +33,13 @@ export async function GET() {
       SESSION_SECRET:      !!process.env.SESSION_SECRET,
       FINNHUB_API_KEY:     !!process.env.FINNHUB_API_KEY,
       RESEND_API_KEY:      !!process.env.RESEND_API_KEY,
+      RESEND_WEBHOOK_SECRET: !!process.env.RESEND_WEBHOOK_SECRET,
       CRON_SECRET:         !!process.env.CRON_SECRET,
       ANTHROPIC_API_KEY:   !!process.env.ANTHROPIC_API_KEY,
       IBKR_FLEX_TOKEN:              !!process.env.IBKR_FLEX_TOKEN,
       IBKR_FLEX_QUERY_ID:           !!process.env.IBKR_FLEX_QUERY_ID,
       IBKR_FLEX_QUERY_ID_ACTIVITY:  !!process.env.IBKR_FLEX_QUERY_ID_ACTIVITY,
+      IBKR_FLEX_EMAIL_RECIPIENT:    !!process.env.IBKR_FLEX_EMAIL_RECIPIENT,
     },
   })
 }

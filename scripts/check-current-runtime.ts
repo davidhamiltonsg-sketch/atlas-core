@@ -19,7 +19,10 @@ for(const file of ["lib/next-best-move.ts","lib/ladder.ts","lib/sbr-governance.t
 const init=read("scripts/init-db.mjs");expect(!/IMID 52%|IWQU 29%/.test(init),"init-db still seeds retired Atlas mandate")
 const engine=read("lib/portfolio-engine-v2.ts");expect(engine.includes('"SMH.US"')&&engine.includes('"GBTC"'),"migration engine lacks legacy identities")
 const identity=read("lib/instrument-identity.ts");expect(identity.includes('symbol === "IBIT" || symbol === "GBTC"'),"Bitcoin economic-sleeve aggregation missing")
-const page=read("app/page.tsx");for(const old of ["<DecisionLadderCard","<GovernanceSeal","<ComplianceBoard","<HealthMethodology"])expect(!page.includes(old),`Atlas first page still renders legacy ${old}`)
+// GovernanceSeal is not legacy — PR #52 deliberately wired it in as the current ring-gauge
+// design, replacing the old plain-text "GOVERNANCE STATUS" band.
+const page=read("app/page.tsx");for(const old of ["<DecisionLadderCard","<ComplianceBoard","<HealthMethodology"])expect(!page.includes(old),`Atlas first page still renders legacy ${old}`)
+expect(page.includes("<GovernanceSeal"),"Atlas first page is missing the current GovernanceSeal ring")
 for(const file of ["app/portfolio/page.tsx","app/reports/page.tsx","app/risk/page.tsx","app/forecast/page.tsx"])expect(read(file).includes("activePortfolioContext"),`${file}: route is not active-owner scoped`)
 if(failures.length)throw new Error(`Current-runtime guard failed:\n${failures.join("\n")}`)
 console.log("Current-runtime guard passed: canonical documents, engines and app agree ✓")
