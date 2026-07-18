@@ -31,6 +31,7 @@ model User {
   dcaCashBanks           DcaCashBank[]
   dcaBankEntries         DcaBankEntry[]
   ibkrSyncLogs           IbkrSyncLog[]
+  syncStatus             SyncStatus?
 }
 
 model DcaCashBank {
@@ -298,4 +299,21 @@ model IbkrSyncLog {
   createdAt DateTime @default(now())
 
   @@index([userId, syncedAt])
+}
+
+// ── IBKR Sync Status ──────────────────────────────────────────────────────────
+// One row per owner, upserted on every sync ATTEMPT (success or failure) — unlike
+// IbkrSyncLog above, which only ever logs successes for rate-limiting. Answers "did my
+// last refresh actually work?" without the owner needing to catch an ephemeral toast at
+// the moment it fires, or check Vercel logs. See lib/sync-status.ts.
+model SyncStatus {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source        String    // "positions" | "activity" | "reconcile" | "cron"
+  lastAttemptAt DateTime
+  lastOutcome   String    // "success" | "failure"
+  lastError     String?   // set only when lastOutcome = "failure"
+  lastSuccessAt DateTime?
+  updatedAt     DateTime  @updatedAt
 }
