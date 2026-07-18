@@ -487,13 +487,15 @@ export async function SbrDashboard({ userId, name, isAdmin }: { userId: string; 
             <div className="rounded-2xl card-lux p-5 space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Score breakdown</h3>
               {[
-                { label: "Governance",    value: d.health.governance,    weight: "25%" },
-                { label: "Risk",          value: d.health.risk,          weight: "20%" },
-                { label: "Allocation",    value: d.health.allocation,    weight: "15%" },
-                { label: "Contribution",  value: d.health.contribution,  weight: "15%" },
-                { label: "Behaviour",     value: d.health.behavioural,   weight: "10%" },
-                { label: "Liquidity",     value: d.health.liquidity,     weight: "10%" },
-                { label: "Documentation", value: d.health.documentation, weight: "5%"  },
+                // Weights mirror computeSbrHealth's overall formula exactly (lib/sbr-engine.ts).
+                // "documentation" is a duplicate of freshness, not a separately-weighted term, so
+                // it isn't listed again here to avoid implying it's double-counted in the total.
+                { label: "Governance",   value: d.health.governance,   weight: "25%" },
+                { label: "Risk",         value: d.health.risk,         weight: "20%" },
+                { label: "Allocation",   value: d.health.allocation,   weight: "15%" },
+                { label: "Contribution", value: d.health.contribution, weight: "20%" },
+                { label: "Behaviour",    value: d.health.behavioural,  weight: "10%" },
+                { label: "Liquidity",    value: d.health.liquidity,    weight: "10%" },
               ].map(({ label, value, weight }) => (
                 <div key={label}>
                   <div className="flex items-center justify-between mb-1">
