@@ -12,6 +12,7 @@ import { ReconcileButton } from "@/components/portfolio/reconcile-button"
 import { DataCorrectionPanel } from "@/components/portfolio/data-correction-panel"
 import { ExternalAwardCard, type AwardCardData } from "@/components/cockpit/external-award-card"
 import { getAwardPipeline } from "@/lib/external-awards"
+import { getSyncStatus, formatSyncStatus } from "@/lib/sync-status"
 import { money, convert } from "@/lib/money"
 import { AutoRefresh } from "@/components/auto-refresh"
 import { DriftNotifications } from "@/components/drift-notifications"
@@ -134,6 +135,8 @@ export default async function Portfolio() {
   const targetSleeveCount = constitutionFunds.length
   const canCorrect = session.role === "admin" || session.userId === active.owner.id
   const { holdings, totalValue, hasBalance, sleeveActual, duplicates, identityWarnings } = await getPortfolioData(active.owner.id, constitutionFunds.map((f) => f.ticker))
+  const syncStatus = await getSyncStatus(active.owner.id)
+  const syncStatusLabel = syncStatus ? formatSyncStatus(syncStatus) : null
 
   // Outside-Atlas employer award pipeline — never part of NAV/targets/drift, but it
   // should still be visible somewhere holdings live rather than only on the dashboard.
@@ -355,7 +358,14 @@ export default async function Portfolio() {
         {/* Update portfolio — four options */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="px-5 py-3.5 border-b border-border bg-muted/20">
-            <h2 className="text-sm font-semibold mb-0.5">Update Your Portfolio</h2>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-sm font-semibold mb-0.5">Update Your Portfolio</h2>
+              {syncStatusLabel && (
+                <span className={`text-[11px] font-medium ${syncStatus?.lastOutcome === "failure" ? "text-danger" : "text-muted-foreground"}`}>
+                  {syncStatusLabel}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">Keep your holdings current — choose how you&apos;d like to enter new prices</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border">

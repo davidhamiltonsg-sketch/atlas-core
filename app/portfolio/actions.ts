@@ -15,6 +15,7 @@ import { GOVERNANCE_UNIVERSE } from "@/lib/approved-alternatives"
 import { valueConsistentPrice } from "@/lib/unit-price"
 import { findDuplicateGroups } from "@/lib/holding-duplicates"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
+import { recordSyncAttempt } from "@/lib/sync-status"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
 const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQAC: "EQAC.L", SMH: "SMH.L", IBIT: "IBIT", BTC: "IBIT", DBMFE: "DBMFE.PA" }
@@ -363,9 +364,23 @@ export async function removeErroneousPosition(holdingId: string): Promise<{ succ
 // we pull live positions (units + mark price + value) — the source of truth. Holdings IBKR
 // doesn't report, and the case where IBKR is unconfigured/unavailable, fall back to Yahoo
 // Finance price-only with units carried forward.
-export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: boolean } = {}): Promise<{
+type RefreshLivePricesResult = {
   success: boolean; updated?: number; unitsUpdated?: number; added?: number; removed?: number; source?: "ibkr" | "yahoo"; note?: string; error?: string
-}> {
+}
+
+// Thin wrapper so every call — success or failure — lands in SyncStatus (lib/sync-status.ts),
+// without threading recording calls through refreshLivePricesImpl's several early-return
+// paths below.
+export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: boolean } = {}): Promise<RefreshLivePricesResult> {
+  const session = await getSession()
+  if (!session) throw new Error("Unauthenticated")
+  const active = await activePortfolioContext(session)
+  const result = await refreshLivePricesImpl(opts)
+  await recordSyncAttempt(active.owner.id, "positions", result.success ? "success" : "failure", result.error)
+  return result
+}
+
+async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boolean } = {}): Promise<RefreshLivePricesResult> {
   const withIbkr = opts.withIbkr !== false        // default: use IBKR when configured
   const reconcile = opts.reconcile ?? withIbkr     // add/remove holdings only when we have brokerage truth
   const session = await getSession()
@@ -567,15 +582,22 @@ export async function refreshLivePrices(opts: { withIbkr?: boolean; reconcile?: 
 // dividend/ledger row → confirm). This re-fetches the same Flex activity report and imports
 // everything in one pass — importIbkrActivityForUser already dedupes by IBKR trade/
 // transaction ID (and by natural key), so re-submitting already-imported rows is a no-op.
-export async function reconcileCostBasis(): Promise<{
+type ReconcileCostBasisResult = {
   success: boolean; tradesImported?: number; dividendsImported?: number; ledgerImported?: number; contributionsImported?: number; error?: string
-}> {
+}
+
+export async function reconcileCostBasis(): Promise<ReconcileCostBasisResult> {
   const session = await getSession()
   if (!session) throw new Error("Unauthenticated")
   const active = await activePortfolioContext(session)
   assertCanMutateOwner(session, active.owner.id)
+  const result = await reconcileCostBasisImpl(active.owner.id, active.constitutionId)
+  await recordSyncAttempt(active.owner.id, "reconcile", result.success ? "success" : "failure", result.error)
+  return result
+}
 
-  const { token, activityQuery } = ibkrCredentialsFor(active.constitutionId)
+async function reconcileCostBasisImpl(ownerId: string, constitutionId: Parameters<typeof ibkrCredentialsFor>[0]): Promise<ReconcileCostBasisResult> {
+  const { token, activityQuery } = ibkrCredentialsFor(constitutionId)
   if (!token || !activityQuery) {
     return { success: false, error: "The IBKR activity feed is not configured for this portfolio. Set the Flex token and a dedicated Activity Flex query (Trades + Cash Transactions + Dividends), then retry." }
   }
@@ -584,7 +606,7 @@ export async function reconcileCostBasis(): Promise<{
   if (!result.success) return { success: false, error: result.error }
 
   const { trades: tradesImported, dividends: dividendsImported, ledger: ledgerImported, contributions: contributionsImported, tickers } =
-    await importIbkrActivityForUser(active.owner.id, result.executions, result.dividends, result.ledger)
+    await importIbkrActivityForUser(ownerId, result.executions, result.dividends, result.ledger)
 
   if (tickers.length > 0) {
     for (const p of ["/", "/contributions", "/next", "/portfolio", "/compliance", "/reports", "/forecast", "/risk", "/mission-control"]) {

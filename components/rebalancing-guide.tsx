@@ -26,7 +26,7 @@ export function RebalancingGuide({ portfolio, currentDrift }: RebalancingGuidePr
     {
       number: 3,
       title: 'Only sell if necessary',
-      description: 'Rebalance via sales only if position exceeds hard cap or drifts >5% from target',
+      description: "Rebalance via sales only if a position exceeds its hard cap/floor — soft bands vary per fund, see Mission Control",
       icon: AlertCircle,
     },
   ] : [
@@ -45,7 +45,7 @@ export function RebalancingGuide({ portfolio, currentDrift }: RebalancingGuidePr
     {
       number: 3,
       title: 'Rebalance occasionally',
-      description: 'If one fund drifts significantly (>10%), you can adjust at the next contribution window',
+      description: 'If a fund drifts outside its soft band or breaches its hard cap, adjust at the next contribution window — see your holdings for exact bands',
       icon: AlertCircle,
     },
   ]

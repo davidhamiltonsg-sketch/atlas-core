@@ -9,6 +9,7 @@ import { db } from "@/lib/db"
 import { activePortfolioContext } from "@/lib/active-portfolio"
 import { CONSTITUTIONS } from "@/lib/constitutions"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
+import { recordSyncAttempt } from "@/lib/sync-status"
 
 export const maxDuration = 30
 
@@ -133,7 +134,10 @@ export async function PUT(req: Request) {
   const {token,activityQuery}=ibkrCredentialsFor(active.constitutionId)
   if(!token||!activityQuery)return NextResponse.json({error:"IBKR activity query is not configured"},{status:503})
   const fresh=await fetchFlexActivity(token,activityQuery)
-  if(!fresh.success)return NextResponse.json({error:fresh.error},{status:422})
+  if(!fresh.success){
+    await recordSyncAttempt(active.owner.id,"activity","failure",fresh.error)
+    return NextResponse.json({error:fresh.error},{status:422})
+  }
   const selectedTrades=new Set((body.executions??[]).map(x=>x.tradeID))
   const selectedDividends=new Set((body.dividends??[]).map(x=>x.transactionID))
   const selectedLedger=new Set((body.ledger??[]).map(x=>x.externalId))
@@ -148,10 +152,11 @@ export async function PUT(req: Request) {
     await importIbkrActivityForUser(active.owner.id, executions, dividends, ledger)
 
   if (tickers.length > 0) {
-    for (const p of ["/", "/trades", "/contributions", "/next", "/ytd", "/portfolio", "/governance", "/compliance", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
+    for (const p of ["/", "/contributions", "/next", "/portfolio", "/compliance", "/reports", "/forecast", "/risk", "/mission-control"]) {
       revalidatePath(p)
     }
   }
 
+  await recordSyncAttempt(active.owner.id, "activity", "success")
   return NextResponse.json({ tradesImported, dividendsImported, ledgerImported, contributionsImported })
 }

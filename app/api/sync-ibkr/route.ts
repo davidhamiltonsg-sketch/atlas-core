@@ -8,6 +8,8 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import { instrumentIdentity } from "@/lib/instrument-identity"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
 import { canSyncWithIbkr, recordIbkrSync, getTimeUntilNextIbkrSync, formatTimeRemaining } from "@/lib/ibkr-rate-limiter"
+import { recordSyncAttempt } from "@/lib/sync-status"
+import { upsertSnapshotToday } from "@/lib/holdings-sync"
 
 // Allow up to 30s for the FLEX polling loop
 export const maxDuration = 30
@@ -104,7 +106,10 @@ export async function PUT(req: Request) {
   const {token,positionsQuery}=ibkrCredentialsFor(active.constitutionId)
   if(!token||!positionsQuery)return NextResponse.json({error:"IBKR positions query is not configured"},{status:503})
   const fresh=await fetchFlexPositions(token,positionsQuery)
-  if(!fresh.success)return NextResponse.json({error:fresh.error},{status:502})
+  if(!fresh.success){
+    await recordSyncAttempt(active.owner.id,"positions","failure",fresh.error)
+    return NextResponse.json({error:fresh.error},{status:502})
+  }
   const selected=new Map(body.positions.map(p=>[p.symbol?.trim().toUpperCase(),p.holdingId??null]))
   const authoritative=fresh.positions.filter(p=>selected.has(p.symbol.trim().toUpperCase()))
   if(!authoritative.length)return NextResponse.json({error:"Selected positions were not present in the refreshed IBKR report"},{status:409})
@@ -138,27 +143,27 @@ export async function PUT(req: Request) {
       }
     }
 
-    await db.snapshot.create({
-      data: {
-        holdingId,
-        units:     pos.units,
-        price:     pos.markPrice,
-        value:     pos.positionValue, // SGD from IBKR (base currency)
-        currency:  "SGD",
-        costBasis: pos.costBasis ?? null,
-        unrealizedPnl: pos.unrealizedPnl ?? null,
-        date:      new Date(),
-      },
+    // upsertSnapshotToday (not a raw create): keeps the one-snapshot-per-holding-per-day
+    // invariant the value-history chart depends on, and carries cost-basis provenance
+    // forward correctly when this specific position happens to omit it.
+    await upsertSnapshotToday(holdingId, {
+      units: pos.units,
+      price: pos.markPrice,
+      value: pos.positionValue, // SGD from IBKR (base currency)
+      costBasis: pos.costBasis ?? null,
+      unrealizedPnl: pos.unrealizedPnl ?? null,
+      ...(pos.costBasis != null ? { costBasisSource: "ibkr", costBasisAsOf: new Date() } : {}),
     })
     updated++
   }
 
-  for (const p of ["/", "/trades", "/ytd", "/portfolio", "/governance", "/compliance", "/contributions", "/next", "/reports", "/forecast", "/holdings", "/risk", "/mission-control"]) {
+  for (const p of ["/", "/portfolio", "/compliance", "/contributions", "/next", "/reports", "/forecast", "/risk", "/mission-control"]) {
     revalidatePath(p)
   }
 
   // Record sync for rate limiting
   await recordIbkrSync(active.owner.id)
+  await recordSyncAttempt(active.owner.id, "positions", "success")
 
   return NextResponse.json({ updated, created })
 }

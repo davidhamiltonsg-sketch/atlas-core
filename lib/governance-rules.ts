@@ -1,5 +1,10 @@
 import type { ConstitutionId } from "@/lib/constitutions"
 import { ATLAS_SPEC, SBR_SPEC } from "@/lib/portfolio-spec"
+import { LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS } from "@/lib/look-through"
+import {
+  SBR_SINGLE_COMPANY_WATCH, SBR_SINGLE_COMPANY_LIMIT, SBR_TECHNOLOGY_WATCH, SBR_TECHNOLOGY_LIMIT,
+  SBR_SEMICONDUCTOR_WATCH, SBR_SEMICONDUCTOR_LIMIT, SBR_COUNTRY_WATCH, SBR_COUNTRY_LIMIT,
+} from "@/lib/sbr-look-through"
 
 export interface AppGovernanceRule {
   id:string; category:string; title:string; rule:string; why:string; appAction:string
@@ -9,12 +14,16 @@ export function governanceRules(id:ConstitutionId):AppGovernanceRule[]{
   const atlas=id==="atlas-core", spec=atlas?ATLAS_SPEC:SBR_SPEC
   const targets=spec.funds.map(f=>`${f.ticker} ${f.target}%`).join(", ")
   const bands=spec.funds.map(f=>`${f.ticker} ${"band" in f?`${f.target-f.band}–${f.target+f.band}`:`${f.rangeLow}–${f.rangeHigh}`}%`).join("; ")
+  const company=atlas?LOOKTHROUGH_COMPANY_CAPS.Nvidia:{soft:SBR_SINGLE_COMPANY_WATCH,hard:SBR_SINGLE_COMPANY_LIMIT}
+  const tech=atlas?LOOKTHROUGH_SECTOR_CAPS.digital:{soft:SBR_TECHNOLOGY_WATCH,hard:SBR_TECHNOLOGY_LIMIT}
+  const semi=atlas?LOOKTHROUGH_SECTOR_CAPS.semiconductor:{soft:SBR_SEMICONDUCTOR_WATCH,hard:SBR_SEMICONDUCTOR_LIMIT}
+  const us=atlas?LOOKTHROUGH_SECTOR_CAPS.us:{soft:SBR_COUNTRY_WATCH,hard:SBR_COUNTRY_LIMIT}
   return [
     {id:"authority",category:"Authority",title:"The constitution wins",rule:`Use ${atlas?"Atlas v10.6":"SBR v10.5"}. If the app and constitution disagree, stop the affected instruction.`,why:"Software can contain mistakes; a versioned written mandate provides the controlling record.",appAction:"Show a blocking discrepancy and create no trade instruction."},
     {id:"universe",category:"Construction",title:"Only the approved target sleeves receive new money",rule:`Target ${targets}. Match legal name and ISIN/CUSIP, not ticker alone.`,why:"Extra tickers often duplicate existing risks and make the plan harder to control.",appAction:"Show target sleeves on the dashboard; keep legacy instruments in activity/history only."},
     {id:"bands",category:"Construction",title:"Soft bands guide contributions",rule:`Working bands: ${bands}.`,why:"Normal market movement should direct new cash rather than cause unnecessary sales.",appAction:"Route the next contribution to the furthest-underweight eligible sleeve."},
     {id:"hard",category:"Construction",title:"Hard limits require review",rule:"A hard floor or cap pauses additions and requires a written correction. It does not automatically sell.",why:"Outer limits stop a small idea from taking control while avoiding mechanical panic trades.",appAction:"Mark the breach, pause the affected purchase and explain the next permitted step."},
-    {id:"lookthrough",category:"Concentration",title:"Measure what the funds own underneath",rule:"Watch/hard: company 7/9%, technology 45/50%, semiconductors 25/30%, United States 70/75%, unclassified 1/3%.",why:"Different ETFs can own the same companies, so ticker weights alone understate concentration.",appAction:"Aggregate refreshed underlying holdings and redirect new cash before considering sales."},
+    {id:"lookthrough",category:"Concentration",title:"Measure what the funds own underneath",rule:`Watch/hard: company ${company.soft}/${company.hard}%, technology ${tech.soft}/${tech.hard}%, semiconductors ${semi.soft}/${semi.hard}%, United States ${us.soft}/${us.hard}%. Any nonzero unclassified amount blocks concentration-led instructions until every held fund is classified.`,why:"Different ETFs can own the same companies, so ticker weights alone understate concentration.",appAction:"Aggregate refreshed underlying holdings and redirect new cash before considering sales."},
     {id:"freshness",category:"Data quality",title:"Stale data cannot create a sale",rule:"Warn when the oldest required source is over 35 days old; block concentration-led instructions after 75 days.",why:"An old estimate can be useful as a warning but is too weak to compel a disposal.",appAction:"Display source and as-of date; refresh before concentration-led action."},
     {id:"dca",category:"Contributions",title:"Use confirmed cash and whole shares",rule:"Add the contribution and carried cash, reserve FX and commission, buy whole units, then carry the exact residual.",why:"The app must never spend expected proceeds or pretend residual cash was invested.",appAction:"Reconcile each instruction to a unique confirmed IBKR execution."},
     {id:"settlement",category:"Contributions",title:"Sale proceeds must settle first",rule:"Lifecycle: pending sale → sold/unsettled → confirmed settled cash → reinvested.",why:"Expected proceeds can change through price, commission, tax, FX or settlement adjustments.",appAction:"Credit migration cash only from authoritative broker cash data."},
