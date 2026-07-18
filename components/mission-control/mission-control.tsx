@@ -7,6 +7,11 @@ import {
   ShieldCheck, GitCompare, TrendingUp, Landmark, BarChart3, Coins,
   Activity, Radar, Gauge, ArrowLeft, Play, Square, Zap, CircleDot, AlertTriangle,
 } from "lucide-react"
+import { LOOKTHROUGH_COMPANY_CAPS, LOOKTHROUGH_SECTOR_CAPS, LOOKTHROUGH_FRESH_DAYS, LOOKTHROUGH_STALE_DAYS } from "@/lib/look-through"
+import {
+  SBR_SINGLE_COMPANY_WATCH, SBR_SINGLE_COMPANY_LIMIT, SBR_TECHNOLOGY_WATCH, SBR_TECHNOLOGY_LIMIT,
+  SBR_SEMICONDUCTOR_WATCH, SBR_SEMICONDUCTOR_LIMIT, SBR_COUNTRY_WATCH, SBR_COUNTRY_LIMIT, SBR_FRESH_DAYS, SBR_STALE_DAYS,
+} from "@/lib/sbr-look-through"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mission Control — a live agent dispatch console.
@@ -344,13 +349,19 @@ const SBR_BUILDING_BLOCKS = [...COMMON_BUILDING_BLOCKS,
 
 function BuildingBlockBasis({ variant, mono, lastUpdated }: { variant: "atlas" | "sbr"; mono: string; lastUpdated: Date | null }) {
   const buildingBlocks = variant === "atlas" ? ATLAS_BUILDING_BLOCKS : SBR_BUILDING_BLOCKS
-  const rules = [["US country", "70%", "75%"], ["Info technology", "45%", "50%"], ["Semiconductors", "25%", "30%"], ["Single company", "7%", "9%"]]
+  const us = variant === "atlas" ? LOOKTHROUGH_SECTOR_CAPS.us : { soft: SBR_COUNTRY_WATCH, hard: SBR_COUNTRY_LIMIT }
+  const tech = variant === "atlas" ? LOOKTHROUGH_SECTOR_CAPS.digital : { soft: SBR_TECHNOLOGY_WATCH, hard: SBR_TECHNOLOGY_LIMIT }
+  const semis = variant === "atlas" ? LOOKTHROUGH_SECTOR_CAPS.semiconductor : { soft: SBR_SEMICONDUCTOR_WATCH, hard: SBR_SEMICONDUCTOR_LIMIT }
+  const company = variant === "atlas" ? LOOKTHROUGH_COMPANY_CAPS.Nvidia : { soft: SBR_SINGLE_COMPANY_WATCH, hard: SBR_SINGLE_COMPANY_LIMIT }
+  const freshDays = variant === "atlas" ? LOOKTHROUGH_FRESH_DAYS : SBR_FRESH_DAYS
+  const staleDays = variant === "atlas" ? LOOKTHROUGH_STALE_DAYS : SBR_STALE_DAYS
+  const rules = [["US country", `${us.soft}%`, `${us.hard}%`], ["Info technology", `${tech.soft}%`, `${tech.hard}%`], ["Semiconductors", `${semis.soft}%`, `${semis.hard}%`], ["Single company", `${company.soft}%`, `${company.hard}%`]]
   return <section className="rounded-2xl border p-4" style={{ background: C.card, borderColor: C.line }}>
     <div className="flex flex-wrap items-start justify-between gap-3 mb-3"><div><SectionLabel mono={mono}>LOOK-THROUGH BASIS</SectionLabel><h2 className="text-sm font-semibold mt-1" style={{ color: C.text }}>Fund building blocks used</h2></div><RefreshLookThroughButton lastUpdated={lastUpdated} compact /></div>
     <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-[11px]"><thead><tr style={{ color: C.dim, borderBottom: `1px solid ${C.line}` }}><th className="py-2">Fund</th><th>US %</th><th>Info-tech %</th><th>Semis %</th><th>Source / note</th></tr></thead><tbody>{buildingBlocks.map(r=><tr key={r.fund} style={{ borderBottom: `1px solid ${C.line}` }}><td className="py-2 font-semibold">{r.fund}</td><td>{r.us}</td><td>{r.tech}</td><td>{r.semis}</td><td><a href={r.href} target="_blank" rel="noreferrer" className="underline underline-offset-2" style={{ color: C.blue }}>{r.note} ↗</a></td></tr>)}</tbody></table></div>
     <p className="mt-3 text-[10px] leading-relaxed" style={{ color: C.dim }}>The figures in this reference table are benchmark context. Live exposure is calculated from the refreshed database coefficients and reconciled fund-by-fund in Look-through. Stale or missing source data blocks concentration-led trades. DBMFE is not cash or a capital guarantee; Bitcoin is reported separately.</p>
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{rules.map(([lens,watch,review])=><div key={lens} className="rounded-lg border p-2" style={{ borderColor:C.line, background:C.navy }}><p className="text-[9px]" style={{color:C.dim}}>{lens}</p><p className={`${mono} mt-1 text-[10px]`}>WATCH {watch} · REVIEW {review}</p></div>)}</div>
-    <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Warn when the oldest required source is more than 35 days old; after 75 days, block concentration-led trades until the source is refreshed.</p>
+    <p className="mt-2 text-[9px]" style={{ color: C.dim }}>A review trigger pauses overlapping satellite additions and routes new cash; it is not an automatic sell instruction. Warn when the oldest required source is more than {freshDays} days old; after {staleDays} days, block concentration-led trades until the source is refreshed.</p>
   </section>
 }
 
