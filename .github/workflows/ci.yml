@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    name: Typecheck, lint, unit tests, contract checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm test -- --run
+      - run: npm run check
+        env:
+          # Contract checks are static (spec/money/ingest/valuation/look-through/boundary/
+          # runtime-guard) and don't touch a database, but a couple of scripts import
+          # lib/db.ts at module scope, so a syntactically valid DATABASE_URL avoids an
+          # import-time throw even though no query ever runs.
+          DATABASE_URL: "file:./ci-placeholder.db"
+
+  e2e:
+    name: Playwright smoke suite (Atlas + SBR)
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./e2e-test.db"
+      SESSION_SECRET: ${{ secrets.CI_SESSION_SECRET || 'ci-smoke-test-session-secret' }}
+      CI_ATLAS_PASSWORD: ci-smoke-test-password
+      CI_SBR_PASSWORD: ci-smoke-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx prisma generate
+      - run: npx prisma db push
+      - run: npx tsx scripts/ci-seed.ts
+      - run: npm run build
+      - run: npx playwright test --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
