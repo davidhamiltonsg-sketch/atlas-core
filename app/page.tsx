@@ -29,7 +29,7 @@ import { blendedGrowthRates, projectPortfolio } from "@/lib/forecast"
 import { getAwardPipeline, vestExtraContributionsForUser } from "@/lib/external-awards"
 import { ExternalAwardCard, type AwardCardData } from "@/components/cockpit/external-award-card"
 import { activePortfolioContext } from "@/lib/active-portfolio"
-import { openPositionValuation } from "@/lib/valuation"
+import { openPositionValuation, COST_BASIS_STALE_DAYS } from "@/lib/valuation"
 import { GettingStartedGuide } from "@/components/getting-started-guide"
 import { redirect } from "next/navigation"
 import { getCachedUsdSgdRate } from "@/lib/fx-cache"
@@ -124,11 +124,15 @@ async function getDashboardData(userId: string) {
     const driftPct = actualPct - effTarget
     const absDrift = Math.abs(driftPct)
     const judged = sleeveActualMap.get(sleeveKey) ?? actualPct
-    const overCap = h.hardCapPct !== null && judged > h.hardCapPct
+    // Inclusive (>=/<=) — a holding sitting exactly at its hard cap/floor is already AT the
+    // limit, matching evaluateGovernance/evaluateFundLimits (lib/governance-engine.ts). An
+    // exclusive comparison here would let this row show "healthy" while the governance
+    // check on the same dashboard correctly calls it a breach.
+    const overCap = h.hardCapPct !== null && judged >= h.hardCapPct
     const ht = h.ticker === sleeveKey ? HARD_THRESHOLDS[h.ticker] : undefined
     const isHardDrift = totalValue > 0 && (overCap ||
-      (ht?.low !== undefined && judged < ht.low) ||
-      (ht !== undefined && judged > ht.high))
+      (ht?.low !== undefined && judged <= ht.low) ||
+      (ht !== undefined && judged >= ht.high))
     const isSoftDrift = totalValue > 0 && !isHardDrift && absDrift > h.toleranceBand
     const status: ActionStatus = isHardDrift ? "hard" : isSoftDrift ? "soft" : "healthy"
     const latestPrice = h.snapshots[0]?.price ?? 0
@@ -140,8 +144,8 @@ async function getDashboardData(userId: string) {
     // IBKR's open-position report is authoritative for live cost basis and unrealised P/L.
     // Reconstructing from the full trade table can double-count re-imported or partial history,
     // so the trade ledger is used only when the latest IBKR snapshot omitted these fields.
-    const valuation = openPositionValuation({value,units:latestSnapshot?.units??0,snapshotCostBasis:latestSnapshot?.costBasis,snapshotUnrealizedPnl:latestSnapshot?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate})
-    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: effTarget, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd:valuation.averagePriceInstrumentCurrency, costBasisSgd:valuation.costBasis??0, unrealisedSgd:valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct:valuation.reconciles?valuation.unrealizedReturnPct:null, valuationSource:valuation.source, valuationReconciles:valuation.reconciles, units: h.snapshots[0]?.units ?? 0 }
+    const valuation = openPositionValuation({value,units:latestSnapshot?.units??0,snapshotCostBasis:latestSnapshot?.costBasis,snapshotUnrealizedPnl:latestSnapshot?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate,costBasisAsOf:latestSnapshot?.costBasisAsOf})
+    return { ticker: h.ticker, name: h.name, color: CORE_DEFAULTS[h.ticker]?.color ?? h.color, value, actualPct, targetPct: effTarget, driftPct, status, hardCapPct: h.hardCapPct, toleranceBand: h.toleranceBand, latestPrice, priceChangePct, priceHistory, avgCostUsd:valuation.averagePriceInstrumentCurrency, costBasisSgd:valuation.costBasis??0, unrealisedSgd:valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct:valuation.reconciles?valuation.unrealizedReturnPct:null, valuationSource:valuation.source, valuationReconciles:valuation.reconciles, valuationStale:valuation.costBasisStale, units: h.snapshots[0]?.units ?? 0 }
   })
 
   // Bitcoin sleeve consolidation — BTC in run-off, IBIT is accumulation vehicle
@@ -323,6 +327,7 @@ async function getDashboardData(userId: string) {
     hardCapPct: p.hardCapPct ?? null, status: p.status,
     thisMonth: dcaByTicker.get(p.ticker) ?? null,
     aggregate: false as boolean,
+    valuationStale: p.valuationStale,
   }))
 
   // Collapse Bitcoin instruments into one economic sleeve. Instrument history remains
@@ -338,7 +343,8 @@ async function getDashboardData(userId: string) {
       const unrealisedPct = unrealisedSgd !== null && costBasis > 0 ? (unrealisedSgd / costBasis) * 100 : null
       const sleevePct = bitcoinRows.reduce((sum,r)=>sum+r.actualPct,0)
       const cap = 8
-      const status: ActionStatus = sleevePct > cap ? "hard" : Math.abs(sleevePct - BITCOIN_SLEEVE_TARGET_PCT) > 1 ? "soft" : "healthy"
+      // Inclusive (>=) — matches evaluateGovernance/evaluateFundLimits (lib/governance-engine.ts).
+      const status: ActionStatus = sleevePct >= cap ? "hard" : Math.abs(sleevePct - BITCOIN_SLEEVE_TARGET_PCT) > 1 ? "soft" : "healthy"
       const sleeve = {
         ticker: "BTC", name: `Bitcoin sleeve · ${bitcoinRows.map(r=>r.ticker).join(" + ")}`, color: bitcoinRows[0].color,
         units: 0, value, latestPrice: 0, priceChangePct: null, priceHistory: [] as number[],
@@ -347,6 +353,7 @@ async function getDashboardData(userId: string) {
         hardCapPct: cap, status,
         thisMonth: dcaByTicker.get("IBIT") ?? dcaByTicker.get("BTC") ?? null,
         aggregate: true as boolean,
+        valuationStale: reconciled ? bitcoinRows.some(r => r.valuationStale) : false,
       }
       const rest = holdingsRows.filter((r) => !["BTC", "IBIT", "GBTC"].includes(r.ticker))
       rest.push(sleeve)
@@ -471,6 +478,11 @@ export default async function Dashboard() {
   const valuationComplete = d.holdingsRows.filter(p=>p.value>0).every(p=>p.unrealisedSgd!==null)
   const totalUnrealised = totalCostBasis > 0 && valuationComplete ? costedMarketValue - totalCostBasis : null
   const totalReturnPct = totalCostBasis > 0 && totalUnrealised !== null ? (totalUnrealised / totalCostBasis) * 100 : null
+  // Distinct from "Needs reconciliation" (costBasis missing entirely): this is present but
+  // hasn't been re-confirmed against IBKR in a while — a plain price refresh carries it
+  // forward unchanged (see upsertSnapshotToday), so it can go quietly stale without ever
+  // becoming null.
+  const costBasisStale = d.holdingsRows.some(p => p.value > 0 && p.valuationStale)
 
   return (
   <Shell title="Cockpit" subtitle="Atlas Core — Constitution v10.6" userName={session.name} isAdmin={session.role === "admin"}>
@@ -545,7 +557,7 @@ export default async function Dashboard() {
           <p className="atlas-kicker">TOTAL PORTFOLIO VALUE</p>
           <strong className="atlas-total"><AnimatedNumber value={d.totalValue} currency="SGD" /></strong>
           <div className="atlas-value-stats">
-            <div><span>Cost basis</span><b>{valuationComplete && totalCostBasis > 0 ? formatCurrency(totalCostBasis, "SGD") : <Link href="/portfolio" className="underline decoration-dotted underline-offset-2">Needs reconciliation</Link>}</b></div>
+            <div><span>Cost basis</span><b>{valuationComplete && totalCostBasis > 0 ? formatCurrency(totalCostBasis, "SGD") : <Link href="/portfolio" className="underline decoration-dotted underline-offset-2">Needs reconciliation</Link>}</b>{valuationComplete && costBasisStale && <em className="block text-[10px] font-normal not-italic text-muted-foreground mt-0.5">Not confirmed via IBKR in {COST_BASIS_STALE_DAYS}+ days — <Link href="/portfolio" className="underline decoration-dotted underline-offset-2">reconcile</Link></em>}</div>
             <div><span>Unrealised P&amp;L</span><b className={totalUnrealised !== null && totalUnrealised < 0 ? "down" : "up"}>{totalUnrealised === null ? "—" : `${totalUnrealised >= 0 ? "+" : "−"}${formatCurrency(Math.abs(totalUnrealised), "SGD")}`}</b></div>
             <div><span>Unrealised return</span><b className={totalReturnPct !== null && totalReturnPct < 0 ? "down" : "up"}>{totalReturnPct === null ? <Link href="/portfolio" className="underline decoration-dotted underline-offset-2">Needs reconciliation</Link> : `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}</b></div>
           </div>

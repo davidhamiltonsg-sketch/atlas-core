@@ -80,8 +80,9 @@ export async function getAtlasReportData(userId: string, period: ReportPeriod): 
   const positions: AtlasReportPosition[] = sleeved.map((p) => {
     const ht = HARD_THRESHOLDS[p.ticker]
     const drift = p.actualPct - p.targetPct
-    const overCap = p.hardCapPct !== null && p.actualPct > p.hardCapPct
-    const isHard = hasBalance && (overCap || (ht?.low !== undefined && p.actualPct < ht.low) || (ht !== undefined && p.actualPct > ht.high))
+    // Inclusive (>=/<=) — matches evaluateGovernance/evaluateFundLimits (lib/governance-engine.ts).
+    const overCap = p.hardCapPct !== null && p.actualPct >= p.hardCapPct
+    const isHard = hasBalance && (overCap || (ht?.low !== undefined && p.actualPct <= ht.low) || (ht !== undefined && p.actualPct >= ht.high))
     const isSoft = hasBalance && !isHard && Math.abs(drift) > p.toleranceBand
     return {
       ticker: p.ticker, name: p.name, color: p.color, value: p.value,

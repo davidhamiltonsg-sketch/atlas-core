@@ -28,10 +28,16 @@ export function getPhaseCaps(phaseKey: string) {
 
 function route(positions: SbrPosition[], totalValue: number, c: Constitution, opts: SbrEngineOpts = {}): SbrBranch {
   if (totalValue <= 0) return { tag: "empty" }
+  // Inclusive (>=/<=) — a fund sitting exactly at its hard cap/floor is already AT the limit
+  // Decision-ladder Step 1 names ("above a hard cap or below a required floor" is the
+  // constitution's plain-English framing, but "at 8%, stop adding" in the same Article II
+  // box is explicit that landing exactly on the number already triggers the stop). Matches
+  // evaluateFundLimits (lib/governance-engine.ts) — routing must never send a contribution
+  // toward a fund the compliance check already calls a breach.
   const byGap = [...positions].sort((a,b) => (a.actualPct-a.targetPct)-(b.actualPct-b.targetPct))
-  const cap = positions.filter(p => p.hardCap !== null && p.actualPct > p.hardCap).sort((a,b) => (b.actualPct-(b.hardCap??100))-(a.actualPct-(a.hardCap??100)))[0]
+  const cap = positions.filter(p => p.hardCap !== null && p.actualPct >= p.hardCap).sort((a,b) => (b.actualPct-(b.hardCap??100))-(a.actualPct-(a.hardCap??100)))[0]
   if (cap) return { tag: "hard_cap", fund: cap, cap: cap.hardCap! }
-  const floor = positions.filter(p => p.floor !== undefined && p.actualPct < p.floor).sort((a,b) => (a.actualPct-(a.floor??0))-(b.actualPct-(b.floor??0)))[0]
+  const floor = positions.filter(p => p.floor !== undefined && p.actualPct <= p.floor).sort((a,b) => (a.actualPct-(a.floor??0))-(b.actualPct-(b.floor??0)))[0]
   if (floor) return { tag: "floor", fund: floor, floor: floor.floor! }
   const combined = positions.filter(p => c.combined?.tickers.includes(p.ticker)).reduce((s,p)=>s+p.actualPct,0)
   // Constitution levels (Article II, derived from each fund's own hard cap — same method as
@@ -39,7 +45,7 @@ function route(positions: SbrPosition[], totalValue: number, c: Constitution, op
   // pause holds until combined falls back below the soft band (18.75%); crossing the soft band
   // on the way up is an early warning only and never blocks routing.
   const hard = c.combined?.hard ?? 25, warning = c.combined?.warning ?? 18.75, resume = c.combined?.resume ?? 18.75
-  if (combined > hard || (opts.previouslyPaused && combined >= resume)) return { tag: "combined_hard", combined }
+  if (combined >= hard || (opts.previouslyPaused && combined >= resume)) return { tag: "combined_hard", combined }
   if (combined >= warning) return { tag: "combined_watch", combined }
   const under = byGap.find(p => p.actualPct < p.rangeLow && p.actualPct < p.rangeHigh)
   return under ? { tag: "underweight", fund: under } : { tag: "standard", fund: byGap.find(p=>p.actualPct<p.rangeHigh) ?? byGap[0] }

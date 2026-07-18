@@ -115,8 +115,13 @@ async function getSbrData(userId: string) {
   const govAlignment: GovAlignment = evaluateSbrGovernance(positions, totalValue, lookThroughAsOf,new Date(),lookThrough)
 
   // Holdings rows
+  // Inclusive (>=/<=): a holding sitting exactly at its hard cap or floor is already AT the
+  // limit, not one basis point shy of it — matches evaluateFundLimits (lib/governance-engine.ts),
+  // the same boundary the Rule Check panel above judges this exact holding against. These
+  // must never disagree: an exclusive comparison here previously let a fund sitting exactly
+  // on its limit show green in this table while the Rule Check panel called it a breach.
   const statusOf = (p: SbrPosition): HoldingRow["status"] => {
-    const hard = (p.hardCap !== null && p.actualPct > p.hardCap) || (p.floor !== undefined && p.actualPct < p.floor)
+    const hard = (p.hardCap !== null && p.actualPct >= p.hardCap) || (p.floor !== undefined && p.actualPct <= p.floor)
     const soft = !hard && (p.actualPct < p.rangeLow || p.actualPct > p.rangeHigh)
     return hard ? "hard" : soft ? "soft" : "healthy"
   }
@@ -132,6 +137,7 @@ async function getSbrData(userId: string) {
       reconstructedCostBasis: null,
       reconstructedAveragePrice: null,
       reportingFxRate: cb?.currency === "SGD" ? 1 : usdSgdRate,
+      costBasisAsOf: cb?.costBasisAsOf,
     })
     return {
       ticker: h.ticker, name: h.name, color: p?.color ?? h.color, units: cb?.units ?? 0, value: cb?.value ?? 0,

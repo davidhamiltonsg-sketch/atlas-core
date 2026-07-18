@@ -128,7 +128,14 @@ export async function ensureSbrPresentation(userId: string): Promise<void> {
  */
 export async function upsertSnapshotToday(
   holdingId: string,
-  data: { units: number; price: number; value: number; costBasis?: number | null; unrealizedPnl?: number | null },
+  data: {
+    units: number; price: number; value: number
+    costBasis?: number | null; unrealizedPnl?: number | null
+    // Provenance for costBasis/unrealizedPnl — set only by an authoritative write (the IBKR
+    // positions sync). Omitted (not explicit null) by every other caller, so it carries
+    // forward below exactly like costBasis/unrealizedPnl themselves.
+    costBasisSource?: string | null; costBasisAsOf?: Date | null
+  },
 ): Promise<void> {
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
@@ -149,12 +156,15 @@ export async function upsertSnapshotToday(
     // to null and the UI permanently read "Needs reconciliation" until the next full
     // IBKR sync. An explicitly-passed value (including null, e.g. zeroing a closed
     // position) is never overridden.
-    const carryForward: { costBasis?: number | null; unrealizedPnl?: number | null } = {}
-    if (!("costBasis" in data) || !("unrealizedPnl" in data)) {
+    const carryForward: { costBasis?: number | null; unrealizedPnl?: number | null; costBasisSource?: string | null; costBasisAsOf?: Date | null } = {}
+    const carriesAny = !("costBasis" in data) || !("unrealizedPnl" in data) || !("costBasisSource" in data) || !("costBasisAsOf" in data)
+    if (carriesAny) {
       const prior = await db.snapshot.findFirst({ where: { holdingId }, orderBy: { date: "desc" } })
       if (prior) {
         if (!("costBasis" in data)) carryForward.costBasis = prior.costBasis
         if (!("unrealizedPnl" in data)) carryForward.unrealizedPnl = prior.unrealizedPnl
+        if (!("costBasisSource" in data)) carryForward.costBasisSource = prior.costBasisSource
+        if (!("costBasisAsOf" in data)) carryForward.costBasisAsOf = prior.costBasisAsOf
       }
     }
     await db.snapshot.create({
@@ -201,12 +211,16 @@ export async function applyFlexPositionsForUser(userId: string, positions: FlexP
     await upsertSnapshotToday(h.id, {
       units: pos.units, price: pos.markPrice, value: pos.positionValue,
       costBasis: pos.costBasis, unrealizedPnl: pos.unrealizedPnl,
+      // IBKR's Flex report doesn't always carry cost basis for every position (see
+      // lib/valuation.ts) — only mark this as an authoritative, freshly-confirmed source
+      // when it actually supplied one, not on every sync regardless of what came back.
+      ...(pos.costBasis != null ? { costBasisSource: "ibkr", costBasisAsOf: new Date() } : {}),
     })
     snapshots++
   }
   for (const h of holdings) {
     if (!matchedHoldingIds.has(h.id) && (h.snapshots[0]?.units ?? 0) > 0) {
-      await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0, costBasis: 0, unrealizedPnl: 0 })
+      await upsertSnapshotToday(h.id, { units: 0, price: 0, value: 0, costBasis: 0, unrealizedPnl: 0, costBasisSource: "ibkr", costBasisAsOf: new Date() })
       await db.holding.update({ where: { id: h.id }, data: { instrumentStatus: "CLOSED" } })
       snapshots++
     }
