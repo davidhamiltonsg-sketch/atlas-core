@@ -22,6 +22,7 @@ import { evaluateGovernance, type Align } from "@/lib/governance-status"
 import { computeSbrLookThrough } from "@/lib/sbr-look-through"
 import { evaluateSbrGovernance } from "@/lib/sbr-governance"
 import type { SbrPosition } from "@/lib/sbr-engine"
+import { recordConstitutionVersionIfNew, detectUnversionedDrift, getConstitutionVersionHistory } from "@/lib/constitution-version"
 
 const CONE_DRAWDOWN_DEFAULT = 0.20
 const alignToIndicator: Record<Align, "compliant" | "caution" | "critical"> = { ok: "compliant", watch: "caution", breach: "critical" }
@@ -39,6 +40,16 @@ export default async function CompliancePage() {
   const sbr = c.id === "silicon-brick-road"
   const rules = governanceRules(c.id)
   const categories = [...new Set(rules.map(r => r.category))]
+
+  // Article VI requires "a version increment" for any material change — record this version
+  // as a durable, queryable fact the first time this page runs with it, and surface the one
+  // integrity failure the record exists to catch: the same version number now governing
+  // different content than what was first recorded (a rule changed without the increment).
+  await recordConstitutionVersionIfNew(c.id)
+  const [versionDrift, versionHistory] = await Promise.all([
+    detectUnversionedDrift(c.id),
+    getConstitutionVersionHistory(c.id),
+  ])
 
   // Live weights for the threshold gauge
   const holdings = await db.holding.findMany({
@@ -158,6 +169,13 @@ export default async function CompliancePage() {
       constitutionId={c.id}
     >
       <div className="space-y-6">
+
+        {versionDrift && (
+          <div className="rounded-xl border border-danger/40 bg-danger/10 px-5 py-4 text-xs text-danger">
+            <b className="block text-sm mb-1">Constitution integrity check failed</b>
+            Version v{c.version} first recorded on {versionDrift.recordedAt.toISOString().slice(0, 10)} with different governing content than what is now live under the same version number. Article VI requires a version increment for any material change — resolve by either reverting the unintended edit or bumping the version.
+          </div>
+        )}
 
         {/* ── COMPLIANCE DASHBOARD ────────────────────────────────────── */}
         <GovernanceComplianceDashboard
@@ -302,6 +320,27 @@ export default async function CompliancePage() {
           </section>
 
           <section className="review-rhythm">{[["Monthly", "Reconcile", "Holdings, executions, cash, dividends, fees, FX and residual cash bank."], ["Quarterly", "Look underneath", "Refresh official sources and review bands, overlap and classification."], ["Annually", "Check the destination", "Review purpose, liquidity, instruments, beneficiaries, tax and legal changes."]].map(([when, title, text]) => <article key={when}><span>{when}</span><h2>{title}</h2><p>{text}</p></article>)}</section>
+
+          <section className="rule-register">
+            <header>
+              <div>
+                <p>AMENDMENT HISTORY</p>
+                <h2>Every version this constitution has run under</h2>
+                <span>Recorded automatically the first time the app runs with a given version — a durable answer to Article VI&apos;s &quot;version increment&quot; requirement.</span>
+              </div>
+            </header>
+            <div className="rule-grid">
+              {versionHistory.length === 0
+                ? <p className="text-xs text-muted-foreground">No version recorded yet — this appears after the page&apos;s first load.</p>
+                : versionHistory.map((v) => (
+                  <article key={v.id}>
+                    <span>v{v.version}</span>
+                    <h4>{v.updated}</h4>
+                    <dl><div><dt>First recorded</dt><dd>{v.recordedAt.toISOString().slice(0, 10)}</dd></div></dl>
+                  </article>
+                ))}
+            </div>
+          </section>
         </div>
 
         {/* ── LIVE POSITION GAUGES ────────────────────────────────────── */}
