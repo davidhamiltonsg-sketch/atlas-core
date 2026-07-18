@@ -35,6 +35,7 @@ Six pillars fix that at the root:
 | 2 — Atlas constants + seed derive from spec | 1 | **Landed** | full `npm run check` |
 | 3 — reporting-currency single source + helper | 4 (foundation) | **Landed** | `check:spec` |
 | 4 — derive the SBR registry from the spec | 1 | **Landed** | `check:spec` + `check:sbr` + sbr-reviewer + isolation |
+| 5c — unify the governance/compliance CHECK engine (distinct from 5b's DECISION engine below) | 3 | **Landed** | `check:portfolio-v2` + constitution-auditor + sbr-engine-reviewer + 121 tests |
 | 6 — `Money` type + currency boundary (foundation) | 4 | **Landed** | `check:money` (25) + Vercel build |
 | 5a — engine characterization net (pre-merge) | 3 | **Landed** | `check:sbr` routing grid (27 pins) |
 | 5b — unify each portfolio's two engines | 3 | **Landed** | 62 routing assertions (check:sbr) |
@@ -84,6 +85,26 @@ so the two views can't diverge.
   *then* refactor under them (the checks are the safety net for the un-renderable paths).
 - Do **not** merge blind — a wrong SBR decision is a wrong buy instruction for Dami. Verify the
   headline + split on the running dashboard before shipping.
+
+### 5c — Unify the governance/compliance CHECK engine  ·  landed, headless-verified
+
+Separate from 5b above: `lib/governance-status.ts` (Atlas) and `lib/sbr-governance.ts` (SBR)
+answer "is the portfolio currently compliant" (rendered as the Rule Check panel), not "where
+should the next contribution go" (5b's `route()`/`decide()`). These had the exact duplication
+problem Pillar 3 targets — separately hand-written hard-cap/floor loops that had already drifted
+apart (an inclusive-boundary fix landed in one file earlier this session and not the other).
+
+`lib/governance-engine.ts` is now the single implementation (`evaluateFundLimits`,
+`evaluateCombinedSleeve`) both portfolios' check functions delegate to, reading limits straight
+off `Constitution.funds`/`combined`. Shipped headless (no live dashboard drive — same
+network/DB-access constraint noted under "Status" above) but backed by two independent
+specialist reviews against the served constitution docs (constitution-auditor,
+sbr-engine-reviewer) plus `check:portfolio-v2`'s existing "hard cap pauses EQAC and routes core"
+scenario tests for both portfolios, which exercise the changed boundary directly. The reviews
+also surfaced and fixed a real pre-existing bug: several *display*-level status computations
+across the app (holdings tables, reports, 5b's own `route()`) had independently duplicated the
+old exclusive boundary, causing a fund sitting exactly at its cap to show breach in one panel and
+"healthy" in another on the same page.
 
 ### 6 — `Money` type  ·  medium risk, mostly render-verified
 - Add `lib/money.ts`: `type Money = { amount: number; ccy: "USD" | "SGD" }`, `formatMoney`, and a

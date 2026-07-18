@@ -199,20 +199,21 @@ async function loadAgentFindings(userId: string): Promise<Record<string, AgentFi
     const sgovPct = positions.filter(p => ["SGOV", "CASH", "SGD", "AGG"].includes(p.ticker.toUpperCase())).reduce((s, p) => s + p.actualPct, 0)
     const govAlignment = evaluateGovernance({ positions, bufferPct: sgovPct, lookThrough })
 
+    // Inclusive (>=/<=) — matches evaluateGovernance/evaluateFundLimits (lib/governance-engine.ts).
     const hardBreaches = positions.filter(p => {
       const ht = HARD_THRESHOLDS[p.ticker]
-      const overCap = p.hardCapPct !== null && p.actualPct > p.hardCapPct
+      const overCap = p.hardCapPct !== null && p.actualPct >= p.hardCapPct
       return overCap ||
-        (ht?.low !== undefined && p.actualPct < ht.low) ||
-        (ht !== undefined && p.actualPct > ht.high)
+        (ht?.low !== undefined && p.actualPct <= ht.low) ||
+        (ht !== undefined && p.actualPct >= ht.high)
     }).length
 
     const softBreaches = positions.filter(p => {
       const ht = HARD_THRESHOLDS[p.ticker]
-      const overCap = p.hardCapPct !== null && p.actualPct > p.hardCapPct
+      const overCap = p.hardCapPct !== null && p.actualPct >= p.hardCapPct
       const isHard = overCap ||
-        (ht?.low !== undefined && p.actualPct < ht.low) ||
-        (ht !== undefined && p.actualPct > ht.high)
+        (ht?.low !== undefined && p.actualPct <= ht.low) ||
+        (ht !== undefined && p.actualPct >= ht.high)
       return !isHard && p.targetPct > 0 && Math.abs(p.actualPct - p.targetPct) > p.toleranceBand
     }).length
 
@@ -703,7 +704,7 @@ async function loadSbrFindings(userId: string): Promise<Record<string, AgentFind
         const withPct = rows.map(r => ({ ...r, actualPct: (r.value / totalValue) * 100 }))
         const capBreaches = withPct.filter(r => {
           const fund = SBR_SPEC.funds.find(f => f.ticker === r.ticker)
-          return fund?.hardCap != null && r.actualPct > fund.hardCap
+          return fund?.hardCap != null && r.actualPct >= fund.hardCap
         })
         if (capBreaches.length > 0) {
           findings.safety = {

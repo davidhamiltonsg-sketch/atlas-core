@@ -86,7 +86,8 @@ export async function getSbrReportData(userId: string, period: ReportPeriod): Pr
     const actualPct=totalValue>0?value/totalValue*100:0
     const targetPct=p?.targetPct??0
     const drift = actualPct-targetPct
-    const isHard = hasBalance && (!p || ((p.hardCap !== null && actualPct > p.hardCap) || (p.floor !== undefined && actualPct < p.floor)))
+    // Inclusive (>=/<=) — matches evaluateSbrGovernance/evaluateFundLimits (lib/governance-engine.ts).
+    const isHard = hasBalance && (!p || ((p.hardCap !== null && actualPct >= p.hardCap) || (p.floor !== undefined && actualPct <= p.floor)))
     const isSoft = hasBalance && !!p && !isHard && (actualPct < p.rangeLow || actualPct > p.rangeHigh)
     return {
       ticker: h.ticker, name: h.name, color: p?.color??h.color, value,

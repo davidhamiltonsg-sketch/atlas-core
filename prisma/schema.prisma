@@ -110,6 +110,16 @@ model Snapshot {
   currency      String   @default("USD")
   costBasis     Float?
   unrealizedPnl Float?
+  // Provenance for costBasis/unrealizedPnl — explicit instead of inferred by null-checking
+  // at render time (lib/valuation.ts). "ibkr" = authoritative, set by the IBKR positions
+  // sync; costBasisAsOf is the sync time it was last confirmed, NOT this row's own `date`
+  // (a plain price refresh creates/updates a row daily via upsertSnapshotToday without ever
+  // touching cost basis — see lib/holdings-sync.ts — so `date` alone can't tell you how
+  // stale the cost basis actually is). Null means no IBKR-confirmed cost basis has ever
+  // been recorded for this holding; the app falls back to reconstructing it from the Trade
+  // log at render time, which stays unprovenanced (recomputed fresh every read).
+  costBasisSource String?  // "ibkr" | null
+  costBasisAsOf DateTime?
   createdAt     DateTime @default(now())
 }
 

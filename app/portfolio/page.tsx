@@ -92,16 +92,17 @@ async function getPortfolioData(userId: string, governedTickers: string[]) {
       // (ticker === sleeve key) carries the §3 drift-trigger lookup — alias/accumulation
       // rows are governed via their derived targets, mirroring the BTC/IBIT precedent.
       const judged = sleeveActual[sleeveKey] ?? actualPct
-      const overCap = hasBalance && !isLegacy && h.hardCapPct !== null && judged > h.hardCapPct
+      // Inclusive (>=/<=) — matches evaluateGovernance/evaluateFundLimits (see app/page.tsx).
+      const overCap = hasBalance && !isLegacy && h.hardCapPct !== null && judged >= h.hardCapPct
       const ht = h.ticker === sleeveKey ? HARD_THRESHOLDS[h.ticker] : undefined
       const isHard = hasBalance && !isLegacy && (overCap ||
-        (ht?.low !== undefined && judged < ht.low) ||
-        (ht !== undefined && judged > ht.high))
+        (ht?.low !== undefined && judged <= ht.low) ||
+        (ht !== undefined && judged >= ht.high))
       const isSoft = hasBalance && !isLegacy && !isHard && !withinBand
       const sparklineValues = h.snapshots.map(s => s.value)
 
       const cb = avgCostMap[h.ticker]
-      const valuation=openPositionValuation({value,units:latest?.units??0,snapshotCostBasis:latest?.costBasis,snapshotUnrealizedPnl:latest?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate})
+      const valuation=openPositionValuation({value,units:latest?.units??0,snapshotCostBasis:latest?.costBasis,snapshotUnrealizedPnl:latest?.unrealizedPnl,reconstructedCostBasis:cb?.sgd,reconstructedAveragePrice:cb&&cb.units>0?cb.usd/cb.units:null,reportingFxRate:usdSgdRate,costBasisAsOf:latest?.costBasisAsOf})
       const avgCostUsd=valuation.averagePriceInstrumentCurrency, unrealisedSgd=valuation.reconciles?valuation.unrealizedPnl:null, unrealisedPct=valuation.reconciles?valuation.unrealizedReturnPct:null
 
       return { ...h, targetPct: tgt, latestSnapshot: latest ?? null, value, actualPct, drift, withinBand, overCap, isHard, isSoft, sparklineValues, avgCostUsd, unrealisedSgd, unrealisedPct, sleeveKey, isLegacy }
