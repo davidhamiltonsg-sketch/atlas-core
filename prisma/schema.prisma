@@ -317,3 +317,25 @@ model SyncStatus {
   lastSuccessAt DateTime?
   updatedAt     DateTime  @updatedAt
 }
+
+// ── Constitution Versioning ────────────────────────────────────────────────────
+// The constitution's version number lives only as a string literal in lib/constitutions.ts
+// (config-as-data, not DB-editable) — there was no queryable record of when a version first
+// went live or what it governed. Article VI requires "a version increment" for any material
+// change; this table makes that increment a durable, auditable fact instead of only a git
+// commit. One row per (constitutionId, version), written once via
+// recordConstitutionVersionIfNew() the first time the app runs with it (see
+// lib/constitution-version.ts) — never edited afterward, so contentHash is a fixed snapshot
+// to detect the one integrity failure this exists to catch: the same version number later
+// serving different governing content (a rule changed without the required increment).
+model ConstitutionVersion {
+  id             String   @id @default(cuid())
+  constitutionId String   // "atlas-core" | "silicon-brick-road"
+  version        String
+  updated        String   // the constitution's own "updated" label, e.g. "2026-07"
+  contentHash    String   // sha256 of funds/bands/caps/decisionLadder/rules at first recording
+  recordedAt     DateTime @default(now())
+
+  @@unique([constitutionId, version])
+  @@index([constitutionId])
+}
