@@ -1,4 +1,5 @@
 import { economicSleeveTicker } from "@/lib/instrument-identity"
+import { FUND_COMPANY_WEIGHTS, FUND_SECTOR_WEIGHTS } from "@/lib/fund-weights"
 
 // SBR look-through. These fund-level coefficients are planning estimates and must
 // carry an as-of date; actual portfolio weights always come from the owner account.
@@ -30,10 +31,16 @@ export const SBR_COUNTRY_WATCH = 70
 export const SBR_FRESH_DAYS = 35
 export const SBR_STALE_DAYS = 75
 
+// Technology figures come from the canonical FUND_SECTOR_WEIGHTS.digital (shared with
+// Atlas — see lib/fund-weights.ts) rather than a second hand-copied number, so this
+// breakdown can't drift from the governed technologyPct figure below it. The
+// non-technology slices (Communication/Consumer/Healthcare/etc.) are presentation-only
+// granularity Atlas doesn't need and have no independent source; VWRA's "Other" absorbs
+// whatever the canonical Technology figure doesn't account for so the row still sums to 100.
 const INDUSTRIES: Record<string, Record<string, number>> = {
-  EQAC: { Technology: 62, Communication: 12, Consumer: 12, Healthcare: 4, Industrials: 4, Other: 6 },
+  EQAC: { Technology: FUND_SECTOR_WEIGHTS.EQAC.digital, Communication: 12, Consumer: 12, Healthcare: 4, Industrials: 4, Other: 6 },
   SMH: { Semiconductors: 100 },
-  VWRA: { Technology: 27, Financials: 16, Industrials: 11, Consumer: 15, Healthcare: 9, Other: 22 },
+  VWRA: { Technology: FUND_SECTOR_WEIGHTS.VWRA.digital, Financials: 16, Industrials: 11, Consumer: 15, Healthcare: 9, Other: 100 - FUND_SECTOR_WEIGHTS.VWRA.digital - 16 - 11 - 15 - 9 },
   BTC: { Crypto: 100 },
   DBMFE: { "Managed futures": 100 },
   A35: { "Singapore government bonds": 100 },
@@ -46,17 +53,16 @@ const COUNTRIES: Record<string, Record<string, number>> = {
   DBMFE: { Global: 100 },
   A35: { Singapore: 100 },
 }
-const COMPANIES: Record<string, Record<string, number>> = {
-  EQAC: { Nvidia: 8.6, Apple: 7.4, Microsoft: 5.4, Amazon: 5.0, Alphabet: 4.8, Broadcom: 4.6, Meta: 3.4 },
-  SMH: { Nvidia: 19, TSMC: 9.4, ASML: 7, Broadcom: 5.6, AMD: 5.6 },
-  VWRA: { Nvidia: 4.7, Apple: 4.3, Microsoft: 3.2, Amazon: 2.5, Alphabet: 2.1, Meta: 1.5, Broadcom: 1.5, TSMC: 1.2 },
-}
+// Company weights are the canonical FUND_COMPANY_WEIGHTS (shared with Atlas), which
+// already carries this same data — including SMH's ASML/AMD, which Atlas's own company
+// cap set doesn't track but its engine harmlessly ignores.
+const COMPANIES: Record<string, Record<string, number>> = { EQAC: FUND_COMPANY_WEIGHTS.EQAC, SMH: FUND_COMPANY_WEIGHTS.SMH, VWRA: FUND_COMPANY_WEIGHTS.VWRA }
 const ASSETS: Record<string, Record<string, number>> = {
   EQAC: { Equity: 100 }, SMH: { Equity: 100 },
   VWRA: { Equity: 100 }, BTC: { Crypto: 100 }, DBMFE: { "Managed futures": 100 },
   A35: { "SGD government bonds": 100 },
 }
-const SEMICONDUCTORS: Record<string, number> = { EQAC: 32, SMH: 100, VWRA: 10, BTC: 0, DBMFE: 0, A35: 0 }
+const SEMICONDUCTORS: Record<string, number> = { EQAC: FUND_SECTOR_WEIGHTS.EQAC.semiconductor, SMH: FUND_SECTOR_WEIGHTS.SMH.semiconductor, VWRA: FUND_SECTOR_WEIGHTS.VWRA.semiconductor, BTC: 0, DBMFE: 0, A35: 0 }
 
 export interface ExposureLine { name: string; pct: number; contributors?: Array<{ticker:string;portfolioWeightPct:number;underlyingWeightPct:number;contributionPct:number}> }
 export interface SbrLookThrough {
@@ -114,7 +120,7 @@ export function computeSbrLookThrough(positions: Array<{ ticker: string; actualP
   const countries = aggregate(invested, countryTable)
   const industries = aggregate(invested, industryTable)
   const assets = aggregate(invested, ASSETS)
-  const technologyPct = invested.reduce((sum,p)=>{const t=sbrSleeveTicker(p.ticker);return sum+(p.actualPct/100)*(refreshedWeights?.[t]?.sectorWeights?.digital??(t==="SMH"?90:INDUSTRIES[t]?.Technology??0))},0)
+  const technologyPct = invested.reduce((sum,p)=>{const t=sbrSleeveTicker(p.ticker);return sum+(p.actualPct/100)*(refreshedWeights?.[t]?.sectorWeights?.digital??FUND_SECTOR_WEIGHTS[t]?.digital??0)},0)
   const semiconductorPct = invested.reduce((sum, p) => { const t=sbrSleeveTicker(p.ticker); return sum + (p.actualPct / 100) * (refreshedWeights?.[t]?.sectorWeights?.semiconductor??SEMICONDUCTORS[t]??0) }, 0)
   const topCompany = companies[0] ?? { name: "—", pct: 0 }
   const topCountry = countries[0] ?? { name: "—", pct: 0 }
