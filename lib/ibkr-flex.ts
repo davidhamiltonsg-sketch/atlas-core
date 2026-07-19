@@ -373,9 +373,13 @@ export async function fetchFlexActivity(token: string, queryId: string): Promise
       return { success: false, error: `IBKR: ${ibkrError}` }
     }
 
-    // Step 2: poll for result (max ~25s to stay within Vercel 30s limit)
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await sleep(attempt === 0 ? 4000 : 4000)
+    // Step 2: poll for result. IBKR's own guidance is not to poll GetStatement faster than
+    // roughly every 5-10s — polling faster doesn't make the report generate any sooner, and
+    // each "not ready yet" response adds to whatever failure count feeds IBKR's own lockout
+    // (ErrorCode 1025, "Too many failed attempts"). 3 polls spaced 5s/7s/7s (~19s total) covers
+    // about the same wait window as the previous 5×4s (~20s) with fewer, better-spaced requests.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await sleep(attempt === 0 ? 5000 : 7000)
       const getRes = await fetch(
         `${getUrl}?q=${encodeURIComponent(referenceCode)}&t=${encodeURIComponent(token)}&v=3`,
         { cache: "no-store" }
@@ -439,9 +443,13 @@ export async function fetchFlexPositions(token: string, queryId: string): Promis
       return { success: false, error: `IBKR: ${ibkrError}` }
     }
 
-    // Step 2: poll until ready (max ~30s)
-    for (let attempt = 0; attempt < 6; attempt++) {
-      await sleep(attempt === 0 ? 4000 : 3000)
+    // Step 2: poll until ready. Same cadence reasoning as fetchFlexActivity — IBKR recommends
+    // not polling GetStatement faster than ~5-10s; polling harder doesn't speed up report
+    // generation and adds to whatever failure count feeds IBKR's own lockout (ErrorCode 1025,
+    // "Too many failed attempts"). 3 polls spaced 5s/7s/7s (~19s total) covers about the same
+    // wait window as the previous 6×3-4s (~19s) with half the request count.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await sleep(attempt === 0 ? 5000 : 7000)
 
       const getRes = await fetch(
         `${getUrl}?q=${encodeURIComponent(referenceCode)}&t=${encodeURIComponent(token)}&v=3`,
