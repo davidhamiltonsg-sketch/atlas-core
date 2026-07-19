@@ -118,7 +118,7 @@ export function parseFlexXml(xml: string): { positions: FlexPosition[]; accountI
   while ((match = re.exec(xml)) !== null) {
     const a = match[1]
     const symbol = attr(a, "symbol")
-    const units = parseFloat(attr(a, "position"))
+    let units = parseFloat(attr(a, "position"))
     const markPrice = parseFloat(attr(a, "markPrice"))
     const positionValue = parseFloat(attr(a, "positionValue"))
     const currency = attr(a, "currency")
@@ -127,6 +127,17 @@ export function parseFlexXml(xml: string): { positions: FlexPosition[]; accountI
 
     // Skip forex / cash balances — a currency position is not an investment holding.
     if (isForexRow(symbol, attr(a, "assetCategory"))) continue
+
+    // position (units) is likewise an OPTIONAL Flex column — a real Atlas Flex query
+    // configuration (observed accountId U13800637, symbol BTC "GRAYSCALE BITCOIN MINI ETF",
+    // production logs 2026-07-04 through 2026-07-19) omits it from every OpenPosition row
+    // while still including markPrice and positionValue. Requiring units here dropped every
+    // position in that report and the sync silently reported "parsed 0 positions" even though
+    // real value data was present in the XML the whole time. Derive units the same way markPrice
+    // is derived below, just inverted: positionValue / markPrice.
+    if (isNaN(units) && !isNaN(positionValue) && !isNaN(markPrice) && markPrice !== 0) {
+      units = positionValue / markPrice
+    }
 
     // Keep a position as long as it has a symbol, positive units, and AT LEAST ONE value field.
     // markPrice is an OPTIONAL Flex column — if the query doesn't include it, requiring it here
