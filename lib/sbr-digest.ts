@@ -18,7 +18,10 @@ export async function buildSbrDigest(userId:string):Promise<SbrDigest|null>{
  // sync is older than SYNC_STALE_DAYS (syncs run daily) — the access token has likely expired.
  {const {token,positionsQuery}=ibkrCredentialsFor("silicon-brick-road")
   if(token&&positionsQuery){
-   const lastSync=await db.ibkrSyncLog.findFirst({where:{userId},orderBy:{syncedAt:"desc"},select:{syncedAt:true}})
+   // Failure is non-fatal: if the IbkrSyncLog lookup errors (e.g. table missing), treat
+   // the sync age as unknown rather than throwing and crashing the whole digest/cron.
+   let lastSync:{syncedAt:Date}|null=null
+   try{lastSync=await db.ibkrSyncLog.findFirst({where:{userId},orderBy:{syncedAt:"desc"},select:{syncedAt:true}})}catch{lastSync=null}
    const syncAgeDays=lastSync?Math.floor((Date.now()-lastSync.syncedAt.getTime())/86400000):null
    if(syncAgeDays===null||syncAgeDays>SYNC_STALE_DAYS)items.push({severity:"watch",title:"IBKR sync may be broken — regenerate the Flex token",detail:syncAgeDays===null?"The broker connection is set up but the app has never received an automatic update.":`The app last received an automatic broker update ${syncAgeDays} days ago (updates normally arrive daily). The connection token has probably expired — creating a fresh one on the broker's website restores automatic updates.`})}}
  return{user:{id:user.id,name:user.name,email:user.email},totalValue,phase:{key:"GROWTH",label:"Flexible growth"},nextMove:move,snapshotAgeDays:age,healthScore:health.overall,items,actionable:items.length>0,phaseCrossed:false,newPhaseKey:null}

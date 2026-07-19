@@ -66,6 +66,21 @@ describe("parseFlexXml", () => {
     expect(positions[0].positionValue).toBeCloseTo(1123.55, 2)
   })
 
+  it("derives units from positionValue / markPrice when the position attribute is missing entirely", () => {
+    // Real failing shape from production logs (accountId U13800637): the OpenPosition row has
+    // NO position="..." attribute at all, so parseFloat("") on it is NaN and the row was being
+    // silently dropped, reporting "parsed 0 positions" even though markPrice and positionValue
+    // were present the whole time.
+    const xml = `<FlexStatement>
+      <OpenPosition accountId="U13800637" currency="USD" symbol="BTC" description="GRAYSCALE BITCOIN MINI ETF" markPrice="28.27" positionValue="4353.58" costBasisPrice="38.980584416" costBasisMoney="6003.01" percentOfNAV="3.55" fifoPnlUnrealized="-1649.43" />
+    </FlexStatement>`
+    const { positions } = parseFlexXml(xml)
+    expect(positions).toHaveLength(1)
+    expect(positions[0].units).toBeCloseTo(4353.58 / 28.27, 3)
+    expect(positions[0].markPrice).toBeCloseTo(28.27, 2)
+    expect(positions[0].positionValue).toBeCloseTo(4353.58, 2)
+  })
+
   it("does not cross-contaminate two different symbols in the same report", () => {
     const xml = `<FlexStatement>
       <OpenPosition accountId="U1" currency="USD" symbol="BTC" markPrice="28.72" positionValue="4422.88" percentOfNAV="3.14" position="154" />

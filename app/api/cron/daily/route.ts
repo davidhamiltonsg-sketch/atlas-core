@@ -54,7 +54,22 @@ export async function GET(req: Request) {
 
     if (portfolioId === "silicon-brick-road") {
       // ── SBR path ──────────────────────────────────────────────────────────
-      const digest = await buildSbrDigest(u.id)
+      // Failure is non-fatal to the loop: one user's bad/missing data must not
+      // crash the whole cron and skip every other user's email.
+      let digest: Awaited<ReturnType<typeof buildSbrDigest>>
+      try {
+        digest = await buildSbrDigest(u.id)
+      } catch (e) {
+        results.push({
+          userId: u.id,
+          portfolio: "sbr",
+          actionable: false,
+          emailed: false,
+          items: 0,
+          reason: `digest build failed: ${e instanceof Error ? e.message : "unknown"}`,
+        })
+        continue
+      }
       if (!digest) {
         results.push({ userId: u.id, portfolio: "sbr", actionable: false, emailed: false, items: 0, reason: "no digest" })
         continue
@@ -87,7 +102,22 @@ export async function GET(req: Request) {
 
     } else {
       // ── Atlas Core path ────────────────────────────────────────────────────
-      const digest = await buildGovernanceDigest(u.id)
+      // Failure is non-fatal to the loop: one user's bad/missing data must not
+      // crash the whole cron and skip every other user's email.
+      let digest: Awaited<ReturnType<typeof buildGovernanceDigest>>
+      try {
+        digest = await buildGovernanceDigest(u.id)
+      } catch (e) {
+        results.push({
+          userId: u.id,
+          portfolio: "atlas",
+          actionable: false,
+          emailed: false,
+          items: 0,
+          reason: `digest build failed: ${e instanceof Error ? e.message : "unknown"}`,
+        })
+        continue
+      }
       if (!digest) {
         results.push({ userId: u.id, portfolio: "atlas", actionable: false, emailed: false, items: 0, reason: "no digest" })
         continue
