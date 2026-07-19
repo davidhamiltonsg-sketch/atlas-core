@@ -40,7 +40,10 @@ export async function buildGovernanceDigest(userId:string):Promise<GovernanceDig
  // than SYNC_STALE_DAYS (the cron runs daily) — the Flex token has most likely expired.
  {const {token,positionsQuery}=ibkrCredentialsFor("atlas-core")
   if(token&&positionsQuery){
-   const lastSync=await db.ibkrSyncLog.findFirst({where:{userId},orderBy:{syncedAt:"desc"},select:{syncedAt:true}})
+   // Failure is non-fatal: if the IbkrSyncLog lookup errors (e.g. table missing), treat
+   // the sync age as unknown rather than throwing and crashing the whole digest/cron.
+   let lastSync:{syncedAt:Date}|null=null
+   try{lastSync=await db.ibkrSyncLog.findFirst({where:{userId},orderBy:{syncedAt:"desc"},select:{syncedAt:true}})}catch{lastSync=null}
    const syncAgeDays=lastSync?Math.floor((Date.now()-lastSync.syncedAt.getTime())/86400000):null
    if(syncAgeDays===null||syncAgeDays>SYNC_STALE_DAYS)items.push({severity:"watch",title:"IBKR sync may be broken — regenerate the Flex token",detail:syncAgeDays===null?"IBKR Flex is configured but no successful sync has ever been recorded.":`The last successful IBKR sync was ${syncAgeDays} days ago (syncs run daily). Flex tokens expire — regenerate the token in IBKR Client Portal and update the environment variable.`})}}
  const {drawdownPct,previousDrawdownPct}=await computeDrawdown(userId,totalValue)
