@@ -82,6 +82,26 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
   const dialogRef = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<"choose" | "manual" | "screenshot" | "ibkr">(defaultMode)
 
+  // Mobile keyboard fix: the on-screen keyboard shrinks the VISUAL viewport, but the CSS
+  // `dvh` unit the dialog's max-height falls back to doesn't reliably track that shrink on
+  // every mobile browser — so a centred, height-capped dialog could compute itself taller
+  // than what's actually visible once the keyboard is up (this form is nothing but number
+  // inputs), pushing the footer's Save button below the fold with no way to scroll to it.
+  // window.visualViewport DOES track the keyboard, so use it to cap the dialog live.
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null
+    if (!vv) return
+    const update = () => setViewportHeight(vv.height)
+    update()
+    vv.addEventListener("resize", update)
+    vv.addEventListener("scroll", update)
+    return () => {
+      vv.removeEventListener("resize", update)
+      vv.removeEventListener("scroll", update)
+    }
+  }, [])
+
   // Manual state
   const [manualValues, setManualValues] = useState<Record<string, { units: string; price: string }>>(
     Object.fromEntries(holdings.map((h) => [h.id, { units: String(h.latestUnits), price: String(h.latestPrice) }]))
@@ -388,7 +408,14 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="update-portfolio-title" className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="update-portfolio-title"
+        style={viewportHeight ? { maxHeight: `${viewportHeight - 16}px` } : undefined}
+        className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div>

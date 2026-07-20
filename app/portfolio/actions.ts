@@ -10,7 +10,7 @@ import { activePortfolioContext } from "@/lib/active-portfolio"
 import Anthropic from "@anthropic-ai/sdk"
 import { SBR_SPEC, ATLAS_SPEC } from "@/lib/portfolio-spec"
 import { assertCanMutateOwner } from "@/lib/mutation-auth"
-import { economicSleeveTicker } from "@/lib/instrument-identity"
+import { economicSleeveTicker, instrumentIdentity } from "@/lib/instrument-identity"
 import { GOVERNANCE_UNIVERSE } from "@/lib/approved-alternatives"
 import { valueConsistentPrice } from "@/lib/unit-price"
 import { findDuplicateGroups } from "@/lib/holding-duplicates"
@@ -18,7 +18,7 @@ import { getCachedUsdSgdRate } from "@/lib/fx-cache"
 import { recordSyncAttempt } from "@/lib/sync-status"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
-const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQAC: "EQAC.L", SMH: "SMH.L", IBIT: "IBIT", BTC: "IBIT", DBMFE: "DBMFE.PA" }
+const YF_TICKER_MAP: Record<string, string> = { VWRA: "VWRA.L", EQAC: "EQAC.L", SMH: "SMH.L", "SMH.US": "SMH", IBIT: "IBIT", BTC: "IBIT", DBMFE: "DBMFE.PA" }
 const YF_REVERSE_MAP = Object.fromEntries(Object.entries(YF_TICKER_MAP).map(([k, v]) => [v, k]))
 // Tickers whose Yahoo Finance price is already in SGD (no USD→SGD conversion needed).
 const YF_SGD_PRICED = new Set<string>()
@@ -453,13 +453,30 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
   // SBR users get their own Flex tokens (IBKR_SBR_*), falling back to the main tokens
   // if the SBR account isn't wired up yet. Shared with the modal + cron sync paths.
   const { token: ibkrToken, positionsQuery: ibkrQuery } = ibkrCredentialsFor(constitutionId)
+  // Canonical position map — ONE entry per real position, keyed by the identity-resolved
+  // ticker (venue-ambiguous symbols like SMH US vs SMH UCITS only resolve correctly via
+  // ISIN/CUSIP/exchange; see instrument-identity.ts). Used for creating not-yet-tracked
+  // holdings below, where a second alias key would mint a duplicate row.
   const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
+  const posIdentityMap: Record<string, ReturnType<typeof instrumentIdentity>> = {}
+  // Alias map for MATCHING existing holdings only — also keyed by the raw display ticker,
+  // so a row still stored under the old ambiguous symbol (not yet self-healed) finds its
+  // position too.
+  const posAliasMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
+  const posIdentityAliasMap: Record<string, ReturnType<typeof instrumentIdentity>> = {}
   let ibkrError: string | null = null
   if (withIbkr && ibkrToken && ibkrQuery) {
     const r = await fetchFlexPositions(ibkrToken, ibkrQuery)
     if (r.success) {
       for (const p of r.positions) {
-        posMap[p.symbol.toUpperCase()] = { units: p.units, markPrice: p.markPrice, positionValue: p.positionValue }
+        const identity = instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid })
+        const entry = { units: p.units, markPrice: p.markPrice, positionValue: p.positionValue }
+        posMap[identity.ticker] = entry
+        posIdentityMap[identity.ticker] = identity
+        posAliasMap[identity.ticker] = entry
+        posAliasMap[identity.displayTicker] = entry
+        posIdentityAliasMap[identity.ticker] = identity
+        posIdentityAliasMap[identity.displayTicker] = identity
       }
     } else {
       ibkrError = r.error
@@ -489,7 +506,7 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
   let unitsUpdated = 0
   for (const holding of holdings) {
     const latest = holding.snapshots[0]
-    const pos = posMap[holding.ticker.toUpperCase()]
+    const pos = posAliasMap[holding.ticker.toUpperCase()]
     const yh = priceMap[holding.ticker]
 
     let units: number
@@ -497,6 +514,21 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
     let value: number
 
     if (pos) {
+      // Brokerage truth confirms this row's real identity (ISIN/CUSIP/exchange) — self-heal
+      // a ticker seeded before the venue was known (e.g. legacy US SMH stored as bare "SMH")
+      // so governance scope, sleeve bucketing and price lookup all key off the right value.
+      const identity = posIdentityAliasMap[holding.ticker.toUpperCase()]
+      if (identity && identity.ticker !== holding.ticker) {
+        await db.holding.update({ where: { id: holding.id }, data: {
+          ticker: identity.ticker, displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
+          isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
+          instrumentStatus: (ATLAS_KNOWN_LEGACY as readonly string[]).includes(identity.ticker) ? "LEGACY" : "ACTIVE",
+        } })
+        // Keep the in-memory row consistent with the write above — the reconcile block
+        // below re-derives dbTickers/posMap lookups from this same `holdings` array, and
+        // must see the corrected ticker rather than re-deriving the stale one.
+        holding.ticker = identity.ticker
+      }
       // Brokerage truth — update units AND price together.
       units = pos.units
       value = pos.positionValue > 0 ? pos.positionValue : pos.units * pos.markPrice * usdSgdRate

@@ -46,10 +46,13 @@ export function instrumentIdentity(input: InstrumentIdentityInput): InstrumentId
 
   // SMH is ambiguous: the US ETF and Irish UCITS ETF use the same visible ticker on
   // different venues. Venue-qualify storage while keeping the familiar display label.
+  // Fail-safe direction: only a positively-confirmed UCITS identity (ISIN or LSE
+  // listing) counts as the governed line. Every other case — including exchange
+  // strings IBKR sends that we haven't enumerated (e.g. "ISLAND") — defaults to the
+  // legacy US line rather than silently being swept into governed scope.
   let ticker = symbol
   if (symbol === "SMH") {
-    if (isin === "IE00BMC38736" || exchange?.includes("LSE")) ticker = "SMH"
-    else if (cusip === "92189F676" || exchange?.includes("NASDAQ") || exchange?.includes("ARCA")) ticker = "SMH.US"
+    ticker = isin === "IE00BMC38736" || exchange?.includes("LSE") ? "SMH" : "SMH.US"
   }
 
   if (isin === "LU2951555403") ticker = "DBMFE"
