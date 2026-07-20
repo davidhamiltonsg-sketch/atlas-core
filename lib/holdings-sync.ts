@@ -204,6 +204,12 @@ export async function applyFlexPositionsForUser(userId: string, positions: FlexP
     const { p: pos, identity } = matched
     matchedHoldingIds.add(h.id)
     await db.holding.update({ where: { id: h.id }, data: {
+      // Self-heal the ticker itself, not just presentation — a row seeded under an
+      // ambiguous symbol (e.g. "SMH" before its venue was known) must converge on the
+      // identity-resolved value once brokerage data (ISIN/CUSIP/exchange) confirms it,
+      // or every downstream consumer keyed off holding.ticker (governance scope, sleeve
+      // bucketing, price lookup) keeps reading the wrong instrument forever.
+      ticker: identity.ticker,
       displayTicker: identity.displayTicker, instrumentKey: identity.instrumentKey,
       isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
       instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US", "GBTC"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",

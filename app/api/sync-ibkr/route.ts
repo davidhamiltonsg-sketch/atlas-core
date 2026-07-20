@@ -51,7 +51,12 @@ export async function POST() {
 
   // Build preview payload — let the client confirm before writing
   const positions = result.positions.map((pos) => {
-    const holding = holdingMap.get(pos.symbol.toUpperCase())
+    // Venue-ambiguous symbols (e.g. SMH US vs SMH UCITS) only resolve correctly via
+    // ISIN/CUSIP/exchange — match on the identity-resolved ticker first, falling back to
+    // the raw symbol for any row not yet self-healed onto its resolved ticker (see PUT
+    // below, which already resolves identity the same way).
+    const identity = instrumentIdentity({ symbol: pos.symbol, isin: pos.isin, cusip: pos.cusip, exchange: pos.exchange, conid: pos.conid })
+    const holding = holdingMap.get(identity.ticker) ?? holdingMap.get(pos.symbol.toUpperCase())
     return {
       symbol:        pos.symbol,
       units:         pos.units,
