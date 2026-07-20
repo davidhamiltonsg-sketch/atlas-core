@@ -45,11 +45,20 @@ export default async function CompliancePage() {
   // as a durable, queryable fact the first time this page runs with it, and surface the one
   // integrity failure the record exists to catch: the same version number now governing
   // different content than what was first recorded (a rule changed without the increment).
-  await recordConstitutionVersionIfNew(c.id)
-  const [versionDrift, versionHistory] = await Promise.all([
-    detectUnversionedDrift(c.id),
-    getConstitutionVersionHistory(c.id),
-  ])
+  // Best-effort: this is an integrity nice-to-have layered on top of the page, not something
+  // the whole compliance dashboard should hard-crash over (e.g. ConstitutionVersion migration
+  // not yet applied in this environment) — degrade to "no drift detected, no history" instead.
+  let versionDrift: Awaited<ReturnType<typeof detectUnversionedDrift>> = null
+  let versionHistory: Awaited<ReturnType<typeof getConstitutionVersionHistory>> = []
+  try {
+    await recordConstitutionVersionIfNew(c.id)
+    ;[versionDrift, versionHistory] = await Promise.all([
+      detectUnversionedDrift(c.id),
+      getConstitutionVersionHistory(c.id),
+    ])
+  } catch (e) {
+    console.error("[compliance] constitution version tracking unavailable:", e)
+  }
 
   // Live weights for the threshold gauge
   const holdings = await db.holding.findMany({
