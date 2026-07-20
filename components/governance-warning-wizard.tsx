@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { AlertTriangle, CheckCircle2, ArrowRight, X } from 'lucide-react'
 
 interface GovernanceWarningWizardProps {
@@ -22,7 +23,10 @@ export function GovernanceWarningWizard({
   const textColor = isCritical ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'
   const borderColor = isCritical ? 'border-red-500/50' : 'border-amber-500/50'
 
-  return (
+  // Portal straight to document.body — see update-portfolio-modal.tsx: a `backdrop-filter`
+  // on an ancestor `bg-card` panel creates a new containing block for `position: fixed`,
+  // silently shrinking this dialog to that panel's box instead of the real viewport.
+  return createPortal(
     <div className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4`}>
       <div className={`rounded-2xl border ${bgColor} ${borderColor} max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
@@ -95,6 +99,7 @@ export function GovernanceWarningWizard({
           </a>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef, useTransition } from "react"
+import { createPortal } from "react-dom"
 import { X, Upload, Pencil, Check, AlertCircle, Loader2, Camera, RefreshCw, ArrowUpCircle, TrendingUp, Info, ShieldAlert } from "lucide-react"
 import { updateHoldingsManually, extractFromScreenshot, applyExtractedHoldings, type NeedsConfirmationRow } from "@/app/portfolio/actions"
 import { isInScope } from "@/lib/approved-alternatives"
@@ -404,7 +405,13 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  return (
+  // Portal straight to document.body: this dialog is opened from buttons nested inside
+  // `bg-card`-classed panels, and `.atlas-shell main .bg-card` carries a permanent
+  // `backdrop-filter` (app/globals.css) — any CSS filter/transform/backdrop-filter on an
+  // ancestor creates a new containing block for `position: fixed` descendants, so without
+  // a portal this dialog's "fixed inset-0" was being sized against that small card's box
+  // instead of the real viewport, clipping it and leaving the Save button unreachable.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
@@ -928,6 +935,7 @@ export function UpdatePortfolioModal({ holdings, onClose, defaultMode = "choose"
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
