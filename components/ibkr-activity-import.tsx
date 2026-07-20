@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition, useMemo } from "react"
+import { createPortal } from "react-dom"
 import { X, RefreshCw, Check, AlertCircle, ArrowUpCircle, Loader2, TrendingUp, Info, ShieldAlert } from "lucide-react"
 import { isInScope } from "@/lib/approved-alternatives"
 import { formatFlexDate } from "@/lib/ibkr-flex"
@@ -185,7 +186,11 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
   const hasSells = executions.some(e => selectedTrades.has(e.tradeID) && e.buySell === "SELL")
   const canImport = totalNew > 0 && (!hasSells || behaviourAcknowledged)
 
-  return (
+  // Portal straight to document.body — see the identical fix (and rationale) in
+  // update-portfolio-modal.tsx: a `backdrop-filter`/`transform` on an ancestor `bg-card`
+  // panel creates a new containing block for this dialog's `position: fixed`, silently
+  // shrinking it to that panel's box instead of the real viewport.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
@@ -505,6 +510,7 @@ export function IBKRActivityImport({ onClose, onImported }: IBKRActivityImportPr
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
