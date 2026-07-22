@@ -7,7 +7,7 @@ import { instrumentIdentity } from "@/lib/instrument-identity"
 import { recordDcaBankMovement } from "@/lib/dca-bank-service"
 import { portfolioOwner } from "@/lib/active-portfolio"
 import { ibkrCredentialsFor } from "@/lib/ibkr-config"
-import { getCachedUsdSgdRate } from "@/lib/fx-cache"
+import { getCachedUsdSgdRate, convertToSgd, isConvertibleToSgd } from "@/lib/fx-cache"
 import {
   parseFlexDate, naturalKey, executionNaturalKey,
   selectExecutionsToImport, selectStaleDuplicateTrades, type ExistingTradeRow,
@@ -194,6 +194,7 @@ async function brokerPortfolioOwners(){
  */
 export async function applyFlexPositionsForUser(userId: string, positions: FlexPosition[]): Promise<number> {
   let snapshots = 0
+  const usdSgdRate = await getCachedUsdSgdRate()
   const identified = positions.map((p) => ({ p, identity: instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid }) }))
   const bySymbol = new Map(identified.flatMap((x) => [[x.identity.ticker, x], [x.identity.displayTicker, x]]))
   const holdings = await db.holding.findMany({ where: { userId }, include: { snapshots: { orderBy: { date: "desc" }, take: 1 } } })
@@ -214,9 +215,18 @@ export async function applyFlexPositionsForUser(userId: string, positions: FlexP
       isin: identity.isin, cusip: identity.cusip, exchange: identity.exchange, ibkrConid: identity.ibkrConid,
       instrumentStatus: ["VT", "QQQM", "VWO", "SMH.US", "GBTC"].includes(identity.ticker) ? "LEGACY" : "ACTIVE",
     } })
+    // positionValue/costBasis/unrealizedPnl are in the position's OWN trading currency, not
+    // pre-converted to the account base currency despite the field names — confirmed against
+    // a live account balance breakdown and real Flex XML (positionValue reproduces units ×
+    // markPrice exactly, no FX factor applied). Only SGD/USD convert correctly today; anything
+    // else is passed through unconverted with a warning rather than silently guessed.
+    if (!isConvertibleToSgd(pos.currency)) {
+      console.warn(`[holdings-sync] ${pos.symbol} reported in unhandled currency "${pos.currency}" — value/cost basis stored unconverted`)
+    }
     await upsertSnapshotToday(h.id, {
-      units: pos.units, price: pos.markPrice, value: pos.positionValue,
-      costBasis: pos.costBasis, unrealizedPnl: pos.unrealizedPnl,
+      units: pos.units, price: pos.markPrice, value: convertToSgd(pos.positionValue, pos.currency, usdSgdRate),
+      costBasis: pos.costBasis != null ? convertToSgd(pos.costBasis, pos.currency, usdSgdRate) : pos.costBasis,
+      unrealizedPnl: pos.unrealizedPnl != null ? convertToSgd(pos.unrealizedPnl, pos.currency, usdSgdRate) : pos.unrealizedPnl,
       // IBKR's Flex report doesn't always carry cost basis for every position (see
       // lib/valuation.ts) — only mark this as an authoritative, freshly-confirmed source
       // when it actually supplied one, not on every sync regardless of what came back.

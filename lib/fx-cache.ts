@@ -80,6 +80,33 @@ export async function getCachedUsdSgdRate(): Promise<number> {
 }
 
 /**
+ * Convert a position-level amount (positionValue, costBasis, unrealizedPnl — anything IBKR
+ * reports per-position) from its OWN instrument currency to SGD.
+ *
+ * These fields are NOT pre-converted to the account's base currency despite the field names
+ * suggesting otherwise — confirmed against a live account (`get_account_balances`: per-currency
+ * stock_market_value is the raw, unconverted instrument-currency figure; only the BASE row is
+ * true SGD) and against real Flex XML (positionValue / markPrice reproduces the unit count
+ * exactly, with no FX factor applied). Only SGD (pass through) and USD (the app's only live
+ * rate) can be converted correctly today — any other currency (EUR, GBp, ...) is returned
+ * unconverted since guessing would trade one currency bug for another; callers should log when
+ * that happens so a real occurrence is visible instead of silently wrong.
+ */
+export function convertToSgd(value: number, currency: string | null | undefined, usdSgdRate: number): number {
+  const c = currency?.trim().toUpperCase()
+  if (c === "SGD") return value
+  if (c === "USD") return value * usdSgdRate
+  return value
+}
+
+/** True when convertToSgd() can actually convert this currency (used to decide whether to log
+ *  an "unhandled currency" warning at the call site). */
+export function isConvertibleToSgd(currency: string | null | undefined): boolean {
+  const c = currency?.trim().toUpperCase()
+  return c === "SGD" || c === "USD"
+}
+
+/**
  * Clear the FX rate cache.
  * Call this at the end of a request to ensure fresh rates on the next request.
  */

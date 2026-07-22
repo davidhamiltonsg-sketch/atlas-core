@@ -14,7 +14,7 @@ import { economicSleeveTicker, instrumentIdentity } from "@/lib/instrument-ident
 import { GOVERNANCE_UNIVERSE } from "@/lib/approved-alternatives"
 import { valueConsistentPrice } from "@/lib/unit-price"
 import { findDuplicateGroups } from "@/lib/holding-duplicates"
-import { getCachedUsdSgdRate } from "@/lib/fx-cache"
+import { getCachedUsdSgdRate, convertToSgd, isConvertibleToSgd } from "@/lib/fx-cache"
 import { recordSyncAttempt } from "@/lib/sync-status"
 
 // Yahoo Finance ticker overrides for non-US instruments held by SBR users.
@@ -457,12 +457,12 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
   // ticker (venue-ambiguous symbols like SMH US vs SMH UCITS only resolve correctly via
   // ISIN/CUSIP/exchange; see instrument-identity.ts). Used for creating not-yet-tracked
   // holdings below, where a second alias key would mint a duplicate row.
-  const posMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
+  const posMap: Record<string, { units: number; markPrice: number; positionValue: number; currency: string }> = {}
   const posIdentityMap: Record<string, ReturnType<typeof instrumentIdentity>> = {}
   // Alias map for MATCHING existing holdings only — also keyed by the raw display ticker,
   // so a row still stored under the old ambiguous symbol (not yet self-healed) finds its
   // position too.
-  const posAliasMap: Record<string, { units: number; markPrice: number; positionValue: number }> = {}
+  const posAliasMap: Record<string, { units: number; markPrice: number; positionValue: number; currency: string }> = {}
   const posIdentityAliasMap: Record<string, ReturnType<typeof instrumentIdentity>> = {}
   let ibkrError: string | null = null
   if (withIbkr && ibkrToken && ibkrQuery) {
@@ -470,7 +470,7 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
     if (r.success) {
       for (const p of r.positions) {
         const identity = instrumentIdentity({ symbol: p.symbol, isin: p.isin, cusip: p.cusip, exchange: p.exchange, conid: p.conid })
-        const entry = { units: p.units, markPrice: p.markPrice, positionValue: p.positionValue }
+        const entry = { units: p.units, markPrice: p.markPrice, positionValue: p.positionValue, currency: p.currency }
         posMap[identity.ticker] = entry
         posIdentityMap[identity.ticker] = identity
         posAliasMap[identity.ticker] = entry
@@ -531,8 +531,14 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
       }
       // Brokerage truth — update units AND price together.
       units = pos.units
-      value = pos.positionValue > 0 ? pos.positionValue : pos.units * pos.markPrice * usdSgdRate
-      // IBKR's positionValue (SGD base) is authoritative; keep the stored price consistent
+      // positionValue is in the position's OWN trading currency, not pre-converted to SGD
+      // despite the field name — see convertToSgd's doc comment for how this was confirmed.
+      if (!isConvertibleToSgd(pos.currency)) {
+        console.warn(`[refreshLivePrices] ${holding.ticker} reported in unhandled currency "${pos.currency}" — value stored unconverted`)
+      }
+      const rawValue = pos.positionValue > 0 ? pos.positionValue : pos.units * pos.markPrice
+      value = convertToSgd(rawValue, pos.currency, usdSgdRate)
+      // IBKR's positionValue is now converted to SGD above; keep the stored price consistent
       // with it (a stray mark in the wrong currency would otherwise contradict the value).
       price = valueConsistentPrice(units, pos.markPrice, value, usdSgdRate)
       if (!latest || Math.abs((latest.units ?? 0) - units) > 1e-6) unitsUpdated++
@@ -573,9 +579,12 @@ async function refreshLivePricesImpl(opts: { withIbkr?: boolean; reconcile?: boo
           targetPct: 0, hardCapPct: null, toleranceBand: 2.5, color: "#64748b",
         },
       })
+      if (!isConvertibleToSgd(p.currency)) {
+        console.warn(`[refreshLivePrices] new position ${sym} reported in unhandled currency "${p.currency}" — value stored unconverted`)
+      }
       await upsertSnapshotToday(created.id, {
         units: p.units, price: p.markPrice,
-        value: p.positionValue > 0 ? p.positionValue : p.units * p.markPrice * usdSgdRate,
+        value: convertToSgd(p.positionValue > 0 ? p.positionValue : p.units * p.markPrice, p.currency, usdSgdRate),
       })
       added++
     }
