@@ -10,6 +10,7 @@ import { assertCanMutateOwner } from "@/lib/mutation-auth"
 import { canSyncWithIbkr, recordIbkrSync, getTimeUntilNextIbkrSync, formatTimeRemaining } from "@/lib/ibkr-rate-limiter"
 import { recordSyncAttempt } from "@/lib/sync-status"
 import { upsertSnapshotToday } from "@/lib/holdings-sync"
+import { getCachedUsdSgdRate, convertToSgd, isConvertibleToSgd } from "@/lib/fx-cache"
 
 // Allow up to 30s for the FLEX polling loop
 export const maxDuration = 30
@@ -49,6 +50,11 @@ export async function POST() {
 
   const holdingMap = new Map(holdings.map((h) => [h.ticker.toUpperCase(), h]))
 
+  // positionValue/costBasis/unrealizedPnl arrive in the position's OWN trading currency, not
+  // pre-converted to SGD despite the field names (see convertToSgd's doc comment) — convert
+  // here so the confirm-preview modal shows the same true SGD figures the PUT handler saves.
+  const usdSgdRate = await getCachedUsdSgdRate()
+
   // Build preview payload — let the client confirm before writing
   const positions = result.positions.map((pos) => {
     // Venue-ambiguous symbols (e.g. SMH US vs SMH UCITS) only resolve correctly via
@@ -57,14 +63,17 @@ export async function POST() {
     // below, which already resolves identity the same way).
     const identity = instrumentIdentity({ symbol: pos.symbol, isin: pos.isin, cusip: pos.cusip, exchange: pos.exchange, conid: pos.conid })
     const holding = holdingMap.get(identity.ticker) ?? holdingMap.get(pos.symbol.toUpperCase())
+    if (!isConvertibleToSgd(pos.currency)) {
+      console.warn(`[sync-ibkr] ${pos.symbol} reported in unhandled currency "${pos.currency}" — preview value unconverted`)
+    }
     return {
       symbol:        pos.symbol,
       units:         pos.units,
       markPrice:     pos.markPrice,
-      positionValue: pos.positionValue,
+      positionValue: convertToSgd(pos.positionValue, pos.currency, usdSgdRate),
       currency:      pos.currency,
-      costBasis:     pos.costBasis,
-      unrealizedPnl: pos.unrealizedPnl,
+      costBasis:     pos.costBasis != null ? convertToSgd(pos.costBasis, pos.currency, usdSgdRate) : pos.costBasis,
+      unrealizedPnl: pos.unrealizedPnl != null ? convertToSgd(pos.unrealizedPnl, pos.currency, usdSgdRate) : pos.unrealizedPnl,
       holdingId:     holding?.id ?? null,
       matched:       !!holding,
       prevUnits:     holding?.snapshots[0]?.units ?? null,
@@ -119,6 +128,10 @@ export async function PUT(req: Request) {
   const authoritative=fresh.positions.filter(p=>selected.has(p.symbol.trim().toUpperCase()))
   if(!authoritative.length)return NextResponse.json({error:"Selected positions were not present in the refreshed IBKR report"},{status:409})
 
+  // positionValue/costBasis/unrealizedPnl arrive in the position's OWN trading currency, not
+  // pre-converted to SGD despite the field names — see convertToSgd's doc comment.
+  const usdSgdRate = await getCachedUsdSgdRate()
+
   let updated = 0
   let created = 0
   for (const pos of authoritative) {
@@ -148,15 +161,18 @@ export async function PUT(req: Request) {
       }
     }
 
+    if (!isConvertibleToSgd(pos.currency)) {
+      console.warn(`[sync-ibkr] ${pos.symbol} reported in unhandled currency "${pos.currency}" — value/cost basis stored unconverted`)
+    }
     // upsertSnapshotToday (not a raw create): keeps the one-snapshot-per-holding-per-day
     // invariant the value-history chart depends on, and carries cost-basis provenance
     // forward correctly when this specific position happens to omit it.
     await upsertSnapshotToday(holdingId, {
       units: pos.units,
       price: pos.markPrice,
-      value: pos.positionValue, // SGD from IBKR (base currency)
-      costBasis: pos.costBasis ?? null,
-      unrealizedPnl: pos.unrealizedPnl ?? null,
+      value: convertToSgd(pos.positionValue, pos.currency, usdSgdRate),
+      costBasis: pos.costBasis != null ? convertToSgd(pos.costBasis, pos.currency, usdSgdRate) : null,
+      unrealizedPnl: pos.unrealizedPnl != null ? convertToSgd(pos.unrealizedPnl, pos.currency, usdSgdRate) : null,
       ...(pos.costBasis != null ? { costBasisSource: "ibkr", costBasisAsOf: new Date() } : {}),
     })
     updated++

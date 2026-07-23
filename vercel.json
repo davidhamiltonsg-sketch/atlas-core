@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/cron/daily",         "schedule": "45 10 * * *"  },
     { "path": "/api/cron/sync-holdings", "schedule": "0 10 * * *"   },
+    { "path": "/api/cron/sync-holdings", "schedule": "0 15 * * *"   },
     { "path": "/api/cron/monthly",       "schedule": "0 0 14 * *"   },
     { "path": "/api/cron/annual",        "schedule": "0 0 1 1 *"    }
   ]

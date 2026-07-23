@@ -12,6 +12,8 @@ import {
   clearFxCache,
   getCacheState,
   _testResetCache,
+  convertToSgd,
+  isConvertibleToSgd,
 } from "@/lib/fx-cache"
 
 let mockFxRateValue = 1.35
@@ -236,6 +238,50 @@ describe("fx-cache", () => {
       expect(rate2).toBe(1.4)
       expect(rate3).toBe(1.42)
       expect(mockFxRateCallCount).toBe(3)
+    })
+  })
+
+  // Fixture is the real account_balances breakdown pulled live from IBKR for this exact
+  // account: USD stock_market_value 139880.21 at exchange_rate 1.29109945 reconciles to the
+  // BASE (SGD) row's 180599.26 — i.e. IBKR's per-position figures are NOT pre-converted to
+  // account base currency despite the field names, only account-level rollups are. This is
+  // the bug convertToSgd exists to fix (see its doc comment).
+  describe("convertToSgd", () => {
+    const usdSgdRate = 1.29109945
+
+    it("passes an SGD amount through unchanged", () => {
+      expect(convertToSgd(1000, "SGD", usdSgdRate)).toBe(1000)
+      expect(convertToSgd(1000, "sgd", usdSgdRate)).toBe(1000) // case-insensitive
+    })
+
+    it("converts a USD amount to SGD using the live rate", () => {
+      expect(convertToSgd(139880.21, "USD", usdSgdRate)).toBeCloseTo(180599.26, 0)
+    })
+
+    it("reproduces the real VWRA position from the live account (USD -> SGD)", () => {
+      // 454 units, IBKR-reported positionValue 85660.72 USD (raw, unconverted)
+      expect(convertToSgd(85660.7166858, "USD", usdSgdRate)).toBeCloseTo(85660.7166858 * usdSgdRate, 6)
+    })
+
+    it("passes an unhandled currency through unconverted rather than guessing", () => {
+      expect(convertToSgd(1000, "EUR", usdSgdRate)).toBe(1000)
+      expect(convertToSgd(1000, "GBP", usdSgdRate)).toBe(1000)
+      expect(convertToSgd(1000, null, usdSgdRate)).toBe(1000)
+      expect(convertToSgd(1000, undefined, usdSgdRate)).toBe(1000)
+    })
+  })
+
+  describe("isConvertibleToSgd", () => {
+    it("is true for SGD and USD (case-insensitive)", () => {
+      expect(isConvertibleToSgd("SGD")).toBe(true)
+      expect(isConvertibleToSgd("usd")).toBe(true)
+    })
+
+    it("is false for any other currency, including missing", () => {
+      expect(isConvertibleToSgd("EUR")).toBe(false)
+      expect(isConvertibleToSgd("GBP")).toBe(false)
+      expect(isConvertibleToSgd(null)).toBe(false)
+      expect(isConvertibleToSgd(undefined)).toBe(false)
     })
   })
 })
